@@ -5,14 +5,14 @@ records and organization, attendance (clock-in/out with face recognition and
 geofencing), leave, payroll and payslips, notifications, reports, and a
 mobile-first PWA experience.
 
-**Current phase: 1 — Project Foundation.**
+**Current phase: 2 — Database & ORM.**
 
 ## Technology stack
 
 - **Framework:** Next.js 16 (App Router, React Server Components, Turbopack)
 - **UI:** React 19, TypeScript (strict), Tailwind CSS v4 design tokens
 - **UI primitives:** in-house `components/ui/*` (no UI framework dependency)
-- **Data:** PostgreSQL + Drizzle ORM (Phase 2+)
+- **Data:** PostgreSQL + Drizzle ORM (`drizzle-orm`, `pg`)
 - **Auth:** planned (Phase 3+)
 
 ## Requirements
@@ -28,6 +28,13 @@ npm run dev
 ```
 
 Open http://localhost:3000.
+
+Database (requires a reachable PostgreSQL and a local `DATABASE_URL`):
+
+```bash
+cp .env.example .env.local   # then edit DATABASE_URL
+npm run db:migrate           # apply migrations
+```
 
 - `/` — entry/landing page (auth-aware redirect arrives in Phase 3)
 - `/dashboard` — authenticated application shell placeholder
@@ -49,7 +56,7 @@ lib/
 ├── config/     Safe env-only configuration (server-only)
 └── utils/      Small shared utilities (cn, focus)
 services/       Server integrations (later phases)
-db/             Database schema/migrations (Phase 2)
+db/             Drizzle schema, connection, migrations
 hooks/ · store/ Client hooks/state (as needed)
 types/          Shared foundational types
 scripts/        Tooling scripts
@@ -67,8 +74,8 @@ Key conventions:
 
 ## Roadmap
 
-1. Project foundation **(this phase)**
-2. Database & ORM (Drizzle)
+1. Project foundation **(complete)**
+2. Database & ORM (Drizzle) **(this phase)**
 3. Authentication
 4. RBAC
 5. Employee management
@@ -90,8 +97,11 @@ Key conventions:
 ## Commands
 
 ```bash
-npm run dev     # development server
-npm run lint    # ESLint
-npm run build   # production build
-npm run start   # serve the production build
+npm run dev       # development server
+npm run lint      # ESLint
+npm run build     # production build
+npm run start     # serve the production build
+npm run db:generate # create a new Drizzle migration from the schema
+npm run db:migrate  # apply migrations (requires DATABASE_URL + Postgres)
+npm run db:studio   # Drizzle Studio (requires DATABASE_URL + Postgres)
 ```
