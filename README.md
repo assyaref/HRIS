@@ -1,36 +1,97 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Enterprise HRIS
 
-## Getting Started
+A human resource information system built in incremental phases: employee
+records and organization, attendance (clock-in/out with face recognition and
+geofencing), leave, payroll and payslips, notifications, reports, and a
+mobile-first PWA experience.
 
-First, run the development server:
+**Current phase: 1 — Project Foundation.**
+
+## Technology stack
+
+- **Framework:** Next.js 16 (App Router, React Server Components, Turbopack)
+- **UI:** React 19, TypeScript (strict), Tailwind CSS v4 design tokens
+- **UI primitives:** in-house `components/ui/*` (no UI framework dependency)
+- **Data:** PostgreSQL + Drizzle ORM (Phase 2+)
+- **Auth:** planned (Phase 3+)
+
+## Requirements
+
+- Node.js 20+ (developed against Node 24)
+- npm
+
+## Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `/` — entry/landing page (auth-aware redirect arrives in Phase 3)
+- `/dashboard` — authenticated application shell placeholder
+- `/login` — authentication route-group placeholder (implemented in Phase 3)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Project architecture
 
-## Learn More
+The full specification lives in `docs/architecture.md`.
 
-To learn more about Next.js, take a look at the following resources:
+```
+app/            App Router routes, thin UI
+├── (auth)/     Public route group (login placeholder)
+├── (dashboard)/ Authenticated shell (sidebar + header + content)
+components/
+├── ui/         Reusable, accessible primitives (Button, Input, Dialog, …)
+└── layout/     Application shell components
+features/       Domain modules (land in later phases)
+lib/
+├── config/     Safe env-only configuration (server-only)
+└── utils/      Small shared utilities (cn, focus)
+services/       Server integrations (later phases)
+db/             Database schema/migrations (Phase 2)
+hooks/ · store/ Client hooks/state (as needed)
+types/          Shared foundational types
+scripts/        Tooling scripts
+public/         Static assets
+docs/           Architecture and ADRs
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Key conventions:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Server Components by default**; `"use client"` only for interactive leaves.
+- **Secrets are environment-only**, never hardcoded, and never reach client
+  components (`lib/config` is `server-only`).
+- Route groups separate public (`(auth)`) and authenticated (`(dashboard)`)
+  areas; auth guarding lands in Phase 3.
 
-## Deploy on Vercel
+## Roadmap
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Project foundation **(this phase)**
+2. Database & ORM (Drizzle)
+3. Authentication
+4. RBAC
+5. Employee management
+6. Organization / projects
+7. Attendance
+8. Face recognition
+9. Geofencing
+10. Leave & permission
+11. Payroll
+12. Payslip
+13. Notifications
+14. Reports & dashboard
+15. PWA / offline / push
+16. Security hardening
+17. Testing
+18. CI/CD
+19. Production deployment
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Commands
+
+```bash
+npm run dev     # development server
+npm run lint    # ESLint
+npm run build   # production build
+npm run start   # serve the production build
+```
