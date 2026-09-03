@@ -9,14 +9,16 @@ import { createdAt, updatedAt, uuidId } from "./common";
 import { organizations } from "./organizations";
 
 /**
- * Users — identity accounts (authentication foundation for Phase 3).
+ * Users — identity accounts (authentication foundation, Phase 3).
  *
  * Status values (application-level contract): pending | active | suspended | locked.
+ * Only `active` accounts may authenticate (enforced by lib/auth).
  *
- * Phase 2 deliberately excludes credential columns (password_hash, MFA fields,
- * lockout counters, last_login_at). They arrive with the Phase 3
- * authentication work so no storage or format decision is made early.
- * Passwords are never stored in plaintext.
+ * `password_hash` stores the Argon2id PHC hash only — never a plaintext or
+ * reversibly-encrypted password. It is nullable so accounts can exist in a
+ * pre-credential state (e.g. `pending` invitations); authenticating with a
+ * NULL hash always fails with a generic error. MFA and lockout counters
+ * arrive with the phases that own them.
  */
 export const users = pgTable(
   "users",
@@ -28,6 +30,7 @@ export const users = pgTable(
     ),
     email: text("email").notNull(),
     status: text("status").notNull().default("active"),
+    passwordHash: text("password_hash"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

@@ -12,7 +12,7 @@ export function Sidebar() {
         <NavLinks />
       </nav>
       <div className="shrink-0 border-t border-border px-6 py-4">
-        <p className="text-xs text-muted-foreground">Phase 1 — Foundation</p>
+        <p className="text-xs text-muted-foreground">Phase 3 — Authentication</p>
       </div>
     </aside>
   );
