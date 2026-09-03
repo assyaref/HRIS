@@ -52,7 +52,7 @@ export default function DashboardPage() {
           </p>
         </div>
         <Badge variant="outline" className="w-fit">
-          Phase 3 · Authentication
+          Phase 4 · RBAC
         </Badge>
       </div>
 

@@ -2,14 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createTabTrap, getFocusableElements } from "@/lib/utils/focus";
+import type { NavSection } from "@/types/navigation";
 import { Brand } from "./brand";
 import { NavLinks } from "./nav-links";
 
 /**
  * Mobile navigation: hamburger trigger + accessible slide-over drawer.
  * Rendered as a modal (focus trap, Esc to close, scroll lock).
+ * `sections` are permission-filtered server-side before they reach this
+ * client component.
  */
-export function MobileNav() {
+export function MobileNav({ sections }: { sections: NavSection[] }) {
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -113,11 +116,14 @@ export function MobileNav() {
               aria-label="Main navigation"
               className="flex-1 overflow-y-auto p-3"
             >
-              <NavLinks onNavigate={() => setOpen(false)} />
+              <NavLinks
+                sections={sections}
+                onNavigate={() => setOpen(false)}
+              />
             </nav>
             <div className="shrink-0 border-t border-border px-6 py-4">
               <p className="text-xs text-muted-foreground">
-                Phase 3 — Authentication
+                Phase 4 — RBAC
               </p>
             </div>
           </div>

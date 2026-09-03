@@ -3,14 +3,21 @@ import { MobileNav } from "./mobile-nav";
 import { Button } from "@/components/ui/button";
 import { logoutAction } from "@/features/auth/actions";
 import type { CurrentUser } from "@/lib/auth/types";
+import type { NavSection } from "@/types/navigation";
 
 /**
  * Sticky top bar: mobile menu + brand, with the signed-in user and sign-out.
  */
-export function Header({ user }: { user: CurrentUser }) {
+export function Header({
+  user,
+  sections,
+}: {
+  user: CurrentUser;
+  sections: NavSection[];
+}) {
   return (
     <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background/90 px-4 backdrop-blur lg:h-16 lg:px-6">
-      <MobileNav />
+      <MobileNav sections={sections} />
       <div className="min-w-0 lg:hidden">
         <Brand />
       </div>
