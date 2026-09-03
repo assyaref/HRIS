@@ -17,7 +17,7 @@ const roadmap = [
   {
     module: "Employees",
     phase: "Phase 5",
-    note: "Employee, department and position management.",
+    note: "Employee records, search and organization-scoped management.",
   },
   {
     module: "Attendance",
@@ -52,7 +52,7 @@ export default function DashboardPage() {
           </p>
         </div>
         <Badge variant="outline" className="w-fit">
-          Phase 4 · RBAC
+          Phase 7 · Leave &amp; Permission
         </Badge>
       </div>
 

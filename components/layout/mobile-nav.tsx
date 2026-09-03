@@ -123,7 +123,7 @@ export function MobileNav({ sections }: { sections: NavSection[] }) {
             </nav>
             <div className="shrink-0 border-t border-border px-6 py-4">
               <p className="text-xs text-muted-foreground">
-                Phase 4 — RBAC
+                Phase 7 — Leave &amp; Permission
               </p>
             </div>
           </div>

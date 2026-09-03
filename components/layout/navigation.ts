@@ -10,6 +10,26 @@ import type { NavItem, NavSection } from "@/types/navigation";
  */
 export const primaryNavigation: NavItem[] = [
   { title: "Dashboard", href: "/dashboard" },
+  {
+    title: "Employees",
+    href: "/employees",
+    permission: PERMISSIONS.EMPLOYEES_VIEW,
+  },
+  {
+    title: "Attendance",
+    href: "/attendance",
+    permission: PERMISSIONS.ATTENDANCE_VIEW,
+  },
+  {
+    title: "Leave",
+    href: "/leave",
+    permission: PERMISSIONS.LEAVE_VIEW,
+  },
+  {
+    title: "Permission",
+    href: "/permission",
+    permission: PERMISSIONS.PERMISSION_VIEW,
+  },
 ];
 
 export const settingsNavigation: NavItem[] = [

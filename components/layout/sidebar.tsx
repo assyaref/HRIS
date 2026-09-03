@@ -13,7 +13,7 @@ export function Sidebar({ sections }: { sections: NavSection[] }) {
         <NavLinks sections={sections} />
       </div>
       <div className="shrink-0 border-t border-border px-6 py-4">
-        <p className="text-xs text-muted-foreground">Phase 4 — RBAC</p>
+        <p className="text-xs text-muted-foreground">Phase 7 — Leave &amp; Permission</p>
       </div>
     </aside>
   );

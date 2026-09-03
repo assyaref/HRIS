@@ -64,8 +64,8 @@ table stores `code`, `module` and `description`; `resource`/`action` are
 derived from the code for display.
 
 Modules: `dashboard`, `profile`, `users`, `roles`, `permissions`, `employees`,
-`attendance`, `leave`, `payroll`, `payslip`, `projects`, `reports`,
-`settings`, `audit`.
+`attendance`, `leave`, `permission`, `payroll`, `payslip`, `projects`,
+`reports`, `settings`, `audit`.
 
 > The catalog is **RBAC capability metadata only**. The Employee, Attendance,
 > Leave, Payroll, Payslip and other modules land in later phases and will check
@@ -83,15 +83,22 @@ Granted capabilities are the seed matrix in `scripts/seed-rbac.mts`:
 | `roles.*` | ● | ● | – | – | – | – | – |
 | `permissions.view` | ● | ● | – | – | – | – | – |
 | `permissions.manage` | ● | – | – | – | – | – | – |
-| `employees.*` | ● | ● | – | ● | – | – | – |
 | `employees.view` | ● | ● | ● | ● | ● | ● | – |
-| `attendance.view` | ● | – | ● | ● | – | ● | ● |
-| `attendance.manage` | ● | – | – | ● | – | – | – |
+| `employees.create`, `employees.update` | ● | ● | – | ● | – | – | – |
+| `employees.delete` (deactivation) | ● | ● | – | – | – | – | – |
+| `attendance.view` | ● | ● | ● | ● | – | ● | ● |
+| `attendance.manage` | ● | ● | ● | ● | – | – | – |
+| `attendance.check_in` | ● | ● | – | – | – | – | ● |
+| `attendance.check_out` | ● | ● | – | – | – | – | ● |
 | `attendance.approve` | ● | – | – | – | – | ● | – |
-| `leave.view` | ● | – | ● | ● | – | ● | ● |
-| `leave.create` | ● | – | – | ● | – | – | ● |
-| `leave.manage` | ● | – | – | ● | – | – | – |
-| `leave.approve` | ● | – | – | ● | – | ● | – |
+| `leave.view` | ● | ● | ● | ● | – | ● | ● |
+| `leave.create` | ● | ● | – | ● | – | – | ● |
+| `leave.manage` | ● | ● | ● | ● | – | – | – |
+| `leave.approve` | ● | ● | ● | ● | – | ● | – |
+| `permission.view` | ● | ● | ● | ● | – | ● | ● |
+| `permission.create` | ● | ● | – | – | – | – | ● |
+| `permission.manage` | ● | ● | ● | ● | – | – | – |
+| `permission.approve` | ● | ● | ● | ● | – | ● | – |
 | `payroll.view`, `payroll.manage` | ● | – | – | – | ● | – | – |
 | `payslip.view` | ● | – | – | – | ● | – | ● |
 | `projects.view` | ● | ● | ● | – | – | ● | – |
@@ -104,6 +111,12 @@ Granted capabilities are the seed matrix in `scripts/seed-rbac.mts`:
 evaluation-time bypass in `lib/auth/rbac.ts`). Row-level scoping (supervisor →
 team, employee → self, finance → payroll) is enforced by the future modules'
 data-access layer, not by this capability layer.
+
+> **Phase 5 semantics:** `employees.delete` maps to *deactivation* (employment
+> status → `inactive`) rather than physical deletion, because HRIS person
+> records are retained and later modules reference them. HR edits employee
+> profiles (`employees.create`/`employees.update`) but does not deactivate;
+> that is an ADMIN capability.
 
 ## 5. Organization isolation
 

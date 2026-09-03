@@ -6,14 +6,14 @@ import { db } from "@/db";
 import { auditLogs } from "@/db/schema";
 
 /**
- * Audit logging — append-only writes to `audit_logs` (Phase 4).
+ * Audit logging — append-only writes to `audit_logs` (Phases 4+).
  *
  * Rules:
  * - The `audit_logs` table is append-only by design: this module only ever
  *   INSERTs. There is deliberately no UPDATE/DELETE path.
  * - Never log passwords, session tokens, hashes or secrets.
- * - RBAC administrative actions (role created/updated/deleted, permission
- *   assignments, future user-role assignments) are recorded here.
+ * - Administrative/business actions are recorded here (RBAC role changes,
+ *   employee create/update/status changes, future user-role assignments).
  */
 
 export type RbacAuditAction =
@@ -22,10 +22,40 @@ export type RbacAuditAction =
   | "rbac.role.deleted"
   | "rbac.role.permissions.updated";
 
+export type EmployeeAuditAction =
+  | "employee.created"
+  | "employee.updated"
+  | "employee.status_changed";
+
+export type AttendanceAuditAction =
+  | "attendance.check_in"
+  | "attendance.check_in_rejected"
+  | "attendance.check_out"
+  | "attendance.check_out_rejected";
+
+export type LeaveAuditAction =
+  | "leave.created"
+  | "leave.cancelled"
+  | "leave.approved"
+  | "leave.rejected";
+
+export type PermissionAuditAction =
+  | "permission.created"
+  | "permission.cancelled"
+  | "permission.approved"
+  | "permission.rejected";
+
+export type AuditAction =
+  | RbacAuditAction
+  | EmployeeAuditAction
+  | AttendanceAuditAction
+  | LeaveAuditAction
+  | PermissionAuditAction;
+
 export interface WriteAuditLogInput {
   organizationId: string | null;
   actorUserId: string;
-  action: RbacAuditAction;
+  action: AuditAction;
   entityType: string;
   entityId?: string | null;
   /** Safe, JSON-serializable metadata. Never secrets. */

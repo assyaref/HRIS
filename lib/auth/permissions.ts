@@ -26,6 +26,7 @@ export const PERMISSION_MODULES = {
   EMPLOYEES: "employees",
   ATTENDANCE: "attendance",
   LEAVE: "leave",
+  PERMISSION: "permission",
   PAYROLL: "payroll",
   PAYSLIP: "payslip",
   PROJECTS: "projects",
@@ -63,10 +64,16 @@ export const PERMISSIONS = {
   ATTENDANCE_VIEW: "attendance.view",
   ATTENDANCE_MANAGE: "attendance.manage",
   ATTENDANCE_APPROVE: "attendance.approve",
+  ATTENDANCE_CHECK_IN: "attendance.check_in",
+  ATTENDANCE_CHECK_OUT: "attendance.check_out",
   LEAVE_VIEW: "leave.view",
   LEAVE_CREATE: "leave.create",
   LEAVE_MANAGE: "leave.manage",
   LEAVE_APPROVE: "leave.approve",
+  PERMISSION_VIEW: "permission.view",
+  PERMISSION_CREATE: "permission.create",
+  PERMISSION_APPROVE: "permission.approve",
+  PERMISSION_MANAGE: "permission.manage",
   PAYROLL_VIEW: "payroll.view",
   PAYROLL_MANAGE: "payroll.manage",
   PAYSLIP_VIEW: "payslip.view",
@@ -196,6 +203,16 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     module: PERMISSION_MODULES.ATTENDANCE,
     description: "Approve attendance entries.",
   },
+  {
+    code: PERMISSIONS.ATTENDANCE_CHECK_IN,
+    module: PERMISSION_MODULES.ATTENDANCE,
+    description: "Check in to attendance.",
+  },
+  {
+    code: PERMISSIONS.ATTENDANCE_CHECK_OUT,
+    module: PERMISSION_MODULES.ATTENDANCE,
+    description: "Check out of attendance.",
+  },
   // Leave
   {
     code: PERMISSIONS.LEAVE_VIEW,
@@ -216,6 +233,27 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     code: PERMISSIONS.LEAVE_APPROVE,
     module: PERMISSION_MODULES.LEAVE,
     description: "Approve leave requests.",
+  },
+  // Permission requests (time-based absences, not the permission catalog)
+  {
+    code: PERMISSIONS.PERMISSION_VIEW,
+    module: PERMISSION_MODULES.PERMISSION,
+    description: "View permission (absence) requests.",
+  },
+  {
+    code: PERMISSIONS.PERMISSION_CREATE,
+    module: PERMISSION_MODULES.PERMISSION,
+    description: "Submit permission (absence) requests.",
+  },
+  {
+    code: PERMISSIONS.PERMISSION_APPROVE,
+    module: PERMISSION_MODULES.PERMISSION,
+    description: "Approve permission (absence) requests.",
+  },
+  {
+    code: PERMISSIONS.PERMISSION_MANAGE,
+    module: PERMISSION_MODULES.PERMISSION,
+    description: "Manage permission (absence) requests.",
   },
   // Payroll
   {
@@ -284,6 +322,7 @@ export const PERMISSION_MODULE_LABELS: Record<PermissionModule, string> = {
   employees: "Employees",
   attendance: "Attendance",
   leave: "Leave",
+  permission: "Permission Requests",
   payroll: "Payroll",
   payslip: "Payslips",
   projects: "Projects",

@@ -5,7 +5,7 @@ records and organization, attendance (clock-in/out with face recognition and
 geofencing), leave, payroll and payslips, notifications, reports, and a
 mobile-first PWA experience.
 
-**Current phase: 4 — RBAC.**
+**Current phase: 7 — Leave & permission management.**
 
 ## Technology stack
 
@@ -17,7 +17,9 @@ mobile-first PWA experience.
   Argon2id password hashing)
 - **Authorization:** server-side RBAC (Drizzle-backed roles/permissions,
   org-scoped, no client-trusted roles)
-- **Design docs:** `docs/auth.md` (authentication) · `docs/rbac.md` (RBAC)
+- **Design docs:** `docs/auth.md` (authentication) · `docs/rbac.md` (RBAC) ·
+  `docs/employees.md` (employee management) · `docs/attendance.md` (attendance) ·
+  `docs/leave.md` (leave) · `docs/permission.md` (permission requests)
 
 ## Requirements
 
@@ -56,13 +58,20 @@ Routes:
 - `/` — auth-aware entry: redirects to `/dashboard` or `/login`
 - `/login` — professional sign-in (Server Action backed)
 - `/dashboard` — authenticated application shell (server-side guard)
+- `/employees` — employee directory (search/filter/pagination, `employees.view`)
+- `/employees/[employeeId]` — employee profile + edit (org-scoped)
+- `/attendance` — employee check-in/check-out + history (`attendance.view`)
+- `/attendance/management` — org attendance view (`attendance.manage`)
+- `/attendance/[attendanceId]` — attendance detail + immutable events
+- `/leave` — leave hub (balances + requests) · `/leave/balances` · `/leave/[requestId]` · `/leave/management`
+- `/permission` — permission requests hub · `/permission/[requestId]` · `/permission/management`
 - `/settings/roles` — role administration (requires `roles.view`)
 - `/settings/permissions` — permission catalog (requires `permissions.view`)
 - `/forbidden` (special file) — 403 UI rendered by RBAC guards
 
-> **Database note:** Phase 4 could not be validated against PostgreSQL in the
-> development environment (no reachable `DATABASE_URL`). Lint and build pass;
-> see `docs/rbac.md` §10 for the limitation and the manual validation steps.
+> **Database note:** Phases 4–7 could not be validated against PostgreSQL in the
+> development environment (no reachable `DATABASE_URL`). Lint and build pass.
+> See the docs for each phase for limitations and manual validation steps.
 
 ## Project architecture
 
@@ -72,11 +81,15 @@ The full specification lives in `docs/architecture.md`.
 app/            App Router routes, thin UI
 ├── (auth)/     Public route group (login)
 ├── (dashboard)/ Authenticated shell (sidebar + header + content)
+│   ├── employees/ Employee management (list, profile)
+│   ├── attendance/ Attendance (self-service, management, detail)
+│   ├── leave/     Leave (hub, balances, detail, management)
+│   ├── permission/ Permission requests (hub, detail, management)
 │   └── settings/  RBAC admin (roles, permissions)
 components/
 ├── ui/         Reusable, accessible primitives (Button, Input, Dialog, …)
 └── layout/     Application shell components (role-aware navigation)
-features/       Domain modules (auth, rbac — later HR modules)
+features/       Domain modules (auth, rbac, employees, attendance, leave, permission)
 lib/
 ├── config/     Safe env-only configuration (server-only)
 ├── auth/       Authentication (password, session, auth orchestration)
@@ -88,7 +101,7 @@ hooks/ · store/ Client hooks/state (as needed)
 types/          Shared foundational types (navigation)
 scripts/        Tooling scripts (dev user helper, RBAC seed)
 public/         Static assets
-docs/           Architecture, auth design, RBAC design, ADRs
+docs/           Architecture, auth, RBAC, employees, attendance, leave, permission, ADRs
 ```
 
 Key conventions:
@@ -106,22 +119,21 @@ Key conventions:
 1. Project foundation **(complete)**
 2. Database & ORM (Drizzle) **(complete)**
 3. Authentication **(complete)**
-4. RBAC **(this phase)**
-5. Employee management
-6. Organization / projects
-7. Attendance
+4. RBAC **(complete)**
+5. Employee management **(complete)**
+6. Attendance **(complete)**
+7. Leave & permission management **(this phase)**
 8. Face recognition
 9. Geofencing
-10. Leave & permission
-11. Payroll
-12. Payslip
-13. Notifications
-14. Reports & dashboard
-15. PWA / offline / push
-16. Security hardening
-17. Testing
-18. CI/CD
-19. Production deployment
+10. Payroll
+11. Payslip
+12. Notifications
+13. Reports & dashboard
+14. PWA / offline / push
+15. Security hardening
+16. Testing
+17. CI/CD
+18. Production deployment
 
 ## Commands
 
