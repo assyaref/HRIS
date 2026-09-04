@@ -75,8 +75,15 @@ export const PERMISSIONS = {
   PERMISSION_APPROVE: "permission.approve",
   PERMISSION_MANAGE: "permission.manage",
   PAYROLL_VIEW: "payroll.view",
+  PAYROLL_CREATE: "payroll.create",
+  PAYROLL_CALCULATE: "payroll.calculate",
+  PAYROLL_UPDATE: "payroll.update",
+  PAYROLL_APPROVE: "payroll.approve",
+  PAYROLL_LOCK: "payroll.lock",
   PAYROLL_MANAGE: "payroll.manage",
   PAYSLIP_VIEW: "payslip.view",
+  PAYSLIP_PUBLISH: "payslip.publish",
+  PAYSLIP_MANAGE: "payslip.manage",
   PROJECTS_VIEW: "projects.view",
   PROJECTS_MANAGE: "projects.manage",
   REPORTS_VIEW: "reports.view",
@@ -262,15 +269,50 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description: "View payroll runs.",
   },
   {
+    code: PERMISSIONS.PAYROLL_CREATE,
+    module: PERMISSION_MODULES.PAYROLL,
+    description: "Create payroll periods.",
+  },
+  {
+    code: PERMISSIONS.PAYROLL_CALCULATE,
+    module: PERMISSION_MODULES.PAYROLL,
+    description: "Calculate payroll.",
+  },
+  {
+    code: PERMISSIONS.PAYROLL_UPDATE,
+    module: PERMISSION_MODULES.PAYROLL,
+    description: "Update payroll periods and runs.",
+  },
+  {
+    code: PERMISSIONS.PAYROLL_APPROVE,
+    module: PERMISSION_MODULES.PAYROLL,
+    description: "Approve payroll.",
+  },
+  {
+    code: PERMISSIONS.PAYROLL_LOCK,
+    module: PERMISSION_MODULES.PAYROLL,
+    description: "Lock and finalize payroll.",
+  },
+  {
     code: PERMISSIONS.PAYROLL_MANAGE,
     module: PERMISSION_MODULES.PAYROLL,
-    description: "Run and approve payroll.",
+    description: "Manage payroll periods and runs.",
   },
   // Payslip
   {
     code: PERMISSIONS.PAYSLIP_VIEW,
     module: PERMISSION_MODULES.PAYSLIP,
     description: "View payslips.",
+  },
+  {
+    code: PERMISSIONS.PAYSLIP_PUBLISH,
+    module: PERMISSION_MODULES.PAYSLIP,
+    description: "Publish payslips to employees.",
+  },
+  {
+    code: PERMISSIONS.PAYSLIP_MANAGE,
+    module: PERMISSION_MODULES.PAYSLIP,
+    description: "Manage payslip issuance.",
   },
   // Projects
   {

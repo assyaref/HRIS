@@ -25,7 +25,8 @@ export type RbacAuditAction =
 export type EmployeeAuditAction =
   | "employee.created"
   | "employee.updated"
-  | "employee.status_changed";
+  | "employee.status_changed"
+  | "employee.account.created";
 
 export type AttendanceAuditAction =
   | "attendance.check_in"
@@ -45,12 +46,24 @@ export type PermissionAuditAction =
   | "permission.approved"
   | "permission.rejected";
 
+export type PayrollAuditAction =
+  | "payroll.period.created"
+  | "payroll.calculated"
+  | "payroll.submitted"
+  | "payroll.approved"
+  | "payroll.rejected"
+  | "payroll.locked"
+  | "payroll.cancelled"
+  | "payslip.generated"
+  | "payslip.published";
+
 export type AuditAction =
   | RbacAuditAction
   | EmployeeAuditAction
   | AttendanceAuditAction
   | LeaveAuditAction
-  | PermissionAuditAction;
+  | PermissionAuditAction
+  | PayrollAuditAction;
 
 export interface WriteAuditLogInput {
   organizationId: string | null;

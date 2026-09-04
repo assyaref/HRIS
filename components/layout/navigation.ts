@@ -30,6 +30,11 @@ export const primaryNavigation: NavItem[] = [
     href: "/permission",
     permission: PERMISSIONS.PERMISSION_VIEW,
   },
+  {
+    title: "Payroll",
+    href: "/payroll",
+    permission: PERMISSIONS.PAYROLL_VIEW,
+  },
 ];
 
 export const settingsNavigation: NavItem[] = [

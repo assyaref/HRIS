@@ -15,9 +15,10 @@ import { requireUser } from "@/lib/auth/auth";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { hasPermission, requirePermission } from "@/lib/auth/rbac";
 
-import { updateEmployeeAction } from "@/features/employees/actions";
+import { updateEmployeeAction, createEmployeeAccountAction } from "@/features/employees/actions";
 import { EmployeeEditor } from "@/features/employees/employee-editor";
 import { EmployeeStatusBadge } from "@/features/employees/employee-status-badge";
+import { CreateAccountDialog } from "@/features/employees/create-account-dialog";
 import {
   getEmployeeInOrganization,
   getOrganizationName,
@@ -59,11 +60,12 @@ export default async function EmployeeDetailPage({
   const employee = await getEmployeeInOrganization(employeeId, organizationId);
   if (!employee) forbidden();
 
-  const [organizationName, canUpdate, canDeactivate, linkableUsers] =
+  const [organizationName, canUpdate, canDeactivate, canCreateAccount, linkableUsers] =
     await Promise.all([
       getOrganizationName(organizationId),
       hasPermission(user.id, PERMISSIONS.EMPLOYEES_UPDATE),
       hasPermission(user.id, PERMISSIONS.EMPLOYEES_DELETE),
+      hasPermission(user.id, PERMISSIONS.USERS_CREATE),
       listLinkableUsers(organizationId, employeeId),
     ]);
 
@@ -162,16 +164,29 @@ export default async function EmployeeDetailPage({
                   </span>
                 </p>
                 <p className="flex justify-between gap-4">
+                  <span className="text-muted-foreground">Role</span>
+                  <span className="font-medium">EMPLOYEE</span>
+                </p>
+                <p className="flex justify-between gap-4">
                   <span className="text-muted-foreground">Status</span>
                   <span className="font-medium capitalize">
                     {employee.linkedUserStatus ?? "—"}
                   </span>
                 </p>
+                {/* Reset Password and Disable Account buttons can be added in future iterations */}
               </>
             ) : (
-              <p className="text-muted-foreground">
-                No sign-in account is linked to this employee.
-              </p>
+              <div className="space-y-3">
+                <p className="text-muted-foreground">
+                  No login account is linked.
+                </p>
+                <CreateAccountDialog
+                  employeeId={employee.id}
+                  employeeEmail={employee.email}
+                  action={createEmployeeAccountAction}
+                  canCreate={canCreateAccount}
+                />
+              </div>
             )}
           </CardContent>
         </Card>

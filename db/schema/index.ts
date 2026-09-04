@@ -13,6 +13,7 @@ export * from "./assignments";
 export * from "./attendance";
 export * from "./leave";
 export * from "./permission_requests";
+export * from "./payroll";
 export * from "./roles";
 export * from "./permissions";
 export * from "./role_permissions";

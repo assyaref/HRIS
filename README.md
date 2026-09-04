@@ -5,7 +5,7 @@ records and organization, attendance (clock-in/out with face recognition and
 geofencing), leave, payroll and payslips, notifications, reports, and a
 mobile-first PWA experience.
 
-**Current phase: 7 — Leave & permission management.**
+**Current phase: 8 — Payroll.**
 
 ## Technology stack
 
@@ -19,7 +19,8 @@ mobile-first PWA experience.
   org-scoped, no client-trusted roles)
 - **Design docs:** `docs/auth.md` (authentication) · `docs/rbac.md` (RBAC) ·
   `docs/employees.md` (employee management) · `docs/attendance.md` (attendance) ·
-  `docs/leave.md` (leave) · `docs/permission.md` (permission requests)
+  `docs/leave.md` (leave) · `docs/permission.md` (permission requests) ·
+  `docs/payroll.md` (payroll)
 
 ## Requirements
 
@@ -65,11 +66,12 @@ Routes:
 - `/attendance/[attendanceId]` — attendance detail + immutable events
 - `/leave` — leave hub (balances + requests) · `/leave/balances` · `/leave/[requestId]` · `/leave/management`
 - `/permission` — permission requests hub · `/permission/[requestId]` · `/permission/management`
+- `/payroll` — payroll period hub · `/payroll/[periodId]` · `/payroll/components` · `/payroll/items/[payrollItemId]` · `/payroll/payslips/[payslipId]`
 - `/settings/roles` — role administration (requires `roles.view`)
 - `/settings/permissions` — permission catalog (requires `permissions.view`)
 - `/forbidden` (special file) — 403 UI rendered by RBAC guards
 
-> **Database note:** Phases 4–7 could not be validated against PostgreSQL in the
+> **Database note:** Phases 4–8 could not be validated against PostgreSQL in the
 > development environment (no reachable `DATABASE_URL`). Lint and build pass.
 > See the docs for each phase for limitations and manual validation steps.
 
@@ -85,11 +87,12 @@ app/            App Router routes, thin UI
 │   ├── attendance/ Attendance (self-service, management, detail)
 │   ├── leave/     Leave (hub, balances, detail, management)
 │   ├── permission/ Permission requests (hub, detail, management)
+│   ├── payroll/   Payroll (hub, period detail, items, components, payslips)
 │   └── settings/  RBAC admin (roles, permissions)
 components/
 ├── ui/         Reusable, accessible primitives (Button, Input, Dialog, …)
 └── layout/     Application shell components (role-aware navigation)
-features/       Domain modules (auth, rbac, employees, attendance, leave, permission)
+features/       Domain modules (auth, rbac, employees, attendance, leave, permission, payroll)
 lib/
 ├── config/     Safe env-only configuration (server-only)
 ├── auth/       Authentication (password, session, auth orchestration)
@@ -101,7 +104,7 @@ hooks/ · store/ Client hooks/state (as needed)
 types/          Shared foundational types (navigation)
 scripts/        Tooling scripts (dev user helper, RBAC seed)
 public/         Static assets
-docs/           Architecture, auth, RBAC, employees, attendance, leave, permission, ADRs
+docs/           Architecture, auth, RBAC, employees, attendance, leave, permission, payroll, ADRs
 ```
 
 Key conventions:
@@ -122,18 +125,17 @@ Key conventions:
 4. RBAC **(complete)**
 5. Employee management **(complete)**
 6. Attendance **(complete)**
-7. Leave & permission management **(this phase)**
-8. Face recognition
-9. Geofencing
-10. Payroll
-11. Payslip
-12. Notifications
-13. Reports & dashboard
-14. PWA / offline / push
-15. Security hardening
-16. Testing
-17. CI/CD
-18. Production deployment
+7. Leave & permission management **(complete)**
+8. Payroll **(current phase)**
+9. Face recognition
+10. Geofencing
+11. Notifications
+12. Reports & dashboard
+13. PWA / offline / push
+14. Security hardening
+15. Testing
+16. CI/CD
+17. Production deployment
 
 ## Commands
 

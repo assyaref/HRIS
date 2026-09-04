@@ -6,11 +6,13 @@ import { forbidden, redirect } from "next/navigation";
 import type { z } from "zod";
 
 import { db } from "@/db";
-import { employees, users } from "@/db/schema";
+import { employees, users, roles, userRoles } from "@/db/schema";
 import { requireUser } from "@/lib/auth/auth";
 import { writeAuditLog } from "@/lib/auth/audit";
+import { hashPassword } from "@/lib/auth/password";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { requirePermission } from "@/lib/auth/rbac";
+import { ORGANIZATION_ROLE_CODES, ROLE_CATALOG } from "@/lib/auth/roles";
 
 import type { EmployeeStatus } from "./constants";
 import {
@@ -384,4 +386,174 @@ export async function updateEmployeeAction(
   return { status: "success", message: "Employee updated." };
 }
 
+/**
+ * Create a login account for an existing employee.
+ *
+ * This action creates a new user record, links it to the employee, assigns
+ * the EMPLOYEE role, and writes an audit log. All operations run in a
+ * transaction to ensure atomicity.
+ */
+export async function createEmployeeAccountAction(
+  employeeId: string,
+  _prevState: EmployeeActionState,
+  formData: FormData
+): Promise<EmployeeActionState> {
+  const user = await requireUser();
+  await requirePermission(user.id, PERMISSIONS.USERS_CREATE);
 
+  if (!user.organizationId) {
+    return toStateError("Your account is not assigned to an organization.");
+  }
+  const organizationId = user.organizationId;
+
+  // Load the employee and ensure it belongs to the caller's organization
+  const employee = await getEmployeeInOrganization(employeeId, organizationId);
+  if (!employee) forbidden();
+
+  // Check if employee already has a login account
+  if (employee.userId) {
+    return toStateError("Employee already has a login account.");
+  }
+
+  // Extract and validate form fields
+  const email = field(formData, "email");
+  const password = field(formData, "password");
+  const confirmPassword = field(formData, "confirmPassword");
+
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!email || !emailRegex.test(email)) {
+    return toStateError(undefined, { email: "Please enter a valid email address." });
+  }
+
+  // Validate passwords match
+  if (password !== confirmPassword) {
+    return toStateError(undefined, { confirmPassword: "Passwords do not match." });
+  }
+
+  // Validate password strength (minimum 8 characters)
+  if (password.length < 8) {
+    return toStateError(undefined, { password: "Password must be at least 8 characters long." });
+  }
+
+  try {
+    // Use a transaction to ensure all operations succeed or fail together
+    const result = await db.transaction(async (tx) => {
+      // Check if email already exists
+      const existingUser = await tx
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+
+      if (existingUser.length > 0) {
+        throw new Error("DUPLICATE_EMAIL");
+      }
+
+      // Hash the password
+      const passwordHash = await hashPassword(password);
+
+      // Insert new user
+      const insertedUser = await tx
+        .insert(users)
+        .values({
+          organizationId,
+          email,
+          status: "active",
+          passwordHash,
+        })
+        .returning({ id: users.id });
+
+      const newUserId = insertedUser[0]?.id;
+      if (!newUserId) throw new Error("Failed to create user account.");
+
+      // Ensure all organization-level roles are provisioned (idempotent)
+      for (const roleCode of ORGANIZATION_ROLE_CODES) {
+        const existingRole = await tx
+          .select({ id: roles.id })
+          .from(roles)
+          .where(and(eq(roles.organizationId, organizationId), eq(roles.code, roleCode)))
+          .limit(1);
+
+        if (!existingRole[0]) {
+          await tx.insert(roles).values({
+            organizationId,
+            code: roleCode,
+            name: ROLE_CATALOG[roleCode].name,
+            description: ROLE_CATALOG[roleCode].description,
+            isSystem: true,
+          });
+        }
+      }
+
+      // Find the EMPLOYEE role in this organization
+      const employeeRole = await tx
+        .select({ id: roles.id })
+        .from(roles)
+        .where(
+          and(
+            eq(roles.organizationId, organizationId),
+            eq(roles.code, "EMPLOYEE")
+          )
+        )
+        .limit(1);
+
+      const roleId = employeeRole[0]?.id;
+      if (!roleId) throw new Error("EMPLOYEE role not found in your organization.");
+
+      // Insert user_role mapping
+      await tx.insert(userRoles).values({
+        userId: newUserId,
+        roleId,
+        scope: "organization",
+        scopeId: organizationId,
+        grantedBy: user.id,
+      });
+
+      // Update employee to link the new user
+      await tx
+        .update(employees)
+        .set({ userId: newUserId })
+        .where(
+          and(
+            eq(employees.id, employeeId),
+            eq(employees.organizationId, organizationId)
+          )
+        );
+
+      return { newUserId };
+    });
+
+    // Write audit log after successful transaction
+    try {
+      await writeAuditLog({
+        organizationId,
+        actorUserId: user.id,
+        action: "employee.account.created",
+        entityType: "employee",
+        entityId: employeeId,
+        metadata: {
+          employeeId,
+          employeeNumber: employee.employeeNumber,
+          userId: result.newUserId,
+          role: "EMPLOYEE",
+          email,
+        },
+      });
+    } catch (auditError) {
+      console.error("[employees] audit failed after account creation", auditError);
+    }
+
+    revalidatePath("/employees");
+    revalidatePath(`/employees/${employeeId}`);
+    return { status: "success", message: "Login account created successfully." };
+  } catch (error) {
+    if (error instanceof Error && error.message === "DUPLICATE_EMAIL") {
+      return toStateError(undefined, { email: "This email address is already in use." });
+    }
+    console.error("[employees] account creation failed", error);
+    return toStateError(
+      error instanceof Error ? error.message : "Could not create the account. Please try again."
+    );
+  }
+}
