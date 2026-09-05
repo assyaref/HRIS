@@ -1,0 +1,80 @@
+name: Deploy HRIS to VPS
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hris-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy HRIS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy HRIS to VPS
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          port: ${{ secrets.VPS_PORT }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script_stop: true
+
+          script: |
+            set -e
+
+            echo "=================================================="
+            echo " HRIS CI/CD DEPLOYMENT"
+            echo "=================================================="
+
+            echo
+            echo "[1] VERIFY USER"
+            whoami
+
+            test "$(whoami)" = "hris-deploy"
+
+            echo
+            echo "[2] VERIFY HRIS SERVICE"
+            sudo -n systemctl is-active hris.service || true
+
+            echo
+            echo "[3] RUN HRIS DEPLOYMENT"
+            sudo -n /usr/local/sbin/hris-deploy
+
+            echo
+            echo "[4] VERIFY HRIS SERVICE"
+            sudo -n systemctl is-active hris.service
+
+            echo
+            echo "[5] HEALTH CHECK"
+            HTTP_STATUS="$(curl -sS \
+              -o /dev/null \
+              -w '%{http_code}' \
+              --max-time 15 \
+              http://127.0.0.1:3000/)"
+
+            echo "HTTP_STATUS=$HTTP_STATUS"
+
+            case "$HTTP_STATUS" in
+              2??|3??)
+                echo "HRIS HEALTH CHECK: OK"
+                ;;
+              *)
+                echo "HRIS HEALTH CHECK: FAILED"
+                exit 1
+                ;;
+            esac
+
+            echo
+            echo "=================================================="
+            echo " HRIS DEPLOYMENT SUCCESS"
+            echo "=================================================="
