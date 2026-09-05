@@ -27,8 +27,8 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           port: ${{ secrets.VPS_PORT }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          script_stop: true
-
+          timeout: 30s
+          command_timeout: 15m
           script: |
             set -e
 
@@ -36,26 +36,16 @@ jobs:
             echo " HRIS CI/CD DEPLOYMENT"
             echo "=================================================="
 
-            echo
             echo "[1] VERIFY USER"
+            test "$(whoami)" = "hris-deploy"
             whoami
 
-            test "$(whoami)" = "hris-deploy"
-
-            echo
-            echo "[2] VERIFY HRIS SERVICE"
-            sudo -n systemctl is-active hris.service || true
-
-            echo
-            echo "[3] RUN HRIS DEPLOYMENT"
+            echo "[2] RUN HRIS DEPLOYMENT"
             sudo -n /usr/local/sbin/hris-deploy
 
-            echo
-            echo "[4] VERIFY HRIS SERVICE"
-            sudo -n systemctl is-active hris.service
+            echo "[3] DEPLOYMENT COMMAND FINISHED"
 
-            echo
-            echo "[5] HEALTH CHECK"
+            echo "[4] HEALTH CHECK"
             HTTP_STATUS="$(curl -sS \
               -o /dev/null \
               -w '%{http_code}' \
