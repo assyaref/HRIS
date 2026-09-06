@@ -90,6 +90,8 @@ export const PERMISSIONS = {
   SETTINGS_VIEW: "settings.view",
   SETTINGS_MANAGE: "settings.manage",
   AUDIT_VIEW: "audit.view",
+  WORK_LOCATIONS_VIEW: "work_locations.view",
+  WORK_LOCATIONS_MANAGE: "work_locations.manage",
 } as const;
 
 export type Permission =
@@ -387,5 +389,3 @@ export function splitPermissionCode(code: Permission): {
     action: code.slice(separatorIndex + 1),
   };
 }
-
-

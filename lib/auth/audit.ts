@@ -57,13 +57,20 @@ export type PayrollAuditAction =
   | "payslip.generated"
   | "payslip.published";
 
+export type WorkLocationAuditAction =
+  | "work_location.created"
+  | "work_location.updated"
+  | "work_location.status_changed"
+  | "work_location.deleted";
+
 export type AuditAction =
   | RbacAuditAction
   | EmployeeAuditAction
   | AttendanceAuditAction
   | LeaveAuditAction
   | PermissionAuditAction
-  | PayrollAuditAction;
+  | PayrollAuditAction
+  | WorkLocationAuditAction;
 
 export interface WriteAuditLogInput {
   organizationId: string | null;

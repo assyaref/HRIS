@@ -48,6 +48,11 @@ export const settingsNavigation: NavItem[] = [
     href: "/settings/permissions",
     permission: PERMISSIONS.PERMISSIONS_VIEW,
   },
+  {
+    title: "Work Locations",
+    href: "/settings/work-locations",
+    permission: PERMISSIONS.WORK_LOCATIONS_VIEW,
+  },
 ];
 
 /** All navigation sections in display order. */
