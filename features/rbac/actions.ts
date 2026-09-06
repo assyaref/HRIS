@@ -11,7 +11,7 @@ import { requireUser } from "@/lib/auth/auth";
 import { writeAuditLog } from "@/lib/auth/audit";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import {
-  isSuperAdmin,
+  getUserAuthorization,
   requirePermission,
 } from "@/lib/auth/rbac";
 import {
@@ -36,6 +36,10 @@ import { createRoleSchema, updateRoleSchema } from "./schemas";
  *   by another organization can never be loaded (forbidden).
  * - The system-level SUPERADMIN role cannot be created, edited by a
  *   non-SUPERADMIN, stripped of all permissions, or deleted.
+ * - An actor may never modify a role that is currently granted to their
+ *   own account (self role-edit protection; SUPERADMIN is exempt).
+ * - A non-SUPERADMIN actor may only assign permissions that are within
+ *   the actor's own effective permissions (delegation boundary).
  * - System (seeded) roles cannot be deleted.
  * - Administrative changes are appended to `audit_logs`.
  */
@@ -91,6 +95,15 @@ export async function createRoleAction(
   if (isReservedRoleCode(code)) {
     return toStateError(undefined, {
       code: `"${code}" is a reserved system role code.`,
+    });
+  }
+
+  // Additional protection: Cannot create a role that would allow privilege escalation
+  // Check if this code is already assigned to the actor (prevent duplicate code issues)
+  const actorAuthorization = await getUserAuthorization(user.id);
+  if (!actorAuthorization.isSuperAdmin && (actorAuthorization.roleCodes as readonly string[]).includes(code)) {
+    return toStateError(undefined, {
+      code: `You cannot create a role with code "${code}" that is already assigned to your account.`,
     });
   }
 
@@ -176,13 +189,50 @@ export async function updateRoleAction(
   }
   const { name, description, permissionCodes } = parsed.data;
 
-  const actorIsSuperAdmin = await isSuperAdmin(user.id);
+  const actorAuthorization = await getUserAuthorization(user.id);
+
+  // RULE 4 — Self role-edit protection. An actor must not modify a role
+  // that is currently granted to their own account; this blocks an ADMIN
+  // from editing the ADMIN role it holds to give itself extra
+  // capabilities. SUPERADMIN is exempt (it manages the SUPERADMIN role,
+  // which lives in the reserved SYSTEM organization).
+  // Check by role ID (not just code) for stricter protection.
+  if (!actorAuthorization.isSuperAdmin) {
+    const actorRoleIds = await db
+      .select({ roleId: userRoles.roleId })
+      .from(userRoles)
+      .where(eq(userRoles.userId, user.id));
+    
+    const actorRoleIdSet = new Set(actorRoleIds.map(r => r.roleId));
+    if (actorRoleIdSet.has(role.id)) {
+      return toStateError(
+        "You cannot modify a role that is assigned to your own account."
+      );
+    }
+  }
+
+  // RULE 3 — SUPERADMIN role: only SUPERADMIN holders may touch it, and it
+  // must always retain at least one permission (can never be emptied).
   if (role.code === SUPERADMIN_ROLE_CODE) {
-    // Only a SUPERADMIN may touch the SUPERADMIN role.
-    if (!actorIsSuperAdmin) forbidden();
-    // A SUPERADMIN must keep at least one permission.
+    if (!actorAuthorization.isSuperAdmin) forbidden();
     if (permissionCodes.length === 0) {
       return toStateError("SUPERADMIN must retain at least one permission.");
+    }
+  }
+
+  // RULE 5 — Delegation boundary. A non-SUPERADMIN actor may only assign
+  // permissions that fall within the actor's own effective permissions.
+  // Holding `roles.update` does not entitle the actor to delegate
+  // capabilities they do not themselves have (e.g. an ADMIN must not be
+  // able to grant payroll/payslip permissions to any role).
+  if (!actorAuthorization.isSuperAdmin) {
+    const delegatable = new Set(actorAuthorization.permissionCodes);
+    for (const code of permissionCodes) {
+      if (!delegatable.has(code)) {
+        return toStateError(
+          "You can only assign permissions that you are allowed to delegate."
+        );
+      }
     }
   }
 
@@ -293,6 +343,22 @@ export async function deleteRoleAction(
     return toStateError("System roles cannot be deleted.");
   }
 
+  // Additional protection: Cannot delete a role that is assigned to the actor's own account
+  const actorAuthorization = await getUserAuthorization(user.id);
+  if (!actorAuthorization.isSuperAdmin) {
+    const actorRoleIds = await db
+      .select({ roleId: userRoles.roleId })
+      .from(userRoles)
+      .where(eq(userRoles.userId, user.id));
+    
+    const actorRoleIdSet = new Set(actorRoleIds.map(r => r.roleId));
+    if (actorRoleIdSet.has(role.id)) {
+      return toStateError(
+        "You cannot delete a role that is assigned to your own account."
+      );
+    }
+  }
+
   const members = await db
     .select({ id: userRoles.id })
     .from(userRoles)
@@ -332,4 +398,3 @@ export async function deleteRoleAction(
   revalidatePath("/settings/roles");
   redirect("/settings/roles");
 }
-
