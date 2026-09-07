@@ -47,12 +47,20 @@ export async function listWorkLocationProjectOptions(
 export async function getProjectInOrganization(
   projectId: string,
   organizationId: string
-): Promise<{ id: string; name: string; code: string } | null> {
+): Promise<{
+  id: string;
+  organizationId: string;
+  name: string;
+  code: string;
+  status: string;
+} | null> {
   const rows = await db
     .select({
       id: projects.id,
+      organizationId: projects.organizationId,
       name: projects.name,
       code: projects.code,
+      status: projects.status,
     })
     .from(projects)
     .where(

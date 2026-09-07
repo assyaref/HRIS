@@ -1,0 +1,7 @@
+# Biometric images must NOT be committed to version control.
+# Keep labelled calibration photos in a private/secret store; point the
+# calibration tool at them with:
+#   node scripts/face-calibration.mjs <private-dataset-path>
+*.jpg
+*.jpeg
+*.png

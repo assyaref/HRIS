@@ -14,6 +14,7 @@ import {
 import { requireUser } from "@/lib/auth/auth";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { hasPermission, requirePermission } from "@/lib/auth/rbac";
+import { isFaceRecognitionConfigured } from "@/lib/attendance/face-recognition";
 
 import { updateEmployeeAction, createEmployeeAccountAction } from "@/features/employees/actions";
 import { EmployeeEditor } from "@/features/employees/employee-editor";
@@ -24,6 +25,14 @@ import {
   getOrganizationName,
   listLinkableUsers,
 } from "@/features/employees/queries";
+import {
+  listEmployeeProjectAssignments,
+} from "@/features/attendance/assignments.queries";
+import { listOrganizationProjects } from "@/features/attendance/queries";
+import { ProjectAssignmentManager } from "@/features/attendance/project-assignment-manager";
+import { FaceEnrollmentPanel } from "@/features/employees/face-enrollment-panel";
+import { FaceVerificationPanel } from "@/features/employees/face-verification-panel";
+import { getFaceEnrollmentSummaryInOrganization } from "@/features/employees/face-enrollment.queries";
 
 export const metadata: Metadata = {
   title: "Employee profile",
@@ -60,14 +69,37 @@ export default async function EmployeeDetailPage({
   const employee = await getEmployeeInOrganization(employeeId, organizationId);
   if (!employee) forbidden();
 
-  const [organizationName, canUpdate, canDeactivate, canCreateAccount, linkableUsers] =
+  const [organizationName, canUpdate, canDeactivate, canCreateAccount, linkableUsers, canManageAssignments] =
     await Promise.all([
       getOrganizationName(organizationId),
       hasPermission(user.id, PERMISSIONS.EMPLOYEES_UPDATE),
       hasPermission(user.id, PERMISSIONS.EMPLOYEES_DELETE),
       hasPermission(user.id, PERMISSIONS.USERS_CREATE),
       listLinkableUsers(organizationId, employeeId),
+      hasPermission(user.id, PERMISSIONS.ATTENDANCE_MANAGE),
     ]);
+
+  // Assignment management data is fetched only for users who can manage
+  // attendance configuration; the underlying actions re-authorize server-side.
+  const [assignments, orgProjects] = canManageAssignments
+    ? await Promise.all([
+        listEmployeeProjectAssignments(organizationId, employeeId),
+        listOrganizationProjects(organizationId),
+      ])
+    : [[], [] as Awaited<ReturnType<typeof listOrganizationProjects>>];
+  const assignedActiveProjectIds = new Set(
+    assignments.filter((assignment) => assignment.active).map((assignment) => assignment.projectId)
+  );
+  const assignableProjects = orgProjects.filter(
+    (project) => !assignedActiveProjectIds.has(project.id)
+  );
+
+  const faceEnrollmentSummary = await getFaceEnrollmentSummaryInOrganization(
+    organizationId,
+    employee.id
+  );
+
+  const faceEngineConfigured = isFaceRecognitionConfigured();
 
   const displayName = `${employee.firstName} ${employee.lastName}`;
 
@@ -215,6 +247,40 @@ export default async function EmployeeDetailPage({
             </p>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Face identity</CardTitle>
+            <CardDescription>
+              Face enrollment status and verification.
+            </CardDescription>
+          </CardHeader>
+          <FaceEnrollmentPanel
+            employeeId={employee.id}
+            employeeName={displayName}
+            status={faceEnrollmentSummary.status}
+            canManage={canUpdate}
+            engineConfigured={faceEngineConfigured}
+          />
+        </Card>
+
+        {canUpdate && faceEngineConfigured ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Face verification</CardTitle>
+              <CardDescription>
+                Server-side check against the active enrollment.
+              </CardDescription>
+            </CardHeader>
+            <FaceVerificationPanel
+              employeeId={employee.id}
+              employeeName={displayName}
+              status={faceEnrollmentSummary.status}
+              canVerify={canUpdate}
+              engineConfigured={faceEngineConfigured}
+            />
+          </Card>
+        ) : null}
       </div>
       {canUpdate ? (
         <EmployeeEditor
@@ -243,6 +309,14 @@ export default async function EmployeeDetailPage({
           </span>
         </div>
       )}
+
+      {canManageAssignments ? (
+        <ProjectAssignmentManager
+          employeeId={employee.id}
+          assignments={assignments}
+          assignableProjects={assignableProjects}
+        />
+      ) : null}
     </div>
   );
 }

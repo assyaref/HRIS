@@ -21,6 +21,10 @@ import {
   type AcquiredLocation,
   type LocationIssue,
 } from "./location-capture";
+import {
+  NETWORK_REQUIRED_MESSAGE,
+  isBrowserOffline,
+} from "./mobile-compat";
 import type { AttendanceOption } from "./queries";
 
 type LocationSelection =
@@ -108,37 +112,55 @@ export function AttendancePanel({
 
   function submit() {
     if (disabled || pending) return;
+
+    // Attendance is NEVER queued offline: the server validation chain must
+    // run for every submission. If the browser already reports offline, tell
+    // the user and stop instead of attempting a request that cannot validate.
+    if (
+      typeof navigator !== "undefined" &&
+      isBrowserOffline(navigator.onLine)
+    ) {
+      setMessage({ tone: "error", text: NETWORK_REQUIRED_MESSAGE });
+      return;
+    }
+
     const locationPayload = buildLocationPayload();
     if (!locationPayload) {
       setMessage({
         tone: "error",
-        text: "Capture your GPS location before continuing.",
+        text: "Ambil lokasi GPS Anda terlebih dahulu.",
       });
       return;
     }
 
     setMessage(null);
     startTransition(async () => {
-      const result =
-        mode === "check_in"
-          ? await checkInAction({
-              projectId: selectedProjectId,
-              workLocationId: selectedWorkLocationId,
-              notes: notes.trim() || undefined,
-              location: locationPayload,
-            })
-          : await checkOutAction({
-              notes: notes.trim() || undefined,
-              location: locationPayload,
-            });
+      try {
+        const result =
+          mode === "check_in"
+            ? await checkInAction({
+                projectId: selectedProjectId,
+                workLocationId: selectedWorkLocationId,
+                notes: notes.trim() || undefined,
+                location: locationPayload,
+              })
+            : await checkOutAction({
+                notes: notes.trim() || undefined,
+                location: locationPayload,
+              });
 
-      if (result.ok) {
-        setLocation(null);
-        setNotes("");
-        setMessage({ tone: "success", text: result.message });
-        router.refresh();
-      } else {
-        setMessage({ tone: "error", text: result.message });
+        if (result.ok) {
+          setLocation(null);
+          setNotes("");
+          setMessage({ tone: "success", text: result.message });
+          router.refresh();
+        } else {
+          setMessage({ tone: "error", text: result.message });
+        }
+      } catch {
+        // Network/server transport failure: keep the captured GPS fix so the
+        // user can retry once connectivity returns. Nothing was queued.
+        setMessage({ tone: "error", text: NETWORK_REQUIRED_MESSAGE });
       }
     });
   }

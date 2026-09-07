@@ -149,3 +149,15 @@ The migration was generated and reviewed but **not applied**; live attendance
 CRUD and the manual validation checklist were not executed. `npm run lint`,
 `npx tsc --noEmit` and `npm run build` pass.
 
+
+## 0. Face + Geofence integration foundation (Phase 10.6)
+
+Status: **architecture only — attendance enforcement remains DISABLED.** The
+Phase 6 geofence engine (`lib/attendance/geofence.ts`) remains the only
+authoritative GPS/distance decision and is unchanged. Phase 10.6 adds a PURE
+composite model (`features/attendance/attendance-presence.ts`) that a future
+attendance engine may consume; it is NOT wired to check-in/check-out. The
+composite requires identity match + liveness pass + geofence pass + valid
+assignment + active employee, and liveness `NOT_CONFIGURED` is a hard fail.
+The production readiness gate stays `NOT_READY` while the face threshold is
+uncalibrated and no real liveness provider is configured.

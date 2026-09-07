@@ -11,6 +11,7 @@ export * from "./projects";
 export * from "./locations";
 export * from "./assignments";
 export * from "./attendance";
+export * from "./face_enrollments";
 export * from "./leave";
 export * from "./permission_requests";
 export * from "./payroll";

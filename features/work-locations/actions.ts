@@ -8,6 +8,13 @@ import { requirePermission } from "@/lib/auth/rbac";
 import { writeAuditLog } from "@/lib/auth/audit";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { createWorkLocationSchema, updateWorkLocationSchema, type CreateWorkLocationInput, type UpdateWorkLocationInput } from "./schemas";
+import {
+  evaluateWorkLocationProjectEligibility,
+  missingActiveWorkLocationFields,
+  parseWorkLocationNumber,
+  workLocationZodFieldErrors,
+  type WorkLocationConfigSnapshot,
+} from "./guardrails";
 import { getProjectInOrganization } from "./queries";
 
 // Action state type matching project's pattern (useActionState)
@@ -29,6 +36,10 @@ export interface WorkLocationListItem {
   status: string;
   projectId: string | null;
   projectName: string | null;
+  /** Status of the bound project (`null` when unbound / legacy). */
+  projectStatus: string | null;
+  /** True when at least one employee has an ACTIVE assignment to the project. */
+  hasActiveAssignments: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -69,6 +80,19 @@ export async function listWorkLocationsAction(): Promise<{
         status: workLocations.status,
         projectId: workLocations.projectId,
         projectName: projects.name,
+        projectStatus: projects.status,
+        hasActiveAssignments: exists(
+          db
+            .select({ id: employeeProjectAssignments.id })
+            .from(employeeProjectAssignments)
+            .where(
+              and(
+                eq(employeeProjectAssignments.organizationId, user.organizationId),
+                eq(employeeProjectAssignments.projectId, workLocations.projectId),
+                eq(employeeProjectAssignments.active, true)
+              )
+            )
+        ),
         createdAt: workLocations.createdAt,
         updatedAt: workLocations.updatedAt,
       })
@@ -131,6 +155,19 @@ export async function getWorkLocationAction(locationId: string): Promise<{
         status: workLocations.status,
         projectId: workLocations.projectId,
         projectName: projects.name,
+        projectStatus: projects.status,
+        hasActiveAssignments: exists(
+          db
+            .select({ id: employeeProjectAssignments.id })
+            .from(employeeProjectAssignments)
+            .where(
+              and(
+                eq(employeeProjectAssignments.organizationId, user.organizationId),
+                eq(employeeProjectAssignments.projectId, workLocations.projectId),
+                eq(employeeProjectAssignments.active, true)
+              )
+            )
+        ),
         createdAt: workLocations.createdAt,
         updatedAt: workLocations.updatedAt,
       })
@@ -198,24 +235,18 @@ export async function createWorkLocationAction(
     const input: Record<string, unknown> = {
       name: formData.get("name")?.toString(),
       projectId: formData.get("projectId")?.toString() || null,
-      latitude: formData.get("latitude") ? parseFloat(formData.get("latitude") as string) : undefined,
-      longitude: formData.get("longitude") ? parseFloat(formData.get("longitude") as string) : undefined,
-      radiusMeters: formData.get("radiusMeters") ? parseInt(formData.get("radiusMeters") as string) : undefined,
-      maxGpsAccuracyMeters: formData.get("maxGpsAccuracyMeters") ? parseInt(formData.get("maxGpsAccuracyMeters") as string) : undefined,
+      latitude: parseWorkLocationNumber(formData.get("latitude")),
+      longitude: parseWorkLocationNumber(formData.get("longitude")),
+      radiusMeters: parseWorkLocationNumber(formData.get("radiusMeters")),
+      maxGpsAccuracyMeters: parseWorkLocationNumber(formData.get("maxGpsAccuracyMeters")),
       timezone: formData.get("timezone")?.toString(),
       status: formData.get("status")?.toString(),
     };
 
     const parsed = createWorkLocationSchema.safeParse(input);
     if (!parsed.success) {
-      // Extract field errors from Zod
-      const fieldErrors: Record<string, string> = {};
-      const errors = parsed.error.issues;
-      errors.forEach((issue) => {
-        if (issue.path[0]) {
-          fieldErrors[issue.path[0].toString()] = issue.message;
-        }
-      });
+      // Extract field errors from Zod (shared mapper in ./guardrails)
+      const fieldErrors = workLocationZodFieldErrors(parsed.error.issues);
       return {
         status: "error",
         message: "Please correct the errors below.",
@@ -225,14 +256,28 @@ export async function createWorkLocationAction(
 
     const data = parsed.data as CreateWorkLocationInput;
 
-    // Validate the project belongs to the caller's organization. The client's
-    // projectId alone is never trusted; organizationId always comes from the
-    // session. Rejecting here also blocks cross-organization project binding.
+    // Validate the project belongs to the caller's organization AND is still
+    // eligible (ACTIVE). The client's projectId alone is never trusted;
+    // organizationId always comes from the session. Rejecting here also blocks
+    // cross-organization project binding and binding to inactive/completed
+    // projects (only ACTIVE projects resolve through employee assignments).
     const project = await getProjectInOrganization(
       data.projectId,
       user.organizationId
     );
+    const projectDecision = evaluateWorkLocationProjectEligibility({
+      actorOrganizationId: user.organizationId,
+      project,
+      projectIsUnchanged: false,
+    });
+    if (!projectDecision.ok) {
+      return {
+        status: "error",
+        message: projectDecision.message,
+      };
+    }
     if (!project) {
+      // Unreachable: the guard above rejects a missing project. Kept for TS.
       return {
         status: "error",
         message: "The selected project is not available.",
@@ -307,23 +352,17 @@ export async function updateWorkLocationAction(
     const input: Record<string, unknown> = {
       name: formData.get("name")?.toString(),
       projectId: formData.get("projectId")?.toString() || null,
-      latitude: formData.get("latitude") ? parseFloat(formData.get("latitude") as string) : undefined,
-      longitude: formData.get("longitude") ? parseFloat(formData.get("longitude") as string) : undefined,
-      radiusMeters: formData.get("radiusMeters") ? parseInt(formData.get("radiusMeters") as string) : undefined,
-      maxGpsAccuracyMeters: formData.get("maxGpsAccuracyMeters") ? parseInt(formData.get("maxGpsAccuracyMeters") as string) : undefined,
+      latitude: parseWorkLocationNumber(formData.get("latitude")),
+      longitude: parseWorkLocationNumber(formData.get("longitude")),
+      radiusMeters: parseWorkLocationNumber(formData.get("radiusMeters")),
+      maxGpsAccuracyMeters: parseWorkLocationNumber(formData.get("maxGpsAccuracyMeters")),
       timezone: formData.get("timezone")?.toString(),
       status: formData.get("status")?.toString(),
     };
 
     const parsed = updateWorkLocationSchema.safeParse(input);
     if (!parsed.success) {
-      const fieldErrors: Record<string, string> = {};
-      const errors = parsed.error.issues;
-      errors.forEach((issue) => {
-        if (issue.path[0]) {
-          fieldErrors[issue.path[0].toString()] = issue.message;
-        }
-      });
+      const fieldErrors = workLocationZodFieldErrors(parsed.error.issues);
       return {
         status: "error",
         message: "Please correct the errors below.",
@@ -338,6 +377,9 @@ export async function updateWorkLocationAction(
         name: workLocations.name,
         status: workLocations.status,
         projectId: workLocations.projectId,
+        latitude: workLocations.latitude,
+        longitude: workLocations.longitude,
+        radiusMeters: workLocations.radiusMeters,
       })
       .from(workLocations)
       .where(
@@ -356,18 +398,57 @@ export async function updateWorkLocationAction(
     }
 
     const data = parsed.data as UpdateWorkLocationInput;
+    const existingLocation = existing[0];
 
     // Validate the project belongs to the caller's organization before binding
     // it to this location. Cross-organization project IDs are rejected with a
     // safe, generic error. A work location can never be moved to another org.
+    // Binding to a NEW project additionally requires the project to be ACTIVE.
+    // Keeping the location's current project is allowed even when that project
+    // was deactivated later (preserves existing valid configuration).
     const project = await getProjectInOrganization(
       data.projectId,
       user.organizationId
     );
+    const projectDecision = evaluateWorkLocationProjectEligibility({
+      actorOrganizationId: user.organizationId,
+      project,
+      projectIsUnchanged: existingLocation.projectId === data.projectId,
+    });
+    if (!projectDecision.ok) {
+      return {
+        status: "error",
+        message: projectDecision.message,
+      };
+    }
     if (!project) {
+      // Unreachable: the guard above rejects a missing project. Kept for TS.
       return {
         status: "error",
         message: "The selected project is not available.",
+      };
+    }
+
+    // Active-completeness (Phase 9.5 step 3): the resulting location must stay
+    // complete whenever the saved status is ACTIVE. When the request does not
+    // include a status/field, the current database value is preserved.
+    const effectiveConfig: WorkLocationConfigSnapshot = {
+      status: data.status ?? existingLocation.status,
+      projectId: data.projectId ?? existingLocation.projectId,
+      latitude: data.latitude ?? existingLocation.latitude,
+      longitude: data.longitude ?? existingLocation.longitude,
+      radiusMeters: data.radiusMeters ?? existingLocation.radiusMeters,
+    };
+    const missingActiveFields = missingActiveWorkLocationFields(
+      effectiveConfig
+    );
+    if (missingActiveFields.length > 0) {
+      const missingLabels = missingActiveFields
+        .map((field) => field.label)
+        .join(", ");
+      return {
+        status: "error",
+        message: `Cannot save an active work location without: ${missingLabels}. Deactivate it first or complete the configuration.`,
       };
     }
 
@@ -456,7 +537,15 @@ export async function toggleWorkLocationStatusAction(
 
     // Verify location exists and belongs to org
     const existing = await db
-      .select({ id: workLocations.id, name: workLocations.name, status: workLocations.status })
+      .select({
+        id: workLocations.id,
+        name: workLocations.name,
+        status: workLocations.status,
+        projectId: workLocations.projectId,
+        latitude: workLocations.latitude,
+        longitude: workLocations.longitude,
+        radiusMeters: workLocations.radiusMeters,
+      })
       .from(workLocations)
       .where(
         and(
@@ -481,6 +570,29 @@ export async function toggleWorkLocationStatusAction(
         ok: true,
         message: `Location is already ${newStatus}.`,
       };
+    }
+
+    // Activation guardrail (Phase 9.5 step 3): prevent activating an
+    // incomplete location — employees could select it for check-in but the
+    // geofence could never resolve.
+    if (newStatus === "active") {
+      const missingActiveFields = missingActiveWorkLocationFields({
+        status: "active",
+        projectId: existing[0].projectId,
+        latitude: existing[0].latitude,
+        longitude: existing[0].longitude,
+        radiusMeters: existing[0].radiusMeters,
+      });
+      if (missingActiveFields.length > 0) {
+        const missingLabels = missingActiveFields
+          .map((field) => field.label)
+          .join(", ");
+        return {
+          status: "error",
+          ok: false,
+          message: `Cannot activate an incomplete work location. Complete the following first: ${missingLabels}.`,
+        };
+      }
     }
 
     await db

@@ -20,6 +20,7 @@ import {
 } from "@/lib/auth/rbac";
 
 import { listWorkLocationsAction } from "@/features/work-locations/actions";
+import { collectWorkLocationWarnings } from "@/features/work-locations/guardrails";
 import { listWorkLocationProjectOptions } from "@/features/work-locations/queries";
 import { CreateWorkLocationDialog } from "@/features/work-locations/work-location-create-dialog";
 
@@ -86,58 +87,84 @@ export default async function WorkLocationsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {locations.map((location) => (
-                <TableRow key={location.id}>
-                  <TableCell className="font-medium">
-                    {location.name}
-                    <span className="block text-xs font-normal text-muted-foreground">
-                      {location.projectId
-                        ? `Project: ${location.projectName ?? ""}`
-                        : "Project: Not Assigned"}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    {location.latitude && location.longitude ? (
-                      <span className="text-sm font-mono">
-                        {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
+              {locations.map((location) => {
+                const warnings = collectWorkLocationWarnings({
+                  status: location.status,
+                  projectStatus: location.projectStatus,
+                  hasActiveAssignments: location.hasActiveAssignments,
+                });
+                return (
+                  <TableRow key={location.id}>
+                    <TableCell className="font-medium">
+                      {location.name}
+                      <span className="block text-xs font-normal text-muted-foreground">
+                        {location.projectId
+                          ? `Project: ${location.projectName ?? ""}`
+                          : "Project: Not Assigned"}
                       </span>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">Not set</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {location.radiusMeters ? (
-                      <span className="text-sm">{location.radiusMeters}m</span>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">Not set</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {location.timezone ? (
-                      <span className="text-sm">{location.timezone}</span>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">Not set</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={location.status === "active" ? "primary" : "secondary"}>
-                      {location.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {canManage && (
-                      <div className="flex justify-end gap-2">
-                        <Link
-                          href={`/settings/work-locations/${location.id}`}
-                          className={buttonVariants({ variant: "secondary", size: "sm" })}
+                      {warnings.map((warning) => (
+                        <span
+                          key={warning}
+                          className="block text-xs font-normal text-amber-700"
                         >
-                          Edit
-                        </Link>
+                          ⚠ {warning}
+                        </span>
+                      ))}
+                    </TableCell>
+                    <TableCell>
+                      {location.latitude && location.longitude ? (
+                        <span className="text-sm font-mono">
+                          {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">Not set</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {location.radiusMeters ? (
+                        <span className="text-sm">{location.radiusMeters}m</span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">Not set</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {location.timezone ? (
+                        <span className="text-sm">{location.timezone}</span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">Not set</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col items-start gap-0.5">
+                        <Badge
+                          variant={
+                            location.status === "active" ? "primary" : "secondary"
+                          }
+                        >
+                          {location.status === "active" ? "Active" : "Inactive"}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {location.status === "active"
+                            ? "Available for attendance"
+                            : "Not available for attendance"}
+                        </span>
                       </div>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {canManage && (
+                        <div className="flex justify-end gap-2">
+                          <Link
+                            href={`/settings/work-locations/${location.id}`}
+                            className={buttonVariants({ variant: "secondary", size: "sm" })}
+                          >
+                            Edit
+                          </Link>
+                        </div>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>

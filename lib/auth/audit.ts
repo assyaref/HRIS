@@ -63,6 +63,21 @@ export type WorkLocationAuditAction =
   | "work_location.status_changed"
   | "work_location.deleted";
 
+export type AssignmentAuditAction =
+  | "assignment.created"
+  | "assignment.ended";
+
+export type FaceEnrollmentAuditAction =
+  | "face_enrollment.created"
+  | "face_enrollment.replaced"
+  | "face_enrollment.revoked";
+
+export type FaceVerificationAuditAction =
+  | "face_verification.matched"
+  | "face_verification.not_matched"
+  | "face_verification.unavailable"
+  | "face_verification.failed";
+
 export type AuditAction =
   | RbacAuditAction
   | EmployeeAuditAction
@@ -70,7 +85,10 @@ export type AuditAction =
   | LeaveAuditAction
   | PermissionAuditAction
   | PayrollAuditAction
-  | WorkLocationAuditAction;
+  | WorkLocationAuditAction
+  | AssignmentAuditAction
+  | FaceEnrollmentAuditAction
+  | FaceVerificationAuditAction;
 
 export interface WriteAuditLogInput {
   organizationId: string | null;

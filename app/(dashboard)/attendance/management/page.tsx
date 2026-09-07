@@ -79,13 +79,21 @@ export default async function AttendanceManagementPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-          Attendance management
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-          {total} {total === 1 ? "record" : "records"} in your organization.
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            Attendance management
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground sm:text-base">
+            {total} {total === 1 ? "record" : "records"} in your organization.
+          </p>
+        </div>
+        <Link
+          href="/attendance/readiness"
+          className={buttonVariants({ variant: "outline", size: "sm" })}
+        >
+          Attendance readiness
+        </Link>
       </div>
 
       <form
@@ -174,7 +182,7 @@ export default async function AttendanceManagementPage({
         />
       ) : (
         <>
-          <div className="rounded-lg border border-border bg-card">
+          <div className="overflow-x-auto rounded-lg border border-border bg-card">
             <Table>
               <TableHeader>
                 <TableRow>

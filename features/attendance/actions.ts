@@ -23,6 +23,7 @@ import {
   type CheckInInput,
   type CheckOutInput,
 } from "./schemas";
+import { buildLocationRejectionMessage } from "./rejection-reasons";
 import {
   getEligibleAssignmentLocation,
   getEmployeeForUser,
@@ -227,10 +228,7 @@ export async function checkInAction(
     });
     return {
       ok: false,
-      message:
-        location.status === "denied"
-          ? "Location access was denied. Enable location access and try again."
-          : "Unable to determine your location. Try again.",
+      message: buildLocationRejectionMessage(reason),
     };
   }
 
@@ -267,7 +265,7 @@ export async function checkInAction(
     });
     return {
       ok: false,
-      message: "This project or work location is not available to you.",
+      message: buildLocationRejectionMessage("project_or_location_not_eligible"),
     };
   }
 
@@ -312,10 +310,14 @@ export async function checkInAction(
     });
     return {
       ok: false,
-      message:
-        evaluation.status === "outside_geofence"
-          ? "You are outside the geofenced work location."
-          : "Your location could not be verified. Move closer and check your GPS accuracy.",
+      message: buildLocationRejectionMessage(evaluation.status, {
+        distanceMeters:
+          evaluation.status === "outside_geofence"
+            ? evaluation.distanceMeters
+            : null,
+        radiusMeters: workLocation.radiusMeters,
+        accuracyMeters: coords.accuracyMeters,
+      }),
     };
   }
 
@@ -668,10 +670,7 @@ export async function checkOutAction(
       });
       return {
         ok: false,
-        message:
-          outcome.reason === "location_permission_denied"
-            ? "Location access was denied. Enable location access and try again."
-            : "Your location could not be verified against the work geofence.",
+        message: buildLocationRejectionMessage(outcome.reason),
       };
     }
     if (outcome.outcome === "verification_failed") {

@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 
+import { classifyCameraErrorName } from "./mobile-compat";
+
 type CameraState =
   | { kind: "idle" }
   | { kind: "requesting" }
@@ -14,20 +16,29 @@ type CameraState =
   | { kind: "error"; message: string };
 
 /**
- * Camera pre-flight component (Phase 6).
+ * Camera pre-flight component (Phase 6 + Phase 9.7 mobile compatibility).
  *
  * Purpose: confirm the device has a usable camera and that the user grants
  * permission — as an explicit user action. The stream is shown live only,
- * NEVER recorded, uploaded or persisted, and it is stopped on unmount.
+ * NEVER recorded, uploaded or persisted, and it is stopped on unmount AND when
+ * the app is hidden/backgrounded (no stale live streams).
  *
  * IMPORTANT: a visible camera stream is NOT proof of identity. Attendance
- * identity verification remains `not_configured` in Phase 6 and is enforced
- * server-side; this component contributes no verification result.
+ * identity verification remains `not_configured` and is enforced server-side;
+ * this component contributes no verification result.
  */
 export function AttendanceCamera() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [state, setState] = useState<CameraState>({ kind: "idle" });
+
+  function stopStream() {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  }
 
   async function startCamera() {
     if (!("mediaDevices" in navigator) || !navigator.mediaDevices?.getUserMedia) {
@@ -48,48 +59,58 @@ export function AttendanceCamera() {
     } catch (error) {
       const name =
         typeof error === "object" && error !== null && "name" in error
-          ? String(error.name)
+          ? String((error as { name?: unknown }).name ?? "")
           : "";
-      if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+      const kind = classifyCameraErrorName(name || undefined);
+      if (kind === "denied") {
         setState({ kind: "denied" });
-      } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
-        setState({ kind: "unavailable" });
-      } else if (name === "NotReadableError") {
+      } else if (kind === "unavailable") {
         setState({ kind: "unavailable" });
       } else {
         setState({
           kind: "error",
-          message: "The camera could not be started.",
+          message: "Kamera tidak dapat dijalankan.",
         });
       }
     }
   }
 
   function stopCamera() {
-    streamRef.current?.getTracks().forEach((track) => track.stop());
-    streamRef.current = null;
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
+    stopStream();
     setState({ kind: "idle" });
   }
 
-  useEffect(() => stopCamera, []);
+  // Stop the live stream when the app is hidden/backgrounded and on unmount so
+  // the camera never stays active without a visible page. No auto-start after
+  // resume — the user must explicitly retry.
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.hidden) {
+        stopStream();
+        setState({ kind: "idle" });
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      stopStream();
+    };
+  }, []);
 
   const statusLabel = (() => {
     switch (state.kind) {
       case "idle":
-        return "Camera not started.";
+        return "Kamera belum dijalankan.";
       case "requesting":
-        return "Requesting camera…";
+        return "Meminta akses kamera…";
       case "active":
-        return "Camera preview active. Nothing is recorded.";
+        return "Pratinjau kamera aktif. Tidak ada yang direkam.";
       case "denied":
-        return "Camera permission was denied.";
+        return "Izin kamera ditolak.";
       case "unsupported":
-        return "This browser does not support camera access.";
+        return "Browser ini tidak mendukung akses kamera.";
       case "unavailable":
-        return "No camera is available on this device.";
+        return "Tidak ada kamera yang tersedia di perangkat ini.";
       case "error":
         return state.message;
     }
@@ -119,11 +140,11 @@ export function AttendanceCamera() {
           onClick={startCamera}
           disabled={state.kind === "requesting"}
         >
-          {state.kind === "requesting" ? "Starting…" : "Use camera"}
+          {state.kind === "requesting" ? "Memulai…" : "Gunakan kamera"}
         </Button>
       ) : (
         <Button type="button" variant="ghost" size="sm" onClick={stopCamera}>
-          Stop preview
+          Hentikan pratinjau
         </Button>
       )}
     </div>

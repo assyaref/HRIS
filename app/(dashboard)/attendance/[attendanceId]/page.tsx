@@ -29,6 +29,7 @@ import {
   AttendanceStatusBadge,
   LocationStatusBadge,
   VerificationStatusBadge,
+  RejectionReasonBadge,
 } from "@/features/attendance/attendance-badges";
 import {
   formatDate,
@@ -242,8 +243,12 @@ export default async function AttendanceDetailPage({
                       <TableCell>
                         {event.verificationMethod ?? "—"}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {event.reason ?? "—"}
+                      <TableCell>
+                        {event.reason ? (
+                          <RejectionReasonBadge reason={event.reason} />
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

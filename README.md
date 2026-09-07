@@ -5,7 +5,7 @@ records and organization, attendance (clock-in/out with face recognition and
 geofencing), leave, payroll and payslips, notifications, reports, and a
 mobile-first PWA experience.
 
-**Current phase: 8 — Payroll.**
+**Current phase: 11 — Face Recognition.**
 
 ## Technology stack
 
@@ -19,6 +19,7 @@ mobile-first PWA experience.
   org-scoped, no client-trusted roles)
 - **Design docs:** `docs/auth.md` (authentication) · `docs/rbac.md` (RBAC) ·
   `docs/employees.md` (employee management) · `docs/attendance.md` (attendance) ·
+  `docs/face-verification.md` (face verification calibration/security) ·
   `docs/leave.md` (leave) · `docs/permission.md` (permission requests) ·
   `docs/payroll.md` (payroll)
 
@@ -119,6 +120,8 @@ Key conventions:
 
 ## Roadmap
 
+## Foundation & Core HRIS
+
 1. Project foundation **(complete)**
 2. Database & ORM (Drizzle) **(complete)**
 3. Authentication **(complete)**
@@ -126,16 +129,79 @@ Key conventions:
 5. Employee management **(complete)**
 6. Attendance **(complete)**
 7. Leave & permission management **(complete)**
-8. Payroll **(current phase)**
-9. Face recognition
-10. Geofencing
-11. Notifications
-12. Reports & dashboard
-13. PWA / offline / push
-14. Security hardening
-15. Testing
-16. CI/CD
-17. Production deployment
+
+## Payroll
+
+8. Payroll **(complete)**
+
+## Work Location & Geofence
+
+9. Work Location Management **(complete)**
+
+10. Geofence Validation & Attendance Enforcement
+
+   - 10.1 Geofence Test Foundation **(complete)**
+   - 10.2 Employee ↔ Project Assignment Management **(complete)**
+   - 10.3 Client GPS Hardening **(complete)**
+   - 10.4 Rejection Transparency **(complete)**
+   - 10.5 Work Location Configuration Guardrails **(complete)**
+   - 10.6 Management Reconciliation **(complete)**
+   - 10.7 PWA / Mobile Compatibility **(complete)**
+
+> Note: 10.7 covers PWA/mobile compatibility for the attendance/geofence flow
+> specifically. Broader platform PWA/offline/push implementation remains item
+> 15 below (pending).
+
+## Identity Verification
+
+11. Face Recognition **(current)**
+   - 11.1 Face Enrollment **(complete)** — foundation + self-hosted engine
+     @vladmandic/human (WASM/tfjs) integrated behind opt-in env vars
+     `FACE_PROVIDER=human` + model folder + `FACE_TEMPLATE_ENCRYPTION_KEY`
+     (AES-256-GCM at rest). Without those variables the provider stays
+     `not_configured` and nothing is stored or claimed as verified
+   - 11.2 Face Verification **(complete)** — server-authoritative verification
+     against the ACTIVE enrolled template: org-scoped lookup → server-side
+     decryption → @vladmandic/human exactly-one-face processing → Human-native
+     matching → server threshold (`FACE_VERIFY_THRESHOLD`, default 0.5). The
+     browser never sees a template, embedding, score or threshold; attendance
+     enforcement is intentionally NOT wired yet
+   - 11.3 Face Verification Calibration & Security Hardening **(complete)** —
+     real-engine calibration tooling (`scripts/face-calibration.mjs`, labelled
+     `dataset/<subject>/*.jpg`, genuine/impostor distributions + FAR/FRR,
+     never fabricates a recommendation), NON-PRODUCTION threshold baseline
+     0.5 documented, production-only per-actor/per-org rate limiting
+     (`lib/security/face-verification-rate-limit.ts`), security test suite
+   - 11.4 Face Liveness / Anti-Spoof Foundation **(complete)** — provider seam
+      (`isFaceLivenessConfigured`/`assessFaceLiveness`) + pure contract
+      (`features/employees/face-liveness.ts`); status is explicitly
+      **NOT_CONFIGURED**: the bundled single-frame Human `antispoof`/`liveness`
+      models are NOT wired because they cannot defensibly prove liveness, so
+      no `live=true` is ever produced; identity matching and liveness remain
+      independent signals
+
+12. Face + Geofence Attendance Enforcement **(pending — foundation built in
+    Phase 10.6, enforcement stays DISABLED)**
+   - Face verification (Phase 10.3, non-production threshold)
+   - GPS validation (existing authoritative geofence engine)
+   - Work Location validation (existing org-scoped chain)
+   - Project assignment validation (existing chain)
+   - Composite presence model + production readiness gate
+     (`features/attendance/attendance-presence.ts`) — pure architecture only,
+     no attendance event is written and check-in/check-out remain disabled
+
+## Platform Features
+
+13. Notifications **(pending)**
+14. Reports & Dashboard **(pending)**
+15. PWA / Offline / Push **(pending)**
+
+## Production Readiness
+
+16. Security Hardening **(pending)**
+17. Testing & QA **(pending)**
+18. CI/CD **(pending)**
+19. Production Deployment **(pending)**
 
 ## Commands
 

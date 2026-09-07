@@ -203,7 +203,7 @@ export default async function AttendancePage() {
             description="Your attendance records will appear here."
           />
         ) : (
-          <div className="rounded-lg border border-border bg-card">
+          <div className="overflow-x-auto rounded-lg border border-border bg-card">
             <Table>
               <TableHeader>
                 <TableRow>
