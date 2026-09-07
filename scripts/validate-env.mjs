@@ -26,7 +26,9 @@
 //   node scripts/validate-env.mjs
 import dotenv from "dotenv";
 
-// Match the repository load order (drizzle.config.ts / db bootstrap):
+// Match production runtime / drizzle.config.ts load order.
+// dotenv never overrides variables that are already set.
+dotenv.config({ path: ".env.production" });
 dotenv.config({ path: ".env.local" });
 dotenv.config({ path: ".env" });
 
@@ -102,6 +104,7 @@ if (!has("FACE_VERIFY_THRESHOLD")) {
 
 for (const name of ["FACE_MODEL_BASE_PATH", "FACE_ENGINE_DIST_PATH", "FACE_ENGINE_WASM_PATH"]) {
   classify(name, "optional", true, has(name) ? "PRESENT (operator override)." : "ABSENT (defaults resolve under node_modules).");
+}
 
 // --- Optional operational values ------------------------------------------------
 if (!has("AUTH_SESSION_TTL_SECONDS")) {
@@ -133,5 +136,3 @@ if (criticalFailure) {
 }
 console.log("RESULT: OK — no invalid critical configuration detected.");
 process.exit(0);
-
-}

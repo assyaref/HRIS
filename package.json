@@ -19,6 +19,7 @@
     "test:face-engine": "node scripts/face-engine-check.mjs",
     "test:face-verification": "node scripts/face-verification-check.mjs",
     "test:face-calibration": "node scripts/face-calibration.mjs",
+    "validate:env": "node scripts/validate-env.mjs",
     "icons:generate": "node scripts/generate-pwa-icons.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
