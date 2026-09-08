@@ -5,7 +5,10 @@ records and organization, attendance (clock-in/out with face recognition and
 geofencing), leave, payroll and payslips, notifications, reports, and a
 mobile-first PWA experience.
 
-**Current phase: 11 — Face Recognition.**
+**Status: Codebase feature work complete through Phase 10.7C-58 (face
+recognition foundation + temporary attendance photos). Current production
+gate: PHASE 10.7C-60 — PRODUCTION NOT READY (staging VPS validation pending;
+face threshold NOT production-approved; liveness deferred).**
 
 ## Technology stack
 
@@ -189,6 +192,23 @@ Key conventions:
    - Composite presence model + production readiness gate
      (`features/attendance/attendance-presence.ts`) — pure architecture only,
      no attendance event is written and check-in/check-out remain disabled
+
+### Temporary attendance photos (Phases 10.7C-55…58) — codebase complete
+
+- **10.7C-55 Foundation:** `attendance_photos` table (BYTEA), pure validation
+  (`image/jpeg`, ≤ 900,000 B, JPEG signature), `endOfAttendanceDay()`,
+  org-scoped DAL, migration `0007_sloppy_pyro.sql`.
+- **10.7C-56 Check-in capture:** camera → JPEG Blob → FormData →
+  `checkInAction` → same-transaction attendance record + temporary photo.
+- **10.7C-57 Management/HR viewer:** authenticated route handler gated by
+  `attendance.manage` + session organization + `expires_at > now()` read guard;
+  `private, no-store` JPEG response.
+- **10.7C-58 Automated purge:** `npm run purge:attendance-photos` (standalone,
+  idempotent `DELETE WHERE expires_at <= now()`).
+
+**Production: NOT READY.** Remaining gates: staging VPS validation
+(Phase 10.7C-60), migration 0007 applied to a staging DB, purge scheduling,
+and retention/privacy policy sign-off.
 
 ## Platform Features
 

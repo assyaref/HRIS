@@ -161,3 +161,35 @@ composite requires identity match + liveness pass + geofence pass + valid
 assignment + active employee, and liveness `NOT_CONFIGURED` is a hard fail.
 The production readiness gate stays `NOT_READY` while the face threshold is
 uncalibrated and no real liveness provider is configured.
+
+## 12. Temporary attendance photos (Phases 10.7C-55…58)
+
+The attendance photo lifecycle is a **temporary, presence-evidence-only** flow:
+
+- **Capture + storage:** check-in produces one transient JPEG Blob
+  (`image/jpeg`, ≤ 900,000 bytes) sent via FormData to `checkInAction`, which
+  stores it as `bytea` in `attendance_photos` in the same transaction as the
+  attendance record. `captured_at` = server check-in instant.
+- **Expiration:** `expires_at` = first instant of the next attendance day in
+  the **work-location IANA timezone** (`endOfAttendanceDay`), e.g.
+  `2026-09-09 00:00:00 Asia/Jakarta` = `2026-09-08T17:00:00.000Z`.
+- **Contract:** `expires_at > now()` → active/retrievable; `expires_at <= now()`
+  → expired/not retrievable. The **read-time guard is the security boundary**
+  (`getActiveAttendancePhoto` filters `expires_at > now()`); purge is cleanup
+  only and never the enforcement mechanism.
+- **Viewing:** only authenticated users holding `attendance.manage`
+  (ADMIN / MANAGEMENT / HR) may fetch the active photo via the route handler
+  `app/api/attendance/[attendanceId]/photo/route.ts`, which responds
+  `image/jpeg` with `Cache-Control: private, no-store` and
+  `X-Content-Type-Options: nosniff`. Organization scope comes from the session.
+- **Automated purge:** `npm run purge:attendance-photos` runs
+  `scripts/attendance-photo-purge.mjs` (standalone Node ESM; idempotent;
+  `DELETE FROM attendance_photos WHERE expires_at <= now()`; prints
+  `deleted_count`). An operator schedules it (systemd timer / cron) on the
+  single-VPS `hris.service` deployment; no in-app timer is used.
+- **Retention caveat:** deleting a row from PostgreSQL does **not** guarantee
+  immediate physical eradication of the historical bytes from database
+  backups or write-ahead logs (WAL). Retention is managed by keeping the
+  expiry window short and purging promptly; this is not cryptographic erasure.
+
+Migration `db/migrations/0007_sloppy_pyro.sql` creates `attendance_photos`.
