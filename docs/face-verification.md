@@ -151,3 +151,146 @@ NOT_CONFIGURED, the current readiness state is **NOT_READY** and attendance
 enforcement must remain disabled. The composite layer does not create a second
 rate limiter — any future composite/attendance action must reuse
 `faceVerificationRateLimiter` (org + authenticated-user key).
+# Face Verification Privacy & Operational Policy
+
+Applies to the face-enrollment and face-verification implementation described
+above (engine: @vladmandic/human 3.3.6, WASM; template: human-faceres-v1).
+This section is operational documentation only; it is not legal advice and must
+be reviewed/approved by the company before biometric processing begins with
+real employee data.
+
+## 1. Purpose
+Face biometrics are processed solely to support employee identity verification
+for attendance-related identity checks. The feature remains an opt-in,
+server-side capability; attendance enforcement is NOT enabled until the
+production prerequisites below are satisfied.
+
+## 2. Scope
+This policy covers the enrollment, storage, verification, revocation and
+deletion of employee face templates in this HRIS deployment. It does not cover
+raw photographs (none are stored), payroll, leave or other HR data.
+
+## 3. Biometric Data Handling
+A one-shot JPEG capture is decoded in memory and never persisted, logged or
+sent to a third party. Only the resulting 1024-d embedding (template version
+human-faceres-v1) is retained, encrypted, in the face template vault.
+
+## 4. Enrollment
+Enrollment is performed by an authorized operator (HR/Admin with the
+employees.update permission) for an ACTIVE employee inside the operator's own
+organization. Duplicate ACTIVE enrollment is prevented by a partial unique
+index; replacing an existing enrollment is explicit (reenroll) and
+transactional.
+
+## 5. Consent
+Enrollment requires an explicit, unchecked-by-default operator acknowledgement
+(consent checkbox). A missing consent acknowledgement fails closed on the
+server. Consent is a privacy safeguard only and is never an authorization or
+security boundary; requireUser/requirePermission and org-scoped guards remain
+authoritative.
+
+## 6. Verification
+Face verification is server-authoritative: the server decrypts the reference
+template, runs the engine locally (exactly one face required), applies the
+server-side threshold and returns only a safe matched/not-matched result. No
+score, threshold, embedding or template is returned to the browser.
+
+## 7. Storage Protection
+Templates are stored only as encrypted blobs in the face_enrollment_templates
+vault row, linked 1:1 to an ACTIVE enrollment. Raw images, base64 frames and
+camera frames are never stored.
+
+## 8. Encryption at Rest
+AES-256-GCM (node:crypto) with a server-only 32-byte key supplied via
+FACE_TEMPLATE_ENCRYPTION_KEY. Layout: nonce(12) || ciphertext || authTag(16).
+Wrong key, tampering and malformed blobs are rejected; ciphertext never leaves
+the server.
+
+## 9. Access Control
+Only authenticated users with the required RBAC permission can manage face
+data. Employee-facing pages never expose templates or scores.
+
+## 10. Organization Isolation
+All face rows are organization-scoped. Cross-organization employees resolve to
+the same generic safe response; organizationId is never accepted from the
+client.
+## 11. Retention
+Retention period: TO BE DEFINED BY COMPANY POLICY.
+PRODUCTION PREREQUISITE: a documented retention period and enforcement must be
+approved before production activation.
+
+## 12. Revocation
+Replacement revokes the previous ACTIVE enrollment (status=revoked,
+revoked_by/revoked_at recorded) and deletes its encrypted template row in the
+same transaction, so the old ciphertext is never used again. A standalone
+revoke-without-replace server action + UI (Phase 10.7C-44) lets an authorized
+operator (EMPLOYEES_UPDATE) revoke the ACTIVE enrollment of an employee in the
+operator's own organization without enrolling a new one. It is strict-input
+(only employeeId), org-scoped, and only ever revokes an ACTIVE enrollment.
+The transaction re-selects the ACTIVE row(s) under its own read snapshot, then
+flips status=revoked + revoked_by/revoked_at and deletes the vault ciphertext
+row atomically in the same transaction. A second revoke that finds no ACTIVE
+enrollment under that snapshot becomes a safe no-op with a generic message; if
+a concurrent replacement has already committed before the revoke transaction's
+SELECT snapshot, the revoke may legitimately operate on the newly-created
+ACTIVE enrollment instead — both outcomes remain fail-closed and never create a
+verification bypass. A face_enrollment.revoked audit event with only scalar
+metadata is recorded. Revocation removes face-verification
+capability only — it can never grant or bypass one — and it deliberately does
+not depend on the employee's employment status so a departed employee's
+biometric record can still be deleted.
+
+## 13. Re-enrollment
+Re-enrollment is explicit (reenroll=true) and results in exactly one ACTIVE
+enrollment after the old one is revoked.
+
+## 14. Deletion
+Deleting a template occurs on replacement (old ciphertext removed). Physical
+employee deletion is intentionally not implemented (deactivation instead), so a
+dedicated biometric deletion/retention job is part of the retention policy that
+must be defined by the company. PRODUCTION PREREQUISITE.
+
+## 15. Audit Trail
+Audit events (face_enrollment.created, face_enrollment.replaced,
+face_enrollment.revoked, face_verification.*) store only scalar identifiers and
+outcome/status metadata. No image, embedding, score, threshold, ciphertext or
+key is logged.
+
+## 16. Rate Limiting
+face verification is rate limited server-side (faceVerificationRateLimiter:
+10 attempts / 15 minutes per organizationId + authenticatedUserId, production
+only). The limiter is in-process; a shared store is required before horizontal
+scaling.
+
+## 17. Failure Handling
+All biometric failures map to generic Indonesian messages. No internal detail,
+model output, score or template state is revealed to the browser.
+
+## 18. Incident Handling
+Because no raw images or plaintext templates are stored, the incident surface
+is limited to ciphertext at rest and in-memory captures. Suspected key
+compromise requires rotating FACE_TEMPLATE_ENCRYPTION_KEY and re-enrolling
+employees; report to the operator per company incident policy. TO BE EXTENDED
+BY COMPANY POLICY.
+
+## 19. Data Subject / Employee Request Handling
+Requests about face data (access, correction, revocation, deletion) are
+handled by the HR/Admin operator through the existing employee management flow.
+A formal subject-request procedure must be defined by the company before
+production. TO BE DEFINED BY COMPANY POLICY.
+
+## 20. Production Activation Prerequisites
+Face production activation is BLOCKED until ALL of the following hold:
+1. A labelled calibration dataset exists (>= 5 subjects, >= 50 genuine and >=
+   50 impostor pairs) and scripts/face-calibration.mjs produced an
+   evidence-based threshold; the 0.5 baseline is NON-PRODUCTION.
+2. FACE_PROVIDER, FACE_TEMPLATE_ENCRYPTION_KEY (32-byte base64) and the chosen
+   FACE_VERIFY_THRESHOLD are configured server-side only; validate with
+   scripts/validate-env.mjs.
+3. A real, validated liveness mechanism is configured (NOT_CONFIGURED today).
+4. Consent UI, this policy (incl. retention/deletion and subject-request
+   procedure) are approved by the company.
+5. Deployment database migrations 0005/0006 are applied and verified.
+6. Physical-device (Android/PWA) controlled tests pass.
+The production readiness gate (evaluateAttendanceReadiness) remains NOT_READY
+until these are satisfied.

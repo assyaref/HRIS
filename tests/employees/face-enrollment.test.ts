@@ -19,6 +19,7 @@ import assert from "node:assert/strict";
 
 import {
   deriveFaceEnrollmentStatus,
+  evaluateFaceEnrollmentConsent,
   evaluateFaceEnrollmentGuard,
   faceEnrollmentDeterministic,
   faceEnrollmentInputSchema,
@@ -62,6 +63,45 @@ describe("faceEnrollmentInputSchema", () => {
     });
     assert.equal(withOrg.success, false);
     assert.equal(withVerifiedFlag.success, false);
+  });
+});
+
+describe("face enrollment consent (Phase 10.7C-42)", () => {
+  it("defaults consent to false when the field is omitted", () => {
+    const parsed = faceEnrollmentInputSchema.safeParse({
+      employeeId: EMPLOYEE_A,
+    });
+    assert.equal(parsed.success, true);
+    if (parsed.success) {
+      assert.equal(parsed.data.consent, false);
+    }
+  });
+
+  it("accepts an explicit consent true acknowledgement", () => {
+    const parsed = faceEnrollmentInputSchema.safeParse({
+      employeeId: EMPLOYEE_A,
+      consent: true,
+    });
+    assert.equal(parsed.success, true);
+    if (parsed.success) {
+      assert.equal(parsed.data.consent, true);
+    }
+  });
+
+  it("blocks enrollment when consent is false (default unchecked)", () => {
+    const decision = evaluateFaceEnrollmentConsent(false);
+    assert.equal(decision.ok, false);
+    if (!decision.ok) {
+      assert.match(decision.message, /Persetujuan pemrosesan data biometrik/i);
+    }
+  });
+
+  it("permits the existing validation flow when consent is true", () => {
+    assert.deepEqual(evaluateFaceEnrollmentConsent(true), { ok: true });
+  });
+
+  it("maps consent_required to a safe Indonesian message", () => {
+    assert.match(faceEnrollmentMessage("consent_required"), /sebelum enrollment/i);
   });
 });
 

@@ -17,10 +17,13 @@ import { createFaceTemplateFromEnrollmentCapture } from "@/lib/attendance/face-r
 import { getEmployeeInOrganization } from "./queries";
 import {
   buildFaceEnrollmentAuditMetadata,
+  evaluateFaceEnrollmentConsent,
   evaluateFaceEnrollmentGuard,
+  evaluateFaceEnrollmentRevokeGuard,
   FACE_CAPTURE_MAX_BYTES,
   faceEnrollmentInputSchema,
   faceEnrollmentMessage,
+  faceEnrollmentRevokeInputSchema,
   mapFaceTemplateResultToFailureReason,
   planFaceEnrollmentWrite,
 } from "./face-enrollment";
@@ -35,9 +38,15 @@ import { getFaceEnrollmentSummaryInOrganization } from "./face-enrollment.querie
  *   → face-recognition provider → encrypted template persistence → audit.
  *
  * The browser never supplies `organizationId`, roles, permissions, a template,
- * an embedding, or any verification flag. It supplies ONLY the employeeId
- * (optional reenroll marker) and one transient JPEG capture. The JPEG is
- * decoded in-memory by the engine and is never persisted or logged.
+ * an embedding, or any verification flag. It supplies ONLY the employeeId, an
+ * optional reenroll marker, an explicit operator consent acknowledgement, and
+ * one transient JPEG capture. The JPEG is decoded in-memory by the engine and
+ * is never persisted or logged.
+ *
+ * Consent is never an authorization boundary: `requireUser` +
+ * `requirePermission(EMPLOYEES_UPDATE)` run first, and the org-scoped employee
+ * guard still decides eligibility. A missing `consent: true` acknowledgement
+ * fails closed before any employee lookup or capture processing.
  *
  * The engine is opt-in (`FACE_PROVIDER=human` + model folder + encryption
  * key). Without it the provider returns `not_configured` and nothing is
@@ -70,15 +79,25 @@ export async function enrollFaceAction(
 
   const employeeIdRaw = formData.get("employeeId");
   const reenrollRaw = formData.get("reenroll");
+  const consentRaw = formData.get("consent");
   if (typeof employeeIdRaw !== "string") {
     return invalidEnrollmentInput();
   }
   const parsed = faceEnrollmentInputSchema.safeParse({
     employeeId: employeeIdRaw,
     reenroll: reenrollRaw === "true",
+    consent: consentRaw === "true",
   });
   if (!parsed.success) {
     return invalidEnrollmentInput();
+  }
+
+  // Explicit biometric consent gate (Phase 10.7C-42). Fails closed when the
+  // operator did not acknowledge consent. Runs before any employee lookup or
+  // capture processing and is independent of the authorization chain.
+  const consentDecision = evaluateFaceEnrollmentConsent(parsed.data.consent);
+  if (!consentDecision.ok) {
+    return { ok: false, message: consentDecision.message };
   }
 
   // Transient capture validation. Only JPEG is accepted; size is bounded so
@@ -249,4 +268,162 @@ export async function enrollFaceAction(
       message: faceEnrollmentMessage("unexpected"),
     };
   }
+}
+
+/**
+ * Standalone face enrollment revocation (Phase 10.7C-44) — server-authoritative.
+ *
+ * Authorization + validation chain:
+ *   requireUser → requirePermission(EMPLOYEES_UPDATE) → session organizationId
+ *   → org-scoped employee lookup → ACTIVE-enrollment guard → transactional
+ *   revoke (status + revoked_by/revoked_at + ciphertext deletion) → audit.
+ *
+ * The browser supplies ONLY the `employeeId`. It NEVER supplies
+ * organizationId, roles, permissions, a template, an embedding, a threshold,
+ * or any revocation flag.
+ *
+ * Only an ACTIVE enrollment can be revoked; a concurrent replacement or a
+ * second revoke degrades to a safe no-op with a generic message. The status
+ * update and the vault-row deletion happen in ONE transaction, so a REVOKED
+ * row with surviving ciphertext is impossible. Employee employment status is
+ * deliberately NOT required: revocation is a data-minimization action and must
+ * remain available for departed/inactive employees. It only removes face
+ * verification capability — it can never grant or bypass one.
+ */
+export async function revokeFaceEnrollmentAction(
+  _prevState: FaceEnrollmentActionResult | undefined,
+  formData: FormData
+): Promise<FaceEnrollmentActionResult> {
+  const user = await requireUser();
+  await requirePermission(user.id, PERMISSIONS.EMPLOYEES_UPDATE);
+
+  if (!user.organizationId) {
+    return {
+      ok: false,
+      message: "Akun Anda tidak terhubung ke organisasi mana pun.",
+    };
+  }
+  const organizationId = user.organizationId;
+
+  const employeeIdRaw = formData.get("employeeId");
+  if (typeof employeeIdRaw !== "string") {
+    return invalidEnrollmentInput();
+  }
+  const parsed = faceEnrollmentRevokeInputSchema.safeParse({
+    employeeId: employeeIdRaw,
+  });
+  if (!parsed.success) {
+    return invalidEnrollmentInput();
+  }
+
+  // Org-scoped employee lookup: cross-organization employees resolve to null
+  // and receive the same generic error (existence is never revealed).
+  const employee = await getEmployeeInOrganization(
+    parsed.data.employeeId,
+    organizationId
+  );
+  if (!employee) {
+    return {
+      ok: false,
+      message: faceEnrollmentMessage("employee_unavailable"),
+    };
+  }
+
+  const summary = await getFaceEnrollmentSummaryInOrganization(
+    organizationId,
+    employee.id
+  );
+  const decision = evaluateFaceEnrollmentRevokeGuard({
+    employeeExists: true,
+    hasActiveEnrollment: summary.hasActive,
+  });
+  if (!decision.ok) {
+    return { ok: false, message: decision.message };
+  }
+
+  // Flag used to distinguish "nothing was ACTIVE" (safe no-op) from a real
+  // failure. All mutations happen inside ONE transaction: the status flip and
+  // the ciphertext deletion commit together or not at all.
+  let revokedActiveEnrollment = false;
+
+  try {
+    await db.transaction(async (tx) => {
+      // Re-resolve the ACTIVE row(s) INSIDE the transaction so a concurrent
+      // replacement/re-enrollment can never be caught up in this revoke and so
+      // the status update + template deletion are atomic.
+      const activeRows = await tx
+        .select({ id: employeeFaceEnrollments.id })
+        .from(employeeFaceEnrollments)
+        .where(
+          and(
+            eq(employeeFaceEnrollments.organizationId, organizationId),
+            eq(employeeFaceEnrollments.employeeId, employee.id),
+            eq(employeeFaceEnrollments.status, "active")
+          )
+        );
+
+      if (activeRows.length === 0) {
+        // A second revoke or a replacement landed first: nothing was written
+        // and nothing needs to be rolled back (fail closed, no partial state).
+        return;
+      }
+      revokedActiveEnrollment = true;
+
+      for (const activeRow of activeRows) {
+        await tx
+          .update(employeeFaceEnrollments)
+          .set({
+            status: "revoked",
+            revokedByUserId: user.id,
+            revokedAt: new Date(),
+          })
+          .where(eq(employeeFaceEnrollments.id, activeRow.id));
+        // The old biometric secret must not survive a standalone revoke.
+        await tx
+          .delete(faceEnrollmentTemplates)
+          .where(eq(faceEnrollmentTemplates.enrollmentId, activeRow.id));
+      }
+    });
+  } catch (error) {
+    // No image, embedding, template or ciphertext data is ever logged here.
+    console.error("[face-enrollment] revoke persistence failed", error);
+    return {
+      ok: false,
+      message: faceEnrollmentMessage("unexpected"),
+    };
+  }
+
+  if (!revokedActiveEnrollment) {
+    return {
+      ok: false,
+      message: faceEnrollmentMessage("no_active_enrollment"),
+    };
+  }
+
+  try {
+    await writeAuditLog({
+      organizationId,
+      actorUserId: user.id,
+      action: "face_enrollment.revoked",
+      entityType: "employee",
+      entityId: employee.id,
+      metadata: buildFaceEnrollmentAuditMetadata({
+        employeeId: employee.id,
+        employeeNumber: employee.employeeNumber,
+        previousStatus: "ACTIVE",
+        newStatus: "REVOKED",
+        operation: "revoked",
+      }),
+    });
+  } catch (auditError) {
+    // No plaintext template, embedding, score or ciphertext is ever logged.
+    console.error("[face-enrollment] audit write failed", auditError);
+  }
+
+  revalidatePath("/employees");
+  revalidatePath(`/employees/${employee.id}`);
+  return {
+    ok: true,
+    message: "Data wajah karyawan berhasil direvoke.",
+  };
 }
