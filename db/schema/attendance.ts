@@ -1,4 +1,5 @@
 import {
+  customType,
   date,
   index,
   jsonb,
@@ -202,3 +203,52 @@ export const attendanceEvents = pgTable(
   ]
 );
 
+/**
+ * Temporary attendance photos (Phase 10.7C-55 foundation).
+ *
+ * Purpose: transient, presence-evidence-only JPEG captured at an attendance
+ * event and viewable by Management/HR only until the end of the local
+ * attendance day. Rows are immutable (no UPDATE path), are unreadable once
+ * `expires_at` passes (read-time guard), and are physically DELETEd after
+ * expiry by the deterministic purge function. This is NOT a permanent photo
+ * archive and it is NOT a biometric store.
+ *
+ * Non-goals (enforced elsewhere in the application):
+ * - NEVER stores face templates, face embeddings, similarity scores,
+ *   verification results or liveness data.
+ * - NEVER accepts an `organization_id`/`attendance_id`/`expires_at` from the
+ *   browser as authority — organization always comes from the authenticated
+ *   session and the attendance id is verified to belong to that organization.
+ *
+ * Privacy: raw photo bytes live here transiently only; they are never written
+ * to logs or audit metadata.
+ */
+export const attendancePhotos = pgTable(
+  "attendance_photos",
+  {
+    id: uuidId(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id),
+    attendanceId: uuid("attendance_id")
+      .notNull()
+      .references(() => attendanceRecords.id, { onDelete: "cascade" }),
+    capturedAt: timestamp("captured_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+    expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" })
+      .notNull(),
+    mimeType: text("mime_type").notNull().default("image/jpeg"),
+    data: customType<{ data: Buffer }>({
+      dataType: () => "bytea",
+    })("data").notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    index("attendance_photos_org_attendance_idx").on(
+      table.organizationId,
+      table.attendanceId
+    ),
+    index("attendance_photos_expires_at_idx").on(table.expiresAt),
+  ]
+);

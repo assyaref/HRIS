@@ -50,6 +50,13 @@
       "when": 1788713701192,
       "tag": "0006_plain_wolf_cub",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788856586437,
+      "tag": "0007_sloppy_pyro",
+      "breakpoints": true
     }
   ]
 }

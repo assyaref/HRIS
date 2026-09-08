@@ -17,6 +17,10 @@ import { Label } from "@/components/ui/label";
 import { checkInAction, checkOutAction } from "./actions";
 import { AttendanceCamera } from "./attendance-camera";
 import {
+  AttendancePhotoCapture,
+  ATTENDANCE_PHOTO_CAPTURE_FILENAME,
+} from "./attendance-photo-capture";
+import {
   LocationCapture,
   type AcquiredLocation,
   type LocationIssue,
@@ -67,6 +71,9 @@ export function AttendancePanel({
   const [selectedProjectId, setSelectedProjectId] = useState(
     options[0]?.projectId ?? ""
   );
+  // Transient attendance photo Blob (presence evidence). Held only in memory;
+  // cleared after submit, retake/cancel and unmount.
+  const [photo, setPhoto] = useState<Blob | null>(null);
 
   const currentOption = useMemo(
     () =>
@@ -133,17 +140,41 @@ export function AttendancePanel({
       return;
     }
 
+    if (mode === "check_in" && !photo) {
+      setMessage({
+        tone: "error",
+        text: "Ambil foto kehadiran terlebih dahulu.",
+      });
+      return;
+    }
+
+    /**
+     * Check-in payload transport: FormData so the transient JPEG Blob travels
+     * as a real file part. Metadata stays in plain fields — image bytes are
+     * NEVER serialized into JSON or a data URL. The employee/org/date/timezone
+     * are NOT included; the server resolves them from the authenticated
+     * session.
+     */
+    function buildCheckInFormData(): FormData {
+      const formData = new FormData();
+      formData.append("projectId", selectedProjectId);
+      formData.append("workLocationId", selectedWorkLocationId);
+      formData.append("location", JSON.stringify(locationPayload));
+      if (notes.trim() !== "") {
+        formData.append("notes", notes.trim());
+      }
+      if (photo) {
+        formData.append("photo", photo, ATTENDANCE_PHOTO_CAPTURE_FILENAME);
+      }
+      return formData;
+    }
+
     setMessage(null);
     startTransition(async () => {
       try {
         const result =
           mode === "check_in"
-            ? await checkInAction({
-                projectId: selectedProjectId,
-                workLocationId: selectedWorkLocationId,
-                notes: notes.trim() || undefined,
-                location: locationPayload,
-              })
+            ? await checkInAction(buildCheckInFormData())
             : await checkOutAction({
                 notes: notes.trim() || undefined,
                 location: locationPayload,
@@ -152,6 +183,7 @@ export function AttendancePanel({
         if (result.ok) {
           setLocation(null);
           setNotes("");
+          setPhoto(null);
           setMessage({ tone: "success", text: result.message });
           router.refresh();
         } else {
@@ -236,6 +268,20 @@ export function AttendancePanel({
           />
         </div>
 
+        {isCheckIn ? (
+          <div className="space-y-2">
+            <Label>Foto kehadiran (bukti)</Label>
+            <p className="text-sm text-muted-foreground">
+              Foto ini hanya bukti kehadiran dan tidak digunakan sebagai
+              verifikasi wajah. Ambil satu foto sebelum check-in.
+            </p>
+            <AttendancePhotoCapture
+              onPhotoChange={setPhoto}
+              disabled={disabled || pending}
+            />
+          </div>
+        ) : null}
+
         <div className="space-y-2">
           <Label>Identity verification</Label>
           <p className="text-sm text-muted-foreground">
@@ -261,7 +307,13 @@ export function AttendancePanel({
           <Button
             type="button"
             onClick={submit}
-            disabled={disabled || pending || !location || !currentOption}
+            disabled={
+              disabled ||
+              pending ||
+              !location ||
+              !currentOption ||
+              (isCheckIn && !photo)
+            }
           >
             {pending ? "Processing…" : actionLabel}
           </Button>

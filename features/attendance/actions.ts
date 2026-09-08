@@ -3,15 +3,21 @@
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 
 import { db } from "@/db";
-import { attendanceEvents, attendanceRecords } from "@/db/schema";
+import { attendanceEvents, attendancePhotos, attendanceRecords } from "@/db/schema";
 import { requireUser } from "@/lib/auth/auth";
 import { writeAuditLog } from "@/lib/auth/audit";
 import { evaluateGeofence } from "@/lib/attendance/geofence";
 import {
   dateStringInTimeZone,
+  endOfAttendanceDay,
   parseAttendanceDate,
 } from "@/lib/attendance/time";
 import { verifyAttendanceIdentity } from "@/lib/attendance/verification";
+import {
+  ATTENDANCE_PHOTO_MIME_TYPE,
+  attendancePhotoRejectionMessage,
+  validateAttendancePhoto,
+} from "@/lib/attendance/attendance-photo";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { requirePermission } from "@/lib/auth/rbac";
 import type { CurrentUser } from "@/lib/auth/types";
@@ -147,9 +153,142 @@ async function auditAttendance(
   }
 }
 
+/** Allowed check-in FormData fields. Any other key is rejected (fail closed). */
+const CHECK_IN_FORM_FIELDS = new Set([
+  "projectId",
+  "workLocationId",
+  "location",
+  "notes",
+  "photo",
+]);
+
+function invalidCheckInInput(): AttendanceActionResult {
+  return { ok: false, message: "The request could not be validated." };
+}
+
+/**
+ * Strict check-in metadata parser (Phase 10.7C-56 FormData boundary).
+ *
+ * Only `projectId`/`workLocationId`/`location`/`notes`/`photo` are accepted.
+ * `location` is the JSON-serialized GPS object produced by the client.
+ * Unknown fields — e.g. a client-supplied employeeId, organizationId,
+ * attendanceId, attendanceDate, timezone or expiresAt — are rejected before
+ * any business rule or persistence runs. The employee and organization always
+ * come from the authenticated session.
+ */
+function parseCheckInFormData(
+  formData: FormData
+):
+  | { ok: true; data: CheckInInput }
+  | { ok: false; result: AttendanceActionResult } {
+  for (const key of formData.keys()) {
+    if (!CHECK_IN_FORM_FIELDS.has(key)) {
+      return { ok: false, result: invalidCheckInInput() };
+    }
+  }
+
+  const projectId = formData.get("projectId");
+  const workLocationId = formData.get("workLocationId");
+  const locationRaw = formData.get("location");
+  const notesRaw = formData.get("notes");
+  if (
+    typeof projectId !== "string" ||
+    typeof workLocationId !== "string" ||
+    typeof locationRaw !== "string"
+  ) {
+    return { ok: false, result: invalidCheckInInput() };
+  }
+
+  let locationInput: unknown = null;
+  try {
+    locationInput = JSON.parse(locationRaw) as unknown;
+  } catch {
+    return { ok: false, result: invalidCheckInInput() };
+  }
+
+  const notes =
+    typeof notesRaw === "string" && notesRaw.trim() !== ""
+      ? notesRaw.trim()
+      : undefined;
+
+  const parsed = checkInSchema.safeParse({
+    projectId,
+    workLocationId,
+    location: locationInput,
+    notes,
+  });
+  if (!parsed.success) {
+    return {
+      ok: false,
+      result: { ok: false, message: firstIssueMessage(parsed.error.issues) },
+    };
+  }
+  return { ok: true, data: parsed.data };
+}
+
+/** Server-validated attendance photo payload ready for persistence. */
+interface AttendancePhotoPayload {
+  mimeType: string;
+  data: Buffer;
+}
+
+/**
+ * Attendance photo read + validation (Phase 10.7C-56 documented policy).
+ *
+ * Photo is OPTIONAL at the server so the pre-existing attendance product
+ * behavior is preserved when no photo is sent (the Check-In UI itself requires
+ * a capture). When a photo IS present it MUST pass the pure validation
+ * boundary (image/jpeg, <= 900,000 bytes, JPEG signature) before anything is
+ * persisted, and the declared client MIME is never trusted alone.
+ *
+ * Photo bytes are never logged, never written to audit metadata, and never
+ * used as identity verification — this is presence evidence only.
+ */
+async function readCheckInPhoto(
+  formData: FormData
+): Promise<
+  | { ok: true; photo: AttendancePhotoPayload | null }
+  | { ok: false; result: AttendanceActionResult }
+> {
+  const part = formData.get("photo");
+  if (part === null) {
+    return { ok: true, photo: null };
+  }
+
+  const candidate = part as { type?: unknown; arrayBuffer?: unknown } | null;
+  if (
+    !candidate ||
+    typeof candidate.type !== "string" ||
+    typeof candidate.arrayBuffer !== "function"
+  ) {
+    return {
+      ok: false,
+      result: {
+        ok: false,
+        message: attendancePhotoRejectionMessage("invalid_input"),
+      },
+    };
+  }
+
+  const file = part as File;
+  const data = Buffer.from(await file.arrayBuffer());
+  const validation = validateAttendancePhoto({ mimeType: file.type, data });
+  if (!validation.ok) {
+    return {
+      ok: false,
+      result: {
+        ok: false,
+        message: attendancePhotoRejectionMessage(validation.reason),
+      },
+    };
+  }
+
+  return { ok: true, photo: { mimeType: ATTENDANCE_PHOTO_MIME_TYPE, data } };
+}
+
 /** Check the authenticated employee in to attendance. */
 export async function checkInAction(
-  input: CheckInInput
+  formData: FormData
 ): Promise<AttendanceActionResult> {
   const user = await requireUser();
   await requirePermission(user.id, PERMISSIONS.ATTENDANCE_CHECK_IN);
@@ -158,10 +297,13 @@ export async function checkInAction(
   if (!resolved.ok) return resolved.result;
   const { organizationId, employee } = resolved.context;
 
-  const parsed = checkInSchema.safeParse(input);
-  if (!parsed.success) {
-    return { ok: false, message: firstIssueMessage(parsed.error.issues) };
-  }
+  const metadata = parseCheckInFormData(formData);
+  if (!metadata.ok) return metadata.result;
+  const parsed = metadata;
+
+  const photoInput = await readCheckInPhoto(formData);
+  if (!photoInput.ok) return photoInput.result;
+  const attendancePhoto = photoInput.photo;
 
   if (employee.employmentStatus !== "active") {
     await appendAttendanceEvent({
@@ -435,6 +577,24 @@ export async function checkInAction(
         },
       });
 
+      // Temporary attendance photo (Phase 10.7C-56): persisted in the SAME
+      // transaction as the server-created attendance record. capturedAt uses
+      // the same server instant as check-in; expiresAt is the local next
+      // midnight derived from the SAME attendance date + work-location
+      // timezone. Photo failure rolls back the whole check-in (nothing is
+      // silently half-saved), and a failed geofence/duplicate check can never
+      // leave an orphan photo because this point is never reached.
+      if (attendancePhoto) {
+        await tx.insert(attendancePhotos).values({
+          organizationId,
+          attendanceId: recordId,
+          capturedAt: now,
+          expiresAt: endOfAttendanceDay(attendanceDate, workLocation.timezone),
+          mimeType: attendancePhoto.mimeType,
+          data: attendancePhoto.data,
+        });
+      }
+
       return { duplicate: false, message: null, id: recordId };
     }
     );
@@ -702,4 +862,3 @@ export async function checkOutAction(
     };
   }
 }
-

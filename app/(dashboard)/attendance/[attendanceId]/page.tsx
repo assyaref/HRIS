@@ -37,6 +37,7 @@ import {
   formatTime,
 } from "@/features/attendance/format";
 import { getAttendanceDetail } from "@/features/attendance/queries";
+import { AttendancePhotoView } from "@/features/attendance/attendance-photo-view";
 
 export const metadata: Metadata = {
   title: "Attendance details",
@@ -207,6 +208,24 @@ export default async function AttendanceDetailPage({
           </div>
         </CardContent>
       </Card>
+
+      {isManager ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Foto Kehadiran</CardTitle>
+            <CardDescription>
+              Foto kehadiran hanya tersedia untuk Management/HR pada hari yang
+              sama.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AttendancePhotoView
+              key={record.id}
+              attendanceId={record.id}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>
