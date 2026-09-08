@@ -76,6 +76,14 @@ export function faceEnrollmentMessage(
   return FACE_ENROLLMENT_MESSAGES[reason] ?? FACE_ENROLLMENT_MESSAGES.unexpected;
 }
 
+/**
+ * Indonesian message shown when an authenticated user has no linked employee
+ * record (Phase 10.7C-50D self-service). Single source shared by the server
+ * action and the self-service page; never reveals another employee's data.
+ */
+export const FACE_SELF_ENROLLMENT_UNLINKED_MESSAGE =
+  "Akun Anda belum terhubung ke data karyawan.";
+
 const FACE_ENROLLMENT_UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -112,6 +120,25 @@ export const faceEnrollmentRevokeInputSchema = z
   .strict();
 export type FaceEnrollmentRevokeInput = z.infer<
   typeof faceEnrollmentRevokeInputSchema
+>;
+
+/**
+ * Strict server-side input schema for SELF-SERVICE face enrollment
+ * (Phase 10.7C-50D). The client may send ONLY an explicit `consent`
+ * acknowledgement and an optional `reenroll` marker — there is deliberately NO
+ * `employeeId`: the server resolves the employee exclusively from the
+ * authenticated session (user.id → linked employee in the user's organization).
+ * Any other key (employeeId, organizationId, threshold, template, status…)
+ * is rejected by strict mode and fails closed.
+ */
+export const selfFaceEnrollmentInputSchema = z
+  .object({
+    reenroll: z.boolean().optional().default(false),
+    consent: z.boolean().optional().default(false),
+  })
+  .strict();
+export type SelfFaceEnrollmentInput = z.infer<
+  typeof selfFaceEnrollmentInputSchema
 >;
 
 /**

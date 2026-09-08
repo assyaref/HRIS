@@ -36,6 +36,18 @@ import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import path from "node:path";
 import jpeg from "jpeg-js";
+import {
+  percentile,
+  evaluateThreshold,
+  selectBalancedOperatingPoint,
+  canRecommend,
+  MIN_SUBJECTS_FOR_REPORT,
+  MIN_IMAGES_PER_SUBJECT,
+  MIN_PAIRS_FOR_STATS,
+  MIN_SUBJECTS_FOR_RECOMMENDATION,
+  MIN_PAIRS_FOR_RECOMMENDATION,
+  MAX_COMPARISONS,
+} from "../lib/attendance/calibration.ts";
 
 const require = createRequire(import.meta.url);
 
@@ -48,13 +60,6 @@ const HUMAN_DIST = path.resolve(
   "human.node-wasm.js"
 );
 
-// Minimums for honest reporting (documented heuristics, not statistical proof).
-const MIN_SUBJECTS_FOR_REPORT = 2;
-const MIN_IMAGES_PER_SUBJECT = 2;
-const MIN_PAIRS_FOR_STATS = 10;
-const MIN_SUBJECTS_FOR_RECOMMENDATION = 5;
-const MIN_PAIRS_FOR_RECOMMENDATION = 50;
-const MAX_COMPARISONS = 20000; // hard bound on generated pairs (sampled first-N)
 const IMAGE_EXTENSION = /\.jpe?g$/i;
 
 function resolveDatasetPath() {
@@ -96,12 +101,6 @@ function insufficient(message) {
     "RECOMMENDATION: none — keep FACE_VERIFY_THRESHOLD at the NON-PRODUCTION baseline (0.5)."
   );
   process.exit(0);
-}
-
-function percentile(sorted, p) {
-  if (sorted.length === 0) return Number.NaN;
-  const idx = Math.min(sorted.length - 1, Math.floor(p * (sorted.length - 1)));
-  return sorted[idx];
 }
 
 function summarize(label, values) {
@@ -346,19 +345,11 @@ for (const score of [...genuine, ...impostor]) {
 }
 const sortedCandidates = [...candidates].sort((x, y) => x - y);
 
-function evaluateThreshold(t) {
-  let far = 0;
-  for (const s of impostor) if (s >= t) far += 1;
-  let frr = 0;
-  for (const s of genuine) if (s < t) frr += 1;
-  return { far: far / impostor.length, frr: frr / genuine.length };
-}
-
 console.log("CANDIDATE THRESHOLDS");
 console.log("threshold, FAR, FRR");
 const rows = [];
 for (const t of sortedCandidates) {
-  const { far, frr } = evaluateThreshold(t);
+  const { far, frr } = evaluateThreshold(genuine, impostor, t);
   rows.push({ t, far, frr });
   console.log(
     `${t.toFixed(4)}, ${(far * 100).toFixed(2)}%, ${(frr * 100).toFixed(2)}%`
@@ -368,17 +359,9 @@ console.log("");
 
 // Balanced operating point: minimise the absolute FAR-FRR gap; tie-break toward
 // lower FAR. Reported as a candidate, NOT automatically the deployed value.
-const balanced = [...rows].sort(
-  (x, y) =>
-    Math.abs(x.far - x.frr) - Math.abs(y.far - y.frr) ||
-    x.far - y.far ||
-    x.t - y.t
-)[0];
+const balanced = selectBalancedOperatingPoint(rows);
 
-const canRecommend =
-  usableSubjects.length >= MIN_SUBJECTS_FOR_RECOMMENDATION &&
-  genuine.length >= MIN_PAIRS_FOR_RECOMMENDATION &&
-  impostor.length >= MIN_PAIRS_FOR_RECOMMENDATION;
+const canRecommendThis = canRecommend(usableSubjects.length, genuine.length, impostor.length);
 
 console.log("FAR");
 console.log(`at balanced operating point (${balanced.t.toFixed(4)}): ${(balanced.far * 100).toFixed(2)}%`);
@@ -387,7 +370,7 @@ console.log("FRR");
 console.log(`at balanced operating point (${balanced.t.toFixed(4)}): ${(balanced.frr * 100).toFixed(2)}%`);
 console.log("");
 
-if (canRecommend) {
+if (canRecommendThis) {
   console.log("RECOMMENDATION");
   console.log(
     `Dataset supports a preliminary operating point: threshold=${balanced.t.toFixed(4)} ` +

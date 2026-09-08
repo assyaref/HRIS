@@ -10,6 +10,7 @@ import type { NavItem, NavSection } from "@/types/navigation";
  */
 export const primaryNavigation: NavItem[] = [
   { title: "Dashboard", href: "/dashboard" },
+  { title: "Face ID", href: "/face-id" },
   {
     title: "Employees",
     href: "/employees",
