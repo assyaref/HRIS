@@ -17,22 +17,26 @@ import { listWorkLocationProjectOptions } from "@/features/work-locations/querie
 import { WorkLocationEditForm } from "@/features/work-locations/work-location-edit-form";
 
 interface PageProps {
-  params: {
+  params: Promise<{
     locationId: string;
-  };
+  }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { locationId } = await params;
+
   return {
-    title: `Edit ${params.locationId}`,
+    title: `Edit ${locationId}`,
   };
 }
 
 export default async function EditWorkLocationPage({ params }: PageProps) {
+  const { locationId } = await params;
+
   const user = await requireUser();
   await requirePermission(user.id, PERMISSIONS.WORK_LOCATIONS_VIEW);
 
-  const result = await getWorkLocationAction(params.locationId);
+  const result = await getWorkLocationAction(locationId);
   if (!result.ok || !result.location) {
     redirect("/settings/work-locations");
   }
