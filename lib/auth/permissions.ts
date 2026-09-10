@@ -32,6 +32,7 @@ export const PERMISSION_MODULES = {
   PROJECTS: "projects",
   REPORTS: "reports",
   SETTINGS: "settings",
+  WORK_LOCATIONS: "work_locations",
   AUDIT: "audit",
 } as const;
 
@@ -344,6 +345,18 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     module: PERMISSION_MODULES.SETTINGS,
     description: "Manage application settings.",
   },
+  // Work Locations
+  {
+    code: PERMISSIONS.WORK_LOCATIONS_VIEW,
+    module: PERMISSION_MODULES.WORK_LOCATIONS,
+    description: "View organization work locations.",
+  },
+  {
+    code: PERMISSIONS.WORK_LOCATIONS_MANAGE,
+    module: PERMISSION_MODULES.WORK_LOCATIONS,
+    description: "Manage organization work locations.",
+  },
+
   // Audit
   {
     code: PERMISSIONS.AUDIT_VIEW,
@@ -372,6 +385,7 @@ export const PERMISSION_MODULE_LABELS: Record<PermissionModule, string> = {
   projects: "Projects",
   reports: "Reports",
   settings: "Settings",
+  work_locations: "Work Locations",
   audit: "Audit",
 };
 
