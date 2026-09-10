@@ -7,13 +7,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
 
 export const metadata: Metadata = {
   title: "Dashboard",
 };
 
-const roadmap = [
+const modules = [
   {
     module: "Employees",
     phase: "Phase 5",
@@ -21,24 +20,41 @@ const roadmap = [
   },
   {
     module: "Attendance",
-    phase: "Phase 7",
-    note: "Clock in/out with face recognition and geofencing.",
+    phase: "Phase 10.7C",
+    note: "Attendance with geofencing, server-authoritative verification and attendance photo controls.",
+  },
+  {
+    module: "Face ID",
+    phase: "Phase 10.7C",
+    note: "Face enrollment and server-side face verification controls.",
   },
   {
     module: "Leave",
-    phase: "Phase 10",
-    note: "Leave types, balances and approval workflow.",
+    phase: "Phase 7",
+    note: "Leave requests, balances and approval workflow.",
+  },
+  {
+    module: "Permission",
+    phase: "Phase 7",
+    note: "Permission requests and approval workflow.",
   },
   {
     module: "Payroll",
     phase: "Phase 11",
-    note: "Payroll runs, payslips and approvals.",
+    note: "Payroll runs, payslips and approval workflow.",
+  },
+  {
+    module: "Roles",
+    phase: "RBAC",
+    note: "Role-based access control and authorized navigation.",
+  },
+  {
+    module: "Work Locations",
+    phase: "Settings",
+    note: "Organization-scoped work locations and attendance configuration.",
   },
 ];
 
-/**
- * Placeholder dashboard — the final HRIS dashboard ships in Phase 14.
- */
 export default function DashboardPage() {
   return (
     <div className="space-y-8">
@@ -48,29 +64,47 @@ export default function DashboardPage() {
             Dashboard
           </h1>
           <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-            Module overviews will appear here in a later phase.
+            Enterprise HRIS overview and module access.
           </p>
         </div>
+
         <Badge variant="outline" className="w-fit">
-          Phase 7 · Leave &amp; Permission
+          Production HRIS
         </Badge>
       </div>
 
-      <EmptyState
-        title="Foundation is ready — modules are next"
-        description="The application shell and design system primitives are in place. HRIS modules land incrementally in later phases."
-      />
+      <Card>
+        <CardHeader>
+          <CardTitle>HRIS Overview</CardTitle>
+          <CardDescription>
+            Integrated employee management, attendance, face verification,
+            leave, permission, payroll and access control.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Core application services are deployed and protected by
+            server-side authentication and organization-scoped authorization.
+          </p>
+        </CardContent>
+      </Card>
 
-      <section aria-labelledby="module-roadmap-heading">
-        <h2
-          id="module-roadmap-heading"
-          className="text-sm font-semibold tracking-wide text-muted-foreground uppercase"
-        >
-          Module roadmap
-        </h2>
+      <section aria-labelledby="modules-heading">
+        <div>
+          <h2
+            id="modules-heading"
+            className="text-sm font-semibold tracking-wide text-muted-foreground uppercase"
+          >
+            HRIS Modules
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Available modules and their current implementation areas.
+          </p>
+        </div>
+
         <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {roadmap.map((item) => (
-            <Card key={item.module}>
+          {modules.map((item) => (
+            <Card key={item.module} className="h-full">
               <CardHeader>
                 <div className="flex items-center justify-between gap-2">
                   <CardTitle className="text-base">{item.module}</CardTitle>
