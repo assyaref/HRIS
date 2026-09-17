@@ -24,6 +24,22 @@ export const employees = pgTable(
       onDelete: "set null",
     }),
     employeeNumber: text("employee_number").notNull(),
+
+    /**
+     * Indonesian national identity number.
+     *
+     * Nullable during migration so existing employee records remain valid.
+     * Application validation enforces digits-only identity input.
+     */
+    nik: text("nik"),
+
+    /**
+     * Employee date of birth.
+     *
+     * Nullable during migration so existing employee records remain valid.
+     */
+    birthDate: date("birth_date", { mode: "date" }),
+
     firstName: text("first_name").notNull(),
     lastName: text("last_name").notNull(),
     email: text("email"),
@@ -38,6 +54,18 @@ export const employees = pgTable(
       table.organizationId,
       table.employeeNumber
     ),
+
+    /**
+     * NIK must be unique inside one organization.
+     *
+     * PostgreSQL permits multiple NULL values in a normal unique index,
+     * which allows legacy employees to remain without identity data.
+     */
+    uniqueIndex("employees_org_nik_unique").on(
+      table.organizationId,
+      table.nik
+    ),
+
     index("employees_user_id_idx").on(table.userId),
   ]
 );
