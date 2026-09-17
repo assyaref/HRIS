@@ -63,6 +63,7 @@ export type PayrollAuditAction =
   | "payslip.document.uploaded"
   | "payslip.document.generated"
   | "payslip.document.viewed"
+  | "payslip.revoked"
   | "payroll.employee_component.created"
   | "payroll.employee_component.updated"
   | "payroll.employee_component.ended";

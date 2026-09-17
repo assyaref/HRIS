@@ -33,6 +33,7 @@ import {
 import { formatDate, formatDateTime } from "@/features/payroll/format";
 import { formatIDR } from "@/features/payroll/money";
 import { PayrollRunActions } from "@/features/payroll/payroll-run-actions";
+import { PayslipRevocationDialog } from "@/features/payroll/payslip-revocation-dialog";
 import {
   getPayrollPeriodInOrganization,
   listMyPublishedPayslips,
@@ -68,6 +69,7 @@ export default async function PayrollPeriodDetailPage({
     canCancel,
     canGeneratePayslips,
     canPublishPayslips,
+    canRevokePayslips,
     events,
     linkedEmployee,
   ] = await Promise.all([
@@ -101,6 +103,10 @@ export default async function PayrollPeriodDetailPage({
     ]),
     hasAnyPermission(user.id, [
       PERMISSIONS.PAYSLIP_PUBLISH,
+      PERMISSIONS.PAYSLIP_MANAGE,
+      PERMISSIONS.PAYROLL_MANAGE,
+    ]),
+    hasAnyPermission(user.id, [
       PERMISSIONS.PAYSLIP_MANAGE,
       PERMISSIONS.PAYROLL_MANAGE,
     ]),
@@ -309,6 +315,7 @@ export default async function PayrollPeriodDetailPage({
                     <TableHead>Payslip</TableHead>
                     <TableHead>Issued</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -329,6 +336,16 @@ export default async function PayrollPeriodDetailPage({
                       <TableCell>{formatDateTime(payslip.issuedAt)}</TableCell>
                       <TableCell>
                         <PayslipStatusBadge status={payslip.status} />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {canRevokePayslips && payslip.status === "published" ? (
+                          <PayslipRevocationDialog
+                            payslipId={payslip.id}
+                            payslipNumber={payslip.payslipNumber}
+                          />
+                        ) : (
+                          <span className="text-xs text-slate-400">—</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

@@ -43,8 +43,10 @@ import {
 } from "./schemas";
 import {
   countPayslipsMissingDocuments,
+  isPayslipUuid,
   sanitizePayslipOriginalFilename,
 } from "./payslip-document.guard";
+import { buildPayslipRevocationDecision } from "./payslip-revocation.guard";
 import { buildPayslipPostScript } from "./payslip-pdf-builder";
 import {
   classifyPayslipPdfCandidates,
@@ -80,7 +82,8 @@ type AuditAction =
   | "payroll.cancelled"
   | "payslip.generated"
   | "payslip.document.generated"
-  | "payslip.published";
+  | "payslip.published"
+  | "payslip.revoked";
 
 async function auditPayroll(input: {
   organizationId: string;
@@ -1682,6 +1685,171 @@ export async function publishPayslipsAction(
     return {
       ok: false,
       message: "Payslips could not be published. Please try again.",
+    };
+  }
+}
+
+/**
+ * Revoke a single published payslip (PM-07.2).
+ *
+ * Only the transition `published -> revoked` is permitted. The payslip is
+ * located strictly by `(id, organizationId)` where the organization always
+ * comes from the authenticated session; a payslip in another organization or
+ * a payslip that does not exist resolves to the same generic failure so
+ * cross-tenant existence never leaks.
+ *
+ * The borrowing payroll period is locked first (serializing this against
+ * concurrent generation/publishing for the same period), the payslip row is
+ * then locked and its status re-read under the lock, and the revocation
+ * decision from `payslip-revocation.guard.ts` must pass. Only `status` is
+ * updated; `publishedAt`, `issuedAt`, `payslipNumber`, `payrollItemId` and
+ * `employeeId` are preserved and nothing is deleted. A `payslip.revoked`
+ * payroll event and a best-effort audit entry are appended.
+ */
+export async function revokePayslipAction(
+  payslipId: string,
+  reason: string
+): Promise<PayrollActionResult> {
+  const user = await requireUser();
+  await requireAnyPermission(user.id, [
+    PERMISSIONS.PAYSLIP_MANAGE,
+    PERMISSIONS.PAYROLL_MANAGE,
+  ]);
+  if (!user.organizationId) {
+    return { ok: false, message: "Your account is not assigned to an organization." };
+  }
+  const organizationId = user.organizationId;
+
+  if (!isPayslipUuid(payslipId)) {
+    return { ok: false, message: "Invalid payslip identifier." };
+  }
+
+  try {
+    const outcome = await db.transaction(async (tx) => {
+      const locatedRows = await tx
+        .select({
+          payslipNumber: payslips.payslipNumber,
+          periodId: payrollPeriods.id,
+        })
+        .from(payslips)
+        .innerJoin(
+          payrollItems,
+          eq(payrollItems.id, payslips.payrollItemId)
+        )
+        .innerJoin(
+          payrollRuns,
+          eq(payrollRuns.id, payrollItems.payrollRunId)
+        )
+        .innerJoin(
+          payrollPeriods,
+          eq(payrollPeriods.id, payrollRuns.payrollPeriodId)
+        )
+        .where(
+          and(
+            eq(payslips.id, payslipId),
+            eq(payslips.organizationId, organizationId)
+          )
+        )
+        .limit(1);
+
+      const located = locatedRows[0];
+      if (!located) {
+        return { kind: "error" as const, message: "Payslip not found." };
+      }
+
+      // Lock the borrowing period so every payslip workflow transition for
+      // this period is serialized before the payslip status is re-read.
+      const period = await lockPeriod(tx, organizationId, located.periodId);
+      if (!period) {
+        return { kind: "error" as const, message: "Payslip not found." };
+      }
+
+      // Lock the payslip row and verify its current status in the same
+      // serialized section as every other payslip workflow transition.
+      const lockedRows = await tx
+        .select({ status: payslips.status })
+        .from(payslips)
+        .where(
+          and(
+            eq(payslips.id, payslipId),
+            eq(payslips.organizationId, organizationId)
+          )
+        )
+        .for("update")
+        .limit(1);
+      const locked = lockedRows[0];
+      if (!locked) {
+        return { kind: "error" as const, message: "Payslip not found." };
+      }
+
+      const decision = buildPayslipRevocationDecision({
+        payslipStatus: locked.status,
+        reason,
+        managementAllowed: true,
+      });
+      if (!decision.allowed) {
+        return {
+          kind: "error" as const,
+          message: decision.message ?? "The payslip cannot be revoked.",
+        };
+      }
+
+      const trimmedReason = reason.trim();
+      await tx
+        .update(payslips)
+        .set({ status: "revoked" })
+        .where(
+          and(
+            eq(payslips.id, payslipId),
+            eq(payslips.organizationId, organizationId)
+          )
+        );
+
+      await tx.insert(payrollEvents).values({
+        organizationId,
+        payrollPeriodId: period.periodId,
+        actorUserId: user.id,
+        eventType: "payslip.revoked",
+        fromStatus: "published",
+        toStatus: "revoked",
+        reason: trimmedReason,
+        metadata: JSON.stringify({
+          payslipId,
+          payslipNumber: located.payslipNumber,
+        }),
+      });
+
+      return {
+        kind: "success" as const,
+        payslipNumber: located.payslipNumber,
+        reason: trimmedReason,
+      };
+    });
+
+    if (outcome.kind === "error") {
+      return { ok: false, message: outcome.message };
+    }
+
+    await auditPayroll({
+      organizationId,
+      actorUserId: user.id,
+      action: "payslip.revoked",
+      entityType: "payslip",
+      entityId: payslipId,
+      metadata: {
+        payslipNumber: outcome.payslipNumber,
+        reason: outcome.reason,
+      },
+    });
+    return {
+      ok: true,
+      message: `Payslip ${outcome.payslipNumber} revoked.`,
+    };
+  } catch (error) {
+    console.error("[payroll] revoke payslip failed", error);
+    return {
+      ok: false,
+      message: "The payslip could not be revoked. Please try again.",
     };
   }
 }

@@ -114,12 +114,31 @@ Implemented surface:
 - password guidance on both payslip hub and payslip detail:
   "PDF payslip terenkripsi. Untuk membukanya, gunakan NIK + tanggal lahir dengan format DDMMYYYY."
 
-Not implemented:
+Revocation:
 
-- `payslips.status = "revoked"` is not yet enforced server-side (document gap; a
-  revocation workflow is not implemented)
-- automated cross-organization route-level smoke under `node:test` (the pure guard
-  is organization-agnostic; org scoping is enforced by the org-scoped query in the route)
+- published payslips can be revoked by actors with `payslip.manage` or
+  `payroll.manage`
+- revocation is enforced server-side as the only `published -> revoked`
+  transition
+- the authenticated organization is authoritative; cross-organization payslip
+  ids resolve to the same generic not-found behavior
+- the payroll period and payslip row are locked before the status is re-read
+  and transitioned
+- revocation requires a non-empty reason after trimming, with a maximum length
+  of 1000 characters
+- only the payslip status changes; historical identifiers, timestamps,
+  employee linkage and payroll item linkage are preserved
+- a `payslip.revoked` payroll event and best-effort audit entry are recorded
+- revoked payslips are no longer available through published payslip
+  self-service/detail/PDF access
+- the payroll period UI exposes revocation only for published payslips and
+  authorized management actors
+
+Remaining validation gap:
+
+- automated cross-organization route-level smoke under `node:test` has not been
+  executed; the revocation guard itself is organization-agnostic and the
+  production action enforces organization scope from the authenticated session
 
 ## 9. Validation status
 
