@@ -6,6 +6,8 @@ import { forbidden } from "next/navigation";
 import { db } from "@/db";
 import {
   employees,
+  employeePayrollComponents,
+  organizations,
   payrollComponents,
   payrollEvents,
   payrollItemComponents,
@@ -13,6 +15,7 @@ import {
   payrollPeriods,
   payrollRuns,
   payslips,
+  payslipDocuments,
 } from "@/db/schema";
 import { requireUser } from "@/lib/auth/auth";
 import { writeAuditLog } from "@/lib/auth/audit";
@@ -21,14 +24,32 @@ import {
   requireAnyPermission,
   requirePermission,
 } from "@/lib/auth/rbac";
+import {
+  encryptAndStorePayslipPdf,
+  removeStoredPayslipPdf,
+  renderPostScriptToPdf,
+} from "@/lib/payroll/payslip-pdf";
 
-import { applyPercentage } from "./money";
+import {
+  calculateEmployeePayroll,
+  type CalculationComponent,
+  type EmployeeComponentAssignment,
+} from "./calculation";
 import {
   createPayrollPeriodSchema,
   dateToUtc,
   payrollComponentSchema,
   rejectPayrollSchema,
 } from "./schemas";
+import {
+  countPayslipsMissingDocuments,
+  sanitizePayslipOriginalFilename,
+} from "./payslip-document.guard";
+import { buildPayslipPostScript } from "./payslip-pdf-builder";
+import {
+  classifyPayslipPdfCandidates,
+  runStatusAllowsDocumentGeneration,
+} from "./payslip-pdf-generator.guard";
 
 /**
  * Payroll server actions (Phase 8).
@@ -58,6 +79,7 @@ type AuditAction =
   | "payroll.locked"
   | "payroll.cancelled"
   | "payslip.generated"
+  | "payslip.document.generated"
   | "payslip.published";
 
 async function auditPayroll(input: {
@@ -87,6 +109,7 @@ interface PeriodWithRunRow {
   periodCode: string;
   periodName: string;
   periodStatus: string;
+  periodEnd: Date;
   runId: string | null;
   runStatus: string | null;
 }
@@ -97,17 +120,17 @@ async function lockPeriod(
   organizationId: string,
   periodId: string
 ): Promise<PeriodWithRunRow | null> {
-  const rows = await tx
+  // Lock only the payroll period row. Do not use FOR UPDATE on a LEFT JOIN,
+  // because PostgreSQL rejects locking the nullable side of an outer join.
+  const periodRows = await tx
     .select({
       periodId: payrollPeriods.id,
       periodCode: payrollPeriods.code,
       periodName: payrollPeriods.name,
       periodStatus: payrollPeriods.status,
-      runId: payrollRuns.id,
-      runStatus: payrollRuns.status,
+      periodEnd: payrollPeriods.periodEnd,
     })
     .from(payrollPeriods)
-    .leftJoin(payrollRuns, eq(payrollRuns.payrollPeriodId, payrollPeriods.id))
     .where(
       and(
         eq(payrollPeriods.id, periodId),
@@ -116,9 +139,32 @@ async function lockPeriod(
     )
     .for("update")
     .limit(1);
-  const row = rows[0];
-  if (!row) return null;
-  return row;
+
+  const period = periodRows[0];
+  if (!period) return null;
+
+  // The period row is now locked for this transaction, so all payroll
+  // transitions for this period are serialized before reading/updating its run.
+  const runRows = await tx
+    .select({
+      runId: payrollRuns.id,
+      runStatus: payrollRuns.status,
+    })
+    .from(payrollRuns)
+    .where(eq(payrollRuns.payrollPeriodId, period.periodId))
+    .limit(1);
+
+  const run = runRows[0];
+
+  return {
+    periodId: period.periodId,
+    periodCode: period.periodCode,
+    periodName: period.periodName,
+    periodStatus: period.periodStatus,
+    periodEnd: period.periodEnd,
+    runId: run?.runId ?? null,
+    runStatus: run?.runStatus ?? null,
+  };
 }
 
 function messageFromParseError(error: { issues: { message: string }[] }): string {
@@ -337,75 +383,14 @@ export async function setPayrollComponentActiveAction(
 /* Run calculation                                                     */
 /* ------------------------------------------------------------------ */
 
-interface ComponentSpec {
-  id: string;
-  code: string;
-  name: string;
-  type: string;
-  calculationMethod: string;
-  defaultAmount: number;
-}
-
-interface ComputedComponent {
-  componentId: string;
-  componentCode: string;
-  componentName: string;
-  componentType: string;
-  amount: number;
-}
-
-/** Percentage components base = the employee's fixed earning amounts. */
-function fixedEarningsTotal(components: readonly ComponentSpec[]): number {
-  return components.reduce((total, component) => {
-    if (component.type === "earning" && component.calculationMethod === "fixed") {
-      return total + component.defaultAmount;
-    }
-    return total;
-  }, 0);
-}
-
-function computeComponents(
-  components: readonly ComponentSpec[]
-): ComputedComponent[] {
-  const base = fixedEarningsTotal(components);
-  return components.map((component) => {
-    let amount = 0;
-    if (component.calculationMethod === "fixed") {
-      amount = component.defaultAmount;
-    } else if (component.calculationMethod === "percentage") {
-      amount = applyPercentage(base, component.defaultAmount);
-    }
-    // "manual" components start at 0; future phases may carry per-item values.
-    return {
-      componentId: component.id,
-      componentCode: component.code,
-      componentName: component.name,
-      componentType: component.type,
-      amount,
-    };
-  });
-}
-
-function totalsOf(computed: readonly ComputedComponent[]): {
-  earnings: number;
-  deductions: number;
-} {
-  let earnings = 0;
-  let deductions = 0;
-  for (const row of computed) {
-    if (row.componentType === "earning") earnings += row.amount;
-    else deductions += row.amount;
-  }
-  return { earnings, deductions };
-}
-
-
 /**
  * Calculate a payroll run for a period.
  *
  * Creates the run (first calculation) or rewrites a draft/rejected run, then
- * computes one item per active employee from the organization's active payroll
- * components. Deterministic integer math only (see features/payroll/money.ts).
+ * computes one item per active employee. Each employee's own active + effective
+ * employee component assignments (PM-03.4) override the organization's active
+ * master component defaults; see features/payroll/calculation.ts. Deterministic
+ * integer math only (see features/payroll/money.ts).
  */
 export async function calculatePayrollAction(
   periodId: string
@@ -487,7 +472,7 @@ export async function calculatePayrollAction(
         )
         .orderBy(asc(employees.employeeNumber));
 
-      const componentRows = await tx
+      const masterRows = await tx
         .select({
           id: payrollComponents.id,
           code: payrollComponents.code,
@@ -504,6 +489,38 @@ export async function calculatePayrollAction(
           )
         )
         .orderBy(asc(payrollComponents.code));
+      const componentRows = masterRows.map((row) => ({
+        ...row,
+        type: row.type as CalculationComponent["type"],
+        calculationMethod:
+          row.calculationMethod as CalculationComponent["calculationMethod"],
+      }));
+
+      // PM-03.4 — the employee's own ACTIVE assignments (org-scoped). Only the
+      // pure engine decides whether a row is effective for the calculation
+      // date (the period's end); inactive/future/ended rows never apply.
+      const rawAssignmentRows = await tx
+        .select({
+          id: employeePayrollComponents.id,
+          employeeId: employeePayrollComponents.employeeId,
+          componentId: employeePayrollComponents.componentId,
+          amount: employeePayrollComponents.amount,
+          effectiveFrom: employeePayrollComponents.effectiveFrom,
+          effectiveTo: employeePayrollComponents.effectiveTo,
+          active: employeePayrollComponents.active,
+        })
+        .from(employeePayrollComponents)
+        .where(
+          and(
+            eq(employeePayrollComponents.organizationId, organizationId),
+            eq(employeePayrollComponents.active, true)
+          )
+        )
+        .orderBy(
+          asc(employeePayrollComponents.employeeId),
+          asc(employeePayrollComponents.componentId)
+        );
+      const assignmentRows = rawAssignmentRows as EmployeeComponentAssignment[];
 
       let grossTotal = 0;
       let deductionTotal = 0;
@@ -511,9 +528,16 @@ export async function calculatePayrollAction(
       let includedCount = 0;
 
       for (const employee of employeeRows) {
-        const computed = computeComponents(componentRows);
-        const { earnings, deductions } = totalsOf(computed);
-        const net = Math.max(0, earnings - deductions);
+        const result = calculateEmployeePayroll({
+          employeeId: employee.id,
+          calculationDate: period.periodEnd,
+          components: componentRows,
+          assignments: assignmentRows,
+        });
+        const computed = result.components;
+        const earnings = result.totalEarnings;
+        const deductions = result.totalDeductions;
+        const net = result.netAmount;
         grossTotal += earnings;
         deductionTotal += deductions;
         netTotal += net;
@@ -1071,6 +1095,435 @@ export async function generatePayslipsAction(
 }
 
 
+/**
+ * Generate encrypted payslip PDF documents for an approved/locked run.
+ *
+ * PM-05 — Automated payslip document generation.
+ *
+ * The document content is assembled ONLY from immutable payroll snapshots
+ * (payroll_item field/name/number snapshots, payroll_item_component
+ * snapshots, payslip fields, period/organization metadata). Live employee
+ * payroll configuration is never consulted, so a configuration change after
+ * calculation can never alter a generated historical payslip.
+ *
+ * Rendering and encryption happen OUTSIDE the database transaction (they are
+ * IO-heavy: Ghostscript + private filesystem), then the document metadata is
+ * committed transactionally in a second transaction that re-locks every
+ * payslip row and re-checks for an existing document (never generating a
+ * duplicate, never overwriting). A stored file is removed again if its
+ * database insert fails.
+ *
+ * Payslips whose employee identity is missing (NIK or birth date) or that
+ * already have a document are skipped and reported, never blocking the rest
+ * of the run. Published/revoked payslips are never touched.
+ */
+export interface GeneratePayslipPdfsResult extends PayrollActionResult {
+  generated?: number;
+  skipped?: number;
+}
+
+export async function generatePayslipPdfsAction(
+  periodId: string
+): Promise<GeneratePayslipPdfsResult> {
+  const user = await requireUser();
+  await requireAnyPermission(user.id, [
+    PERMISSIONS.PAYSLIP_PUBLISH,
+    PERMISSIONS.PAYSLIP_MANAGE,
+    PERMISSIONS.PAYROLL_MANAGE,
+  ]);
+  if (!user.organizationId) {
+    return { ok: false, message: "Your account is not assigned to an organization." };
+  }
+  const organizationId = user.organizationId;
+
+  try {
+    // ---------------------------------------------------------------- phase 1
+    // Lock the period row, gather org-scoped snapshot data, classify
+    // candidates and build the (pure, deterministic) PostScript per payslip.
+    const outcome = await db.transaction(async (tx) => {
+      const period = await lockPeriod(tx, organizationId, periodId);
+      if (!period) return { kind: "error" as const, message: "Period not found." };
+      if (
+        !period.runId ||
+        !runStatusAllowsDocumentGeneration(period.runStatus)
+      ) {
+        return {
+          kind: "error" as const,
+          message:
+            "Payslip documents can only be generated for approved or locked runs.",
+        };
+      }
+      const runId = period.runId;
+
+      const metaRows = await tx
+        .select({
+          code: payrollPeriods.code,
+          name: payrollPeriods.name,
+          periodStart: payrollPeriods.periodStart,
+          periodEnd: payrollPeriods.periodEnd,
+          paymentDate: payrollPeriods.paymentDate,
+          organizationName: organizations.name,
+          organizationCode: organizations.code,
+        })
+        .from(payrollPeriods)
+        .innerJoin(
+          organizations,
+          eq(organizations.id, payrollPeriods.organizationId)
+        )
+        .where(
+          and(
+            eq(payrollPeriods.id, periodId),
+            eq(payrollPeriods.organizationId, organizationId)
+          )
+        )
+        .limit(1);
+
+      const meta = metaRows[0];
+      if (!meta) return { kind: "error" as const, message: "Period not found." };
+
+      const payslipRows = await tx
+        .select({
+          id: payslips.id,
+          payrollItemId: payslips.payrollItemId,
+          employeeId: payslips.employeeId,
+          payslipNumber: payslips.payslipNumber,
+          issuedAt: payslips.issuedAt,
+          status: payslips.status,
+          employeeName: payrollItems.employeeNameSnapshot,
+          employeeNumber: payrollItems.employeeNumberSnapshot,
+          grossAmount: payrollItems.grossAmount,
+          totalEarnings: payrollItems.totalEarnings,
+          totalDeductions: payrollItems.totalDeductions,
+          netAmount: payrollItems.netAmount,
+        })
+        .from(payslips)
+        .innerJoin(payrollItems, eq(payrollItems.id, payslips.payrollItemId))
+        .where(
+          and(
+            eq(payrollItems.payrollRunId, runId),
+            eq(payrollItems.organizationId, organizationId)
+          )
+        )
+        .orderBy(asc(payslips.payslipNumber));
+
+      const payslipIds = payslipRows.map((row) => row.id);
+      const payslipIdsHaveDocuments =
+        payslipIds.length > 0
+          ? await tx
+              .select({ payslipId: payslipDocuments.payslipId })
+              .from(payslipDocuments)
+              .where(
+                and(
+                  eq(payslipDocuments.organizationId, organizationId),
+                  inArray(payslipDocuments.payslipId, payslipIds)
+                )
+              )
+          : [];
+      const documentPayslipIds = new Set(
+        payslipIdsHaveDocuments.map((row) => row.payslipId)
+      );
+
+      const employeeIds = payslipRows.map((row) => row.employeeId);
+      const identityRows =
+        employeeIds.length > 0
+          ? await tx
+              .select({
+                id: employees.id,
+                nik: employees.nik,
+                birthDate: employees.birthDate,
+              })
+              .from(employees)
+              .where(
+                and(
+                  eq(employees.organizationId, organizationId),
+                  inArray(employees.id, employeeIds)
+                )
+              )
+          : [];
+      const identityByEmployee = new Map(
+        identityRows.map((row) => [row.id, row])
+      );
+
+      const itemIds = payslipRows.map((row) => row.payrollItemId);
+      const componentRows =
+        itemIds.length > 0
+          ? await tx
+              .select({
+                payrollItemId: payrollItemComponents.payrollItemId,
+                code: payrollItemComponents.componentCodeSnapshot,
+                name: payrollItemComponents.componentNameSnapshot,
+                type: payrollItemComponents.componentTypeSnapshot,
+                amount: payrollItemComponents.amount,
+                notes: payrollItemComponents.notes,
+              })
+              .from(payrollItemComponents)
+              .where(
+                and(
+                  eq(payrollItemComponents.organizationId, organizationId),
+                  inArray(payrollItemComponents.payrollItemId, itemIds)
+                )
+              )
+              .orderBy(
+                asc(payrollItemComponents.componentTypeSnapshot),
+                asc(payrollItemComponents.componentCodeSnapshot)
+              )
+          : [];
+      const componentsByItem = new Map<string, typeof componentRows>();
+      for (const row of componentRows) {
+        const list = componentsByItem.get(row.payrollItemId);
+        if (list) list.push(row);
+        else componentsByItem.set(row.payrollItemId, [row]);
+      }
+
+      const { included, skipped } = classifyPayslipPdfCandidates(
+        payslipRows.map((row) => ({
+          payslipId: row.id,
+          status: row.status,
+          nik: identityByEmployee.get(row.employeeId)?.nik,
+          birthDate: identityByEmployee.get(row.employeeId)?.birthDate,
+          existingDocument: documentPayslipIds.has(row.id),
+        }))
+      );
+
+      const payslipById = new Map(payslipRows.map((row) => [row.id, row]));
+
+      const prepared: {
+        payslipId: string;
+        employeeId: string;
+        nik: string;
+        birthDate: Date;
+        payslipNumber: string;
+        postScript: string;
+      }[] = [];
+
+      for (const candidate of included) {
+        const row = payslipById.get(candidate.payslipId);
+        const identity = row
+          ? identityByEmployee.get(row.employeeId)
+          : undefined;
+
+        if (!row || !identity || !identity.nik || !identity.birthDate) {
+          // Unreachable for `included` entries by the guard's contract; fail
+          // loudly rather than silently skip a payslip the guard admitted.
+          throw new Error("Payslip PDF eligibility invariant violated.");
+        }
+
+        prepared.push({
+          payslipId: row.id,
+          employeeId: row.employeeId,
+          nik: identity.nik,
+          birthDate: identity.birthDate,
+          payslipNumber: row.payslipNumber,
+          postScript: buildPayslipPostScript({
+            organizationName: meta.organizationName,
+            organizationCode: meta.organizationCode,
+            period: {
+              code: meta.code,
+              name: meta.name,
+              periodStart: meta.periodStart,
+              periodEnd: meta.periodEnd,
+              paymentDate: meta.paymentDate,
+            },
+            employee: {
+              name: row.employeeName,
+              number: row.employeeNumber,
+            },
+            payslip: {
+              number: row.payslipNumber,
+              issuedAt: row.issuedAt,
+            },
+            grossAmount: row.grossAmount,
+            totalDeductions: row.totalDeductions,
+            netAmount: row.netAmount,
+            components: componentsByItem.get(row.payrollItemId) ?? [],
+          }),
+        });
+      }
+
+      return {
+        kind: "success" as const,
+        periodId: period.periodId,
+        prepared,
+        skippedCount: skipped.length,
+        totalCount: payslipRows.length,
+      };
+    });
+
+    if (outcome.kind === "error") {
+      return { ok: false, message: outcome.message };
+    }
+
+    if (outcome.totalCount === 0) {
+      return { ok: false, message: "There are no generated payslips to process." };
+    }
+
+    if (outcome.prepared.length === 0) {
+      return {
+        ok: true,
+        message:
+          `No payslip PDFs were generated. ${outcome.skippedCount} ` +
+          `payslip${outcome.skippedCount === 1 ? "" : "s"} skipped.`,
+        generated: 0,
+        skipped: outcome.skippedCount,
+      };
+    }
+
+    // ---------------------------------------------------------------- phase 2
+    // Render (Ghostscript) and encrypt each payslip OUTSIDE the transaction.
+    // On any failure, every file stored so far is removed again.
+    const stored: {
+      payslipId: string;
+      employeeId: string;
+      payslipNumber: string;
+      storageKey: string;
+      originalFilename: string;
+      fileSize: number;
+      sha256: string;
+    }[] = [];
+
+    const removeStored = async (): Promise<void> => {
+      for (const entry of stored) {
+        try {
+          await removeStoredPayslipPdf(entry.storageKey);
+        } catch (error) {
+          console.error("[payroll] stored PDF cleanup failed", error);
+        }
+      }
+    };
+
+    try {
+      for (const entry of outcome.prepared) {
+        const plaintextPdf = await renderPostScriptToPdf(
+          entry.postScript
+        );
+        const metadata = await encryptAndStorePayslipPdf({
+          pdf: plaintextPdf,
+          identity: { nik: entry.nik, birthDate: entry.birthDate },
+        });
+        stored.push({
+          payslipId: entry.payslipId,
+          employeeId: entry.employeeId,
+          payslipNumber: entry.payslipNumber,
+          storageKey: metadata.storageKey,
+          originalFilename: sanitizePayslipOriginalFilename(
+            `${entry.payslipNumber}.pdf`
+          ),
+          fileSize: metadata.fileSize,
+          sha256: metadata.sha256,
+        });
+      }
+    } catch (error) {
+      await removeStored();
+      console.error("[payroll] payslip PDF generation failed", error);
+      return {
+        ok: false,
+        message: "Payslip PDFs could not be rendered. Please try again.",
+      };
+    }
+
+    // ---------------------------------------------------------------- phase 3
+    // Commit document metadata: re-lock each payslip, re-verify it is still
+    // `generated` and still without a document, then insert. A failed insert
+    // removes the stored file again.
+    try {
+      await db.transaction(async (tx) => {
+        for (const entry of stored) {
+          const lockedRows = await tx
+            .select({ id: payslips.id, status: payslips.status })
+            .from(payslips)
+            .where(
+              and(
+                eq(payslips.id, entry.payslipId),
+                eq(payslips.organizationId, organizationId)
+              )
+            )
+            .for("update")
+            .limit(1);
+
+          if (!lockedRows[0] || lockedRows[0].status !== "generated") {
+            throw new Error("Payslip is no longer eligible for a PDF document.");
+          }
+
+          const existingRows = await tx
+            .select({ id: payslipDocuments.id })
+            .from(payslipDocuments)
+            .where(
+              and(
+                eq(payslipDocuments.organizationId, organizationId),
+                eq(payslipDocuments.payslipId, entry.payslipId)
+              )
+            )
+            .limit(1);
+
+          if (existingRows[0]) {
+            throw new Error("A payslip document already exists for this payslip.");
+          }
+
+          await tx.insert(payslipDocuments).values({
+            organizationId,
+            payslipId: entry.payslipId,
+            employeeId: entry.employeeId,
+            storageKey: entry.storageKey,
+            originalFilename: entry.originalFilename,
+            mimeType: "application/pdf",
+            fileSize: entry.fileSize,
+            sha256: entry.sha256,
+          });
+
+          await tx.insert(payrollEvents).values({
+            organizationId,
+            payrollPeriodId: outcome.periodId,
+            actorUserId: user.id,
+            eventType: "payslip.document.generated",
+            fromStatus: "generated",
+            toStatus: "generated",
+            reason: null,
+            metadata: JSON.stringify({ payslipNumber: entry.payslipNumber }),
+          });
+        }
+      });
+    } catch (error) {
+      await removeStored();
+      console.error("[payroll] payslip document commit failed", error);
+      return {
+        ok: false,
+        message: "Payslip PDFs could not be stored. Please try again.",
+      };
+    }
+
+    await auditPayroll({
+      organizationId,
+      actorUserId: user.id,
+      action: "payslip.document.generated",
+      entityType: "payslip",
+      metadata: {
+        count: stored.length,
+        skipped: outcome.skippedCount,
+      },
+    });
+
+    const suffix =
+      outcome.skippedCount > 0
+        ? ` ${outcome.skippedCount} payslip${outcome.skippedCount === 1 ? "" : "s"} skipped.`
+        : "";
+    return {
+      ok: true,
+      message:
+        `Generated ${stored.length} payslip PDF${stored.length === 1 ? "" : "s"}.` +
+        suffix,
+      generated: stored.length,
+      skipped: outcome.skippedCount,
+    };
+  } catch (error) {
+    console.error("[payroll] generate payslip PDFs failed", error);
+    return {
+      ok: false,
+      message: "Payslip PDFs could not be generated. Please try again.",
+    };
+  }
+}
+
+
 /** Publish generated payslips so employees can view them (self-service). */
 export async function publishPayslipsAction(
   periodId: string
@@ -1132,6 +1585,57 @@ export async function publishPayslipsAction(
         return {
           kind: "error" as const,
           message: "There are no generated payslips to publish.",
+        };
+      }
+
+      // ==========================================================
+      // PHASE 21.12D.2C.6 — PDF DOCUMENT PUBLISH GUARD
+      //
+      // Every generated payslip must have an encrypted PDF
+      // document before it can be published to employee
+      // self-service.
+      //
+      // Organization scope is enforced here as an additional
+      // server-side boundary.
+      // ==========================================================
+
+      const pendingPayslipIds = pendingRows.map(
+        (row) => row.id,
+      );
+
+      const documentRows = await tx
+        .select({
+          payslipId: payslipDocuments.payslipId,
+        })
+        .from(payslipDocuments)
+        .where(
+          and(
+            eq(
+              payslipDocuments.organizationId,
+              organizationId,
+            ),
+            inArray(
+              payslipDocuments.payslipId,
+              pendingPayslipIds,
+            ),
+          ),
+        );
+
+      const documentPayslipIds = documentRows.map(
+        (row) => row.payslipId,
+      );
+
+      const missingDocumentCount = countPayslipsMissingDocuments(
+        pendingPayslipIds,
+        documentPayslipIds,
+      );
+
+      if (missingDocumentCount > 0) {
+        return {
+          kind: "error" as const,
+          message:
+            `Cannot publish payslips. ${missingDocumentCount} ` +
+            `payslip(s) do not have PDF documents yet.`,
         };
       }
 

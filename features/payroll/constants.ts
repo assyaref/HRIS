@@ -106,6 +106,7 @@ export const PAYROLL_EVENT_TYPES = [
   "payroll.locked",
   "payroll.cancelled",
   "payslip.generated",
+  "payslip.document.generated",
   "payslip.published",
 ] as const;
 export type PayrollEventType = (typeof PAYROLL_EVENT_TYPES)[number];

@@ -57,6 +57,27 @@
       "when": 1788856586437,
       "tag": "0007_sloppy_pyro",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789446177252,
+      "tag": "0008_furry_miek",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1789447083086,
+      "tag": "0009_petite_dakota_north",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1789626467098,
+      "tag": "0010_gray_terrax",
+      "breakpoints": true
     }
   ]
 }

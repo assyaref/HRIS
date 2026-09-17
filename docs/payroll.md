@@ -99,17 +99,27 @@ No passwords, secrets, session tokens, or raw auth material are logged.
 
 ## 8. Payslips
 
-The current schema already supports payslip rows and published payslip detail reads.
-
 Implemented surface:
 
 - published payslips are listed on payroll period detail when generated
 - published payslip detail is viewable at `/payroll/payslips/[payslipId]`
+- employee payslip hub (self-service) lists the authenticated employee's own published payslips at `/payslip`
+- payslip detail from self-service accessible at `/payslip/[payslipId]`
+- encrypted payslip PDF generation (file password = NIK + tanggal lahir as DDMMYYYY)
+- secure PDF serving: private/no-store caching, `nosniff`, CSP `default-src 'none'`,
+  sanitized Content-Disposition, UUID validation, org-scoped reads, generic 404
+- server-side ownership enforcement: an employee may only view their own
+  payslips unless they hold payroll/payslip management permission
+- PDF access audit: `payslip.document.viewed` recorded only when access is allowed
+- password guidance on both payslip hub and payslip detail:
+  "PDF payslip terenkripsi. Untuk membukanya, gunakan NIK + tanggal lahir dengan format DDMMYYYY."
 
 Not implemented:
 
-- PDF generation
-- separate employee payslip hub outside the current payroll surfaces
+- `payslips.status = "revoked"` is not yet enforced server-side (document gap; a
+  revocation workflow is not implemented)
+- automated cross-organization route-level smoke under `node:test` (the pure guard
+  is organization-agnostic; org scoping is enforced by the org-scoped query in the route)
 
 ## 9. Validation status
 

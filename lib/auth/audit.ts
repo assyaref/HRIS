@@ -20,13 +20,17 @@ export type RbacAuditAction =
   | "rbac.role.created"
   | "rbac.role.updated"
   | "rbac.role.deleted"
-  | "rbac.role.permissions.updated";
+  | "rbac.role.permissions.updated"
+  | "rbac.user.role.assigned"
+  | "rbac.user.role.removed";
 
 export type EmployeeAuditAction =
   | "employee.created"
   | "employee.updated"
   | "employee.status_changed"
-  | "employee.account.created";
+  | "employee.account.created"
+  | "employee.deleted"
+  | "employee.purged";
 
 export type AttendanceAuditAction =
   | "attendance.check_in"
@@ -55,13 +59,24 @@ export type PayrollAuditAction =
   | "payroll.locked"
   | "payroll.cancelled"
   | "payslip.generated"
-  | "payslip.published";
+  | "payslip.published"
+  | "payslip.document.uploaded"
+  | "payslip.document.generated"
+  | "payslip.document.viewed"
+  | "payroll.employee_component.created"
+  | "payroll.employee_component.updated"
+  | "payroll.employee_component.ended";
 
 export type WorkLocationAuditAction =
   | "work_location.created"
   | "work_location.updated"
   | "work_location.status_changed"
   | "work_location.deleted";
+
+export type ProjectAuditAction =
+  | "project.created"
+  | "project.updated"
+  | "project.status_changed";
 
 export type AssignmentAuditAction =
   | "assignment.created"
@@ -86,6 +101,7 @@ export type AuditAction =
   | PermissionAuditAction
   | PayrollAuditAction
   | WorkLocationAuditAction
+  | ProjectAuditAction
   | AssignmentAuditAction
   | FaceEnrollmentAuditAction
   | FaceVerificationAuditAction;
