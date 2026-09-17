@@ -98,6 +98,14 @@ export const payrollComponentSchema = z.object({
   calculationMethod: z.enum(PAYROLL_COMPONENT_METHODS),
   defaultAmount: z.number().int().min(0).default(0),
   description: z.string().trim().max(200).optional(),
+}).superRefine((value, ctx) => {
+  if (value.calculationMethod === "percentage" && value.defaultAmount > 100) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["defaultAmount"],
+      message: "Percentage must be between 0 and 100.",
+    });
+  }
 });
 
 export type PayrollComponentInput = z.infer<

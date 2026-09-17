@@ -18,7 +18,6 @@ export default async function PayrollComponentsPage() {
   const user = await requireUser();
   await requireAnyPermission(user.id, [
     PERMISSIONS.PAYROLL_MANAGE,
-    PERMISSIONS.PAYROLL_UPDATE,
   ]);
   if (!user.organizationId) forbidden();
 

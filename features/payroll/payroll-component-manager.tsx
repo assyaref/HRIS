@@ -66,6 +66,9 @@ function ComponentFormDialog({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const defaults = formFromComponent(initial);
+  const [calculationMethod, setCalculationMethod] = useState(
+    defaults.calculationMethod
+  );
 
   function submit(formData: FormData) {
     setError(null);
@@ -153,7 +156,8 @@ function ComponentFormDialog({
               <select
                 id="component-method"
                 name="calculationMethod"
-                defaultValue={defaults.calculationMethod}
+                value={calculationMethod}
+                onChange={(event) => setCalculationMethod(event.target.value)}
                 className={selectClass}
               >
                 {PAYROLL_COMPONENT_METHODS.map((method) => (
@@ -172,13 +176,15 @@ function ComponentFormDialog({
               name="defaultAmount"
               type="number"
               min={0}
+              max={calculationMethod === "percentage" ? 100 : undefined}
               step={1}
               defaultValue={defaults.defaultAmount}
               required
             />
             <p className="text-xs text-muted-foreground">
-              Fixed/manual = integer IDR. Percentage = whole percent of the
-              employee&apos;s fixed earnings.
+              {calculationMethod === "percentage"
+                ? "Percentage must be a whole number from 0 to 100% of fixed earnings."
+                : "Fixed/manual uses an integer IDR amount."}
             </p>
           </div>
 
