@@ -41,7 +41,7 @@ jobs:
             whoami
 
             echo "[2] RUN HRIS DEPLOYMENT"
-            sudo -n /usr/local/sbin/hris-deploy
+            sudo -n /usr/local/sbin/hris-deploy "${GITHUB_SHA}"
 
             echo "[3] DEPLOYMENT COMMAND FINISHED"
 
