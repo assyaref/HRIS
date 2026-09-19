@@ -86,6 +86,8 @@ type AuditAction =
   | "payroll.deleted"
   | "payslip.generated"
   | "payslip.document.generated"
+  | "payslip.document.uploaded"
+  | "payslip.document.replaced"
   | "payslip.published"
   | "payslip.revoked";
 
