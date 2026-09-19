@@ -1,10 +1,10 @@
-const NIK_PATTERN = /^\d{1,32}$/;
+const IDENTITY_PATTERN = /^\d{1,32}$/;
 
-function normalizeNik(nik: string): string {
-  const normalized = nik.trim();
+function normalizeDigits(value: string, label: string): string {
+  const normalized = value.trim();
 
-  if (!NIK_PATTERN.test(normalized)) {
-    throw new Error("Employee NIK must contain 1–32 digits.");
+  if (!IDENTITY_PATTERN.test(normalized)) {
+    throw new Error(`${label} must contain 1–32 digits.`);
   }
 
   return normalized;
@@ -23,7 +23,8 @@ function assertValidBirthDate(birthDate: Date): void {
  *   NIK + DD + YYYY
  *
  * This function exists only for controlled re-encryption of PDFs that were
- * created before the password contract changed.
+ * created before the password contract changed to the employee number. NIK is
+ * intentionally kept out of every current password contract.
  *
  * IMPORTANT:
  * The returned password must never be persisted, logged, audited,
@@ -33,7 +34,7 @@ export function buildPayslipPasswordV1(
   nik: string,
   birthDate: Date
 ): string {
-  const normalizedNik = normalizeNik(nik);
+  const normalizedNik = normalizeDigits(nik, "Employee NIK");
 
   assertValidBirthDate(birthDate);
 
@@ -47,9 +48,13 @@ export function buildPayslipPasswordV1(
  * Current payslip PDF opening password.
  *
  * Contract V2:
- *   NIK + DD + MM + YYYY
+ *   employee number + DD + MM + YYYY
  *
- * Birth date is interpreted as a date-only value using UTC components
+ * Example: employee number `03233`, birth date `25 August 1995` →
+ * `0323325081995`.
+ *
+ * NIK must NOT be used: the password is always derived from the employee
+ * number. Birth date is interpreted as a date-only value using UTC components
  * to avoid server timezone changes affecting the generated password.
  *
  * IMPORTANT:
@@ -57,10 +62,13 @@ export function buildPayslipPasswordV1(
  * returned to the browser, or written to the database.
  */
 export function buildPayslipPassword(
-  nik: string,
+  employeeNumber: string,
   birthDate: Date
 ): string {
-  const normalizedNik = normalizeNik(nik);
+  const normalizedEmployeeNumber = normalizeDigits(
+    employeeNumber,
+    "Employee number"
+  );
 
   assertValidBirthDate(birthDate);
 
@@ -68,5 +76,5 @@ export function buildPayslipPassword(
   const month = String(birthDate.getUTCMonth() + 1).padStart(2, "0");
   const year = String(birthDate.getUTCFullYear());
 
-  return `${normalizedNik}${day}${month}${year}`;
+  return `${normalizedEmployeeNumber}${day}${month}${year}`;
 }

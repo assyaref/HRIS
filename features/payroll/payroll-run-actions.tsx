@@ -102,137 +102,181 @@ export function PayrollRunActions({
 
   if (!hasAnyVisible) return null;
 
+  const actionBase =
+    "min-h-11 rounded-xl px-4 text-sm font-semibold shadow-sm transition-all duration-200 hover:-translate-y-px active:translate-y-0 disabled:pointer-events-none disabled:opacity-60";
+
   return (
     <div className="space-y-4">
       {message ? (
         <div
           role={message.tone === "error" ? "alert" : "status"}
-          className={`rounded-md border px-3 py-2 text-sm ${
+          className={`rounded-2xl border px-4 py-3 text-sm ${
             message.tone === "success"
-              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-              : "border-destructive/40 bg-destructive/10 text-destructive"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border-red-200 bg-red-50 text-red-700"
           }`}
         >
-          {message.text}
+          <div className="flex items-start gap-2">
+            <span className="mt-0.5 font-bold">
+              {message.tone === "success" ? "✓" : "!"}
+            </span>
+            <span>{message.text}</span>
+          </div>
         </div>
       ) : null}
 
-      <div className="flex flex-wrap gap-2">
-        {showCalculate ? (
-          <Button
-            type="button"
-            onClick={() => run(() => calculatePayrollAction(periodId))}
-            disabled={pending}
-          >
-            {pending ? "Working…" : "Calculate run"}
-          </Button>
-        ) : null}
-        {showSubmit ? (
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => run(() => submitPayrollRunAction(periodId))}
-            disabled={pending}
-          >
-            Submit for approval
-          </Button>
-        ) : null}
-        {showApprove ? (
-          <Button
-            type="button"
-            onClick={() => run(() => approvePayrollRunAction(periodId))}
-            disabled={pending}
-          >
-            Approve
-          </Button>
-        ) : null}
-        {showReject && !rejectOpen ? (
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={() => setRejectOpen(true)}
-            disabled={pending}
-          >
-            Reject
-          </Button>
-        ) : null}
-        {showReject && rejectOpen ? (
-          <form
-            action={reject}
-            className="w-full space-y-3 rounded-md border border-border p-3"
-          >
-            <div className="space-y-2">
-              <Label htmlFor="reject-reason">Reason for rejection</Label>
-              <textarea
-                id="reject-reason"
-                name="reason"
-                rows={2}
-                required
-                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setRejectOpen(false)}
-                disabled={pending}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                variant="destructive"
-                size="sm"
-                disabled={pending}
-              >
-                {pending ? "Rejecting…" : "Confirm rejection"}
-              </Button>
-            </div>
-          </form>
-        ) : null}
-        {showLock ? (
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => run(() => lockPayrollRunAction(periodId))}
-            disabled={pending}
-          >
-            Lock and finalize
-          </Button>
-        ) : null}
-        {showCancel ? (
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={() => run(() => cancelPayrollPeriodAction(periodId))}
-            disabled={pending}
-          >
-            Cancel period
-          </Button>
-        ) : null}
-        {showGenerate ? (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => run(() => generatePayslipsAction(periodId))}
-            disabled={pending}
-          >
-            Generate payslips
-          </Button>
-        ) : null}
-        {showPublish ? (
-          <Button
-            type="button"
-            onClick={() => run(() => publishPayslipsAction(periodId))}
-            disabled={pending}
-          >
-            Publish payslips
-          </Button>
-        ) : null}
+      <div className="rounded-2xl border border-blue-100 bg-[#EAF5FF]/60 p-4">
+        <p className="mb-3 text-xs font-bold uppercase tracking-wide text-[#0F6FD1]">
+          Available workflow actions
+        </p>
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          {showCalculate ? (
+            <Button
+              type="button"
+              onClick={() => run(() => calculatePayrollAction(periodId))}
+              disabled={pending}
+              className={`${actionBase} bg-[#1687F8] text-white hover:bg-[#0F6FD1]`}
+            >
+              {pending ? "Working…" : "Calculate run"}
+            </Button>
+          ) : null}
+
+          {showSubmit ? (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => run(() => submitPayrollRunAction(periodId))}
+              disabled={pending}
+              className={`${actionBase} bg-white text-[#0F6FD1] ring-1 ring-blue-200 hover:bg-blue-50`}
+            >
+              Submit for approval
+            </Button>
+          ) : null}
+
+          {showApprove ? (
+            <Button
+              type="button"
+              onClick={() => run(() => approvePayrollRunAction(periodId))}
+              disabled={pending}
+              className={`${actionBase} bg-emerald-600 text-white hover:bg-emerald-700`}
+            >
+              Approve
+            </Button>
+          ) : null}
+
+          {showReject && !rejectOpen ? (
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => setRejectOpen(true)}
+              disabled={pending}
+              className={`${actionBase} bg-red-50 text-red-700 ring-1 ring-red-200 hover:bg-red-100`}
+            >
+              Reject
+            </Button>
+          ) : null}
+
+          {showLock ? (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => run(() => lockPayrollRunAction(periodId))}
+              disabled={pending}
+              className={`${actionBase} bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50`}
+            >
+              Lock and finalize
+            </Button>
+          ) : null}
+
+          {showGenerate ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => run(() => generatePayslipsAction(periodId))}
+              disabled={pending}
+              className={`${actionBase} border-violet-200 bg-white text-violet-700 hover:bg-violet-50`}
+            >
+              Generate payslips
+            </Button>
+          ) : null}
+
+          {showPublish ? (
+            <Button
+              type="button"
+              onClick={() => run(() => publishPayslipsAction(periodId))}
+              disabled={pending}
+              className={`${actionBase} bg-[#1687F8] text-white hover:bg-[#0F6FD1]`}
+            >
+              Publish payslips
+            </Button>
+          ) : null}
+
+          {showCancel ? (
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => run(() => cancelPayrollPeriodAction(periodId))}
+              disabled={pending}
+              className={`${actionBase} bg-white text-red-700 ring-1 ring-red-200 hover:bg-red-50`}
+            >
+              Cancel period
+            </Button>
+          ) : null}
+        </div>
       </div>
+
+      {showReject && rejectOpen ? (
+        <form
+          action={reject}
+          className="space-y-4 rounded-2xl border border-red-200 bg-red-50/60 p-4 sm:p-5"
+        >
+          <div>
+            <p className="text-sm font-bold text-red-800">
+              Reject payroll run
+            </p>
+            <p className="mt-1 text-xs text-red-600">
+              Provide a reason that will be recorded with the workflow event.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="reject-reason" className="text-red-900">
+              Reason for rejection
+            </Label>
+            <textarea
+              id="reject-reason"
+              name="reason"
+              rows={3}
+              required
+              className="flex min-h-24 w-full rounded-xl border border-red-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition-colors placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-red-300"
+            />
+          </div>
+
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setRejectOpen(false)}
+              disabled={pending}
+              className="min-h-11 rounded-xl"
+            >
+              Keep payroll
+            </Button>
+
+            <Button
+              type="submit"
+              variant="destructive"
+              size="sm"
+              disabled={pending}
+              className="min-h-11 rounded-xl bg-red-600 px-4 font-semibold text-white hover:bg-red-700"
+            >
+              {pending ? "Rejecting…" : "Confirm rejection"}
+            </Button>
+          </div>
+        </form>
+      ) : null}
     </div>
   );
 }
-

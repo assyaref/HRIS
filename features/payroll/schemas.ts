@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { PAYROLL_COMPONENT_METHODS, PAYROLL_COMPONENT_TYPES } from "./constants";
+import { PAYROLL_COMPONENT_METHODS, PAYROLL_COMPONENT_TYPES } from "./constants.ts";
 
 /**
  * Payroll input validation (Phase 8).

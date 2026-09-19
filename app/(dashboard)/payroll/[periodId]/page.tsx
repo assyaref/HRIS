@@ -33,18 +33,97 @@ import {
 import { formatDate, formatDateTime } from "@/features/payroll/format";
 import { formatIDR } from "@/features/payroll/money";
 import { PayrollRunActions } from "@/features/payroll/payroll-run-actions";
+import { PayslipDocumentUpload } from "@/features/payroll/payslip-document-upload";
+import { PayslipPublishButton } from "@/features/payroll/payslip-publish-button";
 import { PayslipRevocationDialog } from "@/features/payroll/payslip-revocation-dialog";
 import {
   getPayrollPeriodInOrganization,
   listMyPublishedPayslips,
   listPayrollEvents,
   listPayrollItemsForRun,
-  listPayslipsForRun,
+  listPayslipDocumentSummariesForPeriod,
+  listPayslipsForPeriod,
 } from "@/features/payroll/queries";
 
 export const metadata: Metadata = {
   title: "Payroll period",
 };
+
+function SectionIcon({
+  type,
+}: {
+  type: "calendar" | "workflow" | "money" | "document" | "history";
+}) {
+  const common = {
+    className: "size-5",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+  };
+
+  if (type === "calendar") {
+    return (
+      <svg {...common}>
+        <rect x="3" y="4" width="18" height="17" rx="3" />
+        <path d="M16 2v4M8 2v4M3 10h18" />
+      </svg>
+    );
+  }
+
+  if (type === "workflow") {
+    return (
+      <svg {...common}>
+        <path d="M6 3v18M18 3v18M6 7h12M6 17h12" />
+        <circle cx="6" cy="7" r="1.5" />
+        <circle cx="18" cy="17" r="1.5" />
+      </svg>
+    );
+  }
+
+  if (type === "money") {
+    return (
+      <svg {...common}>
+        <rect x="3" y="5" width="18" height="14" rx="3" />
+        <circle cx="12" cy="12" r="3" />
+        <path d="M7 9h.01M17 15h.01" />
+      </svg>
+    );
+  }
+
+  if (type === "document") {
+    return (
+      <svg {...common}>
+        <path d="M7 3h7l4 4v14H7z" />
+        <path d="M14 3v5h5M10 12h5M10 16h5" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg {...common}>
+      <path d="M12 8v5l3 2" />
+      <circle cx="12" cy="12" r="9" />
+    </svg>
+  );
+}
+
+function InfoRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50/80 px-4 py-3">
+      <span className="text-sm text-slate-500">{label}</span>
+      <span className="text-right text-sm font-semibold text-slate-900">
+        {children}
+      </span>
+    </div>
+  );
+}
 
 export default async function PayrollPeriodDetailPage({
   params,
@@ -114,104 +193,205 @@ export default async function PayrollPeriodDetailPage({
     getEmployeeByUserId(user.id, organizationId),
   ]);
 
-  const [items, payslips] = period.run
-    ? await Promise.all([
-        listPayrollItemsForRun(organizationId, period.run.id),
-        listPayslipsForRun(organizationId, period.run.id),
-      ])
-    : [[], []];
+  const items = period.run
+    ? await listPayrollItemsForRun(organizationId, period.run.id)
+    : [];
+
+  const [payslips, documentSummaries] = await Promise.all([
+    listPayslipsForPeriod(organizationId, period.id),
+    listPayslipDocumentSummariesForPeriod(organizationId, period.id),
+  ]);
 
   const myPayslips = linkedEmployee
     ? await listMyPublishedPayslips(organizationId, linkedEmployee.id)
     : [];
-  const myPayslipsForPeriod = period.run
-    ? myPayslips.filter((payslip) =>
-        payslips.some((row) => row.id === payslip.id)
-      )
-    : [];
+
+  const myPayslipsForPeriod = myPayslips.filter((payslip) =>
+    payslips.some((row) => row.id === payslip.id)
+  );
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            {period.name}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-            {period.code} · {period.organizationName}
-          </p>
-        </div>
-        <Link
-          href="/payroll"
-          className={buttonVariants({ variant: "outline", size: "sm" })}
-        >
-          Back to payroll
-        </Link>
-      </div>
+      {/* Header */}
+      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#1687F8] via-[#1687F8] to-[#0F6FD1] px-5 py-6 text-white shadow-[0_12px_35px_rgba(22,135,248,0.18)] sm:px-7 sm:py-7">
+        <div className="absolute -right-20 -top-24 size-64 rounded-full bg-white/10 blur-2xl" />
+        <div className="absolute -bottom-28 right-24 size-52 rounded-full bg-white/10 blur-3xl" />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Period</CardTitle>
-            <CardDescription>Payroll cycle metadata.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <p className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Window</span>
-              <span className="font-medium">
-                {formatDate(period.periodStart)} → {formatDate(period.periodEnd)}
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold backdrop-blur">
+                Payroll period
               </span>
-            </p>
-            <p className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Payment date</span>
-              <span className="font-medium">{formatDate(period.paymentDate)}</span>
-            </p>
-            <p className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Status</span>
               <PayrollPeriodStatusBadge status={period.status} />
+            </div>
+
+            <h1 className="truncate text-2xl font-bold tracking-tight sm:text-3xl">
+              {period.name}
+            </h1>
+
+            <p className="mt-2 text-sm text-blue-50 sm:text-base">
+              {period.code} · {period.organizationName}
             </p>
-            <p className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Created</span>
-              <span className="font-medium">{formatDateTime(period.createdAt)}</span>
+          </div>
+
+          <Link
+            href="/payroll"
+            className={buttonVariants({
+              variant: "outline",
+              size: "sm",
+              className:
+                "w-full border-white/40 bg-white text-blue-700 shadow-sm hover:bg-blue-50 hover:text-blue-800 sm:w-auto",
+            })}
+          >
+            ← Back to payroll
+          </Link>
+        </div>
+      </section>
+
+      {/* Overview */}
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Card className="border-slate-200/80 shadow-[0_3px_18px_rgba(15,23,42,0.035)]">
+          <CardContent className="p-5">
+            <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-[#EAF5FF] text-[#1687F8]">
+              <SectionIcon type="calendar" />
+            </div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Payroll window
+            </p>
+            <p className="mt-2 text-sm font-bold text-slate-900">
+              {formatDate(period.periodStart)}
+            </p>
+            <p className="text-xs text-slate-500">
+              to {formatDate(period.periodEnd)}
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Run</CardTitle>
-            <CardDescription>Server-controlled payroll workflow.</CardDescription>
+        <Card className="border-slate-200/80 shadow-[0_3px_18px_rgba(15,23,42,0.035)]">
+          <CardContent className="p-5">
+            <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+              <SectionIcon type="money" />
+            </div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Payment date
+            </p>
+            <p className="mt-2 text-sm font-bold text-slate-900">
+              {formatDate(period.paymentDate)}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200/80 shadow-[0_3px_18px_rgba(15,23,42,0.035)]">
+          <CardContent className="p-5">
+            <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+              <SectionIcon type="workflow" />
+            </div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Run status
+            </p>
+            <div className="mt-2">
+              {period.run ? (
+                <PayrollRunStatusBadge status={period.run.status} />
+              ) : (
+                <span className="text-sm font-semibold text-slate-500">
+                  Not calculated
+                </span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200/80 shadow-[0_3px_18px_rgba(15,23,42,0.035)]">
+          <CardContent className="p-5">
+            <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+              <SectionIcon type="history" />
+            </div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Created
+            </p>
+            <p className="mt-2 text-sm font-bold text-slate-900">
+              {formatDateTime(period.createdAt)}
+            </p>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* Period + Workflow */}
+      <div className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
+        <Card className="border-slate-200/80 shadow-[0_3px_18px_rgba(15,23,42,0.035)]">
+          <CardHeader className="border-b border-slate-100 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#EAF5FF] text-[#1687F8]">
+                <SectionIcon type="calendar" />
+              </div>
+              <div>
+                <CardTitle>Period details</CardTitle>
+                <CardDescription>
+                  Payroll cycle metadata and schedule.
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4 text-sm">
+
+          <CardContent className="space-y-2 p-5">
+            <InfoRow label="Window">
+              {formatDate(period.periodStart)} → {formatDate(period.periodEnd)}
+            </InfoRow>
+            <InfoRow label="Payment date">
+              {formatDate(period.paymentDate)}
+            </InfoRow>
+            <InfoRow label="Status">
+              <PayrollPeriodStatusBadge status={period.status} />
+            </InfoRow>
+            <InfoRow label="Created">
+              {formatDateTime(period.createdAt)}
+            </InfoRow>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200/80 shadow-[0_3px_18px_rgba(15,23,42,0.035)]">
+          <CardHeader className="border-b border-slate-100 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#EAF5FF] text-[#1687F8]">
+                <SectionIcon type="workflow" />
+              </div>
+              <div>
+                <CardTitle>Payroll workflow</CardTitle>
+                <CardDescription>
+                  Server-controlled payroll workflow.
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="space-y-5 p-5">
             {period.run ? (
-              <>
-                <p className="flex justify-between gap-4">
-                  <span className="text-muted-foreground">Run status</span>
+              <div className="grid gap-2 sm:grid-cols-3">
+                <InfoRow label="Run">
                   <PayrollRunStatusBadge status={period.run.status} />
-                </p>
-                <p className="flex justify-between gap-4">
-                  <span className="text-muted-foreground">Calculated</span>
-                  <span className="font-medium">
-                    {formatDateTime(period.run.calculatedAt)}
-                  </span>
-                </p>
-                <p className="flex justify-between gap-4">
-                  <span className="text-muted-foreground">Approved</span>
-                  <span className="font-medium">
-                    {formatDateTime(period.run.approvedAt)}
-                  </span>
-                </p>
-                <p className="flex justify-between gap-4">
-                  <span className="text-muted-foreground">Locked</span>
-                  <span className="font-medium">
+                </InfoRow>
+                <InfoRow label="Calculated">
+                  {formatDateTime(period.run.calculatedAt)}
+                </InfoRow>
+                <InfoRow label="Approved">
+                  {formatDateTime(period.run.approvedAt)}
+                </InfoRow>
+                <div className="sm:col-span-3">
+                  <InfoRow label="Locked">
                     {formatDateTime(period.run.lockedAt)}
-                  </span>
-                </p>
-              </>
+                  </InfoRow>
+                </div>
+              </div>
             ) : (
-              <p className="text-muted-foreground">
-                No run exists yet. Use Calculate run to generate payroll items.
-              </p>
+              <div className="rounded-2xl border border-dashed border-blue-200 bg-[#EAF5FF]/70 p-4">
+                <p className="text-sm font-semibold text-[#0F6FD1]">
+                  No payroll run yet
+                </p>
+                <p className="mt-1 text-sm text-slate-600">
+                  Use Calculate run to generate payroll items.
+                </p>
+              </div>
             )}
 
             <PayrollRunActions
@@ -231,142 +411,371 @@ export default async function PayrollPeriodDetailPage({
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Payroll items</CardTitle>
-          <CardDescription>
-            Employee snapshots and calculated totals for this run.
-          </CardDescription>
+      {/* Payroll Items */}
+      <Card className="overflow-hidden border-slate-200/80 shadow-[0_3px_18px_rgba(15,23,42,0.035)]">
+        <CardHeader className="border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#EAF5FF] text-[#1687F8]">
+              <SectionIcon type="money" />
+            </div>
+            <div>
+              <CardTitle>Payroll items</CardTitle>
+              <CardDescription>
+                Employee snapshots and calculated totals for this run.
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
+
+        <CardContent className="p-4 sm:p-6">
           {!period.run || items.length === 0 ? (
             <EmptyState
               title="No payroll items"
               description="Payroll items will appear here after the run is calculated."
             />
           ) : (
-            <div className="rounded-lg border border-border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Employee</TableHead>
-                    <TableHead className="text-right">Gross</TableHead>
-                    <TableHead className="text-right">Deductions</TableHead>
-                    <TableHead className="text-right">Net</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>
-                        <span className="font-medium">{item.employeeNameSnapshot}</span>
-                        <span className="block font-mono text-xs text-muted-foreground">
+            <>
+              {/* Mobile */}
+              <div className="space-y-3 lg:hidden">
+                {items.map((item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold text-slate-900">
+                          {item.employeeNameSnapshot}
+                        </p>
+                        <p className="mt-1 font-mono text-xs text-slate-500">
                           {item.employeeNumberSnapshot}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatIDR(item.grossAmount)}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatIDR(item.totalDeductions)}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatIDR(item.netAmount)}
-                      </TableCell>
-                      <TableCell>
-                        <PayrollItemStatusBadge status={item.status} />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Link
-                          href={`/payroll/items/${item.id}`}
-                          className={buttonVariants({ variant: "ghost", size: "sm" })}
-                        >
-                          View
-                        </Link>
-                      </TableCell>
+                        </p>
+                      </div>
+                      <PayrollItemStatusBadge status={item.status} />
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-3 gap-2">
+                      <div className="rounded-xl bg-slate-50 p-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                          Gross
+                        </p>
+                        <p className="mt-1 text-xs font-bold text-slate-900">
+                          {formatIDR(item.grossAmount)}
+                        </p>
+                      </div>
+                      <div className="rounded-xl bg-slate-50 p-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                          Deduction
+                        </p>
+                        <p className="mt-1 text-xs font-bold text-slate-900">
+                          {formatIDR(item.totalDeductions)}
+                        </p>
+                      </div>
+                      <div className="rounded-xl bg-[#EAF5FF] p-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-[#0F6FD1]">
+                          Net
+                        </p>
+                        <p className="mt-1 text-xs font-bold text-[#0F6FD1]">
+                          {formatIDR(item.netAmount)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <Link
+                      href={`/payroll/items/${item.id}`}
+                      className={buttonVariants({
+                        variant: "outline",
+                        size: "sm",
+                        className:
+                          "mt-4 w-full border-blue-200 text-[#0F6FD1] hover:bg-[#EAF5FF]",
+                      })}
+                    >
+                      View payroll item
+                    </Link>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop */}
+              <div className="hidden overflow-hidden rounded-2xl border border-slate-200/80 lg:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
+                      <TableHead>Employee</TableHead>
+                      <TableHead className="text-right">Gross</TableHead>
+                      <TableHead className="text-right">Deductions</TableHead>
+                      <TableHead className="text-right">Net</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {items.map((item) => (
+                      <TableRow key={item.id} className="hover:bg-blue-50/30">
+                        <TableCell>
+                          <span className="font-semibold text-slate-900">
+                            {item.employeeNameSnapshot}
+                          </span>
+                          <span className="block font-mono text-xs text-slate-500">
+                            {item.employeeNumberSnapshot}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatIDR(item.grossAmount)}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatIDR(item.totalDeductions)}
+                        </TableCell>
+                        <TableCell className="text-right font-bold text-[#0F6FD1]">
+                          {formatIDR(item.netAmount)}
+                        </TableCell>
+                        <TableCell>
+                          <PayrollItemStatusBadge status={item.status} />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Link
+                            href={`/payroll/items/${item.id}`}
+                            className={buttonVariants({
+                              variant: "ghost",
+                              size: "sm",
+                              className:
+                                "text-[#0F6FD1] hover:bg-[#EAF5FF] hover:text-[#0F6FD1]",
+                            })}
+                          >
+                            View →
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Payslips</CardTitle>
-          <CardDescription>
-            Minimum payslip surface supported by the current Phase 8 schema.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {!period.run || payslips.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No payslips have been generated for this period.
-            </p>
-          ) : (
-            <div className="rounded-lg border border-border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Payslip</TableHead>
-                    <TableHead>Issued</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {payslips.map((payslip) => (
-                    <TableRow key={payslip.id}>
-                      <TableCell className="font-mono text-xs">
-                        {payslip.status === "published" ? (
-                          <Link
-                            href={`/payroll/payslips/${payslip.id}`}
-                            className="underline underline-offset-4"
-                          >
-                            {payslip.payslipNumber}
-                          </Link>
-                        ) : (
-                          payslip.payslipNumber
-                        )}
-                      </TableCell>
-                      <TableCell>{formatDateTime(payslip.issuedAt)}</TableCell>
-                      <TableCell>
-                        <PayslipStatusBadge status={payslip.status} />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {canRevokePayslips && payslip.status === "published" ? (
-                          <PayslipRevocationDialog
-                            payslipId={payslip.id}
-                            payslipNumber={payslip.payslipNumber}
-                          />
-                        ) : (
-                          <span className="text-xs text-slate-400">—</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+      {/* Payslips */}
+      <Card className="overflow-hidden border-slate-200/80 shadow-[0_3px_18px_rgba(15,23,42,0.035)]">
+        <CardHeader className="border-b border-slate-100">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+                <SectionIcon type="document" />
+              </div>
+              <div>
+                <CardTitle>Payslips</CardTitle>
+                <CardDescription>
+                  Payslip generation, documents, and publication status.
+                </CardDescription>
+              </div>
             </div>
+
+            {canPublishPayslips &&
+            period.status !== "cancelled" &&
+            period.status !== "locked" ? (
+              <Link
+                href={`/payroll/payslips/upload?periodId=${period.id}`}
+                className={buttonVariants({
+                  variant: "outline",
+                  size: "sm",
+                  className:
+                    "border-violet-200 text-violet-700 hover:bg-violet-50",
+                })}
+              >
+                Upload distribution payslip
+              </Link>
+            ) : null}
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-4 p-4 sm:p-6">
+          {payslips.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 p-6 text-center">
+              <p className="text-sm font-semibold text-slate-700">
+                No payslips generated
+              </p>
+              <p className="mt-1 text-sm text-slate-500">
+                Payslips will appear here after they are generated for this
+                period.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Mobile */}
+              <div className="space-y-3 lg:hidden">
+                {payslips.map((payslip) => (
+                  <div
+                    key={payslip.id}
+                    className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      {payslip.status === "published" ? (
+                        <Link
+                          href={`/payroll/payslips/${payslip.id}`}
+                          className="font-mono text-xs font-bold text-[#0F6FD1] underline underline-offset-4"
+                        >
+                          {payslip.payslipNumber}
+                        </Link>
+                      ) : (
+                        <span className="font-mono text-xs font-bold text-slate-700">
+                          {payslip.payslipNumber}
+                        </span>
+                      )}
+                      <PayslipStatusBadge status={payslip.status} />
+                    </div>
+
+                    <p className="mt-3 text-xs text-slate-500">
+                      Issued {formatDateTime(payslip.issuedAt)}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {payslip.kind === "distribution"
+                        ? "Distribution payslip"
+                        : "Calculated payslip"}
+                    </p>
+
+                    {payslip.status === "generated" ? (
+                      <div className="mt-4">
+                        <PayslipDocumentUpload
+                          payslipId={payslip.id}
+                          payslipNumber={payslip.payslipNumber}
+                          document={
+                            documentSummaries.get(payslip.id) ?? null
+                          }
+                        />
+                      </div>
+                    ) : null}
+
+                    {canPublishPayslips &&
+                    payslip.status === "generated" &&
+                    documentSummaries.get(payslip.id) ? (
+                      <div className="mt-4">
+                        <PayslipPublishButton
+                          payslipId={payslip.id}
+                          payslipNumber={payslip.payslipNumber}
+                          className="w-full"
+                        />
+                      </div>
+                    ) : null}
+
+                    {canRevokePayslips && payslip.status === "published" ? (
+                      <div className="mt-4">
+                        <PayslipRevocationDialog
+                          payslipId={payslip.id}
+                          payslipNumber={payslip.payslipNumber}
+                          triggerClassName="w-full"
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop */}
+              <div className="hidden overflow-hidden rounded-2xl border border-slate-200/80 lg:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
+                      <TableHead>Payslip</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Issued</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">PDF</TableHead>
+                      <TableHead className="text-right">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {payslips.map((payslip) => (
+                      <TableRow key={payslip.id} className="hover:bg-blue-50/30">
+                        <TableCell className="font-mono text-xs">
+                          {payslip.status === "published" ? (
+                            <Link
+                              href={`/payroll/payslips/${payslip.id}`}
+                              className="font-semibold text-[#0F6FD1] underline underline-offset-4"
+                            >
+                              {payslip.payslipNumber}
+                            </Link>
+                          ) : (
+                            payslip.payslipNumber
+                          )}
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-500">
+                          {payslip.kind === "distribution"
+                            ? "Distribution"
+                            : "Calculated"}
+                        </TableCell>
+                        <TableCell>{formatDateTime(payslip.issuedAt)}</TableCell>
+                        <TableCell>
+                          <PayslipStatusBadge status={payslip.status} />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {payslip.status === "generated" ? (
+                            <PayslipDocumentUpload
+                              payslipId={payslip.id}
+                              payslipNumber={payslip.payslipNumber}
+                              document={
+                                documentSummaries.get(payslip.id) ?? null
+                              }
+                            />
+                          ) : (
+                            <span className="text-xs text-slate-400">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {canPublishPayslips &&
+                          payslip.status === "generated" &&
+                          documentSummaries.get(payslip.id) ? (
+                            <PayslipPublishButton
+                              payslipId={payslip.id}
+                              payslipNumber={payslip.payslipNumber}
+                            />
+                          ) : canRevokePayslips &&
+                            payslip.status === "published" ? (
+                            <PayslipRevocationDialog
+                              payslipId={payslip.id}
+                              payslipNumber={payslip.payslipNumber}
+                            />
+                          ) : (
+                            <span className="text-xs text-slate-400">—</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
 
           {myPayslipsForPeriod.length > 0 ? (
-            <div className="rounded-lg border border-border bg-muted/20 p-4">
-              <p className="text-sm font-medium">Your published payslips in this period</p>
-              <ul className="mt-2 space-y-2 text-sm">
+            <div className="rounded-2xl border border-blue-100 bg-[#EAF5FF]/60 p-4 sm:p-5">
+              <div className="flex items-start gap-3">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white text-[#1687F8] shadow-sm">
+                  <SectionIcon type="document" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-slate-900">
+                    Your published payslips
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Published payslips available to your employee account.
+                  </p>
+                </div>
+              </div>
+
+              <ul className="mt-4 space-y-2">
                 {myPayslipsForPeriod.map((payslip) => (
-                  <li key={payslip.id} className="flex items-center justify-between gap-3">
+                  <li
+                    key={payslip.id}
+                    className="flex flex-col gap-2 rounded-xl bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+                  >
                     <Link
                       href={`/payroll/payslips/${payslip.id}`}
-                      className="font-mono text-xs underline underline-offset-4"
+                      className="font-mono text-xs font-bold text-[#0F6FD1] underline underline-offset-4"
                     >
                       {payslip.payslipNumber}
                     </Link>
-                    <span className="text-muted-foreground">
+                    <span className="text-xs text-slate-500">
                       Published on {formatDateTime(payslip.issuedAt)}
                     </span>
                   </li>
@@ -377,41 +786,84 @@ export default async function PayrollPeriodDetailPage({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>History</CardTitle>
-          <CardDescription>Immutable payroll events.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {events.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No events.</p>
-          ) : (
-            <div className="rounded-lg border border-border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Event</TableHead>
-                    <TableHead>Transition</TableHead>
-                    <TableHead>Actor</TableHead>
-                    <TableHead>Time</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {events.map((event) => (
-                    <TableRow key={event.id}>
-                      <TableCell className="font-mono text-xs">
-                        {event.eventType}
-                      </TableCell>
-                      <TableCell>
-                        {(event.fromStatus ?? "—") + " → " + (event.toStatus ?? "—")}
-                      </TableCell>
-                      <TableCell>{event.actorEmail ?? "—"}</TableCell>
-                      <TableCell>{formatDateTime(event.eventAt)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+      {/* History */}
+      <Card className="overflow-hidden border-slate-200/80 shadow-[0_3px_18px_rgba(15,23,42,0.035)]">
+        <CardHeader className="border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+              <SectionIcon type="history" />
             </div>
+            <div>
+              <CardTitle>History</CardTitle>
+              <CardDescription>
+                Immutable payroll events and workflow transitions.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-4 sm:p-6">
+          {events.length === 0 ? (
+            <p className="rounded-2xl bg-slate-50 p-5 text-sm text-slate-500">
+              No events.
+            </p>
+          ) : (
+            <>
+              <div className="space-y-3 lg:hidden">
+                {events.map((event) => (
+                  <div
+                    key={event.id}
+                    className="rounded-2xl border border-slate-200 bg-white p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="font-mono text-xs font-bold text-[#0F6FD1]">
+                        {event.eventType}
+                      </span>
+                      <span className="text-right text-xs text-slate-500">
+                        {formatDateTime(event.eventAt)}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-sm font-medium text-slate-700">
+                      {(event.fromStatus ?? "—") +
+                        " → " +
+                        (event.toStatus ?? "—")}
+                    </p>
+                    <p className="mt-2 text-xs text-slate-500">
+                      Actor: {event.actorEmail ?? "—"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="hidden overflow-hidden rounded-2xl border border-slate-200/80 lg:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
+                      <TableHead>Event</TableHead>
+                      <TableHead>Transition</TableHead>
+                      <TableHead>Actor</TableHead>
+                      <TableHead>Time</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {events.map((event) => (
+                      <TableRow key={event.id} className="hover:bg-blue-50/30">
+                        <TableCell className="font-mono text-xs font-semibold text-[#0F6FD1]">
+                          {event.eventType}
+                        </TableCell>
+                        <TableCell>
+                          {(event.fromStatus ?? "—") +
+                            " → " +
+                            (event.toStatus ?? "—")}
+                        </TableCell>
+                        <TableCell>{event.actorEmail ?? "—"}</TableCell>
+                        <TableCell>{formatDateTime(event.eventAt)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

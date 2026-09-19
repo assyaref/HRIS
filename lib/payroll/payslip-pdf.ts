@@ -29,7 +29,13 @@ const PDF_MAGIC = Buffer.from("%PDF-");
 const GS_TIMEOUT_MS = 60_000;
 
 export interface PayslipPdfIdentity {
+  /**
+   * Legacy NIK, required only to decrypt PDFs encrypted under the pre-employee
+   * number password contracts. Never used to build a current password.
+   */
   nik: string | null;
+  /** Employee number — the base of the current password contract. */
+  employeeNumber: string | null;
   birthDate: Date | null;
 }
 
@@ -68,12 +74,13 @@ function assertPdfSize(size: number): void {
 function assertIdentity(
   identity: PayslipPdfIdentity
 ): asserts identity is {
-  nik: string;
+  nik: string | null;
+  employeeNumber: string;
   birthDate: Date;
 } {
-  if (!identity.nik) {
+  if (!identity.employeeNumber) {
     throw new Error(
-      "Employee NIK is required before a payslip PDF can be published."
+      "Employee number is required before a payslip PDF can be published."
     );
   }
 
@@ -85,6 +92,16 @@ function assertIdentity(
 
   if (Number.isNaN(identity.birthDate.getTime())) {
     throw new Error("Employee birth date is invalid.");
+  }
+}
+
+function assertLegacyIdentity(
+  identity: PayslipPdfIdentity
+): asserts identity is PayslipPdfIdentity & { nik: string } {
+  if (!identity.nik) {
+    throw new Error(
+      "Employee NIK is required to decrypt a PDF created under the legacy contract."
+    );
   }
 }
 
@@ -285,7 +302,7 @@ export async function encryptAndStorePayslipPdf(input: {
     await validatePdfWithGhostscript(sourcePath);
 
     const password = buildPayslipPassword(
-      input.identity.nik,
+      input.identity.employeeNumber,
       input.identity.birthDate
     );
 
@@ -398,9 +415,9 @@ async function verifyEncryptedPdfPassword(
 }
 
 /**
- * Re-encrypts an existing stored payslip PDF from password contract V1
- * (NIK + DD + YYYY) to the current password contract V2
- * (NIK + DD + MM + YYYY).
+ * Re-encrypts an existing stored payslip PDF from the legacy password
+ * contract V1 (NIK + DD + YYYY) to the current password contract V2
+ * (employee number + DD + MM + YYYY).
  *
  * Security contract:
  * - Existing storageKey is preserved.
@@ -428,6 +445,7 @@ export async function reencryptPayslipPdf(
   assertPdfSize(input.encryptedPdf.length);
   assertPdfMagic(input.encryptedPdf);
   assertIdentity(input.identity);
+  assertLegacyIdentity(input.identity);
 
   const tempDir = path.join(
     PRIVATE_ROOT,
@@ -454,7 +472,7 @@ export async function reencryptPayslipPdf(
     );
 
     const newPassword = buildPayslipPassword(
-      input.identity.nik,
+      input.identity.employeeNumber,
       input.identity.birthDate
     );
 

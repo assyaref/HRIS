@@ -28,15 +28,15 @@ export function isGeneratedPayslipStatus(status: string): boolean {
 export type PayslipDocumentSkipReason =
   | "not_generated"
   | "document_exists"
-  | "missing_nik"
+  | "missing_employee_number"
   | "missing_birthdate";
 
 export interface PayslipPdfCandidateInput {
   payslipId: string;
   status: string;
-  /** Snapshot-adjacent identity values: NIK and birth date may be absent in
-   * legacy employee records. */
-  nik?: string | null;
+  /** Snapshot-adjacent identity values: employee number and birth date may be
+   * absent in legacy employee records. */
+  employeeNumber?: string | null;
   birthDate?: Date | string | null;
   /** True when a `payslip_documents` row already exists for the payslip. */
   existingDocument: boolean;
@@ -79,8 +79,11 @@ export function classifyPayslipPdfCandidates(
       continue;
     }
 
-    if (!candidate.nik || candidate.nik.length === 0) {
-      skipped.push({ payslipId: candidate.payslipId, reason: "missing_nik" });
+    if (!candidate.employeeNumber || candidate.employeeNumber.length === 0) {
+      skipped.push({
+        payslipId: candidate.payslipId,
+        reason: "missing_employee_number",
+      });
       continue;
     }
 

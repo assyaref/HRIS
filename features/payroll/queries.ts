@@ -1,9 +1,10 @@
 import "server-only";
 
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, or, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
+  employees,
   organizations,
   payrollComponents,
   payrollEvents,
@@ -12,6 +13,8 @@ import {
   payrollPeriods,
   payrollRuns,
   payslips,
+  payslipDocuments,
+  payslipDocumentVersions,
   users,
 } from "@/db/schema";
 import type {
@@ -22,6 +25,11 @@ import type {
   PayrollRunStatus,
   PayslipStatus,
 } from "./constants";
+import {
+  payslipDocumentSourceFrom,
+  type PayslipDocumentSource,
+} from "./payslip-document.guard";
+import type { PayslipKind } from "./payslip-distribution.guard";
 
 /**
  * Payroll data access (Phase 8) — server-only.
@@ -100,11 +108,15 @@ export interface PayrollComponentRow {
 export interface PayslipRow {
   id: string;
   organizationId: string;
-  payrollItemId: string;
+  payrollItemId: string | null;
+  payrollPeriodId: string | null;
   employeeId: string;
+  /** Historical employee number snapshot used for the PDF password contract. */
+  employeeNumberSnapshot: string | null;
   payslipNumber: string;
   issuedAt: Date;
   status: PayslipStatus;
+  kind: PayslipKind;
 }
 
 export interface PayrollEventRow {
@@ -221,8 +233,10 @@ function toPayrollItemRow(row: {
 function toPayslipRow(row: {
   id: string;
   organizationId: string;
-  payrollItemId: string;
+  payrollItemId: string | null;
+  payrollPeriodId: string | null;
   employeeId: string;
+  employeeNumberSnapshot: string | null;
   payslipNumber: string;
   issuedAt: Date;
   status: string;
@@ -231,10 +245,13 @@ function toPayslipRow(row: {
     id: row.id,
     organizationId: row.organizationId,
     payrollItemId: row.payrollItemId,
+    payrollPeriodId: row.payrollPeriodId,
     employeeId: row.employeeId,
+    employeeNumberSnapshot: row.employeeNumberSnapshot,
     payslipNumber: row.payslipNumber,
     issuedAt: row.issuedAt,
     status: row.status as PayslipStatus,
+    kind: row.payrollItemId ? "calculated" : "distribution",
   };
 }
 
@@ -266,10 +283,11 @@ export interface PayslipDetailRow extends PayslipRow {
   periodStart: Date;
   periodEnd: Date;
   paymentDate: Date;
-  grossAmount: number;
-  totalEarnings: number;
-  totalDeductions: number;
-  netAmount: number;
+  /** Null for Mode B (distribution) payslips — no payroll calculation exists. */
+  grossAmount: number | null;
+  totalEarnings: number | null;
+  totalDeductions: number | null;
+  netAmount: number | null;
   organizationName: string;
   components: PayrollItemComponentRow[];
 }
@@ -508,7 +526,9 @@ export async function listMyPublishedPayslips(
       id: payslips.id,
       organizationId: payslips.organizationId,
       payrollItemId: payslips.payrollItemId,
+      payrollPeriodId: payslips.payrollPeriodId,
       employeeId: payslips.employeeId,
+      employeeNumberSnapshot: payslips.employeeNumberSnapshot,
       payslipNumber: payslips.payslipNumber,
       issuedAt: payslips.issuedAt,
       status: payslips.status,
@@ -525,7 +545,7 @@ export async function listMyPublishedPayslips(
   return rows.map(toPayslipRow);
 }
 
-/** All payslips for a run (management). */
+/** All Mode A payslips for a run (management). */
 export async function listPayslipsForRun(
   organizationId: string,
   payrollRunId: string
@@ -535,7 +555,9 @@ export async function listPayslipsForRun(
       id: payslips.id,
       organizationId: payslips.organizationId,
       payrollItemId: payslips.payrollItemId,
+      payrollPeriodId: payslips.payrollPeriodId,
       employeeId: payslips.employeeId,
+      employeeNumberSnapshot: payslips.employeeNumberSnapshot,
       payslipNumber: payslips.payslipNumber,
       issuedAt: payslips.issuedAt,
       status: payslips.status,
@@ -551,6 +573,339 @@ export async function listPayslipsForRun(
     )
     .orderBy(asc(payslips.payslipNumber));
   return rows.map(toPayslipRow);
+}
+
+/**
+ * Every payslip directly linked to a payroll period (Mode A calculated +
+ * Mode B distribution), newest first. Management view; organization-scoped.
+ */
+export async function listPayslipsForPeriod(
+  organizationId: string,
+  payrollPeriodId: string
+): Promise<PayslipRow[]> {
+  const rows = await db
+    .select({
+      id: payslips.id,
+      organizationId: payslips.organizationId,
+      payrollItemId: payslips.payrollItemId,
+      payrollPeriodId: payslips.payrollPeriodId,
+      employeeId: payslips.employeeId,
+      employeeNumberSnapshot: payslips.employeeNumberSnapshot,
+      payslipNumber: payslips.payslipNumber,
+      issuedAt: payslips.issuedAt,
+      status: payslips.status,
+    })
+    .from(payslips)
+    .where(
+      and(
+        eq(payslips.organizationId, organizationId),
+        eq(payslips.payrollPeriodId, payrollPeriodId)
+      )
+    )
+    .orderBy(asc(payslips.payslipNumber));
+  return rows.map(toPayslipRow);
+}
+
+/** Active employees available for a Mode B distribution payslip upload. */
+export interface PayrollDistributionEmployee {
+  id: string;
+  employeeNumber: string;
+  firstName: string;
+  lastName: string;
+  birthDate: Date | null;
+}
+
+/**
+ * Active, organization-scoped employees for the distribution upload picker.
+ * Only identity fields needed to build the PDF password are returned.
+ */
+export async function listPayrollDistributionEmployees(
+  organizationId: string
+): Promise<PayrollDistributionEmployee[]> {
+  const rows = await db
+    .select({
+      id: employees.id,
+      employeeNumber: employees.employeeNumber,
+      firstName: employees.firstName,
+      lastName: employees.lastName,
+      birthDate: employees.birthDate,
+    })
+    .from(employees)
+    .where(
+      and(
+        eq(employees.organizationId, organizationId),
+        eq(employees.employmentStatus, "active")
+      )
+    )
+    .orderBy(asc(employees.lastName), asc(employees.firstName));
+
+  return rows;
+}
+
+export interface PayslipOverviewRow {
+  id: string;
+  payslipNumber: string;
+  kind: PayslipKind;
+  status: PayslipStatus;
+  issuedAt: Date;
+  employeeId: string;
+  employeeNumber: string;
+  employeeName: string;
+  payrollPeriodId: string | null;
+  periodCode: string | null;
+  periodName: string | null;
+}
+
+export const RECENT_PAYSLIPS_LIMIT = 100;
+
+/**
+ * Recent payslips across every period (Mode A calculated + Mode B
+ * distribution), newest first, organization-scoped. Bounded to
+ * `RECENT_PAYSLIPS_LIMIT` rows for the management overview page.
+ */
+export async function listRecentPayslips(
+  organizationId: string
+): Promise<PayslipOverviewRow[]> {
+  const employeeName = sql<string>`coalesce(
+    ${payrollItems.employeeNameSnapshot},
+    ${employees.firstName} || ' ' || ${employees.lastName}
+  )`;
+  const employeeNumber = sql<string>`coalesce(
+    ${payslips.employeeNumberSnapshot},
+    ${payrollItems.employeeNumberSnapshot},
+    ${employees.employeeNumber}
+  )`;
+  const resolvedPeriodId = sql<string>`coalesce(
+    ${payrollRuns.payrollPeriodId},
+    ${payslips.payrollPeriodId}
+  )`;
+
+  const rows = await db
+    .select({
+      id: payslips.id,
+      payslipNumber: payslips.payslipNumber,
+      payrollItemId: payslips.payrollItemId,
+      status: payslips.status,
+      issuedAt: payslips.issuedAt,
+      employeeId: payslips.employeeId,
+      employeeNumber,
+      employeeName,
+      payrollPeriodId: resolvedPeriodId,
+      periodCode: payrollPeriods.code,
+      periodName: payrollPeriods.name,
+    })
+    .from(payslips)
+    .leftJoin(payrollItems, eq(payrollItems.id, payslips.payrollItemId))
+    .leftJoin(payrollRuns, eq(payrollRuns.id, payrollItems.payrollRunId))
+    .leftJoin(
+      payrollPeriods,
+      or(
+        eq(payrollPeriods.id, payrollRuns.payrollPeriodId),
+        eq(payrollPeriods.id, payslips.payrollPeriodId)
+      )
+    )
+    .innerJoin(employees, eq(employees.id, payslips.employeeId))
+    .where(eq(payslips.organizationId, organizationId))
+    .orderBy(desc(payslips.issuedAt))
+    .limit(RECENT_PAYSLIPS_LIMIT);
+
+  return rows.map((row) => ({
+    id: row.id,
+    payslipNumber: row.payslipNumber,
+    kind: row.payrollItemId ? "calculated" : "distribution",
+    status: row.status as PayslipStatus,
+    issuedAt: row.issuedAt,
+    employeeId: row.employeeId,
+    employeeNumber: row.employeeNumber,
+    employeeName: row.employeeName,
+    payrollPeriodId: row.payrollPeriodId ?? null,
+    periodCode: row.periodCode,
+    periodName: row.periodName,
+  }));
+}
+
+export interface PayslipDocumentSummary {
+  payslipId: string;
+  payslipDocumentId: string;
+  originalFilename: string;
+  mimeType: string;
+  fileSize: number;
+  sha256: string;
+  version: number;
+  source: PayslipDocumentSource;
+  createdAt: Date;
+}
+
+/**
+ * Current document + latest version metadata for every payslip in a run
+ * (management view). Returns a map keyed by `payslipId`; payslips without a
+ * document are absent.
+ *
+ * Organization-scoped. The `payslip_documents` row is the current pointer and
+ * the highest `payslip_document_versions` row describes it; version history
+ * itself is never exposed beyond the current version number/source.
+ */
+export async function listPayslipDocumentSummariesForRun(
+  organizationId: string,
+  payrollRunId: string
+): Promise<Map<string, PayslipDocumentSummary>> {
+  const documentRows = await db
+    .select({
+      payslipId: payslipDocuments.payslipId,
+      payslipDocumentId: payslipDocuments.id,
+      originalFilename: payslipDocuments.originalFilename,
+      mimeType: payslipDocuments.mimeType,
+      fileSize: payslipDocuments.fileSize,
+      sha256: payslipDocuments.sha256,
+      createdAt: payslipDocuments.createdAt,
+    })
+    .from(payslipDocuments)
+    .innerJoin(payslips, eq(payslips.id, payslipDocuments.payslipId))
+    .innerJoin(payrollItems, eq(payrollItems.id, payslips.payrollItemId))
+    .where(
+      and(
+        eq(payslipDocuments.organizationId, organizationId),
+        eq(payrollItems.payrollRunId, payrollRunId),
+        eq(payrollItems.organizationId, organizationId)
+      )
+    );
+
+  if (documentRows.length === 0) {
+    return new Map();
+  }
+
+  const documentIds = documentRows.map((row) => row.payslipDocumentId);
+
+  const versionRows = await db
+    .select({
+      payslipDocumentId: payslipDocumentVersions.payslipDocumentId,
+      version: payslipDocumentVersions.version,
+      source: payslipDocumentVersions.source,
+    })
+    .from(payslipDocumentVersions)
+    .where(
+      and(
+        eq(payslipDocumentVersions.organizationId, organizationId),
+        inArray(payslipDocumentVersions.payslipDocumentId, documentIds)
+      )
+    )
+    .orderBy(asc(payslipDocumentVersions.version));
+
+  const latestByDocument = new Map<
+    string,
+    { version: number; source: string }
+  >();
+
+  for (const row of versionRows) {
+    latestByDocument.set(row.payslipDocumentId, {
+      version: row.version,
+      source: row.source,
+    });
+  }
+
+  const summaries = new Map<string, PayslipDocumentSummary>();
+
+  for (const row of documentRows) {
+    const latest = latestByDocument.get(row.payslipDocumentId);
+
+    summaries.set(row.payslipId, {
+      payslipId: row.payslipId,
+      payslipDocumentId: row.payslipDocumentId,
+      originalFilename: row.originalFilename,
+      mimeType: row.mimeType,
+      fileSize: row.fileSize,
+      sha256: row.sha256,
+      version: latest?.version ?? 1,
+      source: payslipDocumentSourceFrom(latest?.source),
+      createdAt: row.createdAt,
+    });
+  }
+
+  return summaries;
+}
+
+/**
+ * Current document + latest version metadata for every payslip directly linked
+ * to a payroll period (both Mode A calculated and Mode B distribution).
+ * Returns a map keyed by `payslipId`; payslips without a document are absent.
+ * Organization-scoped.
+ */
+export async function listPayslipDocumentSummariesForPeriod(
+  organizationId: string,
+  payrollPeriodId: string
+): Promise<Map<string, PayslipDocumentSummary>> {
+  const documentRows = await db
+    .select({
+      payslipId: payslipDocuments.payslipId,
+      payslipDocumentId: payslipDocuments.id,
+      originalFilename: payslipDocuments.originalFilename,
+      mimeType: payslipDocuments.mimeType,
+      fileSize: payslipDocuments.fileSize,
+      sha256: payslipDocuments.sha256,
+      createdAt: payslipDocuments.createdAt,
+    })
+    .from(payslipDocuments)
+    .innerJoin(payslips, eq(payslips.id, payslipDocuments.payslipId))
+    .where(
+      and(
+        eq(payslipDocuments.organizationId, organizationId),
+        eq(payslips.organizationId, organizationId),
+        eq(payslips.payrollPeriodId, payrollPeriodId)
+      )
+    );
+
+  if (documentRows.length === 0) {
+    return new Map();
+  }
+
+  const documentIds = documentRows.map((row) => row.payslipDocumentId);
+
+  const versionRows = await db
+    .select({
+      payslipDocumentId: payslipDocumentVersions.payslipDocumentId,
+      version: payslipDocumentVersions.version,
+      source: payslipDocumentVersions.source,
+    })
+    .from(payslipDocumentVersions)
+    .where(
+      and(
+        eq(payslipDocumentVersions.organizationId, organizationId),
+        inArray(payslipDocumentVersions.payslipDocumentId, documentIds)
+      )
+    )
+    .orderBy(asc(payslipDocumentVersions.version));
+
+  const latestByDocument = new Map<
+    string,
+    { version: number; source: string }
+  >();
+
+  for (const row of versionRows) {
+    latestByDocument.set(row.payslipDocumentId, {
+      version: row.version,
+      source: row.source,
+    });
+  }
+
+  const summaries = new Map<string, PayslipDocumentSummary>();
+
+  for (const row of documentRows) {
+    const latest = latestByDocument.get(row.payslipDocumentId);
+
+    summaries.set(row.payslipId, {
+      payslipId: row.payslipId,
+      payslipDocumentId: row.payslipDocumentId,
+      originalFilename: row.originalFilename,
+      mimeType: row.mimeType,
+      fileSize: row.fileSize,
+      sha256: row.sha256,
+      version: latest?.version ?? 1,
+      source: payslipDocumentSourceFrom(latest?.source),
+      createdAt: row.createdAt,
+    });
+  }
+
+  return summaries;
 }
 
 /** All payroll components (active + inactive) for the management UI. */
@@ -640,22 +995,40 @@ export async function listPayrollRunItemComponents(
  * One published payslip with the underlying item/period data and component
  * breakdown (org-scoped). Returns null when the id is not in the organization
  * or the payslip is not published (callers respond with forbidden()).
+ *
+ * Supports both Mode A (`calculated`) and Mode B (`distribution`) payslips.
+ * Calculated payslips read the historical item/run snapshot; distribution
+ * payslips have no item, so employee identity falls back to the live
+ * organization-scoped `employees` row and the amounts/component list are null
+ * and empty respectively.
  */
 export async function getPublishedPayslipDetail(
   organizationId: string,
   payslipId: string
 ): Promise<PayslipDetailRow | null> {
+  const employeeName = sql<string>`coalesce(
+    ${payrollItems.employeeNameSnapshot},
+    ${employees.firstName} || ' ' || ${employees.lastName}
+  )`;
+  const employeeNumber = sql<string>`coalesce(
+    ${payslips.employeeNumberSnapshot},
+    ${payrollItems.employeeNumberSnapshot},
+    ${employees.employeeNumber}
+  )`;
+
   const rows = await db
     .select({
       id: payslips.id,
       organizationId: payslips.organizationId,
       payrollItemId: payslips.payrollItemId,
+      payrollPeriodId: payslips.payrollPeriodId,
       employeeId: payslips.employeeId,
+      employeeNumberSnapshot: payslips.employeeNumberSnapshot,
       payslipNumber: payslips.payslipNumber,
       issuedAt: payslips.issuedAt,
       status: payslips.status,
-      employeeNumber: payrollItems.employeeNumberSnapshot,
-      employeeName: payrollItems.employeeNameSnapshot,
+      employeeNumber,
+      employeeName,
       periodCode: payrollPeriods.code,
       periodName: payrollPeriods.name,
       periodStart: payrollPeriods.periodStart,
@@ -668,15 +1041,25 @@ export async function getPublishedPayslipDetail(
       organizationName: organizations.name,
     })
     .from(payslips)
-    .innerJoin(payrollItems, eq(payrollItems.id, payslips.payrollItemId))
-    .innerJoin(payrollRuns, eq(payrollRuns.id, payrollItems.payrollRunId))
-    .innerJoin(
+    .leftJoin(payrollItems, eq(payrollItems.id, payslips.payrollItemId))
+    .leftJoin(payrollRuns, eq(payrollRuns.id, payrollItems.payrollRunId))
+    .leftJoin(
       payrollPeriods,
-      eq(payrollPeriods.id, payrollRuns.payrollPeriodId)
+      or(
+        eq(payrollPeriods.id, payrollRuns.payrollPeriodId),
+        eq(payrollPeriods.id, payslips.payrollPeriodId)
+      )
+    )
+    .innerJoin(
+      employees,
+      and(
+        eq(employees.id, payslips.employeeId),
+        eq(employees.organizationId, organizationId)
+      )
     )
     .innerJoin(
       organizations,
-      eq(organizations.id, payrollPeriods.organizationId)
+      eq(organizations.id, payslips.organizationId)
     )
     .where(
       and(
@@ -687,33 +1070,48 @@ export async function getPublishedPayslipDetail(
     )
     .limit(1);
   const row = rows[0];
-  if (!row) return null;
 
-  const componentRows = await db
-    .select({
-      id: payrollItemComponents.id,
-      payrollItemId: payrollItemComponents.payrollItemId,
-      componentCodeSnapshot: payrollItemComponents.componentCodeSnapshot,
-      componentNameSnapshot: payrollItemComponents.componentNameSnapshot,
-      componentTypeSnapshot: payrollItemComponents.componentTypeSnapshot,
-      amount: payrollItemComponents.amount,
-      notes: payrollItemComponents.notes,
-    })
-    .from(payrollItemComponents)
-    .where(eq(payrollItemComponents.payrollItemId, row.payrollItemId))
-    .orderBy(
-      asc(payrollItemComponents.componentTypeSnapshot),
-      asc(payrollItemComponents.componentCodeSnapshot)
-    );
+  if (
+    !row ||
+    !row.periodCode ||
+    !row.periodName ||
+    !row.periodStart ||
+    !row.periodEnd ||
+    !row.paymentDate
+  ) {
+    return null;
+  }
+
+  const componentRows = row.payrollItemId
+    ? await db
+        .select({
+          id: payrollItemComponents.id,
+          payrollItemId: payrollItemComponents.payrollItemId,
+          componentCodeSnapshot: payrollItemComponents.componentCodeSnapshot,
+          componentNameSnapshot: payrollItemComponents.componentNameSnapshot,
+          componentTypeSnapshot: payrollItemComponents.componentTypeSnapshot,
+          amount: payrollItemComponents.amount,
+          notes: payrollItemComponents.notes,
+        })
+        .from(payrollItemComponents)
+        .where(eq(payrollItemComponents.payrollItemId, row.payrollItemId))
+        .orderBy(
+          asc(payrollItemComponents.componentTypeSnapshot),
+          asc(payrollItemComponents.componentCodeSnapshot)
+        )
+    : [];
 
   return {
     id: row.id,
     organizationId: row.organizationId,
     payrollItemId: row.payrollItemId,
+    payrollPeriodId: row.payrollPeriodId,
     employeeId: row.employeeId,
+    employeeNumberSnapshot: row.employeeNumberSnapshot,
     payslipNumber: row.payslipNumber,
     issuedAt: row.issuedAt,
     status: row.status as PayslipStatus,
+    kind: row.payrollItemId ? "calculated" : "distribution",
     employeeNumber: row.employeeNumber,
     employeeName: row.employeeName,
     periodCode: row.periodCode,

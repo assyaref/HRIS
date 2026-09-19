@@ -84,8 +84,10 @@ export default async function EmployeePayslipPage() {
           Your published payslips
         </p>
         <p className="mt-3 max-w-2xl rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
-          PDF payslip terenkripsi. Untuk membukanya, gunakan NIK + tanggal
-          lahir dengan format DDMMYYYY.
+          PDF payslip terenkripsi. Untuk membukanya, gunakan Nomor Induk
+          Karyawan (employee number) + tanggal lahir dengan format DDMMYYYY.
+          Contoh: nomor induk 03233 dan tanggal lahir 25-08-1995 menjadi
+          0323325081995.
         </p>
       </div>
 

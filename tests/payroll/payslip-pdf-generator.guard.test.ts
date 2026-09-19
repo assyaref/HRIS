@@ -31,7 +31,7 @@ function candidate(
   return {
     payslipId: P1,
     status: "generated",
-    nik: "3273010507980001",
+    employeeNumber: "03233",
     birthDate: BIRTH,
     existingDocument: false,
     ...overrides,
@@ -105,16 +105,16 @@ describe("classifyPayslipPdfCandidates", () => {
     assert.deepEqual(skipped, [{ payslipId: P2, reason: "document_exists" }]);
   });
 
-  it("skips payslips whose employee has no NIK", () => {
+  it("skips payslips whose employee has no employee number", () => {
     const { included, skipped } = classifyPayslipPdfCandidates([
-      candidate({ payslipId: P2, nik: null }),
-      candidate({ payslipId: P3, nik: "" }),
+      candidate({ payslipId: P2, employeeNumber: null }),
+      candidate({ payslipId: P3, employeeNumber: "" }),
     ]);
 
     assert.deepEqual(included, []);
     assert.deepEqual(skipped, [
-      { payslipId: P2, reason: "missing_nik" },
-      { payslipId: P3, reason: "missing_nik" },
+      { payslipId: P2, reason: "missing_employee_number" },
+      { payslipId: P3, reason: "missing_employee_number" },
     ]);
   });
 
@@ -132,10 +132,15 @@ describe("classifyPayslipPdfCandidates", () => {
   });
 
   it("applies skip reasons in priority order", () => {
-    // A published payslip with a document and a missing NIK still reports
-    // the highest-priority reason only (not_generated).
+    // A published payslip with a document and a missing employee number still
+    // reports the highest-priority reason only (not_generated).
     const { skipped } = classifyPayslipPdfCandidates([
-      candidate({ payslipId: P2, status: "published", existingDocument: true, nik: null }),
+      candidate({
+        payslipId: P2,
+        status: "published",
+        existingDocument: true,
+        employeeNumber: null,
+      }),
     ]);
 
     assert.deepEqual(skipped, [{ payslipId: P2, reason: "not_generated" }]);
@@ -145,7 +150,7 @@ describe("classifyPayslipPdfCandidates", () => {
     const { included, skipped } = classifyPayslipPdfCandidates([
       candidate({ payslipId: P1 }),
       candidate({ payslipId: P2, existingDocument: true }),
-      candidate({ payslipId: P3, nik: null }),
+      candidate({ payslipId: P3, employeeNumber: null }),
       candidate({ payslipId: P4, birthDate: null }),
     ]);
 
@@ -155,7 +160,7 @@ describe("classifyPayslipPdfCandidates", () => {
     );
     assert.deepEqual(skipped, [
       { payslipId: P2, reason: "document_exists" },
-      { payslipId: P3, reason: "missing_nik" },
+      { payslipId: P3, reason: "missing_employee_number" },
       { payslipId: P4, reason: "missing_birthdate" },
     ]);
   });

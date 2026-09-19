@@ -3,8 +3,6 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import {
   employees,
-  payrollItems,
-  payrollRuns,
   payslips,
   payslipDocuments,
 } from "@/db/schema";
@@ -131,14 +129,6 @@ export async function GET(
     })
     .from(payslips)
     .innerJoin(
-      payrollItems,
-      eq(payrollItems.id, payslips.payrollItemId)
-    )
-    .innerJoin(
-      payrollRuns,
-      eq(payrollRuns.id, payrollItems.payrollRunId)
-    )
-    .innerJoin(
       payslipDocuments,
       and(
         eq(
@@ -170,14 +160,6 @@ export async function GET(
         eq(payslips.id, payslipId),
         eq(
           payslips.organizationId,
-          organizationId
-        ),
-        eq(
-          payrollItems.organizationId,
-          organizationId
-        ),
-        eq(
-          payrollRuns.organizationId,
           organizationId
         ),
         eq(payslips.status, "published")

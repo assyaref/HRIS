@@ -16,6 +16,7 @@ import {
   payrollRuns,
   payslips,
   payslipDocuments,
+  payslipDocumentVersions,
 } from "@/db/schema";
 import { requireUser } from "@/lib/auth/auth";
 import { writeAuditLog } from "@/lib/auth/audit";
@@ -44,6 +45,7 @@ import {
 import {
   countPayslipsMissingDocuments,
   isPayslipUuid,
+  resolveHistoricalPayslipPasswordIdentity,
   sanitizePayslipOriginalFilename,
 } from "./payslip-document.guard";
 import { buildPayslipRevocationDecision } from "./payslip-revocation.guard";
@@ -80,6 +82,8 @@ type AuditAction =
   | "payroll.rejected"
   | "payroll.locked"
   | "payroll.cancelled"
+  | "payroll.updated"
+  | "payroll.deleted"
   | "payslip.generated"
   | "payslip.document.generated"
   | "payslip.published"
@@ -975,6 +979,232 @@ export async function cancelPayrollPeriodAction(
   }
 }
 
+/**
+ * Update a draft payroll period (PM-11).
+ *
+ * Only a `draft` period with no run and no payslips can be edited, so an
+ * existing payroll calculation or distribution payslip is never silently
+ * detached from its period. Dates are re-validated with the same schema used
+ * for creation. The period row is locked for the whole transition and a
+ * `payroll.updated` event + best-effort audit entry are appended.
+ */
+export async function updatePayrollPeriodAction(
+  periodId: string,
+  input: unknown
+): Promise<PayrollActionResult> {
+  const user = await requireUser();
+  await requireAnyPermission(user.id, [
+    PERMISSIONS.PAYROLL_UPDATE,
+    PERMISSIONS.PAYROLL_MANAGE,
+  ]);
+  if (!user.organizationId) {
+    return { ok: false, message: "Your account is not assigned to an organization." };
+  }
+  const organizationId = user.organizationId;
+
+  if (!isPayslipUuid(periodId)) {
+    return { ok: false, message: "Invalid payroll period identifier." };
+  }
+
+  const parsed = createPayrollPeriodSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, message: messageFromParseError(parsed.error) };
+  }
+  const values = parsed.data;
+
+  try {
+    const outcome = await db.transaction(async (tx) => {
+      const period = await lockPeriod(tx, organizationId, periodId);
+      if (!period) return { kind: "error" as const, message: "Period not found." };
+
+      if (period.periodStatus !== "draft") {
+        return {
+          kind: "error" as const,
+          message: "Only draft periods can be updated.",
+        };
+      }
+
+      if (period.runId) {
+        return {
+          kind: "error" as const,
+          message: "Cancel the run first before updating this period.",
+        };
+      }
+
+      const payslipRows = await tx
+        .select({ id: payslips.id })
+        .from(payslips)
+        .where(
+          and(
+            eq(payslips.organizationId, organizationId),
+            eq(payslips.payrollPeriodId, period.periodId)
+          )
+        )
+        .limit(1);
+
+      if (payslipRows[0]) {
+        return {
+          kind: "error" as const,
+          message: "Delete or revoke existing payslips before updating this period.",
+        };
+      }
+
+      await tx
+        .update(payrollPeriods)
+        .set({
+          code: values.code,
+          name: values.name,
+          periodStart: dateToUtc(values.periodStart),
+          periodEnd: dateToUtc(values.periodEnd),
+          paymentDate: dateToUtc(values.paymentDate),
+        })
+        .where(
+          and(
+            eq(payrollPeriods.id, period.periodId),
+            eq(payrollPeriods.organizationId, organizationId)
+          )
+        );
+
+      await tx.insert(payrollEvents).values({
+        organizationId,
+        payrollPeriodId: period.periodId,
+        actorUserId: user.id,
+        eventType: "payroll.updated",
+        fromStatus: "draft",
+        toStatus: "draft",
+        reason: null,
+        metadata: JSON.stringify({
+          code: values.code,
+          periodStart: values.periodStart,
+          periodEnd: values.periodEnd,
+        }),
+      });
+
+      return { kind: "success" as const, code: values.code };
+    });
+
+    if (outcome.kind === "error") {
+      return { ok: false, message: outcome.message };
+    }
+
+    await auditPayroll({
+      organizationId,
+      actorUserId: user.id,
+      action: "payroll.updated",
+      entityType: "payroll_period",
+      entityId: periodId,
+      metadata: {
+        code: outcome.code,
+        periodStart: values.periodStart,
+        periodEnd: values.periodEnd,
+      },
+    });
+    return { ok: true, message: "Payroll period updated." };
+  } catch (error) {
+    console.error("[payroll] update period failed", error);
+    return {
+      ok: false,
+      message:
+        "The payroll period could not be updated. A period with this code may already exist.",
+    };
+  }
+}
+
+/**
+ * Delete an empty draft payroll period (PM-11).
+ *
+ * Deletion is deliberately narrow: only a `draft` period with no run and no
+ * payslips may be removed. Any run (whether cloned or not) and any payslip row
+ * would be blocked anyway by the foreign keys; the explicit checks produce a
+ * clear message instead of a database error. History-preserving cancellation
+ * (`cancelPayrollPeriodAction`) remains the path for periods that already hold
+ * payroll data.
+ */
+export async function deletePayrollPeriodAction(
+  periodId: string
+): Promise<PayrollActionResult> {
+  const user = await requireUser();
+  await requireAnyPermission(user.id, [
+    PERMISSIONS.PAYROLL_UPDATE,
+    PERMISSIONS.PAYROLL_MANAGE,
+  ]);
+  if (!user.organizationId) {
+    return { ok: false, message: "Your account is not assigned to an organization." };
+  }
+  const organizationId = user.organizationId;
+
+  if (!isPayslipUuid(periodId)) {
+    return { ok: false, message: "Invalid payroll period identifier." };
+  }
+
+  try {
+    const outcome = await db.transaction(async (tx) => {
+      const period = await lockPeriod(tx, organizationId, periodId);
+      if (!period) return { kind: "error" as const, message: "Period not found." };
+
+      if (period.periodStatus !== "draft") {
+        return {
+          kind: "error" as const,
+          message: "Only empty draft periods can be deleted.",
+        };
+      }
+
+      if (period.runId) {
+        return {
+          kind: "error" as const,
+          message: "Cancel the run first before deleting this period.",
+        };
+      }
+
+      const payslipRows = await tx
+        .select({ id: payslips.id })
+        .from(payslips)
+        .where(
+          and(
+            eq(payslips.organizationId, organizationId),
+            eq(payslips.payrollPeriodId, period.periodId)
+          )
+        )
+        .limit(1);
+
+      if (payslipRows[0]) {
+        return {
+          kind: "error" as const,
+          message: "Delete or revoke existing payslips before deleting this period.",
+        };
+      }
+
+      await tx
+        .delete(payrollPeriods)
+        .where(
+          and(
+            eq(payrollPeriods.id, period.periodId),
+            eq(payrollPeriods.organizationId, organizationId)
+          )
+        );
+
+      return { kind: "success" as const, code: period.periodCode };
+    });
+
+    if (outcome.kind === "error") {
+      return { ok: false, message: outcome.message };
+    }
+
+    await auditPayroll({
+      organizationId,
+      actorUserId: user.id,
+      action: "payroll.deleted",
+      entityType: "payroll_period",
+      entityId: periodId,
+      metadata: { code: outcome.code },
+    });
+    return { ok: true, message: "Payroll period deleted." };
+  } catch (error) {
+    console.error("[payroll] delete period failed", error);
+    return { ok: false, message: "The payroll period could not be deleted. Please try again." };
+  }
+}
+
 
 /* ------------------------------------------------------------------ */
 /* Payslips                                                            */
@@ -1034,6 +1264,7 @@ export async function generatePayslipsAction(
         .select({
           id: payrollItems.id,
           employeeId: payrollItems.employeeId,
+          employeeNumberSnapshot: payrollItems.employeeNumberSnapshot,
         })
         .from(payrollItems)
         .where(
@@ -1051,11 +1282,36 @@ export async function generatePayslipsAction(
         };
       }
 
+      /*
+       * Historical birth-date snapshot (Phase 11). The birth date is captured
+       * from the employee record at payslip-creation time so a later birth-date
+       * change can never alter this payslip's PDF password.
+       */
+      const itemEmployeeIds = itemRows.map((item) => item.employeeId);
+      const birthDateRows = await tx
+        .select({
+          id: employees.id,
+          birthDate: employees.birthDate,
+        })
+        .from(employees)
+        .where(
+          and(
+            eq(employees.organizationId, organizationId),
+            inArray(employees.id, itemEmployeeIds)
+          )
+        );
+      const birthDateByEmployee = new Map(
+        birthDateRows.map((row) => [row.id, row.birthDate])
+      );
+
       await tx.insert(payslips).values(
         itemRows.map((item, index) => ({
           organizationId,
           payrollItemId: item.id,
+          payrollPeriodId: period.periodId,
           employeeId: item.employeeId,
+          employeeNumberSnapshot: item.employeeNumberSnapshot,
+          birthDateSnapshot: birthDateByEmployee.get(item.employeeId) ?? null,
           payslipNumber: `PS-${period.periodCode}-${String(index + 1).padStart(4, "0")}`,
           status: "generated",
         }))
@@ -1192,6 +1448,8 @@ export async function generatePayslipPdfsAction(
           payslipNumber: payslips.payslipNumber,
           issuedAt: payslips.issuedAt,
           status: payslips.status,
+          payslipEmployeeNumberSnapshot: payslips.employeeNumberSnapshot,
+          payslipBirthDateSnapshot: payslips.birthDateSnapshot,
           employeeName: payrollItems.employeeNameSnapshot,
           employeeNumber: payrollItems.employeeNumberSnapshot,
           grossAmount: payrollItems.grossAmount,
@@ -1232,6 +1490,7 @@ export async function generatePayslipPdfsAction(
           ? await tx
               .select({
                 id: employees.id,
+                employeeNumber: employees.employeeNumber,
                 nik: employees.nik,
                 birthDate: employees.birthDate,
               })
@@ -1247,7 +1506,9 @@ export async function generatePayslipPdfsAction(
         identityRows.map((row) => [row.id, row])
       );
 
-      const itemIds = payslipRows.map((row) => row.payrollItemId);
+      const itemIds = payslipRows
+        .map((row) => row.payrollItemId)
+        .filter((id): id is string => id !== null);
       const componentRows =
         itemIds.length > 0
           ? await tx
@@ -1282,8 +1543,13 @@ export async function generatePayslipPdfsAction(
         payslipRows.map((row) => ({
           payslipId: row.id,
           status: row.status,
-          nik: identityByEmployee.get(row.employeeId)?.nik,
-          birthDate: identityByEmployee.get(row.employeeId)?.birthDate,
+          employeeNumber:
+            row.payslipEmployeeNumberSnapshot ??
+            row.employeeNumber ??
+            identityByEmployee.get(row.employeeId)?.employeeNumber,
+          birthDate:
+            row.payslipBirthDateSnapshot ??
+            identityByEmployee.get(row.employeeId)?.birthDate,
           existingDocument: documentPayslipIds.has(row.id),
         }))
       );
@@ -1293,7 +1559,8 @@ export async function generatePayslipPdfsAction(
       const prepared: {
         payslipId: string;
         employeeId: string;
-        nik: string;
+        employeeNumber: string;
+        nik: string | null;
         birthDate: Date;
         payslipNumber: string;
         postScript: string;
@@ -1305,17 +1572,40 @@ export async function generatePayslipPdfsAction(
           ? identityByEmployee.get(row.employeeId)
           : undefined;
 
-        if (!row || !identity || !identity.nik || !identity.birthDate) {
+        if (!row || !identity || !row.payrollItemId) {
           // Unreachable for `included` entries by the guard's contract; fail
           // loudly rather than silently skip a payslip the guard admitted.
+          throw new Error("Payslip PDF eligibility invariant violated.");
+        }
+
+        /*
+         * The PDF password and printed number always come from the historical
+         * identity snapshot (Phase 11): payslip employee-number snapshot /
+         * birth-date snapshot first, then the immutable payroll item snapshot
+         * for the number, and the live employee ONLY as a legacy fallback.
+         */
+        const passwordIdentity = resolveHistoricalPayslipPasswordIdentity({
+          payslipEmployeeNumberSnapshot:
+            row.payslipEmployeeNumberSnapshot,
+          payslipBirthDateSnapshot: row.payslipBirthDateSnapshot,
+          itemEmployeeNumberSnapshot: row.employeeNumber,
+          liveEmployeeNumber: identity.employeeNumber,
+          liveBirthDate: identity.birthDate,
+        });
+
+        const effectiveEmployeeNumber = passwordIdentity.employeeNumber;
+        const effectiveBirthDate = passwordIdentity.birthDate;
+
+        if (!effectiveEmployeeNumber || !effectiveBirthDate) {
           throw new Error("Payslip PDF eligibility invariant violated.");
         }
 
         prepared.push({
           payslipId: row.id,
           employeeId: row.employeeId,
+          employeeNumber: effectiveEmployeeNumber,
           nik: identity.nik,
-          birthDate: identity.birthDate,
+          birthDate: effectiveBirthDate,
           payslipNumber: row.payslipNumber,
           postScript: buildPayslipPostScript({
             organizationName: meta.organizationName,
@@ -1329,7 +1619,7 @@ export async function generatePayslipPdfsAction(
             },
             employee: {
               name: row.employeeName,
-              number: row.employeeNumber,
+              number: effectiveEmployeeNumber,
             },
             payslip: {
               number: row.payslipNumber,
@@ -1401,7 +1691,11 @@ export async function generatePayslipPdfsAction(
         );
         const metadata = await encryptAndStorePayslipPdf({
           pdf: plaintextPdf,
-          identity: { nik: entry.nik, birthDate: entry.birthDate },
+          identity: {
+            employeeNumber: entry.employeeNumber,
+            nik: entry.nik,
+            birthDate: entry.birthDate,
+          },
         });
         stored.push({
           payslipId: entry.payslipId,
@@ -1462,15 +1756,42 @@ export async function generatePayslipPdfsAction(
             throw new Error("A payslip document already exists for this payslip.");
           }
 
-          await tx.insert(payslipDocuments).values({
+          const insertedDocument = await tx
+            .insert(payslipDocuments)
+            .values({
+              organizationId,
+              payslipId: entry.payslipId,
+              employeeId: entry.employeeId,
+              storageKey: entry.storageKey,
+              originalFilename: entry.originalFilename,
+              mimeType: "application/pdf",
+              fileSize: entry.fileSize,
+              sha256: entry.sha256,
+            })
+            .returning({ id: payslipDocuments.id });
+
+          const documentId = insertedDocument[0]?.id;
+
+          if (!documentId) {
+            throw new Error("Payslip document insert returned no id.");
+          }
+
+          /*
+           * Version history starts at 1 for every automatically generated
+           * document. Replacements append 2, 3, ... and never delete this row.
+           */
+          await tx.insert(payslipDocumentVersions).values({
             organizationId,
+            payslipDocumentId: documentId,
             payslipId: entry.payslipId,
             employeeId: entry.employeeId,
+            version: 1,
             storageKey: entry.storageKey,
             originalFilename: entry.originalFilename,
             mimeType: "application/pdf",
             fileSize: entry.fileSize,
             sha256: entry.sha256,
+            source: "generated",
           });
 
           await tx.insert(payrollEvents).values({
@@ -1729,21 +2050,10 @@ export async function revokePayslipAction(
       const locatedRows = await tx
         .select({
           payslipNumber: payslips.payslipNumber,
-          periodId: payrollPeriods.id,
+          payrollPeriodId: payslips.payrollPeriodId,
+          payrollItemId: payslips.payrollItemId,
         })
         .from(payslips)
-        .innerJoin(
-          payrollItems,
-          eq(payrollItems.id, payslips.payrollItemId)
-        )
-        .innerJoin(
-          payrollRuns,
-          eq(payrollRuns.id, payrollItems.payrollRunId)
-        )
-        .innerJoin(
-          payrollPeriods,
-          eq(payrollPeriods.id, payrollRuns.payrollPeriodId)
-        )
         .where(
           and(
             eq(payslips.id, payslipId),
@@ -1757,9 +2067,32 @@ export async function revokePayslipAction(
         return { kind: "error" as const, message: "Payslip not found." };
       }
 
+      // A distribution payslip links the period directly; a calculated
+      // payslip reaches it through its payroll item -> run. Both resolve to
+      // the same org-scoped period row for the lock.
+      let resolvedPeriodId = located.payrollPeriodId;
+
+      if (!resolvedPeriodId && located.payrollItemId) {
+        const runRows = await tx
+          .select({ periodId: payrollRuns.payrollPeriodId })
+          .from(payrollItems)
+          .innerJoin(
+            payrollRuns,
+            eq(payrollRuns.id, payrollItems.payrollRunId)
+          )
+          .where(eq(payrollItems.id, located.payrollItemId))
+          .limit(1);
+
+        resolvedPeriodId = runRows[0]?.periodId ?? null;
+      }
+
+      if (!resolvedPeriodId) {
+        return { kind: "error" as const, message: "Payslip not found." };
+      }
+
       // Lock the borrowing period so every payslip workflow transition for
       // this period is serialized before the payslip status is re-read.
-      const period = await lockPeriod(tx, organizationId, located.periodId);
+      const period = await lockPeriod(tx, organizationId, resolvedPeriodId);
       if (!period) {
         return { kind: "error" as const, message: "Payslip not found." };
       }

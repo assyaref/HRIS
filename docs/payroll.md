@@ -104,15 +104,15 @@ Implemented surface:
 - published payslips are listed on payroll period detail when generated
 - published payslip detail is viewable at `/payroll/payslips/[payslipId]`
 - employee payslip hub (self-service) lists the authenticated employee's own published payslips at `/payslip`
-- payslip detail from self-service accessible at `/payslip/[payslipId]`
-- encrypted payslip PDF generation (file password = NIK + tanggal lahir as DDMMYYYY)
+- payslip detail from self-service accessible at `/payroll/payslips/[payslipId]`
+- encrypted payslip PDF generation (file password = Employee Number + DD + MM + YYYY, no separators)
 - secure PDF serving: private/no-store caching, `nosniff`, CSP `default-src 'none'`,
   sanitized Content-Disposition, UUID validation, org-scoped reads, generic 404
 - server-side ownership enforcement: an employee may only view their own
   payslips unless they hold payroll/payslip management permission
 - PDF access audit: `payslip.document.viewed` recorded only when access is allowed
 - password guidance on both payslip hub and payslip detail:
-  "PDF payslip terenkripsi. Untuk membukanya, gunakan NIK + tanggal lahir dengan format DDMMYYYY."
+  "PDF payslip terenkripsi. Untuk membukanya, gunakan Nomor Karyawan + tanggal lahir dengan format DDMMYYYY, tanpa pemisah. NIK digunakan hanya untuk dekripsi/re-enkripsi PDF V1 yang sudah ada dan tidak digunakan untuk PDF baru."
 
 Revocation:
 
