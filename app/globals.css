@@ -1,86 +1,212 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #09090b;
+  /* ==========================================================
+     HRIS — FRESH SOFT BLUE DESIGN SYSTEM
+     ========================================================== */
+
+  --background: #f7fafc;
+  --foreground: #172554;
 
   --card: #ffffff;
-  --card-foreground: #09090b;
+  --card-foreground: #172554;
 
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
 
-  --accent: #f4f4f5;
-  --accent-foreground: #18181b;
+  --accent: #eaf5ff;
+  --accent-foreground: #0f6fd1;
 
-  --border: #e4e4e7;
-  --input: #e4e4e7;
-  --ring: #18181b;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #1687f8;
 
-  --primary: #18181b;
-  --primary-foreground: #fafafa;
+  --primary: #1687f8;
+  --primary-foreground: #ffffff;
 
-  --secondary: #f4f4f5;
-  --secondary-foreground: #18181b;
+  --secondary: #eaf5ff;
+  --secondary-foreground: #0f6fd1;
 
-  --destructive: #dc2626;
-  --destructive-foreground: #fafafa;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+
+  /* HRIS semantic colors */
+  --success: #16b894;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+
+  /* Soft surfaces */
+  --surface-blue: #eaf5ff;
+  --surface-success: #ecfdf5;
+  --surface-warning: #fffbeb;
+  --surface-danger: #fef2f2;
+
+  /* Radius */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
+
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #09090b;
-    --foreground: #fafafa;
-
-    --card: #18181b;
-    --card-foreground: #fafafa;
-
-    --muted: #27272a;
-    --muted-foreground: #a1a1aa;
-
-    --accent: #27272a;
-    --accent-foreground: #fafafa;
-
-    --border: #27272a;
-    --input: #27272a;
-    --ring: #fafafa;
-
-    --primary: #fafafa;
-    --primary-foreground: #18181b;
-
-    --secondary: #27272a;
-    --secondary-foreground: #fafafa;
-
-    --destructive: #ef4444;
-    --destructive-foreground: #fafafa;
-  }
+html {
+  min-height: 100%;
+  background: var(--background);
 }
 
 body {
+  min-height: 100%;
+  margin: 0;
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ==========================================================
+   HRIS GLOBAL UX
+   ========================================================== */
+
+* {
+  border-color: var(--border);
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a {
+  touch-action: manipulation;
+}
+
+::selection {
+  background: #cfe9ff;
+  color: #0f3f75;
+}
+
+/* ==========================================================
+   SOFT SCROLLBAR
+   ========================================================== */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ==========================================================
+   HRIS SURFACE HELPERS
+   ========================================================== */
+
+.hris-card {
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--card);
+  box-shadow:
+    0 1px 2px rgb(15 23 42 / 0.03),
+    0 8px 24px rgb(15 23 42 / 0.04);
+}
+
+.hris-card-hover {
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    border-color 160ms ease;
+}
+
+.hris-card-hover:hover {
+  transform: translateY(-1px);
+  border-color: #bfdbfe;
+  box-shadow:
+    0 4px 6px rgb(15 23 42 / 0.04),
+    0 12px 32px rgb(22 135 248 / 0.08);
+}
+
+.hris-soft-blue {
+  background: var(--surface-blue);
+}
+
+.hris-gradient-blue {
+  background:
+    linear-gradient(
+      135deg,
+      #1687f8 0%,
+      #3b9df9 55%,
+      #69b5ff 100%
+    );
+  color: white;
+}
+
+/* ==========================================================
+   MOBILE UX
+   ========================================================== */
+
+@media (max-width: 767px) {
+  body {
+    font-size: 0.9375rem;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    min-height: 44px;
+  }
 }
