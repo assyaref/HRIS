@@ -30,7 +30,37 @@ export type EmployeeAuditAction =
   | "employee.status_changed"
   | "employee.account.created"
   | "employee.deleted"
-  | "employee.purged";
+  | "employee.purged"
+  | "employee.imported"
+  | "employee.exported";
+
+export type EmployeeMasterDataAuditAction =
+  | "employee.personal.updated"
+  | "employee.employment.updated"
+  | "employee.address.created"
+  | "employee.address.updated"
+  | "employee.address.deleted"
+  | "employee.insurance.updated"
+  | "employee.bank_account.created"
+  | "employee.bank_account.updated"
+  | "employee.bank_account.deleted"
+  | "employee.bank_account.primary_changed"
+  | "employee.dependent.created"
+  | "employee.dependent.updated"
+  | "employee.dependent.deleted"
+  | "employee.education.created"
+  | "employee.education.updated"
+  | "employee.education.deleted"
+  | "employee.document.uploaded"
+  | "employee.document.deleted"
+  | "employee.document.downloaded"
+  | "employee.employment_history.created"
+  | "employee_field.created"
+  | "employee_field.updated"
+  | "employee_field.status_changed"
+  | "employee_field.deleted"
+  | "employee_custom_data.updated"
+  | "employee_custom_data.deleted";
 
 export type AttendanceAuditAction =
   | "attendance.check_in"
@@ -97,6 +127,7 @@ export type FaceVerificationAuditAction =
 export type AuditAction =
   | RbacAuditAction
   | EmployeeAuditAction
+  | EmployeeMasterDataAuditAction
   | AttendanceAuditAction
   | LeaveAuditAction
   | PermissionAuditAction
