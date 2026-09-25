@@ -6,15 +6,31 @@ import { forbidden, redirect } from "next/navigation";
 import type { z } from "zod";
 
 import { db } from "@/db";
-import { employees, users, roles, userRoles } from "@/db/schema";
+import {
+  employeeCustomFieldValues,
+  employeeEmploymentHistory,
+  employees,
+  users,
+  roles,
+  userRoles,
+} from "@/db/schema";
+import {
+  listActiveFieldDefinitions,
+} from "@/features/employee-fields/queries";
+import {
+  parseCustomFieldValue,
+  type NormalizedCustomFieldValue,
+} from "@/features/employee-fields/validation";
+import { isFieldWritableByRoles } from "@/features/employee-fields/filtering";
 import { requireUser } from "@/lib/auth/auth";
 import { writeAuditLog } from "@/lib/auth/audit";
 import { hashPassword } from "@/lib/auth/password";
 import { PERMISSIONS } from "@/lib/auth/permissions";
-import { requirePermission } from "@/lib/auth/rbac";
+import { getUserAuthorization, requirePermission } from "@/lib/auth/rbac";
 import { ORGANIZATION_ROLE_CODES, ROLE_CATALOG } from "@/lib/auth/roles";
 
 import type { EmployeeStatus } from "./constants";
+import { evaluateEmployeeDeletion } from "./delete-policy";
 import {
   getEmployeeInOrganization,
   listLinkableUsers,
@@ -35,10 +51,11 @@ import {
  * - All reads/writes are org-scoped. An employee id that does not belong to
  *   the actor's organization is treated as forbidden (no existence leak).
  * - Related records (linked user) must belong to the same organization.
- * - Physical deletion is intentionally NOT implemented for Phase 5. The
- *   removal lifecycle is a status change to `inactive`, which additionally
- *   requires `employees.delete` (ADMIN). HRIS person records are retained
- *   because later modules reference them.
+ * - Removal lifecycle: deactivation (`active` → `inactive`, requires
+ *   `employees.delete`) retains the person record and every related historical
+ *   row. Employee physical deletion is disabled at the application boundary.
+ * - An employee linked to the actor's own user account cannot be deactivated
+ *   through employee management.
  */
 
 export interface EmployeeActionState {
@@ -156,24 +173,126 @@ export async function createEmployeeAction(
   }
 
   let employeeId: string;
+  // Dynamic custom field values (Employee Master Data 2.0). The create
+  // dialog renders every ACTIVE definition (keyed `cf:<fieldKey>`,
+  // multiselect as `cf:<fieldKey>[]`), so newly created admin fields flow
+  // through here with no source change. The employee + its values commit in
+  // ONE transaction; a rejected value rolls the whole create back.
+  const [authorization, allDefinitions] = await Promise.all([
+    getUserAuthorization(user.id),
+    listActiveFieldDefinitions(organizationId),
+  ]);
+  const canAccessCustomData =
+    authorization.isSuperAdmin ||
+    (authorization.permissionCodes.includes(PERMISSIONS.EMPLOYEE_CUSTOM_DATA_VIEW) &&
+      authorization.permissionCodes.includes(
+        PERMISSIONS.EMPLOYEE_CUSTOM_DATA_UPDATE
+      ));
+  const definitions = canAccessCustomData
+    ? allDefinitions.filter((definition) =>
+        isFieldWritableByRoles(
+          definition.visibilityConfig,
+          definition.editableByConfig,
+          authorization.roleCodes
+        )
+      )
+    : [];
+  const writableKeys = new Set(definitions.map((definition) => definition.fieldKey));
+  const inaccessibleRequiredField = allDefinitions.some(
+    (definition) => definition.isRequired && !writableKeys.has(definition.fieldKey)
+  );
+  if (inaccessibleRequiredField) {
+    return toStateError(
+      "A required custom field is unavailable to your current roles. Employee creation was not performed."
+    );
+  }
+  const unauthorizedSubmitted = allDefinitions.some(
+    (definition) =>
+      !writableKeys.has(definition.fieldKey) &&
+      (formData.has(`cf:${definition.fieldKey}`) ||
+        formData.has(`cf:${definition.fieldKey}[]`))
+  );
+  if (unauthorizedSubmitted) {
+    return toStateError(
+      "You are not authorized to set one or more submitted custom fields."
+    );
+  }
+  type CustomWrite = {
+    definitionId: string;
+    label: string;
+    value: NormalizedCustomFieldValue;
+  };
+  const customWrites: CustomWrite[] = [];
+  const customFieldErrors: Record<string, string> = {};
+  for (const definition of definitions) {
+    let raw: string;
+    if (definition.fieldType === "multiselect") {
+      const values = formData
+        .getAll(`cf:${definition.fieldKey}[]`)
+        .filter((entry): entry is string => typeof entry === "string");
+      raw = values.join(", ");
+    } else if (definition.fieldType === "checkbox") {
+      raw = formData.get(`cf:${definition.fieldKey}`) ? "true" : "";
+    } else {
+      const entry = formData.get(`cf:${definition.fieldKey}`);
+      raw = typeof entry === "string" ? entry.trim() : "";
+    }
+    if (!raw) {
+      if (definition.isRequired) {
+        customFieldErrors[`cf:${definition.fieldKey}`] = `${definition.label} is required.`;
+      }
+      continue;
+    }
+    const parsedValue = parseCustomFieldValue(
+      definition.fieldType,
+      raw,
+      definition.options
+    );
+    if (!parsedValue.ok) {
+      customFieldErrors[`cf:${definition.fieldKey}`] = parsedValue.error;
+      continue;
+    }
+    customWrites.push({
+      definitionId: definition.id,
+      label: definition.label,
+      value: parsedValue.value,
+    });
+  }
+  if (Object.keys(customFieldErrors).length > 0) {
+    return { status: "error", fieldErrors: customFieldErrors };
+  }
   try {
-    const inserted = await db
-      .insert(employees)
-      .values({
-        organizationId,
-        userId: parsed.data.userId ?? null,
-        employeeNumber,
-        firstName,
-        lastName,
-        email: parsed.data.email ?? null,
-        phone: parsed.data.phone ?? null,
-        employmentStatus: "active",
-        hireDate: toDateValue(parsed.data.hireDate),
-      })
-      .returning({ id: employees.id });
-    const row = inserted[0];
-    if (!row) throw new Error("Employee insert returned no row.");
-    employeeId = row.id;
+    employeeId = await db.transaction(async (tx) => {
+      const inserted = await tx
+        .insert(employees)
+        .values({
+          organizationId,
+          userId: parsed.data.userId ?? null,
+          employeeNumber,
+          firstName,
+          lastName,
+          email: parsed.data.email ?? null,
+          phone: parsed.data.phone ?? null,
+          employmentStatus: "active",
+          hireDate: toDateValue(parsed.data.hireDate),
+        })
+        .returning({ id: employees.id });
+      const row = inserted[0];
+      if (!row) throw new Error("Employee insert returned no row.");
+      for (const write of customWrites) {
+        await tx.insert(employeeCustomFieldValues).values({
+          organizationId,
+          employeeId: row.id,
+          fieldDefinitionId: write.definitionId,
+          valueText: write.value.valueText,
+          valueNumber: write.value.valueNumber,
+          valueDate: write.value.valueDate,
+          valueBoolean: write.value.valueBoolean,
+          valueJson: write.value.valueJson,
+        });
+      }
+      return row.id;
+    });
   } catch (error) {
     if (isUniqueViolation(error)) {
       return toStateError(undefined, {
@@ -323,22 +442,75 @@ export async function updateEmployeeAction(
   }
 
   try {
-    await db
-      .update(employees)
-      .set({
-        employeeNumber: nextValues.employeeNumber,
-        firstName: nextValues.firstName,
-        lastName: nextValues.lastName,
-        email: nextValues.email,
-        phone: nextValues.phone,
-        hireDate: nextValues.hireDate,
-        userId: nextValues.userId,
-        employmentStatus: nextValues.employmentStatus,
-      })
-      .where(
-        and(eq(employees.id, employeeId), eq(employees.organizationId, organizationId))
-      );
+    await db.transaction(async (tx) => {
+      let employmentSnapshot:
+        | {
+            position: string | null;
+            department: string | null;
+            division: string | null;
+            managerId: string | null;
+            workLocationId: string | null;
+            employmentType: string | null;
+          }
+        | undefined;
+      if (statusChanged) {
+        const rows = await tx
+          .select({
+            position: employees.position,
+            department: employees.department,
+            division: employees.division,
+            managerId: employees.managerId,
+            workLocationId: employees.workLocationId,
+            employmentType: employees.employmentType,
+          })
+          .from(employees)
+          .where(
+            and(
+              eq(employees.id, employeeId),
+              eq(employees.organizationId, organizationId)
+            )
+          )
+          .limit(1);
+        employmentSnapshot = rows[0];
+        if (!employmentSnapshot) {
+          throw new Error("EMPLOYEE_NOT_FOUND");
+        }
+      }
+      const effectiveFrom = new Date();
+      await tx
+        .update(employees)
+        .set({
+          employeeNumber: nextValues.employeeNumber,
+          firstName: nextValues.firstName,
+          lastName: nextValues.lastName,
+          email: nextValues.email,
+          phone: nextValues.phone,
+          hireDate: nextValues.hireDate,
+          userId: nextValues.userId,
+          employmentStatus: nextValues.employmentStatus,
+          updatedAt: effectiveFrom,
+        })
+        .where(
+          and(
+            eq(employees.id, employeeId),
+            eq(employees.organizationId, organizationId)
+          )
+        );
+      if (statusChanged && employmentSnapshot) {
+        await tx.insert(employeeEmploymentHistory).values({
+          organizationId,
+          employeeId,
+          ...employmentSnapshot,
+          employmentStatus: nextValues.employmentStatus,
+          effectiveFrom,
+          notes: "Status changed through employee profile",
+        });
+      }
+    });
   } catch (error) {
+    if (error instanceof Error && error.message === "EMPLOYEE_NOT_FOUND") {
+      return toStateError("The employee no longer exists in your organization.");
+    }
     if (isUniqueViolation(error)) {
       return toStateError(undefined, {
         employeeNumber: `Employee number "${nextValues.employeeNumber}" already exists in this organization.`,
@@ -556,4 +728,126 @@ export async function createEmployeeAccountAction(
       error instanceof Error ? error.message : "Could not create the account. Please try again."
     );
   }
+}
+
+/**
+ * Deactivate an employee record (requires `employees.delete`).
+ *
+ * The action updates the employee and appends employment history in one
+ * transaction. It never deletes the employee or any dependent master-data,
+ * document, custom-value, payroll, attendance, or leave record.
+ */
+export async function deleteEmployeeAction(
+  employeeId: string
+): Promise<EmployeeActionState> {
+  const user = await requireUser();
+  await requirePermission(user.id, PERMISSIONS.EMPLOYEES_DELETE);
+
+  if (!user.organizationId) {
+    return toStateError("Your account is not assigned to an organization.");
+  }
+  const organizationId = user.organizationId;
+  const employee = await getEmployeeInOrganization(employeeId, organizationId);
+  if (!employee) forbidden();
+
+  const decision = evaluateEmployeeDeletion({
+    actorUserId: user.id,
+    employeeId: employee.id,
+    linkedUserId: employee.userId,
+    protectedCategories: [],
+  });
+  if (!decision.allowed && decision.code === "SELF_LINKED") {
+    return toStateError(decision.message);
+  }
+
+  let changed = false;
+  try {
+    changed = await db.transaction(async (tx) => {
+      const rows = await tx
+        .select({
+          id: employees.id,
+          employeeNumber: employees.employeeNumber,
+          status: employees.employmentStatus,
+          position: employees.position,
+          department: employees.department,
+          division: employees.division,
+          managerId: employees.managerId,
+          workLocationId: employees.workLocationId,
+          employmentType: employees.employmentType,
+        })
+        .from(employees)
+        .where(
+          and(
+            eq(employees.id, employee.id),
+            eq(employees.organizationId, organizationId)
+          )
+        )
+        .limit(1);
+      const current = rows[0];
+      if (!current) {
+        throw new Error("EMPLOYEE_NOT_FOUND");
+      }
+      if (current.status === "inactive") return false;
+
+      const effectiveFrom = new Date();
+      const updated = await tx
+        .update(employees)
+        .set({ employmentStatus: "inactive", updatedAt: effectiveFrom })
+        .where(
+          and(
+            eq(employees.id, current.id),
+            eq(employees.organizationId, organizationId)
+          )
+        )
+        .returning({ id: employees.id });
+      if (updated.length === 0) {
+        throw new Error("EMPLOYEE_NOT_FOUND");
+      }
+      await tx.insert(employeeEmploymentHistory).values({
+        organizationId,
+        employeeId: current.id,
+        position: current.position,
+        department: current.department,
+        division: current.division,
+        managerId: current.managerId,
+        workLocationId: current.workLocationId,
+        employmentType: current.employmentType,
+        employmentStatus: "inactive",
+        effectiveFrom,
+        notes: "Employee deactivated",
+      });
+      return true;
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === "EMPLOYEE_NOT_FOUND") {
+      return toStateError("The employee no longer exists in your organization.");
+    }
+    console.error("[employees] deactivate failed", error);
+    return toStateError("Could not deactivate the employee. Please try again.");
+  }
+
+  if (!changed) {
+    return { status: "success", message: "Employee is already inactive." };
+  }
+
+  try {
+    await writeAuditLog({
+      organizationId,
+      actorUserId: user.id,
+      action: "employee.status_changed",
+      entityType: "employee",
+      entityId: employee.id,
+      metadata: {
+        employeeNumber: employee.employeeNumber,
+        from: employee.employmentStatus,
+        to: "inactive",
+      },
+    });
+  } catch (error) {
+    console.error("[employees] audit failed after deactivate", error);
+  }
+
+  revalidatePath("/employees");
+  revalidatePath(`/employees/${employee.id}`);
+  return { status: "success", message: "Employee deactivated successfully." };
 }

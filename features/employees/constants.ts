@@ -19,3 +19,30 @@ export const EMPLOYEE_STATUS_LABELS: Record<EmployeeStatus, string> = {
 export function isEmployeeStatus(value: string): value is EmployeeStatus {
   return (EMPLOYEE_STATUSES as readonly string[]).includes(value);
 }
+
+/** Application-level employment-type contract (Excel dropdowns + validation). */
+export const EMPLOYMENT_TYPES = [
+  "Probation",
+  "Contract",
+  "Permanent",
+  "Daily",
+  "Internship",
+  "Freelance",
+] as const;
+
+export type EmploymentType = (typeof EMPLOYMENT_TYPES)[number];
+
+export function isEmploymentType(value: string): value is EmploymentType {
+  return (EMPLOYMENT_TYPES as readonly string[]).includes(
+    value as EmploymentType
+  );
+}
+
+/** Application-level gender contract used by Excel dropdowns/validation. */
+export const GENDERS = ["Male", "Female"] as const;
+
+export function isGender(value: string): boolean {
+  return (GENDERS as readonly string[]).some(
+    (gender) => gender.toLowerCase() === value.toLowerCase()
+  );
+}

@@ -34,6 +34,7 @@
     "@vladmandic/human": "^3.3.6",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
+    "exceljs": "^4.4.0",
     "jpeg-js": "^0.4.4",
     "next": "16.3.4",
     "pg": "^8.23.0",
