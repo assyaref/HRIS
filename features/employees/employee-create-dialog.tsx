@@ -15,6 +15,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+import { DynamicCustomFieldInputs, type DynamicCustomFieldSpec } from "@/features/employee-fields/dynamic-inputs";
+
 import type { LinkableUser } from "./queries";
 import { createEmployeeAction, type EmployeeActionState } from "./actions";
 
@@ -41,8 +43,10 @@ function FieldError({ message }: { message?: string }) {
  */
 export function CreateEmployeeDialog({
   linkableUsers,
+  customFieldSpecs = [],
 }: {
   linkableUsers: LinkableUser[];
+  customFieldSpecs?: DynamicCustomFieldSpec[];
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState(
@@ -74,6 +78,18 @@ export function CreateEmployeeDialog({
             >
               {state.message}
             </div>
+          ) : null}
+          {errors && Object.keys(errors).some((key) => key.startsWith("cf:")) ? (
+            <ul
+              role="alert"
+              className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            >
+              {Object.entries(errors)
+                .filter(([key]) => key.startsWith("cf:"))
+                .map(([key, message]) => (
+                  <li key={key}>{message}</li>
+                ))}
+            </ul>
           ) : null}
 
           <form action={formAction} noValidate className="space-y-4">
@@ -160,6 +176,10 @@ export function CreateEmployeeDialog({
                 <FieldError message={errors?.phone} />
               </div>
             </div>
+
+            {customFieldSpecs.length > 0 ? (
+              <DynamicCustomFieldInputs specs={customFieldSpecs} />
+            ) : null}
 
             <div className="space-y-2">
               <Label htmlFor="employee-user">Linked account</Label>

@@ -1,11 +1,27 @@
 import "server-only";
 
-import { and, asc, eq, ilike, isNotNull, ne, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  eq,
+  ilike,
+  isNotNull,
+  ne,
+  or,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 
 import { db } from "@/db";
-import { employees, organizations, users } from "@/db/schema";
+import {
+  employeeCustomFieldValues,
+  employees,
+  organizations,
+  users,
+} from "@/db/schema";
 import type { EmployeeStatus } from "./constants";
 import type { EmployeeListSearchInput } from "./schemas";
+import type { CustomFieldFilter } from "@/features/employee-fields/filtering";
 
 /**
  * Employee data access (Phase 5) — server-only.
@@ -53,17 +69,18 @@ export interface EmployeeListResult {
 export const EMPLOYEE_PAGE_SIZE = 20;
 
 /**
- * Org-scoped employee list with optional text search and status filter.
- *
- * Search matches employee number, first name, last name and (employee) email
- * via parameterized `ILIKE`. Filtering happens in the database — the browser
- * never receives the full employee table.
+ * Share the ORG-scoped search/status WHERE conditions between the paged list
+ * and the (unpaginated) CSV export so the export always mirrors the filters
+ * applied on the employees page (`q` + `status`, same query-parameter names).
  */
-export async function listEmployeesByOrganization(
+function buildEmployeeSearchConditions(
   organizationId: string,
-  input: EmployeeListSearchInput = {}
-): Promise<EmployeeListResult> {
-  const conditions = [eq(employees.organizationId, organizationId)];
+  input: EmployeeListSearchInput,
+  customFilters: readonly CustomFieldFilter[] = []
+): SQL<unknown>[] {
+  const conditions: SQL<unknown>[] = [
+    eq(employees.organizationId, organizationId),
+  ];
 
   const search = input.q?.trim();
   if (search) {
@@ -82,6 +99,130 @@ export async function listEmployeesByOrganization(
   if (input.status) {
     conditions.push(eq(employees.employmentStatus, input.status));
   }
+
+  conditions.push(...buildCustomFieldFilterConditions(organizationId, customFilters));
+  return conditions;
+}
+
+/** Escape ILIKE metacharacters so user text is matched literally. */
+function escapeIlike(value: string): string {
+  return value.replace(/[\\%_]/g, (char) => `\\${char}`);
+}
+
+/**
+ * Dynamic custom-field filter predicates (Employee Master Data 2.0).
+ *
+ * Each filter becomes a correlated, fully parameterized EXISTS subquery on
+ * `employee_custom_field_values` pinned to (organization, field definition) —
+ * so the database does the filtering (never the browser, never an in-memory
+ * scan of the employee table), a value from another tenant can never match,
+ * and multiple filters combine with AND. Matching rules are chosen purely by
+ * the field TYPE; field names are never inspected.
+ */
+export function buildCustomFieldFilterConditions(
+  organizationId: string,
+  filters: readonly CustomFieldFilter[]
+): SQL<unknown>[] {
+  const conditions: SQL<unknown>[] = [];
+
+  for (const filter of filters) {
+    const valueColumn = employeeCustomFieldValues;
+    const shared = [
+      eq(valueColumn.organizationId, organizationId),
+      eq(valueColumn.employeeId, employees.id),
+      eq(valueColumn.fieldDefinitionId, filter.spec.fieldDefinitionId),
+    ];
+
+    let predicate: SQL<unknown>;
+    switch (filter.predicate.kind) {
+      case "contains": {
+        predicate = and(
+          ...shared,
+          sql`${valueColumn.valueText} ILIKE ${`%${escapeIlike(filter.predicate.value)}%`}`
+        )!;
+        break;
+      }
+      case "numberEq": {
+        predicate = and(
+          ...shared,
+          sql`${valueColumn.valueNumber} = ${String(filter.predicate.value)}::numeric`
+        )!;
+        break;
+      }
+      case "booleanEq": {
+        predicate = and(
+          ...shared,
+          eq(valueColumn.valueBoolean, filter.predicate.value)
+        )!;
+        break;
+      }
+      case "dateEq": {
+        // Date-only custom values are stored as UTC midnight (see
+        // parseCustomFieldValue); compare the UTC calendar day so the result
+        // is independent of the database session timezone.
+        predicate = and(
+          ...shared,
+          sql`(${valueColumn.valueDate} AT TIME ZONE 'UTC')::date = ${filter.predicate.value}::date`
+        )!;
+        break;
+      }
+      case "datetimeEq": {
+        // Compare UTC wall-clock minute; parameter is `YYYY-MM-DDTHH:mm:ss.sssZ`
+        // from the parser. `date_trunc` avoids false mismatches on seconds/ms.
+        predicate = and(
+          ...shared,
+          sql`date_trunc('minute', ${valueColumn.valueDate} AT TIME ZONE 'UTC') = date_trunc('minute', ${filter.predicate.value}::timestamptz)`
+        )!;
+        break;
+      }
+      case "datetimeDay": {
+        predicate = and(
+          ...shared,
+          sql`(${valueColumn.valueDate} AT TIME ZONE 'UTC')::date = ${filter.predicate.value}::date`
+        )!;
+        break;
+      }
+      case "optionAny": {
+        // select/radio/multiselect values are stored as a JSONB option array;
+        // `@>` keeps the lookup index-friendly and parameterized.
+        predicate = and(
+          ...shared,
+          sql`${valueColumn.valueJson} @> ${JSON.stringify([filter.predicate.value])}::jsonb`
+        )!;
+        break;
+      }
+      default: {
+        const _exhaustive: never = filter.predicate;
+        void _exhaustive;
+        continue;
+      }
+    }
+
+    conditions.push(
+      sql`EXISTS (SELECT 1 FROM ${valueColumn} WHERE ${predicate})`
+    );
+  }
+
+  return conditions;
+}
+
+/**
+ * Org-scoped employee list with optional text search and status filter.
+ *
+ * Search matches employee number, first name, last name and (employee) email
+ * via parameterized `ILIKE`. Filtering happens in the database — the browser
+ * never receives the full employee table.
+ */
+export async function listEmployeesByOrganization(
+  organizationId: string,
+  input: EmployeeListSearchInput = {},
+  customFilters: readonly CustomFieldFilter[] = []
+): Promise<EmployeeListResult> {
+  const conditions = buildEmployeeSearchConditions(
+    organizationId,
+    input,
+    customFilters
+  );
 
   const page = Math.max(1, input.page ?? 1);
   const offset = (page - 1) * EMPLOYEE_PAGE_SIZE;
@@ -126,6 +267,50 @@ export async function listEmployeesByOrganization(
     pageSize: EMPLOYEE_PAGE_SIZE,
     totalPages,
   };
+}
+
+/**
+ * Every employee in one organization matching the same search/status filters
+ * used by the employees page, WITHOUT pagination.
+ *
+ * Powers the CSV export (`app/api/employees/export/route.ts`): the download
+ * represents the full filtered result set — not just the current page, and not
+ * the whole organization when a filter is active.
+ */
+export async function listEmployeesFlatByOrganization(
+  organizationId: string,
+  input: EmployeeListSearchInput = {},
+  customFilters: readonly CustomFieldFilter[] = []
+): Promise<EmployeeListItem[]> {
+  const conditions = buildEmployeeSearchConditions(
+    organizationId,
+    input,
+    customFilters
+  );
+
+  const rows = await db
+    .select({
+      id: employees.id,
+      employeeNumber: employees.employeeNumber,
+      firstName: employees.firstName,
+      lastName: employees.lastName,
+      email: employees.email,
+      phone: employees.phone,
+      employmentStatus: employees.employmentStatus,
+      hireDate: employees.hireDate,
+      linkedUserEmail: users.email,
+      createdAt: employees.createdAt,
+    })
+    .from(employees)
+    .leftJoin(users, eq(users.id, employees.userId))
+    .where(and(...conditions))
+    .orderBy(
+      asc(employees.lastName),
+      asc(employees.firstName),
+      asc(employees.employeeNumber)
+    );
+
+  return rows.map(toListItem);
 }
 
 /**
@@ -249,6 +434,33 @@ export async function getOrganizationName(
     .where(eq(organizations.id, organizationId))
     .limit(1);
   return rows[0]?.name ?? null;
+}
+
+/**
+ * Employee number + email for every employee in one organization.
+ *
+ * Used by the CSV import preview/confirm to reject rows whose employee number
+ * or email already exists. Only identity columns are streamed — no blobs.
+ */
+export async function listEmployeeIdentifiersByOrganization(
+  organizationId: string
+): Promise<
+  Array<{
+    id: string;
+    employeeNumber: string;
+    email: string | null;
+    status: string;
+  }>
+> {
+  return db
+    .select({
+      id: employees.id,
+      employeeNumber: employees.employeeNumber,
+      email: employees.email,
+      status: employees.employmentStatus,
+    })
+    .from(employees)
+    .where(eq(employees.organizationId, organizationId));
 }
 
 

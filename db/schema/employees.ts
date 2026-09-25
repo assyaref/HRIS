@@ -1,17 +1,23 @@
-import { date, index, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
+import { boolean, date, index, integer, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { createdAt, updatedAt, uuidId } from "./common";
 import { organizations } from "./organizations";
 import { users } from "./users";
+import { workLocations } from "./locations";
 
 /**
  * Employees — the person records consumed by later HR modules.
  *
  * Status values (application-level contract): active | inactive.
  *
- * Phase 2 keeps this to core identity/organization fields. Payroll, biometric,
- * attendance, department/position, manager and assignment columns arrive with
- * the phases that own them (Phase 5+). No circular FK: `users` does not
- * reference `employees`.
+ * EMPLOYEE MASTER DATA 2.0: this table carries the core personal and
+ * employment identity columns (extended additively — every new column is
+ * nullable so existing employee rows remain valid). Related master-data
+ * records (addresses, insurance, bank accounts, dependents, education,
+ * documents, employment history) live in `employee_details`; administrable
+ * custom fields are modeled in `employee_custom_fields`. No circular FK:
+ * `users` does not reference `employees`. `manager_id` self-references the
+ * same table and is `SET NULL` so manager removal never deletes employees.
  */
 export const employees = pgTable(
   "employees",
@@ -25,19 +31,9 @@ export const employees = pgTable(
     }),
     employeeNumber: text("employee_number").notNull(),
 
-    /**
-     * Indonesian national identity number.
-     *
-     * Nullable during migration so existing employee records remain valid.
-     * Application validation enforces digits-only identity input.
-     */
+    /** Indonesian national identity number (NIK). */
     nik: text("nik"),
-
-    /**
-     * Employee date of birth.
-     *
-     * Nullable during migration so existing employee records remain valid.
-     */
+    /** Employee date of birth. */
     birthDate: date("birth_date", { mode: "date" }),
 
     firstName: text("first_name").notNull(),
@@ -46,6 +42,44 @@ export const employees = pgTable(
     phone: text("phone"),
     employmentStatus: text("employment_status").notNull().default("active"),
     hireDate: date("hire_date", { mode: "date" }),
+
+    /* ---------------------------------------------------------------- */
+    /* Personal details (Employee Master Data 2.0)                       */
+    /* ---------------------------------------------------------------- */
+    nickname: text("nickname"),
+    birthPlace: text("birth_place"),
+    gender: text("gender"),
+    religion: text("religion"),
+    maritalStatus: text("marital_status"),
+    nationality: text("nationality"),
+    personalEmail: text("personal_email"),
+    /** Profile photo — server-generated storage key inside the private store. */
+    profilePhotoUrl: text("profile_photo_url"),
+
+    /* ---------------------------------------------------------------- */
+    /* Employment details (Employee Master Data 2.0)                     */
+    /* ---------------------------------------------------------------- */
+    division: text("division"),
+    department: text("department"),
+    position: text("position"),
+    workLocationId: uuid("work_location_id").references(
+      () => workLocations.id,
+      { onDelete: "set null" }
+    ),
+    /** Direct reporting line — self-referencing, org-scoped by policy. */
+    managerId: uuid("manager_id").references(
+      (): AnyPgColumn => employees.id,
+      {
+        onDelete: "set null",
+      }
+    ),
+    employmentType: text("employment_type"),
+    contractStart: date("contract_start", { mode: "date" }),
+    contractEnd: date("contract_end", { mode: "date" }),
+    resignationDate: date("resignation_date", { mode: "date" }),
+    terminationDate: date("termination_date", { mode: "date" }),
+    reasonForLeaving: text("reason_for_leaving"),
+
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -67,5 +101,19 @@ export const employees = pgTable(
     ),
 
     index("employees_user_id_idx").on(table.userId),
+    index("employees_org_status_idx").on(
+      table.organizationId,
+      table.employmentStatus
+    ),
+    index("employees_org_dept_idx").on(table.organizationId, table.department),
+    index("employees_org_position_idx").on(
+      table.organizationId,
+      table.position
+    ),
+    index("employees_work_location_idx").on(
+      table.organizationId,
+      table.workLocationId
+    ),
+    index("employees_manager_idx").on(table.organizationId, table.managerId),
   ]
 );
