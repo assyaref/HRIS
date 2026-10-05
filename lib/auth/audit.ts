@@ -24,13 +24,21 @@ export type RbacAuditAction =
   | "rbac.user.role.assigned"
   | "rbac.user.role.removed";
 
+export type UserAuditAction =
+  | "user.created"
+  | "user.updated"
+  | "user.deleted"
+  | "user.password_changed";
+
 export type EmployeeAuditAction =
   | "employee.created"
   | "employee.updated"
   | "employee.status_changed"
   | "employee.account.created"
   | "employee.deleted"
+  | "employee.permanently_deleted"
   | "employee.purged"
+  | "employee.test_data_purged"
   | "employee.imported"
   | "employee.exported";
 
@@ -59,6 +67,10 @@ export type EmployeeMasterDataAuditAction =
   | "employee_field.updated"
   | "employee_field.status_changed"
   | "employee_field.deleted"
+  | "employee_tab.created"
+  | "employee_tab.updated"
+  | "employee_tab.status_changed"
+  | "employee_tab.reordered"
   | "employee_custom_data.updated"
   | "employee_custom_data.deleted";
 
@@ -88,11 +100,14 @@ export type PayrollAuditAction =
   | "payroll.rejected"
   | "payroll.locked"
   | "payroll.cancelled"
+  | "payroll.updated"
+  | "payroll.deleted"
   | "payslip.generated"
   | "payslip.published"
   | "payslip.document.uploaded"
   | "payslip.document.generated"
   | "payslip.document.viewed"
+  | "payslip.document.replaced"
   | "payslip.revoked"
   | "payroll.employee_component.created"
   | "payroll.employee_component.updated"
@@ -124,8 +139,27 @@ export type FaceVerificationAuditAction =
   | "face_verification.unavailable"
   | "face_verification.failed";
 
+export type AnnouncementAuditAction =
+  | "announcement.created"
+  | "announcement.updated"
+  | "announcement.published"
+  | "announcement.unpublished"
+  | "announcement.deleted"
+  | "announcement.read"
+  | "announcement.attachment.uploaded"
+  | "announcement.attachment.deleted"
+  | "announcement.attachment.downloaded";
+
+export type OrganizationAuditAction =
+  | "organization.created"
+  | "organization.updated"
+  | "organization.deleted"
+  | "organization.activated"
+  | "organization.deactivated";
+
 export type AuditAction =
   | RbacAuditAction
+  | UserAuditAction
   | EmployeeAuditAction
   | EmployeeMasterDataAuditAction
   | AttendanceAuditAction
@@ -136,7 +170,9 @@ export type AuditAction =
   | ProjectAuditAction
   | AssignmentAuditAction
   | FaceEnrollmentAuditAction
-  | FaceVerificationAuditAction;
+  | FaceVerificationAuditAction
+  | AnnouncementAuditAction
+  | OrganizationAuditAction;
 
 export interface WriteAuditLogInput {
   organizationId: string | null;
@@ -160,14 +196,23 @@ function resolveClientMetadata(
   return { ipAddress, userAgent: headerStore.get("user-agent") ?? null };
 }
 
-/** Append one row to the audit log. */
+/**
+ * Append one row to the audit log.
+ *
+ * `client` lets a destructive transaction pass its OWN handle so the audit row
+ * commits atomically with the writes it describes. Without it the pooled
+ * connection is used, which is correct for ordinary writes and for recording a
+ * refusal after a rollback. The client metadata is resolved from the request
+ * headers, so call it from a request scope in both cases.
+ */
 export async function writeAuditLog(
-  input: WriteAuditLogInput
+  input: WriteAuditLogInput,
+  client: { insert: typeof db.insert } = db
 ): Promise<void> {
   const headerStore = await headers();
   const { ipAddress, userAgent } = resolveClientMetadata(headerStore);
 
-  await db.insert(auditLogs).values({
+  await client.insert(auditLogs).values({
     organizationId: input.organizationId,
     actorUserId: input.actorUserId,
     action: input.action,

@@ -34,6 +34,8 @@ export const PERMISSION_MODULES = {
   SETTINGS: "settings",
   WORK_LOCATIONS: "work_locations",
   AUDIT: "audit",
+  ANNOUNCEMENTS: "announcements",
+  ORGANIZATIONS: "organizations",
 } as const;
 
 export type PermissionModule =
@@ -62,6 +64,8 @@ export const PERMISSIONS = {
   EMPLOYEES_CREATE: "employees.create",
   EMPLOYEES_UPDATE: "employees.update",
   EMPLOYEES_DELETE: "employees.delete",
+  EMPLOYEES_PERMANENT_DELETE: "employees.permanent_delete",
+  EMPLOYEES_TEST_DATA_PURGE: "employees.test_data_purge",
   EMPLOYEES_IMPORT: "employees.import",
   EMPLOYEES_EXPORT: "employees.export",
   EMPLOYEES_PERSONAL_VIEW: "employees.personal.view",
@@ -94,6 +98,15 @@ export const PERMISSIONS = {
   ATTENDANCE_APPROVE: "attendance.approve",
   ATTENDANCE_CHECK_IN: "attendance.check_in",
   ATTENDANCE_CHECK_OUT: "attendance.check_out",
+  ANNOUNCEMENTS_VIEW: "announcements.view",
+  ANNOUNCEMENTS_CREATE: "announcements.create",
+  ANNOUNCEMENTS_UPDATE: "announcements.update",
+  ANNOUNCEMENTS_DELETE: "announcements.delete",
+  ANNOUNCEMENTS_PUBLISH: "announcements.publish",
+  ORGANIZATIONS_VIEW: "organizations.view",
+  ORGANIZATIONS_CREATE: "organizations.create",
+  ORGANIZATIONS_UPDATE: "organizations.update",
+  ORGANIZATIONS_DELETE: "organizations.delete",
   LEAVE_VIEW: "leave.view",
   LEAVE_CREATE: "leave.create",
   LEAVE_MANAGE: "leave.manage",
@@ -106,6 +119,10 @@ export const PERMISSIONS = {
   PAYROLL_CREATE: "payroll.create",
   PAYROLL_CALCULATE: "payroll.calculate",
   PAYROLL_UPDATE: "payroll.update",
+  PAYROLL_PERIOD_VIEW: "payroll.period.view",
+  PAYROLL_PERIOD_CREATE: "payroll.period.create",
+  PAYROLL_PERIOD_UPDATE: "payroll.period.update",
+  PAYROLL_PERIOD_DELETE: "payroll.period.delete",
   PAYROLL_APPROVE: "payroll.approve",
   PAYROLL_LOCK: "payroll.lock",
   PAYROLL_MANAGE: "payroll.manage",
@@ -223,6 +240,18 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     code: PERMISSIONS.EMPLOYEES_DELETE,
     module: PERMISSION_MODULES.EMPLOYEES,
     description: "Delete employee records.",
+  },
+  {
+    code: PERMISSIONS.EMPLOYEES_PERMANENT_DELETE,
+    module: PERMISSION_MODULES.EMPLOYEES,
+    description:
+      "Permanently delete an employee record and its deletable related records (Super Administrator only).",
+  },
+  {
+    code: PERMISSIONS.EMPLOYEES_TEST_DATA_PURGE,
+    module: PERMISSION_MODULES.EMPLOYEES,
+    description:
+      "Permanently remove records identified as TEST data from production (Super Administrator only).",
   },
   {
     code: PERMISSIONS.EMPLOYEES_IMPORT,
@@ -385,6 +414,32 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     module: PERMISSION_MODULES.ATTENDANCE,
     description: "Check out of attendance.",
   },
+  // Announcements (management publications / employee information center)
+  {
+    code: PERMISSIONS.ANNOUNCEMENTS_VIEW,
+    module: PERMISSION_MODULES.ANNOUNCEMENTS,
+    description: "View announcements.",
+  },
+  {
+    code: PERMISSIONS.ANNOUNCEMENTS_CREATE,
+    module: PERMISSION_MODULES.ANNOUNCEMENTS,
+    description: "Create announcements.",
+  },
+  {
+    code: PERMISSIONS.ANNOUNCEMENTS_UPDATE,
+    module: PERMISSION_MODULES.ANNOUNCEMENTS,
+    description: "Update announcements.",
+  },
+  {
+    code: PERMISSIONS.ANNOUNCEMENTS_DELETE,
+    module: PERMISSION_MODULES.ANNOUNCEMENTS,
+    description: "Delete announcements.",
+  },
+  {
+    code: PERMISSIONS.ANNOUNCEMENTS_PUBLISH,
+    module: PERMISSION_MODULES.ANNOUNCEMENTS,
+    description: "Publish and unpublish announcements.",
+  },
   // Leave
   {
     code: PERMISSIONS.LEAVE_VIEW,
@@ -432,6 +487,26 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     code: PERMISSIONS.PAYROLL_VIEW,
     module: PERMISSION_MODULES.PAYROLL,
     description: "View payroll runs.",
+  },
+  {
+    code: PERMISSIONS.PAYROLL_PERIOD_VIEW,
+    module: PERMISSION_MODULES.PAYROLL,
+    description: "View payroll periods.",
+  },
+  {
+    code: PERMISSIONS.PAYROLL_PERIOD_CREATE,
+    module: PERMISSION_MODULES.PAYROLL,
+    description: "Create payroll periods.",
+  },
+  {
+    code: PERMISSIONS.PAYROLL_PERIOD_UPDATE,
+    module: PERMISSION_MODULES.PAYROLL,
+    description: "Update payroll periods.",
+  },
+  {
+    code: PERMISSIONS.PAYROLL_PERIOD_DELETE,
+    module: PERMISSION_MODULES.PAYROLL,
+    description: "Delete payroll periods.",
   },
   {
     code: PERMISSIONS.PAYROLL_CREATE,
@@ -525,11 +600,59 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     module: PERMISSION_MODULES.AUDIT,
     description: "View audit logs.",
   },
+  // Organizations (SUPERADMIN-only tenant administration, R19).
+  // These codes exist so the capability is expressible in the catalog and
+  // auditable in the permission matrix; the seed grants them to SUPERADMIN
+  // exclusively. Every organizations action additionally re-checks the
+  // system-level SUPERADMIN role server-side, so a tenant that somehow
+  // receives one of these codes still cannot manage organizations.
+  {
+    code: PERMISSIONS.ORGANIZATIONS_VIEW,
+    module: PERMISSION_MODULES.ORGANIZATIONS,
+    description: "View tenant organizations (Super Administrator only).",
+  },
+  {
+    code: PERMISSIONS.ORGANIZATIONS_CREATE,
+    module: PERMISSION_MODULES.ORGANIZATIONS,
+    description: "Create tenant organizations (Super Administrator only).",
+  },
+  {
+    code: PERMISSIONS.ORGANIZATIONS_UPDATE,
+    module: PERMISSION_MODULES.ORGANIZATIONS,
+    description: "Update tenant organizations (Super Administrator only).",
+  },
+  {
+    code: PERMISSIONS.ORGANIZATIONS_DELETE,
+    module: PERMISSION_MODULES.ORGANIZATIONS,
+    description: "Delete tenant organizations (Super Administrator only).",
+  },
 ];
 
 /** All catalog codes, in display order. */
 export const ALL_PERMISSION_CODES: readonly Permission[] =
   PERMISSION_CATALOG.map((definition) => definition.code);
+
+/**
+ * Permissions that only a SUPERADMIN may ever hold.
+ *
+ * These gate system-level capabilities that no tenant role must be able to
+ * reach, directly or by delegation. `employees.permanent_delete` is one: a
+ * tenant administrator holding `roles.update` must not be able to grant the
+ * ability to destroy employee records to their own role, and even if such a
+ * grant were written, the server action re-checks the SUPERADMIN flag.
+ *
+ * Used by the RBAC seed (refuses to write these into an organization role) and
+ * by the role editor (never offers them for a non-SUPERADMIN role).
+ */
+export const SYSTEM_ONLY_PERMISSION_CODES: readonly Permission[] = [
+  PERMISSIONS.EMPLOYEES_PERMANENT_DELETE,
+  PERMISSIONS.EMPLOYEES_TEST_DATA_PURGE,
+];
+
+/** Whether a permission may only be held by a SUPERADMIN. */
+export function isSystemOnlyPermission(code: Permission): boolean {
+  return SYSTEM_ONLY_PERMISSION_CODES.includes(code);
+}
 
 /** Ordered module labels for grouped displays. */
 export const PERMISSION_MODULE_LABELS: Record<PermissionModule, string> = {
@@ -549,6 +672,8 @@ export const PERMISSION_MODULE_LABELS: Record<PermissionModule, string> = {
   settings: "Settings",
   work_locations: "Work Locations",
   audit: "Audit",
+  announcements: "Announcements",
+  organizations: "Organizations",
 };
 
 /** Split a `resource.action` code into its resource and action parts. */
