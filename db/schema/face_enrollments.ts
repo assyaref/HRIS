@@ -104,7 +104,10 @@ export const faceEnrollmentTemplates = pgTable(
       dataType: () => "bytea",
     })("secret").notNull(),
     /** Encryption key version used at write time. */
-    keyVersion: text("key_version").notNull().default("v1"),
+    // 0019 removed the DEFAULT: the key version must be stated explicitly by
+    // the writer, because an inherited default would mislabel a template
+    // written under a rotated key and break decryption during a rotation.
+    keyVersion: text("key_version").notNull(),
     createdAt: createdAt(),
   },
   (table) => [

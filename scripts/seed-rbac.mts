@@ -35,6 +35,7 @@ import pg from "pg";
 import {
   PERMISSION_CATALOG,
   PERMISSIONS,
+  SYSTEM_ONLY_PERMISSION_CODES,
   type Permission,
 } from "../lib/auth/permissions.ts";
 import {
@@ -46,6 +47,7 @@ import {
   SYSTEM_ORGANIZATION_NAME,
   type RoleCode,
 } from "../lib/auth/roles.ts";
+import { ANNOUNCEMENT_ROLE_GRANTS } from "../features/announcements/permissions.ts";
 
 loadEnv({ path: ".env.local" });
 loadEnv({ path: ".env" });
@@ -136,8 +138,21 @@ const ROLE_PERMISSION_MATRIX: Record<RoleCode, readonly Permission[]> = {
     PERMISSIONS.WORK_LOCATIONS_MANAGE,
     PERMISSIONS.REPORTS_VIEW,
     PERMISSIONS.AUDIT_VIEW,
+    ...ANNOUNCEMENT_ROLE_GRANTS[ROLE_CODES.ADMIN],
     PERMISSIONS.PROFILE_VIEW,
     PERMISSIONS.PROFILE_UPDATE,
+    // Payroll period granular permissions
+    PERMISSIONS.PAYROLL_PERIOD_VIEW,
+    PERMISSIONS.PAYROLL_PERIOD_CREATE,
+    PERMISSIONS.PAYROLL_PERIOD_UPDATE,
+    PERMISSIONS.PAYROLL_PERIOD_DELETE,
+    PERMISSIONS.PAYROLL_VIEW,
+    PERMISSIONS.PAYROLL_CREATE,
+    PERMISSIONS.PAYROLL_CALCULATE,
+    PERMISSIONS.PAYROLL_UPDATE,
+    PERMISSIONS.PAYROLL_APPROVE,
+    PERMISSIONS.PAYROLL_LOCK,
+    PERMISSIONS.PAYROLL_MANAGE,
   ],
 
   // Management dashboards, org-scoped visibility and reports.
@@ -164,6 +179,7 @@ const ROLE_PERMISSION_MATRIX: Record<RoleCode, readonly Permission[]> = {
     PERMISSIONS.PERMISSION_MANAGE,
     PERMISSIONS.REPORTS_VIEW,
     PERMISSIONS.AUDIT_VIEW,
+    ...ANNOUNCEMENT_ROLE_GRANTS[ROLE_CODES.MANAGEMENT],
     PERMISSIONS.PROFILE_VIEW,
     PERMISSIONS.PROFILE_UPDATE,
   ],
@@ -212,6 +228,7 @@ const ROLE_PERMISSION_MATRIX: Record<RoleCode, readonly Permission[]> = {
     PERMISSIONS.PERMISSION_APPROVE,
     PERMISSIONS.PERMISSION_MANAGE,
     PERMISSIONS.REPORTS_VIEW,
+    ...ANNOUNCEMENT_ROLE_GRANTS[ROLE_CODES.HR],
     PERMISSIONS.PROFILE_VIEW,
     PERMISSIONS.PROFILE_UPDATE,
   ],
@@ -225,7 +242,8 @@ const ROLE_PERMISSION_MATRIX: Record<RoleCode, readonly Permission[]> = {
     PERMISSIONS.EMPLOYEES_INSURANCE_VIEW,
     PERMISSIONS.EMPLOYEE_CUSTOM_DATA_VIEW,
     PERMISSIONS.PAYROLL_VIEW,
-    PERMISSIONS.PAYROLL_MANAGE,
+    PERMISSIONS.PAYROLL_PERIOD_VIEW,
+    PERMISSIONS.PAYROLL_PERIOD_UPDATE,
     PERMISSIONS.PAYSLIP_VIEW,
     PERMISSIONS.REPORTS_VIEW,
     PERMISSIONS.PROFILE_VIEW,
@@ -264,6 +282,36 @@ const ROLE_PERMISSION_MATRIX: Record<RoleCode, readonly Permission[]> = {
     PERMISSIONS.PAYSLIP_VIEW,
   ],
 };
+
+/**
+ * Permissions that are SYSTEM-level capabilities and must never be granted to
+ * an organization-level role.
+ *
+ * `employees.permanent_delete` permanently destroys an employee record, and
+ * `employees.test_data_purge` permanently destroys records identified as TEST
+ * data. Both are granted to SUPERADMIN only (through `ALL_PERMISSIONS`, above).
+ * Every other role reaches permanent deletion through the guarded flow
+ * documented in `features/employees/permanent-delete-policy.ts`, and no role
+ * reaches a test-data purge at all, which is the reason this list exists: a
+ * tenant administrator must not be able to grant either capability to their own
+ * role, or to any custom role in their tenant.
+ *
+ * The guard below runs on every seed so the restriction cannot be lifted by an
+ * accidental edit to the matrix — the seed fails loudly instead.
+ */
+const SYSTEM_ONLY_PERMISSIONS: readonly Permission[] =
+  SYSTEM_ONLY_PERMISSION_CODES;
+
+for (const roleCode of ORGANIZATION_ROLE_CODES) {
+  const granted = ROLE_PERMISSION_MATRIX[roleCode] ?? [];
+  for (const systemOnly of SYSTEM_ONLY_PERMISSIONS) {
+    if (granted.includes(systemOnly)) {
+      throw new Error(
+        `Refusing to seed: ${roleCode} must not hold the system-level permission "${systemOnly}".`
+      );
+    }
+  }
+}
 
 const pool = new pg.Pool({ connectionString: databaseUrl });
 

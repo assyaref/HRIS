@@ -1,5 +1,8 @@
 import { requireUser } from "@/lib/auth/auth";
 import { getEmployeeByUserId } from "@/features/employees/queries";
+import {
+  FACE_SELF_ENROLLMENT_UNLINKED_MESSAGE,
+} from "@/features/employees/face-enrollment";
 import { getFaceEnrollmentSummaryInOrganization } from "@/features/employees/face-enrollment.queries";
 import { SelfFaceEnrollmentPanel } from "@/features/employees/face-enrollment-self-panel";
 import { isFaceRecognitionConfigured } from "@/lib/attendance/face-recognition";
@@ -20,17 +23,16 @@ export default async function FaceIdPage() {
     );
   }
 
-  const employee = await getEmployeeByUserId(
-    user.id,
-    user.organizationId
-  );
+  const organizationId = user.organizationId;
+
+  const employee = await getEmployeeByUserId(user.id, organizationId);
 
   if (!employee) {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-semibold tracking-tight">Face ID</h1>
         <p className="text-sm text-muted-foreground">
-          Akun belum terhubung dengan data karyawan.
+          {FACE_SELF_ENROLLMENT_UNLINKED_MESSAGE}
         </p>
       </div>
     );

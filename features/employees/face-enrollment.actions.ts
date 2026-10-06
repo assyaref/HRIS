@@ -230,6 +230,9 @@ export async function enrollFaceAction(
         employeeId: employee.id,
         enrollmentId,
         templateVersion: providerResult.templateVersion,
+        // Explicit, never defaulted: 0019 removes the column default so a
+        // rotation can never silently label a row with the wrong key.
+        keyVersion: providerResult.templateKeyVersion,
         secret: providerResult.templateSecret,
       });
     });
@@ -454,6 +457,9 @@ export async function selfEnrollFaceAction(
         employeeId: employee.id,
         enrollmentId,
         templateVersion: providerResult.templateVersion,
+        // Explicit, never defaulted: 0019 removes the column default so a
+        // rotation can never silently label a row with the wrong key.
+        keyVersion: providerResult.templateKeyVersion,
         secret: providerResult.templateSecret,
       });
     });

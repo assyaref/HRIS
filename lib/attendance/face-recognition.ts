@@ -10,11 +10,13 @@ import {
   type FaceEngineFailureCode,
 } from "./face-engine";
 import {
-  decryptTemplateSecret,
-  encryptTemplateSecret,
+  decryptTemplateSecretWithKey,
+  encryptTemplateSecretWithKey,
   isTemplateEncryptionConfigured,
-  FACE_TEMPLATE_KEY_ENV,
+  resolveKeyForVersion,
+  resolveTemplateKeyRing,
 } from "./template-cipher";
+import { credentialEnvSnapshot } from "@/lib/config/credentials";
 import {
   decodeFaceEmbedding,
   faceScoreIsMatch,
@@ -63,6 +65,12 @@ export type FaceTemplateResult =
       /** Encrypted template payload (nonce || ciphertext || tag). */
       templateSecret: Buffer;
       templateVersion: string;
+      /**
+       * Encryption key version that produced `templateSecret`. The caller MUST
+       * persist this in `face_enrollment_templates.key_version` so the row can
+       * later be decrypted by the correct key.
+       */
+      templateKeyVersion: string;
     };
 
 export interface CreateFaceTemplateInput {
@@ -136,17 +144,29 @@ export async function createFaceTemplateFromEnrollmentCapture(
     return toResultStatus(engineOutcome.code);
   }
 
-  const keyBase64 = process.env[FACE_TEMPLATE_KEY_ENV] ?? "";
+  // Always encrypt with the PRIMARY key, and stamp the row with that key's
+  // version so a later rotation can still decrypt it. The previous key is a
+  // decrypt-only fallback and is never used to write new material.
+  // The snapshot overlays any systemd credential on the legacy environment
+  // variable, so a key held in a credential is picked up transparently.
+  const keyRing = resolveTemplateKeyRing(credentialEnvSnapshot());
+  if (!keyRing) {
+    return { status: "processing_failed" };
+  }
   // Serialize the float embedding (little-endian float32) then encrypt.
   const plaintext = new Float32Array(engineOutcome.embedding);
   const plaintextBytes = new Uint8Array(plaintext.buffer);
-  const templateSecret = encryptTemplateSecret(plaintextBytes, keyBase64);
+  const templateSecret = encryptTemplateSecretWithKey(
+    plaintextBytes,
+    keyRing.primary.key
+  );
 
   return {
     status: "success",
     providerTemplateRef: randomUUID(),
     templateSecret,
     templateVersion: engineOutcome.templateVersion ?? FACE_EMBEDDING_VERSION,
+    templateKeyVersion: keyRing.primary.version,
   };
 }
 /* ------------------------------------------------------------------ */
@@ -181,6 +201,12 @@ export interface VerifyFaceAgainstTemplateInput {
   mimeType: string;
   /** Stored `face_enrollment_templates.template_version` (DB row). */
   templateVersion: string;
+  /**
+   * Stored `face_enrollment_templates.key_version` (DB row). REQUIRED — it
+   * selects which key in the ring decrypts `encryptedTemplate`. Omitting it is
+   * treated as a hard `template_corrupt` rather than a reason to guess.
+   */
+  templateKeyVersion: string;
   /** Encrypted template payload: nonce(12) || ciphertext || authTag(16). */
   encryptedTemplate: Uint8Array;
 }
@@ -255,12 +281,27 @@ export async function verifyFaceAgainstTemplate(
     return { status: "template_corrupt" };
   }
 
-  const keyBase64 = process.env[FACE_TEMPLATE_KEY_ENV] ?? "";
+  // Key selection is by the row's own `key_version`, never by trying keys in
+  // turn. An unknown/absent label is a hard failure: it means the row was
+  // written under a key this process no longer has, and silently trying other
+  // keys would turn a rotation mistake into an undecryptable-template
+  // incident instead of a loud, safe `template_corrupt`.
+  // The snapshot overlays any systemd credential on the legacy environment
+  // variable, so a key held in a credential is picked up transparently.
+  const keyRing = resolveTemplateKeyRing(credentialEnvSnapshot());
+  const keySlot = keyRing
+    ? resolveKeyForVersion(keyRing, input.templateKeyVersion)
+    : null;
+  if (!keySlot) {
+    return { status: "template_corrupt" };
+  }
+
   let plaintext: Buffer;
   try {
-    plaintext = decryptTemplateSecret(input.encryptedTemplate, keyBase64);
+    plaintext = decryptTemplateSecretWithKey(input.encryptedTemplate, keySlot.key);
   } catch {
-    // Wrong key, tampered ciphertext, malformed blob — same safe outcome.
+    // Wrong key for this label, tampered ciphertext, malformed blob — same
+    // safe outcome, exactly as before the key ring existed.
     return { status: "template_corrupt" };
   }
   const decoded = decodeFaceEmbedding(plaintext);

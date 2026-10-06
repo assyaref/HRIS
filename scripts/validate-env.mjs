@@ -25,6 +25,8 @@
 // Usage:
 //   node scripts/validate-env.mjs
 import dotenv from "dotenv";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 // Match production runtime / drizzle.config.ts load order.
 // dotenv never overrides variables that are already set.
@@ -54,6 +56,38 @@ if (!has("DATABASE_URL")) {
   classify("DATABASE_URL", "critical", validScheme, validScheme
     ? "PRESENT with postgres:// scheme (credentials not inspected)."
     : "PRESENT but INVALID — must start with postgres:// or postgresql://.");
+}
+
+// --- Secret source: systemd credential vs EnvironmentFile ---------------------
+// Phase A of the security rotation. Reports WHICH mechanism is supplying each
+// secret and never any value, so an operator can confirm a rotation landed
+// without ever seeing a credential.
+{
+  const dir = process.env.CREDENTIALS_DIRECTORY;
+  const ids = [
+    ["database_url", "DATABASE_URL"],
+    ["face_template_encryption_key", "FACE_TEMPLATE_ENCRYPTION_KEY"],
+    ["face_template_encryption_key_previous", "FACE_TEMPLATE_ENCRYPTION_KEY_PREVIOUS"],
+  ];
+  if (!dir || dir.trim() === "") {
+    classify("CREDENTIALS_DIRECTORY", "optional", true,
+      "UNSET — secrets come from EnvironmentFile=/opt/hris/.env.production (legacy path).");
+  } else {
+    classify("CREDENTIALS_DIRECTORY", "optional", true,
+      `SET — systemd credentials are in use (directory path not displayed).`);
+    for (const [id, envVar] of ids) {
+      let present = false;
+      try {
+        present = readFileSync(join(dir, id), "utf8").trim() !== "";
+      } catch {
+        present = false;
+      }
+      classify(`credential:${id}`, "optional", true,
+        present
+          ? `PRESENT — ${envVar} is supplied by this credential.`
+          : `ABSENT — ${envVar} falls back to the environment variable.`);
+    }
+  }
 }
 
 // --- NODE_ENV -----------------------------------------------------------------

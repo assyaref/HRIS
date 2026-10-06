@@ -29,6 +29,12 @@ export type ActiveFaceVerificationTemplate =
       kind: "available";
       enrollmentId: string;
       templateVersion: string;
+      /**
+       * Encryption key version for this row. Selects which key in the template
+       * key ring decrypts `secret` — must be threaded into the verification
+       * call so a rotated template stays readable.
+       */
+      keyVersion: string;
       /** Encrypted template: nonce(12) || ciphertext || authTag(16). */
       secret: Buffer;
     }
@@ -44,6 +50,7 @@ export async function getActiveFaceVerificationTemplate(
     .select({
       enrollmentId: employeeFaceEnrollments.id,
       templateVersion: faceEnrollmentTemplates.templateVersion,
+      keyVersion: faceEnrollmentTemplates.keyVersion,
       secret: faceEnrollmentTemplates.secret,
     })
     .from(employeeFaceEnrollments)
@@ -66,6 +73,7 @@ export async function getActiveFaceVerificationTemplate(
       kind: "available",
       enrollmentId: active.enrollmentId,
       templateVersion: active.templateVersion,
+      keyVersion: active.keyVersion,
       secret: active.secret,
     };
   }

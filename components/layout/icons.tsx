@@ -27,7 +27,21 @@ export type HrisIconName =
   | "briefcase"
   | "trend-up"
   | "check"
-  | "info";
+  | "info"
+  | "home"
+  | "bell"
+  | "scan"
+  | "document"
+  | "help"
+  | "download"
+  | "edit"
+  | "lock"
+  | "refresh"
+  | "chevron-right"
+  | "map-pin"
+  | "history"
+  | "calendar-check"
+  | "receipt-long";
 
 interface IconPathProps {
   name: HrisIconName;
@@ -295,6 +309,108 @@ function paths(name: HrisIconName) {
           <circle cx="12" cy="12" r="8.5" />
           <path d="M12 11v5" />
           <path d="M12 7.5h.01" />
+        </>
+      );
+    case "home":
+      return (
+        <>
+          <path d="M4 10.5 12 4l8 6.5" />
+          <path d="M6 9.5V20h12V9.5" />
+          <path d="M10 20v-5h4v5" />
+        </>
+      );
+    case "bell":
+      return (
+        <>
+          <path d="M6 9a6 6 0 0 1 12 0c0 4 1.2 5.3 1.8 6H4.2C4.8 14.3 6 13 6 9Z" />
+          <path d="M10 18.5a2 2 0 0 0 4 0" />
+        </>
+      );
+    case "scan":
+      return (
+        <>
+          <path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" />
+          <path d="M8 12h8" />
+        </>
+      );
+    case "document":
+      return (
+        <>
+          <path d="M6 3h8l4 4v14H6z" />
+          <path d="M14 3v4h4" />
+          <path d="M9 12h6M9 15.5h6M9 8.5h2" />
+        </>
+      );
+    case "help":
+      return (
+        <>
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M9.6 9.4a2.4 2.4 0 0 1 4.7.6c0 1.6-2.3 1.9-2.3 3.5" />
+          <path d="M12 17h.01" />
+        </>
+      );
+    case "download":
+      return (
+        <>
+          <path d="M12 4v11" />
+          <path d="m7.5 10.5 4.5 4.5 4.5-4.5" />
+          <path d="M5 19h14" />
+        </>
+      );
+    case "edit":
+      return (
+        <>
+          <path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3Z" />
+          <path d="m14.5 6.5 3 3" />
+        </>
+      );
+    case "lock":
+      return (
+        <>
+          <rect x="5" y="10.5" width="14" height="9.5" rx="2" />
+          <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" />
+          <path d="M12 14.5v2" />
+        </>
+      );
+    case "refresh":
+      return (
+        <>
+          <path d="M20 11a8 8 0 0 0-14.3-4" />
+          <path d="M4 5v4h4" />
+          <path d="M4 13a8 8 0 0 0 14.3 4" />
+          <path d="M20 19v-4h-4" />
+        </>
+      );
+    case "chevron-right":
+      return <path d="m9 6 6 6-6 6" />;
+    case "map-pin":
+      return (
+        <>
+          <path d="M12 21s-6.8-5.4-6.8-10.6A6.8 6.8 0 0 1 12 3.6a6.8 6.8 0 0 1 6.8 6.8C18.8 15.6 12 21 12 21Z" />
+          <circle cx="12" cy="10.3" r="2.4" />
+        </>
+      );
+    case "history":
+      return (
+        <>
+          <path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1" />
+          <path d="M4 4v3.8h3.8" />
+          <path d="M12 8v4.5l3 1.8" />
+        </>
+      );
+    case "calendar-check":
+      return (
+        <>
+          <rect x="4" y="5" width="16" height="15" rx="2" />
+          <path d="M8 3v4M16 3v4M4 10h16" />
+          <path d="m9 15 1.8 1.8L14.5 13" />
+        </>
+      );
+    case "receipt-long":
+      return (
+        <>
+          <path d="M6 3.5h12a1.5 1.5 0 0 1 1.5 1.5v16L17 19.5l-2.5 1.5L12 19.5 9.5 21 7 19.5 4.5 21V5A1.5 1.5 0 0 1 6 3.5Z" />
+          <path d="M9 8h6M9 11.5h6M9 15h4" />
         </>
       );
     default:

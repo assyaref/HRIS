@@ -78,6 +78,69 @@
       "when": 1789626467098,
       "tag": "0010_gray_terrax",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1789693098953,
+      "tag": "0011_payslip_document_versions",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1789699159639,
+      "tag": "0012_jittery_grim_reaper",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1789712000000,
+      "tag": "0013_payslip_employee_number_snapshot",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1789798400000,
+      "tag": "0014_payslip_birth_date_snapshot",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1790152070913,
+      "tag": "0011_nasty_khan",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1790152070913,
+      "tag": "0015_user_account_name",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1790152070913,
+      "tag": "0016_employee_master_data",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1790152070914,
+      "tag": "0017_employee_delete_safety_reconciliation",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1790661254287,
+      "tag": "0018_employee_custom_tabs",
+      "breakpoints": true
     }
   ]
 }

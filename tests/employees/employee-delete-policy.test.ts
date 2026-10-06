@@ -37,8 +37,22 @@ function stripComments(source: string): string {
     .replace(/(^|[^:])\/\/.*$/gm, "$1");
 }
 
+/**
+ * Body of one exported server action, bounded by the next top-level
+ * `export ` so an assertion can never leak into a neighbouring action.
+ */
+function actionBlock(source: string, name: string): string {
+  const start = source.indexOf(`export async function ${name}`);
+  assert.notEqual(start, -1, `actions.ts must export ${name}`);
+  const rest = source.slice(start);
+  const next = rest.indexOf("\nexport ", "export async function".length);
+  return next === -1 ? rest : rest.slice(0, next);
+}
+
 const actionsSource = readRepoFile("features/employees/actions.ts");
 const actionsCode = stripComments(actionsSource);
+const queriesSource = readRepoFile("features/employees/queries.ts");
+const queriesCode = stripComments(queriesSource);
 const permissionsSource = readRepoFile("lib/auth/permissions.ts");
 const seedSource = readRepoFile("scripts/seed-rbac.mts");
 const tableSource = readRepoFile("features/employees/employee-table.tsx");
@@ -170,13 +184,13 @@ describe("delete action: guards in source", () => {
   });
 
   it("never executes a physical employee delete", () => {
-    const actionBlock = actionsCode.split("export async function deleteEmployeeAction")[1] ?? "";
-    assert.equal(actionBlock.includes(".delete(employees)"), false);
-    assert.equal(actionBlock.includes('action: "employee.deleted"'), false);
+    const deactivate = actionBlock(actionsCode, "deleteEmployeeAction");
+    assert.equal(deactivate.includes(".delete(employees)"), false);
+    assert.equal(deactivate.includes('action: "employee.deleted"'), false);
   });
 
   it("retains master-data, document, custom-value, and history rows on deactivation", () => {
-    const actionBlock = actionsCode.split("export async function deleteEmployeeAction")[1] ?? "";
+    const deactivate = actionBlock(actionsCode, "deleteEmployeeAction");
     for (const table of [
       "employeeAddresses",
       "employeeInsurances",
@@ -187,7 +201,7 @@ describe("delete action: guards in source", () => {
       "employeeCustomFieldValues",
       "employeeEmploymentHistory",
     ]) {
-      assert.equal(actionBlock.includes(`.delete(${table})`), false);
+      assert.equal(deactivate.includes(`.delete(${table})`), false);
     }
   });
 
@@ -201,15 +215,14 @@ describe("delete action: guards in source", () => {
     assert.equal(actionsCode.includes("entityType: \"employee\""), true);
     assert.equal(actionsCode.includes("writeAuditLog"), true);
 
-    const actionBlock = actionsCode
-      .split("export async function deleteEmployeeAction")[1] ?? "";
+    const deactivate = actionBlock(actionsCode, "deleteEmployeeAction");
     assert.equal(
-      actionBlock.includes("passwordHash") ||
-        actionBlock.includes("hashPassword"),
+      deactivate.includes("passwordHash") ||
+        deactivate.includes("hashPassword"),
       false,
       "deactivation audit metadata must never carry password material"
     );
-    assert.equal(actionBlock.includes("employeeNumber"), true);
+    assert.equal(deactivate.includes("employeeNumber"), true);
   });
 
   it("returns the deactivation success message", () => {
@@ -219,6 +232,82 @@ describe("delete action: guards in source", () => {
       ),
       true
     );
+  });
+});
+
+describe("dependency detection: org-scoped count across every employee-scoped table", () => {
+  it("defines listEmployeeDeletionDependencies in queries.ts", () => {
+    assert.equal(
+      queriesCode.includes(
+        "export async function listEmployeeDeletionDependencies"
+      ),
+      true
+    );
+  });
+
+  it("runs the scan inside the deletion transaction", () => {
+    assert.equal(
+      queriesCode.includes("tx: HrisTransaction"),
+      true,
+      "the scan must accept the deletion transaction, not a module-level db"
+    );
+  });
+
+  it("scans every employee-scoped table (no gap in the graph)", () => {
+    for (const table of [
+      "attendanceRecords",
+      "attendanceEvents",
+      "leaveBalances",
+      "leaveRequests",
+      "permissionRequests",
+      "employeePayrollComponents",
+      "payrollItems",
+      "payslips",
+      "payslipDocuments",
+      "payslipDocumentVersions",
+      "employeeDocuments",
+      "employeeEmploymentHistory",
+      "employeeFaceEnrollments",
+      "faceEnrollmentTemplates",
+      "employeeProjectAssignments",
+      "employeeAddresses",
+      "employeeInsurances",
+      "employeeBankAccounts",
+      "employeeDependents",
+      "employeeEducations",
+      "employeeCustomFieldValues",
+      "announcementRecipients",
+    ]) {
+      assert.equal(
+        queriesCode.includes(`table: ${table},`),
+        true,
+        `dependency scan must cover ${table}`
+      );
+      assert.equal(
+        queriesCode.includes(`employeeIdColumn: ${table}.employeeId,`),
+        true,
+        `dependency scan must count ${table} by employee`
+      );
+    }
+  });
+
+  it("is org-scoped (organizationId + employeeId on every count)", () => {
+    assert.equal(
+      queriesCode.includes("eq(source.employeeIdColumn, employeeId)"),
+      true
+    );
+    assert.equal(
+      queriesCode.includes("eq(source.organizationIdColumn, organizationId)"),
+      true
+    );
+  });
+
+  it("counts direct reports, whose manager_id the delete would null", () => {
+    assert.equal(queriesCode.includes("eq(employees.managerId, employeeId)"), true);
+  });
+
+  it("never counts append-only audit rows (they have no FK and never block)", () => {
+    assert.equal(queriesCode.includes("auditLogs"), false);
   });
 });
 

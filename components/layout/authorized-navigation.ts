@@ -22,7 +22,9 @@ export async function getAuthorizedSections(
 
   for (const section of navigationSections) {
     const items = section.items.filter(
-      (item) => !item.permission || granted.has(item.permission)
+      (item) =>
+        (!item.permission || granted.has(item.permission)) &&
+        (!item.superadminOnly || authorization.isSuperAdmin)
     );
 
     if (items.length > 0) {

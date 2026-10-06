@@ -26,6 +26,9 @@ import {
 
 import { listEmployeeIdentifiersByOrganization } from "../queries";
 import { listActiveFieldDefinitions } from "../../employee-fields/queries";
+import { listActiveCustomTabs } from "../../employee-tabs/queries";
+import { selectVisibleCustomTabs } from "../../employee-tabs/tabs";
+import { customDataSheetNames, planCustomTabSheets } from "./custom-tab-sheets.ts";
 import { parseCustomFieldValue } from "../../employee-fields/validation";
 import { isFieldWritableByRoles } from "../../employee-fields/filtering";
 import {
@@ -143,15 +146,23 @@ async function loadImportContext(): Promise<{
   organizationId: string;
   customSpecs: CustomFieldImportSpec[];
   inaccessibleRequiredField: boolean;
+  /**
+   * Custom-data worksheets this caller may import from: the built-in
+   * `Custom Fields` sheet plus one worksheet per Custom Tab the caller can see.
+   * A worksheet for a hidden tab is never opened, so its columns can never be
+   * written through an import.
+   */
+  customDataSheetNames: string[];
 }> {
   const user = await requireUser();
   await requirePermission(user.id, PERMISSIONS.EMPLOYEES_IMPORT);
   if (!user.organizationId) {
     throw new Error("Your account is not assigned to an organization.");
   }
-  const [authorization, definitions] = await Promise.all([
+  const [authorization, definitions, tabs] = await Promise.all([
     getUserAuthorization(user.id),
     listActiveFieldDefinitions(user.organizationId),
+    listActiveCustomTabs(user.organizationId),
   ]);
   const canViewCustomData =
     authorization.isSuperAdmin ||
@@ -189,11 +200,21 @@ async function loadImportContext(): Promise<{
       isRequired: definition.isRequired,
     })
   );
+  // Custom Tab worksheets are organization-scoped and must be filtered to the
+  // tabs THIS caller can see, so a restricted role cannot import a column that
+  // belongs to a tab outside their visibility.
+  const visibleTabs = selectVisibleCustomTabs(
+    tabs,
+    authorization.roleCodes
+  );
+  const tabPlan = planCustomTabSheets(visibleTabs, []);
+
   return {
     userId: user.id,
     organizationId: user.organizationId,
     customSpecs,
     inaccessibleRequiredField,
+    customDataSheetNames: customDataSheetNames(tabPlan),
   };
 }
 
@@ -232,7 +253,11 @@ export async function previewExcelImportAction(
 
   let analysis: ExcelImportAnalysis;
   try {
-    analysis = await analyzeExcelImport(buffer, context.customSpecs);
+    analysis = await analyzeExcelImport(
+      buffer,
+      context.customSpecs,
+      context.customDataSheetNames
+    );
   } catch {
     return previewError(
       "The file could not be parsed as an Excel workbook. Use the downloadable template."
@@ -328,9 +353,7 @@ async function loadSectionPermissions(
     bank: analysis.secondary.some((row) => row.sheet === "Bank Accounts"),
     family: analysis.secondary.some((row) => row.sheet === "Family"),
     education: analysis.secondary.some((row) => row.sheet === "Education"),
-    customData: analysis.secondary.some(
-      (row) => row.sheet === "Custom Fields"
-    ),
+    customData: analysis.secondary.some((row) => row.isCustomData),
   };
 
   const checks = await Promise.all([
@@ -413,7 +436,7 @@ function findUnauthorizedSections(
   }
   if (
     !permissions.customData &&
-    analysis.secondary.some((row) => row.sheet === "Custom Fields")
+    analysis.secondary.some((row) => row.isCustomData)
   ) {
     unauthorized.push("Custom Fields");
   }
@@ -433,7 +456,7 @@ export async function confirmExcelImportAction(
   } catch {
     return previewError("You are not allowed to import employees.");
   }
-  const { userId, organizationId, customSpecs } = context;
+  const { userId, organizationId, customSpecs, customDataSheetNames } = context;
 
   const file = formData.get("excelFile");
   if (!(file instanceof File)) {
@@ -443,7 +466,7 @@ export async function confirmExcelImportAction(
   let analysis: ExcelImportAnalysis;
   try {
     const buffer = await file.arrayBuffer();
-    analysis = await analyzeExcelImport(buffer, customSpecs);
+    analysis = await analyzeExcelImport(buffer, customSpecs, customDataSheetNames);
   } catch {
     return previewError("The file could not be parsed. Upload a valid workbook.");
   }

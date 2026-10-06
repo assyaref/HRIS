@@ -195,6 +195,85 @@ a {
 }
 
 /* ==========================================================
+   EMPLOYEE SELF-SERVICE (mobile-first HRIS app)
+   ==========================================================
+   Scope note: these tokens/classes are additive. Management pages keep using
+   the existing design tokens above; employee pages opt into the `.emp-*`
+   vocabulary below so an employee redesign can never leak into admin UI.
+   ========================================================== */
+
+:root {
+  --emp-bg: #f5f8fc;
+  --emp-primary: #1677e8;
+  --emp-primary-strong: #0f63c9;
+  --emp-secondary: #2d9bdb;
+  --emp-cyan: #38c6c8;
+  --emp-text: #172554;
+  --emp-text-muted: #64748b;
+  --emp-success: #16a34a;
+  --emp-warning: #f59e0b;
+  --emp-danger: #dc2626;
+  --emp-radius: 1.5rem;
+}
+
+.emp-shell {
+  background: var(--emp-bg);
+}
+
+.emp-card {
+  border: 1px solid rgb(226 232 240 / 0.75);
+  border-radius: var(--emp-radius);
+  background: #ffffff;
+  box-shadow:
+    0 1px 2px rgb(15 23 42 / 0.03),
+    0 12px 32px -18px rgb(15 23 42 / 0.18);
+}
+
+.emp-card-tap {
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    border-color 160ms ease;
+}
+
+.emp-card-tap:active {
+  transform: scale(0.985);
+}
+
+.emp-card-tap:hover {
+  border-color: #bae0ff;
+  box-shadow:
+    0 1px 2px rgb(15 23 42 / 0.03),
+    0 18px 40px -20px rgb(22 119 232 / 0.28);
+}
+
+/* Elegant, restrained gradient used only for hero/accent surfaces. */
+.emp-gradient {
+  background: linear-gradient(135deg, #1677e8 0%, #2d9bdb 55%, #38c6c8 100%);
+}
+
+.emp-gradient-soft {
+  background: linear-gradient(135deg, #eaf3ff 0%, #e6fbfa 100%);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+/* Safe-area aware spacing for bottom navigation + floating action. */
+.emp-safe-bottom {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+.emp-safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+/* ==========================================================
    MOBILE UX
    ========================================================== */
 

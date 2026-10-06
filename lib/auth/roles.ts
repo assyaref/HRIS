@@ -100,3 +100,34 @@ export const ROLE_CATALOG: Record<RoleCode, RoleDefinition> = {
 export function isReservedRoleCode(code: string): code is RoleCode {
   return Object.prototype.hasOwnProperty.call(ROLE_CODES, code);
 }
+
+/** Display precedence: the most senior catalog role the user holds. */
+export const ROLE_DISPLAY_PRECEDENCE: readonly RoleCode[] = [
+  ROLE_CODES.SUPERADMIN,
+  ROLE_CODES.ADMIN,
+  ROLE_CODES.MANAGEMENT,
+  ROLE_CODES.HR,
+  ROLE_CODES.FINANCE,
+  ROLE_CODES.SUPERVISOR,
+  ROLE_CODES.EMPLOYEE,
+];
+
+/**
+ * Resolve the primary display role for a set of granted role codes.
+ * Returns `null` when the user holds no recognized catalog role.
+ */
+export function resolveDisplayRole(
+  roleCodes: readonly RoleCode[]
+): RoleCode | null {
+  const granted = new Set(roleCodes);
+  for (const code of ROLE_DISPLAY_PRECEDENCE) {
+    if (granted.has(code)) return code;
+  }
+  return null;
+}
+
+/** Human-readable label for the user's primary granted role. */
+export function displayRoleLabel(roleCodes: readonly RoleCode[]): string | null {
+  const role = resolveDisplayRole(roleCodes);
+  return role ? ROLE_CATALOG[role].name : null;
+}

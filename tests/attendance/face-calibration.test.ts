@@ -24,7 +24,7 @@ import {
   MAX_COMPARISONS,
   MIN_SUBJECTS_FOR_RECOMMENDATION,
   MIN_PAIRS_FOR_RECOMMENDATION,
-} from "../../lib/attendance/calibration";
+} from "../../lib/attendance/calibration.ts";
 
 describe("calibration: genuine pair generation", () => {
   it("generates correct i<j pairs for single subject with 3 embeddings", () => {

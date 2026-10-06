@@ -7,6 +7,7 @@ import { requireUser } from "@/lib/auth/auth";
 import {
   PERMISSION_CATALOG,
   PERMISSIONS,
+  isSystemOnlyPermission,
 } from "@/lib/auth/permissions";
 import {
   hasPermission,
@@ -77,6 +78,17 @@ export default async function RoleDetailPage({
     !role.isSystem &&
     role.code !== SUPERADMIN_ROLE_CODE;
 
+  // System-only capabilities (e.g. employees.permanent_delete) are never
+  // offered for an organization-level role. The editor would otherwise let an
+  // operator tick a permission the server rejects on save, and hiding it makes
+  // the SUPERADMIN-only nature of the capability visible.
+  const assignableCatalog =
+    role.code === SUPERADMIN_ROLE_CODE
+      ? PERMISSION_CATALOG
+      : PERMISSION_CATALOG.filter(
+          (definition) => !isSystemOnlyPermission(definition.code)
+        );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
@@ -105,7 +117,7 @@ export default async function RoleDetailPage({
         isSystemRole={role.isSystem}
         canEdit={canEdit}
         canDelete={canDelete}
-        catalog={PERMISSION_CATALOG}
+        catalog={assignableCatalog}
         grantedCodes={grantedCodes}
         updateAction={updateRoleAction.bind(null, role.id)}
         deleteAction={deleteRoleAction.bind(null, role.id)}

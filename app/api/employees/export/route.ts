@@ -18,7 +18,10 @@ import {
   visibleCustomFieldColumns,
 } from "@/features/employees/excel/export-data";
 import { buildTemplateWorkbook } from "@/features/employees/excel/template";
+import { planCustomTabSheets } from "@/features/employees/excel/custom-tab-sheets";
 import { listActiveFieldDefinitions } from "@/features/employee-fields/queries";
+import { listActiveCustomTabs } from "@/features/employee-tabs/queries";
+import { selectVisibleCustomTabs } from "@/features/employee-tabs/tabs";
 import {
   CUSTOM_FILTER_PARAM_PREFIX,
   isFieldVisibleToRoles,
@@ -296,7 +299,19 @@ async function handleExcelExport(
   const visibleDefinitions = definitions.filter((definition) =>
     isFieldVisibleToRoles(definition.visibilityConfig, roleCodes)
   );
-  const customFields = visibleCustomFieldColumns(visibleDefinitions, roleCodes);
+  // Custom Tabs are organization-scoped and must be filtered to the tabs THIS
+  // caller may see, so a restricted role never receives another tab's name,
+  // sheet or field grouping through the workbook.
+  const visibleTabs = selectVisibleCustomTabs(
+    await listActiveCustomTabs(organizationId),
+    roleCodes
+  );
+  const customFields = visibleCustomFieldColumns(
+    visibleDefinitions,
+    roleCodes,
+    new Set(visibleTabs.map((tab) => tab.tabKey))
+  );
+  const customTabPlan = planCustomTabSheets(visibleTabs, customFields);
   const data = await loadEmployeeMasterExportData(organizationId, {
     employeeNumbers: scope,
     filters: scopeLabel === "all" ? filters : undefined,
@@ -333,6 +348,7 @@ async function handleExcelExport(
     maskSensitiveFields: true,
     policy,
     customFields,
+    customTabPlan,
     organizationName: undefined,
   });
 
@@ -395,13 +411,28 @@ async function handleTemplateExport(
             )
         )
       : [];
+  // The template mirrors the export layout: one worksheet per Custom Tab the
+  // caller can see, plus the built-in `Custom Fields` sheet for the rest. A
+  // template that did not match the export shape would force the user to
+  // reshuffle columns before importing.
+  const visibleTabs = canViewCustomData
+    ? selectVisibleCustomTabs(
+        await listActiveCustomTabs(organizationId),
+        authorization.roleCodes
+      )
+    : [];
+  const templateFields = definitions.map((definition) => ({
+    fieldKey: definition.fieldKey,
+    label: definition.label,
+    fieldType: definition.fieldType,
+    options: definition.options,
+    tabKey: visibleTabs.some((tab) => tab.tabKey === definition.section)
+      ? definition.section
+      : null,
+  }));
   const { buffer, filename } = await buildTemplateWorkbook({
-    customFields: definitions.map((definition) => ({
-      fieldKey: definition.fieldKey,
-      label: definition.label,
-      fieldType: definition.fieldType,
-      options: definition.options,
-    })),
+    customFields: templateFields,
+    customTabPlan: planCustomTabSheets(visibleTabs, templateFields),
   });
 
   try {

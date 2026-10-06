@@ -37,6 +37,10 @@ import {
   INSURANCE_SHEET_COLUMNS,
   INSURANCE_SHEET_NAME,
 } from "./columns.ts";
+import {
+  planCustomTabSheets,
+  type CustomTabWorkbookPlan,
+} from "./custom-tab-sheets.ts";
 
 export interface EmployeeExportRow {
   employeeNumber: string;
@@ -182,6 +186,13 @@ export interface ExportBuildOptions {
   policy?: Partial<ExportMaskPolicy>;
   customFieldLabels?: string[];
   customFields?: CustomFieldWorkbookColumn[];
+  /**
+   * Worksheet layout for the organization's Custom Tabs, already filtered to
+   * the tabs THIS caller may see (active + role-visible). Omit it and the
+   * workbook keeps its historical single `Custom Fields` sheet, so existing
+   * callers and tests are unaffected.
+   */
+  customTabPlan?: CustomTabWorkbookPlan;
 }
 
 const HEADER_FILL = {
@@ -422,38 +433,66 @@ export async function buildMainExportWorkbook(
     autoWidth(documentsSheet, DOCUMENTS_HEADERS);
   }
 
-  // -- Custom Fields ------------------------------------------------------
+  // -- Custom data: one worksheet per Custom Tab, plus the built-in sheet ---
   if (!mask.hideCustomFields) {
-    const customSheet = workbook.addWorksheet(CUSTOM_FIELDS_SHEET_NAME);
-    const customHeaders = [
-      "Employee No.",
-      ...customFieldColumns.map((spec) =>
-        stableCustomFields ? customFieldColumnHeader(spec) : spec.label
-      ),
-    ];
-    applyHeaderRow(customSheet, customHeaders);
+    // Values indexed once by employee, then projected onto each worksheet's
+    // own column set. A field is written to exactly one sheet, so no value is
+    // duplicated across the workbook.
     const allowedKeys = new Set(
       customFieldColumns.map((spec) =>
         stableCustomFields ? spec.fieldKey : spec.label
       )
     );
-    const byEmployee = new Map<string, Record<string, string>>();
+    const valuesByEmployee = new Map<string, Record<string, string>>();
     for (const row of data.customValues) {
       const key = stableCustomFields ? row.fieldKey : row.label;
-      if (!allowedKeys.has(stableCustomFields ? row.fieldKey : row.label)) continue;
-      const entry = byEmployee.get(row.employeeNumber) ?? {};
+      if (!allowedKeys.has(key)) continue;
+      const entry = valuesByEmployee.get(row.employeeNumber) ?? {};
       entry[key] = row.value;
-      byEmployee.set(row.employeeNumber, entry);
+      valuesByEmployee.set(row.employeeNumber, entry);
     }
-    for (const [employeeNumber, values] of byEmployee) {
-      customSheet.addRow([
-        employeeNumber,
-        ...customFieldColumns.map((spec) =>
-          values[stableCustomFields ? spec.fieldKey : spec.label] ?? ""
+
+    // `plan` is supplied by the RBAC-aware route: it already contains only the
+    // ACTIVE tabs this caller may see. Without it (legacy/label-only callers)
+    // the columns carry no `tabKey`, so everything lands on the built-in
+    // `Custom Fields` sheet and the workbook keeps its historical shape.
+    const plan = options.customTabPlan ?? planCustomTabSheets([], customFieldColumns);
+
+    const writeCustomSheet = (
+      name: string,
+      columns: readonly CustomFieldWorkbookColumn[],
+      options_: { alwaysEmit?: boolean } = {}
+    ) => {
+      // A tab with no fields is skipped (an empty sheet adds no information),
+      // but the built-in `Custom Fields` sheet is always emitted: it is part of
+      // the historical export contract, and a user with zero custom fields
+      // must still receive the join column they can paste data into.
+      if (columns.length === 0 && !options_.alwaysEmit) return;
+      const worksheet = workbook.addWorksheet(name);
+      const headers = [
+        "Employee No.",
+        ...columns.map((spec) =>
+          stableCustomFields ? customFieldColumnHeader(spec) : spec.label
         ),
-      ]);
+      ];
+      applyHeaderRow(worksheet, headers);
+      for (const [employeeNumber, values] of valuesByEmployee) {
+        worksheet.addRow([
+          employeeNumber,
+          ...columns.map((spec) =>
+            values[stableCustomFields ? spec.fieldKey : spec.label] ?? ""
+          ),
+        ]);
+      }
+      autoWidth(worksheet, headers);
+    };
+
+    for (const sheet of plan.sheets) {
+      writeCustomSheet(sheet.sheetName, sheet.fields);
     }
-    autoWidth(customSheet, customHeaders);
+    writeCustomSheet(CUSTOM_FIELDS_SHEET_NAME, plan.leftover, {
+      alwaysEmit: true,
+    });
   }
 
   if (options.organizationName) {

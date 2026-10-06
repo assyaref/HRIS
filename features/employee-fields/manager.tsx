@@ -46,6 +46,31 @@ import {
   CUSTOM_FIELD_TYPES,
   type CustomFieldType,
 } from "./validation";
+import {
+  CUSTOM_FIELD_LOCATIONS,
+  HEADER_SECTION,
+  type CustomFieldLocation,
+} from "@/features/employee-tabs/validation";
+import type { EmployeeCustomTab } from "@/features/employee-tabs/queries";
+
+/** The custom tabs a field may be assigned to on the Display Location form. */
+type PlaceableTab = Pick<EmployeeCustomTab, "tabKey" | "name" | "icon" | "status">;
+
+/**
+ * Derive the Display Location select state from a stored `section`: the header
+ * sentinel, a custom tab key, or a built-in system section. Unknown/legacy
+ * values fall back to `system-tab` so the raw `section` is still posted and
+ * nothing existing is rewritten.
+ */
+function placementFromSection(
+  section: string,
+  customTabs: readonly PlaceableTab[]
+): { location: CustomFieldLocation; tabKey: string } {
+  if (section === HEADER_SECTION) return { location: "header", tabKey: "" };
+  const tab = customTabs.find((candidate) => candidate.tabKey === section);
+  if (tab) return { location: "custom-tab", tabKey: tab.tabKey };
+  return { location: "system-tab", tabKey: "" };
+}
 
 /**
  * Custom field definition manager (Settings → Employee Fields).
@@ -70,12 +95,14 @@ function statusBadge(status: string) {
 function FieldForm({
   definition,
   roleOptions,
+  customTabs,
   onSubmit,
   submitLabel,
   onDone,
 }: {
   definition: EmployeeFieldDefinition | null;
   roleOptions: { value: string; label: string }[];
+  customTabs: readonly PlaceableTab[];
   onSubmit: (
     prevState: EmployeeFieldActionState,
     formData: FormData
@@ -92,6 +119,15 @@ function FieldForm({
     definition?.fieldType ?? "text"
   );
   const [status, setStatus] = useState(definition?.status ?? "active");
+  // Only ACTIVE tabs are assignable: a retired tab's fields fall back to the
+  // built-in Custom Fields tab, so a field must not be newly parked on one.
+  const assignableTabs = customTabs.filter((tab) => tab.status === "active");
+  const [placement, setPlacement] = useState<CustomFieldLocation>(
+    placementFromSection(definition?.section ?? "Other", customTabs).location
+  );
+  const [tabKey, setTabKey] = useState(
+    placementFromSection(definition?.section ?? "Other", customTabs).tabKey
+  );
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -166,20 +202,69 @@ function FieldForm({
           </select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor={`${formId}-section`}>Section</Label>
+          <Label htmlFor={`${formId}-displayLocation`}>Display location</Label>
           <select
-            id={`${formId}-section`}
-            name="section"
-            defaultValue={definition?.section ?? "Other"}
+            id={`${formId}-displayLocation`}
+            name="displayLocation"
+            value={placement}
+            onChange={(event) =>
+              setPlacement(event.target.value as CustomFieldLocation)
+            }
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
           >
-            {BUILTIN_FIELD_SECTIONS.map((value) => (
+            {CUSTOM_FIELD_LOCATIONS.map((value) => (
               <option key={value} value={value}>
-                {value}
+                {value === "header"
+                  ? "Header"
+                  : value === "custom-tab"
+                    ? "Custom Tab"
+                    : "System Tab"}
               </option>
             ))}
           </select>
+          <p className="text-xs text-muted-foreground">
+            Where this field renders on the employee profile.
+          </p>
         </div>
+        {placement === "system-tab" ? (
+          <div className="space-y-2">
+            <Label htmlFor={`${formId}-section`}>Section</Label>
+            <select
+              id={`${formId}-section`}
+              name="section"
+              defaultValue={definition?.section ?? "Other"}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              {BUILTIN_FIELD_SECTIONS.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
+        {placement === "custom-tab" ? (
+          <div className="space-y-2">
+            <Label htmlFor={`${formId}-customTabKey`}>Custom tab</Label>
+            <select
+              id={`${formId}-customTabKey`}
+              name="customTabKey"
+              value={tabKey}
+              onChange={(event) => setTabKey(event.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="">Select a tab...</option>
+              {assignableTabs.map((tab) => (
+                <option key={tab.tabKey} value={tab.tabKey}>
+                  {tab.icon ? `${tab.icon} ${tab.name}` : tab.name}
+                </option>
+              ))}
+            </select>
+            {errors.form ? (
+              <p className="text-sm text-destructive">{errors.form}</p>
+            ) : null}
+          </div>
+        ) : null}
         {needsOptions(type) ? (
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor={`${formId}-options`}>
@@ -298,12 +383,14 @@ function RowActions({
   canUpdate,
   canDelete,
   roleOptions,
+  customTabs,
   onDone,
 }: {
   definition: EmployeeFieldDefinition;
   canUpdate: boolean;
   canDelete: boolean;
   roleOptions: { value: string; label: string }[];
+  customTabs: readonly PlaceableTab[];
   onDone: () => void;
 }) {
   const [editOpen, setEditOpen] = useState(false);
@@ -395,6 +482,7 @@ function RowActions({
           <FieldForm
             definition={definition}
             roleOptions={roleOptions}
+            customTabs={customTabs}
             submitLabel="Save changes"
             onSubmit={(prev, formData) =>
               updateEmployeeFieldAction(definition.id, prev, formData)
@@ -416,12 +504,14 @@ export function EmployeeFieldsManager({
   canUpdate,
   canDelete,
   roleOptions,
+  customTabs,
 }: {
   definitions: EmployeeFieldDefinition[];
   canCreate: boolean;
   canUpdate: boolean;
   canDelete: boolean;
   roleOptions: { value: string; label: string }[];
+  customTabs: readonly PlaceableTab[];
 }) {
   const [showCreate, setShowCreate] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -487,6 +577,7 @@ export function EmployeeFieldsManager({
                 <FieldForm
                   definition={null}
                   roleOptions={roleOptions}
+                  customTabs={customTabs}
                   submitLabel="Create field"
                   onSubmit={createEmployeeFieldAction}
                   onDone={() => setShowCreate(false)}
@@ -566,6 +657,7 @@ export function EmployeeFieldsManager({
                           canUpdate={canUpdate}
                           canDelete={canDelete}
                           roleOptions={roleOptions}
+                          customTabs={customTabs}
                           onDone={() => undefined}
                         />
                       </TableCell>

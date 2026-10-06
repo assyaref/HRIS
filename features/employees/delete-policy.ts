@@ -2,9 +2,13 @@
  * Employee deactivation policy.
  *
  * PURE decision logic with no database or framework dependencies. The server
- * action uses it for self-protection before deactivation. Physical employee
- * deletion is disabled, so attendance, payroll, leave, audit, master-data,
- * document, custom-value, and employment history remain intact.
+ * action uses it for self-protection before deactivation. Deactivation only
+ * changes the employment status, so attendance, payroll, leave, audit,
+ * master-data, document, custom-value, and employment history remain intact.
+ *
+ * Permanent removal of the row is a separate capability
+ * (`permanentlyDeleteEmployeeAction`) with its own policy module
+ * (`permanent-delete-policy.ts`) and its own dependency guard.
  */
 
 export const EMPLOYEE_DELETE_NO_PROTECTED_HISTORY: readonly string[] = [];

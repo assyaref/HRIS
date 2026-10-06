@@ -24,6 +24,7 @@ import {
   listLinkableUsers,
 } from "@/features/employees/queries";
 import { employeeListSearchSchema } from "@/features/employees/schemas";
+import { canPermanentlyDeleteEmployees } from "@/features/employees/permanent-delete-policy";
 import { listActiveFieldDefinitions } from "@/features/employee-fields/queries";
 import {
   CUSTOM_FILTER_PARAM_PREFIX,
@@ -131,6 +132,13 @@ export default async function EmployeesPage({
     hasPermission(user.id, PERMISSIONS.EMPLOYEE_CUSTOM_DATA_UPDATE),
     getUserAuthorization(user.id),
   ]);
+
+  // Permanent deletion is a separate, higher-privilege capability: the
+  // `employees.permanent_delete` code AND the system-level SUPERADMIN role. Both
+  // are evaluated server-side from the DB-backed authorization of the session,
+  // and `permanentlyDeleteEmployeeAction` re-checks them — this only decides
+  // whether the row action is offered.
+  const canPermanentDelete = canPermanentlyDeleteEmployees(authorization);
 
   // One definition fetch feeds both consumers (same ordered ACTIVE rows):
   //  - custom-field FILTERS: additionally narrowed to fields the caller's
@@ -252,6 +260,7 @@ export default async function EmployeesPage({
             employees={items}
             canEdit={canEdit}
             canDelete={canDelete}
+            canPermanentDelete={canPermanentDelete}
           />
 
           {totalPages > 1 ? (

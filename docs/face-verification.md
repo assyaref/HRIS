@@ -206,6 +206,26 @@ FACE_TEMPLATE_ENCRYPTION_KEY. Layout: nonce(12) || ciphertext || authTag(16).
 Wrong key, tampering and malformed blobs are rejected; ciphertext never leaves
 the server.
 
+### 8.1 Key ring and rotation
+The key is rotatable without destroying stored templates. Every row carries
+`key_version`, written explicitly on enrollment, and a row is decrypted with the
+ONE key named by its own label:
+
+| Variable | Role |
+|---|---|
+| `FACE_TEMPLATE_ENCRYPTION_KEY` | Primary. All new encryptions, and the key `key_version` is stamped with. |
+| `FACE_TEMPLATE_KEY_VERSION` | Version label for the primary key. Defaults to `v1`. |
+| `FACE_TEMPLATE_ENCRYPTION_KEY_PREVIOUS` | Optional decrypt-only fallback, present only during a rotation window. |
+
+Key selection is by label, never by trying each key in turn. A row whose label
+has no registered key fails closed as `template_corrupt` rather than guessing,
+which preserves the property that a wrong key is indistinguishable from
+tampering and keeps the decrypt path from being usable as an oracle.
+
+Rotation procedure, the 0019 schema migration, and the transactional re-key tool
+are documented in `docs/SECURITY-ROTATION-IMPLEMENTATION.md`; rollback in
+`docs/SECURITY-ROTATION-ROLLBACK.md`.
+
 ## 9. Access Control
 Only authenticated users with the required RBAC permission can manage face
 data. Employee-facing pages never expose templates or scores.

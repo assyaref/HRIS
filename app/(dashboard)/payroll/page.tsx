@@ -19,6 +19,8 @@ import { PERMISSIONS } from "@/lib/auth/permissions";
 import { hasAnyPermission, requirePermission } from "@/lib/auth/rbac";
 
 import { PayrollPeriodCreateDialog } from "@/features/payroll/payroll-period-create-dialog";
+import { PayrollPeriodDeleteDialog } from "@/features/payroll/payroll-period-delete-dialog";
+import { PayrollPeriodEditDialog } from "@/features/payroll/payroll-period-edit-dialog";
 import {
   PayrollPeriodStatusBadge,
   PayrollRunStatusBadge,
@@ -93,6 +95,17 @@ function StatusDot() {
   );
 }
 
+/** Statuses the server allows to be edited (draft/cancelled full, processing name-only). */
+const EDITABLE_PERIOD_STATUSES = ["draft", "cancelled", "processing"];
+
+/** Statuses the server allows to be deleted (locked is allowed by design). */
+const DELETABLE_PERIOD_STATUSES = [
+  "draft",
+  "cancelled",
+  "processing",
+  "locked",
+];
+
 export default async function PayrollPage() {
   const user = await requireUser();
 
@@ -102,7 +115,7 @@ export default async function PayrollPage() {
 
   const organizationId = user.organizationId;
 
-  const [periods, canCreate, canManageComponents, canManagePayslips] =
+  const [periods, canCreate, canManageComponents, canManagePayslips, canEditPeriod, canDeletePeriod] =
     await Promise.all([
       listPayrollPeriods(organizationId),
 
@@ -119,6 +132,16 @@ export default async function PayrollPage() {
       hasAnyPermission(user.id, [
         PERMISSIONS.PAYSLIP_PUBLISH,
         PERMISSIONS.PAYSLIP_MANAGE,
+        PERMISSIONS.PAYROLL_MANAGE,
+      ]),
+
+      hasAnyPermission(user.id, [
+        PERMISSIONS.PAYROLL_UPDATE,
+        PERMISSIONS.PAYROLL_MANAGE,
+      ]),
+
+      hasAnyPermission(user.id, [
+        PERMISSIONS.PAYROLL_PERIOD_DELETE,
         PERMISSIONS.PAYROLL_MANAGE,
       ]),
     ]);
@@ -357,31 +380,58 @@ export default async function PayrollPage() {
                       </div>
                     </div>
 
-                    <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
-                      <div>
-                        <p className="text-[10px] font-semibold tracking-wide text-slate-400 uppercase">
-                          Run
-                        </p>
+<div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
+                        <div>
+                          <p className="text-[10px] font-semibold tracking-wide text-slate-400 uppercase">
+                            Run
+                          </p>
 
-                        <div className="mt-1">
-                          {period.run ? (
-                            <PayrollRunStatusBadge status={period.run.status} />
-                          ) : (
-                            <span className="text-xs text-slate-500">
-                              Not started
-                            </span>
-                          )}
+                          <div className="mt-1">
+                            {period.run ? (
+                              <PayrollRunStatusBadge status={period.run.status} />
+                            ) : (
+                              <span className="text-xs text-slate-500">
+                                Not started
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <Link
+                            href={`/payroll/${period.id}`}
+                            className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-blue-50 px-3.5 py-2 text-xs font-semibold text-blue-700 ring-1 ring-blue-100 transition hover:bg-blue-100"
+                          >
+                            Open
+                            <PayrollIcon type="arrow" className="size-3.5" />
+                          </Link>
+
+                          {canEditPeriod &&
+                          EDITABLE_PERIOD_STATUSES.includes(period.status) ? (
+                            <PayrollPeriodEditDialog
+                              periodId={period.id}
+                              periodCode={period.code}
+                              periodName={period.name}
+                              periodStart={formatDate(period.periodStart)}
+                              periodEnd={formatDate(period.periodEnd)}
+                              paymentDate={formatDate(period.paymentDate)}
+                              periodStatus={period.status}
+                            />
+                          ) : null}
+
+                          {canDeletePeriod &&
+                          DELETABLE_PERIOD_STATUSES.includes(period.status) ? (
+                            <PayrollPeriodDeleteDialog
+                              periodId={period.id}
+                              periodName={period.name}
+                              periodStart={formatDate(period.periodStart)}
+                              periodEnd={formatDate(period.periodEnd)}
+                              paymentDate={formatDate(period.paymentDate)}
+                              periodStatus={period.status}
+                            />
+                          ) : null}
                         </div>
                       </div>
-
-                      <Link
-                        href={`/payroll/${period.id}`}
-                        className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-blue-50 px-3.5 py-2 text-xs font-semibold text-blue-700 ring-1 ring-blue-100 transition hover:bg-blue-100"
-                      >
-                        Open
-                        <PayrollIcon type="arrow" className="size-3.5" />
-                      </Link>
-                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -461,16 +511,43 @@ export default async function PayrollPage() {
                       </TableCell>
 
                       <TableCell className="pr-5 text-right">
-                        <Link
-                          href={`/payroll/${period.id}`}
-                          className={buttonVariants({
-                            variant: "ghost",
-                            size: "sm",
-                          })}
-                        >
-                          View
-                          <PayrollIcon type="arrow" className="ml-1 size-3.5" />
-                        </Link>
+                        <div className="flex items-center justify-end gap-1">
+                          <Link
+                            href={`/payroll/${period.id}`}
+                            className={buttonVariants({
+                              variant: "ghost",
+                              size: "sm",
+                            })}
+                          >
+                            View
+                            <PayrollIcon type="arrow" className="ml-1 size-3.5" />
+                          </Link>
+
+                          {canEditPeriod &&
+                          EDITABLE_PERIOD_STATUSES.includes(period.status) ? (
+                            <PayrollPeriodEditDialog
+                              periodId={period.id}
+                              periodCode={period.code}
+                              periodName={period.name}
+                              periodStart={formatDate(period.periodStart)}
+                              periodEnd={formatDate(period.periodEnd)}
+                              paymentDate={formatDate(period.paymentDate)}
+                              periodStatus={period.status}
+                            />
+                          ) : null}
+
+                          {canDeletePeriod &&
+                          DELETABLE_PERIOD_STATUSES.includes(period.status) ? (
+                            <PayrollPeriodDeleteDialog
+                              periodId={period.id}
+                              periodName={period.name}
+                              periodStart={formatDate(period.periodStart)}
+                              periodEnd={formatDate(period.periodEnd)}
+                              paymentDate={formatDate(period.paymentDate)}
+                              periodStatus={period.status}
+                            />
+                          ) : null}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

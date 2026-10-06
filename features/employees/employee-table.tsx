@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table";
 
 import { EmployeeDeleteDialog } from "./employee-delete-dialog";
+import { EmployeePermanentDeleteDialog } from "./delete-employee-dialog";
 import { EmployeeStatusBadge } from "./employee-status-badge";
 import { SelectAllEmployees } from "./export/select-all-checkbox";
 import type { EmployeeListItem } from "./queries";
@@ -24,10 +25,12 @@ function rowActions({
   employee,
   canEdit,
   canDelete,
+  canPermanentDelete,
 }: {
   employee: EmployeeListItem;
   canEdit: boolean;
   canDelete: boolean;
+  canPermanentDelete: boolean;
 }) {
   return (
     <>
@@ -48,26 +51,41 @@ function rowActions({
       {canDelete && employee.employmentStatus === "active" ? (
         <EmployeeDeleteDialog employee={employee} />
       ) : null}
+      {/* Permanent deletion is a SEPARATE, higher-privilege capability
+          (`employees.permanent_delete`, Super Administrator only) and is
+          available for active AND inactive records. Deactivate above keeps its
+          own `employees.delete` gate and its own status guard, so no other
+          role's behavior changes. The server action re-authorizes regardless;
+          hiding the row action is UX, not security. */}
+      {canPermanentDelete ? (
+        <EmployeePermanentDeleteDialog employee={employee} />
+      ) : null}
     </>
   );
 }
 
 /**
- * Org-scoped employee table (server component). Rows link to the employee
- * detail route; every destination is independently protected server-side.
+ * Org-scoped employee table (server component). Rows carry View | Edit |
+ * Deactivate | Permanent Delete actions; every destination/action is
+ * independently protected server-side. The destructive Deactivate action is
+ * rendered for callers holding `employees.delete`, and Permanent Delete only
+ * for callers holding `employees.permanent_delete`. On small screens the table
+ * collapses into stacked cards with the same action set.
  */
 export function EmployeeTable({
   employees,
   canEdit = false,
   canDelete = false,
+  canPermanentDelete = false,
 }: {
   employees: EmployeeListItem[];
   canEdit?: boolean;
   canDelete?: boolean;
+  canPermanentDelete?: boolean;
 }) {
   return (
     <div className="rounded-lg border border-border bg-card">
-      <Table>
+      <Table className="hidden md:table">
         <TableHeader>
           <TableRow>
             <TableHead className="w-10">
@@ -114,14 +132,41 @@ export function EmployeeTable({
                 {formatDate(employee.hireDate)}
               </TableCell>
               <TableCell className="text-right">
-                <div className="flex justify-end gap-1">
-                  {rowActions({ employee, canEdit, canDelete })}
+                <div className="flex flex-wrap justify-end gap-1">
+                  {rowActions({ employee, canEdit, canDelete, canPermanentDelete })}
                 </div>
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
+
+      <ul className="divide-y divide-border md:hidden">
+        {employees.map((employee) => (
+          <li key={employee.id} className="space-y-3 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate font-medium">
+                  {employee.firstName} {employee.lastName}
+                </p>
+                <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+                  {employee.employeeNumber}
+                </p>
+                <p className="mt-1 truncate text-sm text-muted-foreground">
+                  {employee.email ?? employee.linkedUserEmail ?? "—"}
+                </p>
+              </div>
+              <EmployeeStatusBadge status={employee.employmentStatus} />
+            </div>
+            <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
+              <span>Hired {formatDate(employee.hireDate)}</span>
+              <div className="flex flex-wrap justify-end gap-1">
+                {rowActions({ employee, canEdit, canDelete, canPermanentDelete })}
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

@@ -10,6 +10,7 @@ import type { NavItem, NavSection } from "@/types/navigation";
  */
 export const primaryNavigation: NavItem[] = [
   { title: "Dashboard", href: "/dashboard", icon: "dashboard" },
+  { title: "Notifikasi", href: "/notifications", icon: "bell" },
   { title: "Face ID", href: "/face-id", icon: "face" },
   {
     title: "Employees",
@@ -66,6 +67,12 @@ export const supportNavigation: NavItem[] = [
     href: "/projects",
     permission: PERMISSIONS.PROJECTS_VIEW,
     icon: "projects",
+  },
+  {
+    title: "Attendance Recap",
+    href: "/attendance/recap",
+    permission: PERMISSIONS.ATTENDANCE_MANAGE,
+    icon: "attendance",
   },
 ];
 

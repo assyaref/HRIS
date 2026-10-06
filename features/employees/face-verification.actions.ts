@@ -146,6 +146,7 @@ export async function verifyFaceAction(
     imageBuffer,
     mimeType,
     templateVersion: templateLookup.templateVersion,
+    templateKeyVersion: templateLookup.keyVersion,
     encryptedTemplate: templateLookup.secret,
   });
 

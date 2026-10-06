@@ -136,8 +136,28 @@ export interface CustomFieldWorkbookColumn {
   label: string;
   fieldType: string;
   options: readonly string[];
+  /**
+   * `tabKey` of the Custom Tab this field is assigned to, or null when the
+   * field is not assigned to a tab.
+   *
+   * Metadata only. The workbook is NEVER the source of truth for tab
+   * assignment: the assignment lives in the field definition's `section` and
+   * the import planner never moves a field between tabs. This is carried only
+   * so the export can place the field's columns under the right worksheet, and
+   * it is resolved from the caller's VISIBLE tab list, so a field whose tab the
+   * caller may not see is grouped onto the built-in `Custom Fields` sheet.
+   */
+  tabKey?: string | null;
 }
 
+/**
+ * Header for one custom-field column: `Label [fieldKey]`.
+ *
+ * The trailing `[<fieldKey>]` is the stable machine token. Import resolves
+ * every column by that token, which is why a field can be relocated to a
+ * different Custom Tab — or to a different worksheet — without invalidating a
+ * previously generated workbook.
+ */
 export function customFieldColumnHeader(
   spec: CustomFieldWorkbookColumn
 ): string {
@@ -153,4 +173,73 @@ export function columnKeyByHeader(
     map[column.header.toLowerCase()] = column.key;
   }
   return map;
+}
+
+/**
+ * Sheet name rules for the Excel workbook.
+ *
+ * Excel caps a sheet name at 31 characters and rejects `\ / * [ ] : ?`. The
+ * core employee sheets are all far shorter than 31, but a Custom Tab is
+ * database-driven, so its name is arbitrary user input. These helpers make the
+ * name deterministic and collision-free instead of trusting the input.
+ */
+export const EXCEL_SHEET_NAME_MAX_LENGTH = 31;
+
+/** Characters Excel refuses inside a sheet name. */
+const INVALID_SHEET_NAME_CHARS = /[\\/*[\]:?]/g;
+
+/**
+ * Sanitize one custom-tab name into a valid Excel sheet name: strip control
+ * characters and the characters Excel forbids, collapse whitespace, and cap
+ * at 31 characters. Deterministic — the same input always yields the same
+ * output, which is what makes the export → import round-trip work.
+ *
+ * Returns `""` when nothing usable remains, so the caller can fall back
+ * rather than emit an invalid sheet.
+ */
+export function sanitizeSheetName(raw: string): string {
+  const cleaned = raw
+    // Control characters become a space rather than vanishing, so "Tab\nName"
+    // reads as two words instead of running together.
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(INVALID_SHEET_NAME_CHARS, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (cleaned.length === 0) return "";
+  return cleaned.slice(0, EXCEL_SHEET_NAME_MAX_LENGTH).trim();
+}
+
+/**
+ * Resolve the final sheet name for each custom tab, guaranteeing uniqueness
+ * against the reserved core sheet names and against each other.
+ *
+ * Strategy: use the sanitized tab name; on collision append ` (2)`, ` (3)`, …
+ * truncated to stay within 31 characters. The suffix is a pure function of the
+ * tab's position, so re-running the export produces identical names.
+ */
+export function resolveCustomTabSheetNames(
+  tabs: readonly { tabKey: string; name: string }[],
+  reservedNames: readonly string[]
+): { tabKey: string; sheetName: string }[] {
+  const taken = new Set(
+    reservedNames.map((name) => name.trim().toLowerCase())
+  );
+  const result: { tabKey: string; sheetName: string }[] = [];
+  for (const tab of tabs) {
+    const base = sanitizeSheetName(tab.name) || `Tab ${tab.tabKey}`;
+    let candidate = base;
+    let suffix = 2;
+    while (taken.has(candidate.toLowerCase())) {
+      const marker = ` (${suffix})`;
+      const stem = base.slice(
+        0,
+        Math.max(1, EXCEL_SHEET_NAME_MAX_LENGTH - marker.length)
+      );
+      candidate = `${stem}${marker}`;
+      suffix += 1;
+    }
+    taken.add(candidate.toLowerCase());
+    result.push({ tabKey: tab.tabKey, sheetName: candidate });
+  }
+  return result;
 }

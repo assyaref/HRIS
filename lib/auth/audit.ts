@@ -78,7 +78,8 @@ export type AttendanceAuditAction =
   | "attendance.check_in"
   | "attendance.check_in_rejected"
   | "attendance.check_out"
-  | "attendance.check_out_rejected";
+  | "attendance.check_out_rejected"
+  | "attendance.recap.exported";
 
 export type LeaveAuditAction =
   | "leave.created"

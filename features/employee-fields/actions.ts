@@ -11,9 +11,17 @@ import { requireUser } from "@/lib/auth/auth";
 import { writeAuditLog } from "@/lib/auth/audit";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { requirePermission } from "@/lib/auth/rbac";
-import { BUILTIN_FIELD_SECTIONS } from "./validation";
+import { listCustomTabs } from "@/features/employee-tabs/queries";
+// HEADER_SECTION and RESERVED_TAB_KEYS live with the custom-tab contract and
+// are imported from there so there is exactly ONE definition of each. They are
+// NOT re-exported from ./validation, which owns the field-level contract.
+import {
+  HEADER_SECTION,
+  RESERVED_TAB_KEYS,
+} from "@/features/employee-tabs/validation";
 
 import {
+  BUILTIN_FIELD_SECTIONS,
   CUSTOM_FIELD_STATUSES,
   CUSTOM_FIELD_TYPES,
   validateCustomFieldDefinition,
@@ -127,12 +135,63 @@ function roleCodesFromField(
   return { codes: [...result].slice(0, 10), invalid: [...invalid] };
 }
 
-function sectionFromField(formData: FormData): string {
-  const section = optionalValue(formData, "section") ?? "Other";
-  const trimmed = section.trim();
-  if (!trimmed) return "Other";
-  // Free-form sections are allowed but capped; built-ins are used as-is.
-  return trimmed.slice(0, 40);
+/**
+ * A custom tab as far as field placement is concerned. `status` is part of
+ * the contract because an INACTIVE tab is retired: its fields fall back to the
+ * built-in Custom Fields tab, so a new field may not be assigned to it.
+ */
+interface PlaceableTab {
+  tabKey: string;
+  status: string;
+}
+
+/**
+ * Resolve the field's display location (Header / System Tab / Custom Tab)
+ * into the stored `section` value. Custom Tab assignment must reference an
+ * ACTIVE tab that exists in the caller's organization — the list is fetched
+ * server-side and scoped to the session organization, so a key from the form
+ * is never trusted blindly and a cross-organization or retired tab cannot be
+ * selected.
+ *
+ * Backward compatibility: when no `displayLocation` is posted (the pre-2.0
+ * form and every legacy caller) the behaviour is the original free-form
+ * `section` read, capped exactly as before, so existing fields keep working.
+ */
+function sectionFromLocation(
+  formData: FormData,
+  organizationTabs: readonly PlaceableTab[]
+): { section: string } | { error: string } {
+  const location = value(formData, "displayLocation");
+  if (location === "header") {
+    return { section: HEADER_SECTION };
+  }
+  if (location === "custom-tab") {
+    const tabKey = value(formData, "customTabKey");
+    // Reserved tab keys are rejected here as well as at tab creation: a
+    // reserved key must never become a field placement even if a row somehow
+    // carries one.
+    if (RESERVED_TAB_KEYS.includes(tabKey)) {
+      return { error: "Select a valid custom tab for this field." };
+    }
+    const tab = organizationTabs.find(
+      (candidate) => candidate.tabKey === tabKey && candidate.status === "active"
+    );
+    if (!tab) {
+      return { error: "Select a valid custom tab for this field." };
+    }
+    return { section: tab.tabKey };
+  }
+  if (location === "system-tab" || location === "") {
+    // Built-in sections are validated against the catalog; legacy free-form
+    // sections (older payloads) stay accepted, capped as before.
+    const section = (optionalValue(formData, "section") ?? "Other").trim();
+    const trimmed = section === "" ? "Other" : section;
+    const builtin = (BUILTIN_FIELD_SECTIONS as readonly string[]).includes(
+      trimmed
+    );
+    return { section: builtin ? trimmed : trimmed.slice(0, 40) };
+  }
+  return { error: "Invalid display location." };
 }
 
 type DefinitionInput =
@@ -150,18 +209,25 @@ type DefinitionInput =
       };
     };
 
-function loadDefinitionInput(formData: FormData): DefinitionInput {
+function loadDefinitionInput(
+  formData: FormData,
+  organizationTabs: readonly PlaceableTab[]
+): DefinitionInput {
   const fieldKey = value(formData, "fieldKey").toLowerCase();
   const fieldType = value(formData, "fieldType");
   const isRequired = checked(formData, "isRequired");
   const displayOrder = parseIntValue(formData, "displayOrder");
+  const located = sectionFromLocation(formData, organizationTabs);
+  if ("error" in located) {
+    return { error: [located.error] };
+  }
 
   const definition = validateCustomFieldDefinition({
     fieldKey,
     label: value(formData, "label"),
     description: optionalValue(formData, "description"),
     fieldType: fieldType as (typeof CUSTOM_FIELD_TYPES)[number],
-    section: sectionFromField(formData),
+    section: located.section,
     isRequired,
     displayOrder,
     options: parseOptions(formData),
@@ -177,7 +243,7 @@ function loadDefinitionInput(formData: FormData): DefinitionInput {
       label: value(formData, "label"),
       description: optionalValue(formData, "description"),
       fieldType,
-      section: sectionFromField(formData),
+      section: located.section,
       isRequired,
       displayOrder,
       options: parseOptions(formData),
@@ -200,8 +266,9 @@ export async function createEmployeeFieldAction(
   const allowedRoleCodes = (await listRolesByOrganization(organizationId)).map(
     (role) => role.code
   );
+  const organizationTabs = await listCustomTabs(organizationId);
 
-  const input = loadDefinitionInput(formData);
+  const input = loadDefinitionInput(formData, organizationTabs);
   if ("error" in input) {
     return { status: "error", fieldErrors: { form: input.error.join(" ") } };
   }
@@ -308,8 +375,9 @@ export async function updateEmployeeFieldAction(
       ...existing.editableByConfig,
     ]),
   ];
+  const organizationTabs = await listCustomTabs(organizationId);
 
-  const input = loadDefinitionInput(formData);
+  const input = loadDefinitionInput(formData, organizationTabs);
   if ("error" in input) {
     return { status: "error", fieldErrors: { form: input.error.join(" ") } };
   }

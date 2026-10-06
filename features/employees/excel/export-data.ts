@@ -21,6 +21,7 @@ import type { CustomFieldWorkbookColumn } from "./columns.ts";
 import { listActiveFieldDefinitions } from "../../employee-fields/queries.ts";
 import { formatStoredValue } from "../../employee-fields/validation.ts";
 import { isFieldVisibleToRoles } from "../../employee-fields/filtering.ts";
+import { isBuiltinSection } from "../../employee-tabs/tabs.ts";
 import type {
   AddressExportRow,
   BankExportRow,
@@ -447,10 +448,19 @@ export async function loadEmployeeMasterExportData(
  * Custom-field sheet column order (label list) for the CURRENT caller:
  * active definitions only, respecting `visibilityConfig` when the caller's
  * role codes are supplied (an empty config = visible to every role).
+ *
+ * `visibleTabKeys` is the set of Custom Tab keys the caller may see. When
+ * supplied, each column carries the `tabKey` of the tab its field is assigned
+ * to, which is what lets the workbook give each tab its own worksheet. A field
+ * assigned to a tab OUTSIDE this set (or to no tab) resolves to `null` and
+ * lands on the built-in `Custom Fields` sheet — mirroring the Employee Detail
+ * fallback in `partitionFieldsForProfile`, so a hidden tab never leaks its name
+ * or structure through the export.
  */
 export function visibleCustomFieldColumns(
   definitions: Awaited<ReturnType<typeof listActiveFieldDefinitions>>,
-  roleCodes: readonly string[]
+  roleCodes: readonly string[],
+  visibleTabKeys?: ReadonlySet<string>
 ): CustomFieldWorkbookColumn[] {
   return definitions
     .filter((definition) =>
@@ -461,7 +471,21 @@ export function visibleCustomFieldColumns(
       label: definition.label,
       fieldType: definition.fieldType,
       options: definition.options,
+      tabKey: resolveWorkbookTabKey(definition.section, visibleTabKeys),
     }));
+}
+
+/**
+ * Map a field definition's `section` to the tab key the workbook should group
+ * it under. Built-in sections and header placement resolve to `null`.
+ */
+function resolveWorkbookTabKey(
+  section: string,
+  visibleTabKeys?: ReadonlySet<string>
+): string | null {
+  if (!visibleTabKeys || visibleTabKeys.size === 0) return null;
+  if (isBuiltinSection(section)) return null;
+  return visibleTabKeys.has(section) ? section : null;
 }
 
 export function visibleCustomFieldLabels(

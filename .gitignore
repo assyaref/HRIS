@@ -16,6 +16,9 @@
 # next.js
 /.next/
 /.next-*/
+/.next.*/
+/.phase-*/
+/.phase*/
 /out/
 
 # production
@@ -24,6 +27,14 @@
 # misc
 .DS_Store
 *.pem
+**/*.bak*
+**/*.before-*
+**/*.before
+**/*.phase*-before-*
+*.dump
+*.log
+**/*-decrypted.pdf
+**/*reencrypted*.pdf
 
 # debug
 npm-debug.log*

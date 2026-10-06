@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, lt, or, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
@@ -303,7 +303,8 @@ export async function findAttendanceForDate(
 export async function listMyAttendanceHistory(
   organizationId: string,
   employeeId: string,
-  page = 1
+  page = 1,
+  filters: { status?: AttendanceStatus; month?: string } = {}
 ): Promise<Paginated<AttendanceRow>> {
   const pageSize = ATTENDANCE_PAGE_SIZE;
   const currentPage = Math.max(1, page);
@@ -311,6 +312,17 @@ export async function listMyAttendanceHistory(
     eq(attendanceRecords.organizationId, organizationId),
     eq(attendanceRecords.employeeId, employeeId),
   ];
+
+  if (filters.status) {
+    conditions.push(eq(attendanceRecords.status, filters.status));
+  }
+  if (filters.month && /^\d{4}-\d{2}$/.test(filters.month)) {
+    const start = new Date(`${filters.month}-01T00:00:00.000Z`);
+    const end = new Date(start);
+    end.setUTCMonth(end.getUTCMonth() + 1);
+    conditions.push(gte(attendanceRecords.attendanceDate, start));
+    conditions.push(lt(attendanceRecords.attendanceDate, end));
+  }
 
   const [rows, countRows] = await Promise.all([
     db

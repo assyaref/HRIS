@@ -19,7 +19,7 @@ import {
   payslipDocumentVersions,
 } from "@/db/schema";
 import { requireUser } from "@/lib/auth/auth";
-import { writeAuditLog } from "@/lib/auth/audit";
+import { writeAuditLog, type AuditAction } from "@/lib/auth/audit";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import {
   requireAnyPermission,
@@ -49,6 +49,7 @@ import {
   sanitizePayslipOriginalFilename,
 } from "./payslip-document.guard";
 import { buildPayslipRevocationDecision } from "./payslip-revocation.guard";
+import { buildLockedPayrollPeriodDeletionDecision } from "./payroll-period-deletion.guard";
 import { buildPayslipPostScript } from "./payslip-pdf-builder";
 import {
   classifyPayslipPdfCandidates,
@@ -73,23 +74,6 @@ export interface PayrollActionResult {
   ok: boolean;
   message: string;
 }
-
-type AuditAction =
-  | "payroll.period.created"
-  | "payroll.calculated"
-  | "payroll.submitted"
-  | "payroll.approved"
-  | "payroll.rejected"
-  | "payroll.locked"
-  | "payroll.cancelled"
-  | "payroll.updated"
-  | "payroll.deleted"
-  | "payslip.generated"
-  | "payslip.document.generated"
-  | "payslip.document.uploaded"
-  | "payslip.document.replaced"
-  | "payslip.published"
-  | "payslip.revoked";
 
 async function auditPayroll(input: {
   organizationId: string;
@@ -982,12 +966,14 @@ export async function cancelPayrollPeriodAction(
 }
 
 /**
- * Update a draft payroll period (PM-11).
+ * Update a draft or cancelled payroll period (PM-11).
  *
- * Only a `draft` period with no run and no payslips can be edited, so an
- * existing payroll calculation or distribution payslip is never silently
- * detached from its period. Dates are re-validated with the same schema used
- * for creation. The period row is locked for the whole transition and a
+ * A period can be edited if its status is `draft` or `cancelled`.
+ * If the period is `processing`, only the period name may be edited.
+ * A `locked` period cannot be edited.
+ *
+ * Dates are re-validated with the same schema used for creation.
+ * The period row is locked for the whole transition and a
  * `payroll.updated` event + best-effort audit entry are appended.
  */
 export async function updatePayrollPeriodAction(
@@ -1019,38 +1005,78 @@ export async function updatePayrollPeriodAction(
       const period = await lockPeriod(tx, organizationId, periodId);
       if (!period) return { kind: "error" as const, message: "Period not found." };
 
-      if (period.periodStatus !== "draft") {
+      // Edit eligibility by status
+      if (period.periodStatus === "locked") {
         return {
           kind: "error" as const,
-          message: "Only draft periods can be updated.",
+          message: "Cannot edit a locked payroll period.",
         };
       }
 
-      if (period.runId) {
-        return {
-          kind: "error" as const,
-          message: "Cancel the run first before updating this period.",
-        };
+      if (period.periodStatus !== "draft" && period.periodStatus !== "cancelled") {
+        // Processing or pending_approval: only name is safely editable
+        if (period.periodStatus !== "processing") {
+          return {
+            kind: "error" as const,
+            message: "Only draft or cancelled periods can be fully updated.",
+          };
+        }
+        // Processing: only name is editable; ignore date/code changes
+        // We'll still apply the full schema but only use name below
       }
 
-      const payslipRows = await tx
-        .select({ id: payslips.id })
-        .from(payslips)
-        .where(
-          and(
-            eq(payslips.organizationId, organizationId),
-            eq(payslips.payrollPeriodId, period.periodId)
+      if (period.periodStatus !== "draft" && period.periodStatus !== "cancelled") {
+        if (period.runId) {
+          return {
+            kind: "error" as const,
+            message: "Cancel the run first before updating this period.",
+          };
+        }
+      }
+
+      if (period.periodStatus === "draft" || period.periodStatus === "cancelled") {
+        // Full edit: check for existing payslips that would block date/code changes
+        const payslipRows = await tx
+          .select({ id: payslips.id })
+          .from(payslips)
+          .where(
+            and(
+              eq(payslips.organizationId, organizationId),
+              eq(payslips.payrollPeriodId, period.periodId)
+            )
           )
-        )
-        .limit(1);
+          .limit(1);
 
-      if (payslipRows[0]) {
+        if (payslipRows[0]) {
+          return {
+            kind: "error" as const,
+            message: "Delete or revoke existing payslips before updating this period.",
+          };
+        }
+      } else {
+        // Processing status: only name is editable, skip payslip check for dates
+        // but still check that period can be edited
+      }
+
+      if (period.periodStatus === "processing") {
+        // Only allow name change in processing state
+        await tx
+          .update(payrollPeriods)
+          .set({ name: values.name })
+          .where(
+            and(
+              eq(payrollPeriods.id, period.periodId),
+              eq(payrollPeriods.organizationId, organizationId)
+            )
+          );
         return {
-          kind: "error" as const,
-          message: "Delete or revoke existing payslips before updating this period.",
+          kind: "success" as const,
+          code: period.periodCode,
+          message: "Payroll period name updated.",
         };
       }
 
+      // Draft or cancelled: full update
       await tx
         .update(payrollPeriods)
         .set({
@@ -1072,13 +1098,14 @@ export async function updatePayrollPeriodAction(
         payrollPeriodId: period.periodId,
         actorUserId: user.id,
         eventType: "payroll.updated",
-        fromStatus: "draft",
-        toStatus: "draft",
+        fromStatus: period.periodStatus,
+        toStatus: period.periodStatus,
         reason: null,
         metadata: JSON.stringify({
           code: values.code,
           periodStart: values.periodStart,
           periodEnd: values.periodEnd,
+          paymentDate: values.paymentDate,
         }),
       });
 
@@ -1101,33 +1128,44 @@ export async function updatePayrollPeriodAction(
         periodEnd: values.periodEnd,
       },
     });
-    return { ok: true, message: "Payroll period updated." };
+    return { ok: true, message: outcome.message ?? "Payroll period updated." };
   } catch (error) {
     console.error("[payroll] update period failed", error);
     return {
       ok: false,
-      message:
-        "The payroll period could not be updated. A period with this code may already exist.",
+      message: "The payroll period could not be updated. A period with this code may already exist.",
     };
   }
 }
 
 /**
- * Delete an empty draft payroll period (PM-11).
+ * Delete a payroll period (PM-11).
  *
- * Deletion is deliberately narrow: only a `draft` period with no run and no
- * payslips may be removed. Any run (whether cloned or not) and any payslip row
- * would be blocked anyway by the foreign keys; the explicit checks produce a
- * clear message instead of a database error. History-preserving cancellation
- * (`cancelPayrollPeriodAction`) remains the path for periods that already hold
- * payroll data.
+ * The status is a business-state flag, not a hard barrier: `draft`, `cancelled`,
+ * `processing` and `locked` periods can all be deleted, and a `locked` period is
+ * never rejected just because it is locked.
+ *
+ * - Locked periods delete the non-protected graph inside a single transaction:
+ *   `payroll_runs` (NO ACTION on the period) and their `payroll_items` ->
+ *   `payroll_item_components` (CASCADE) rows are deleted explicitly in
+ *   dependency order. Payslips and their `payslip_documents` /
+ *   `payslip_document_versions` chains are only removed when every payslip the
+ *   period owns is already `revoked`; those documents/versions/payslips are
+ *   deleted explicitly in FK dependency order before the run/item graph. A
+ *   locked period that owns any `generated` or `published` payslip is refused
+ *   with a clear error naming the blocking status instead of cascading.
+ *   `payroll_events` link to the period with SET NULL, so workflow history rows
+ *   are preserved.
+ * - Draft/cancelled/processing periods that already own payroll data (a run or a
+ *   payslip) are still routed to history-preserving cancellation
+ *   (`cancelPayrollPeriodAction`) rather than a destructive delete.
  */
 export async function deletePayrollPeriodAction(
   periodId: string
 ): Promise<PayrollActionResult> {
   const user = await requireUser();
   await requireAnyPermission(user.id, [
-    PERMISSIONS.PAYROLL_UPDATE,
+    PERMISSIONS.PAYROLL_PERIOD_DELETE,
     PERMISSIONS.PAYROLL_MANAGE,
   ]);
   if (!user.organizationId) {
@@ -1142,15 +1180,246 @@ export async function deletePayrollPeriodAction(
   try {
     const outcome = await db.transaction(async (tx) => {
       const period = await lockPeriod(tx, organizationId, periodId);
-      if (!period) return { kind: "error" as const, message: "Period not found." };
+      if (!period) {
+        return { kind: "error" as const, message: "Period not found." };
+      }
 
-      if (period.periodStatus !== "draft") {
+      if (
+        period.periodStatus !== "draft" &&
+        period.periodStatus !== "cancelled" &&
+        period.periodStatus !== "processing" &&
+        period.periodStatus !== "locked"
+      ) {
         return {
           kind: "error" as const,
-          message: "Only empty draft periods can be deleted.",
+          message:
+            "Only draft, cancelled, processing or locked periods can be deleted. Otherwise cancel the period first.",
         };
       }
 
+      // ----------------------------------------------------------------
+      // LOCKED period: delete in dependency order inside this transaction.
+      // Runs -> items -> item components are deleted explicitly (the period
+      // FK on payroll_runs is NO ACTION, so the runs must go before the
+      // period). Payslips (and their RESTRICT document/version chains) are
+      // protected: a locked period that owns any GENERATED or PUBLISHED (or
+      // otherwise un-revoked) payslip is refused with a clear error naming the
+      // blocking status instead of a blindly cascaded delete. When all of the
+      // period's payslips are REVOKED they are deleted first (documents ->
+      // document versions -> payslips -> ... -> period) so the RESTRICT foreign
+      // keys are never bypassed. Active/published payroll documents are never
+      // deleted.
+      // ----------------------------------------------------------------
+      if (period.periodStatus === "locked") {
+        const runIds = (
+          await tx
+            .select({ id: payrollRuns.id })
+            .from(payrollRuns)
+            .where(
+              and(
+                eq(payrollRuns.organizationId, organizationId),
+                eq(payrollRuns.payrollPeriodId, period.periodId)
+              )
+            )
+        ).map((run) => run.id);
+
+        const itemIds = runIds.length
+          ? (
+              await tx
+                .select({ id: payrollItems.id })
+                .from(payrollItems)
+                .where(
+                  and(
+                    eq(payrollItems.organizationId, organizationId),
+                    inArray(payrollItems.payrollRunId, runIds)
+                  )
+                )
+            ).map((item) => item.id)
+          : [];
+
+        // Profile every payslip that belongs to the period: distribution
+        // payslips link the period directly, calculated payslips reach it
+        // through their payroll item -> run. Both are resolved org-scoped and
+        // deduplicated so the status rule below sees the full set.
+        const owedPayslips = [
+          ...(
+            await tx
+              .select({ id: payslips.id, status: payslips.status })
+              .from(payslips)
+              .where(
+                and(
+                  eq(payslips.organizationId, organizationId),
+                  eq(payslips.payrollPeriodId, period.periodId)
+                )
+              )
+          ),
+          ...(itemIds.length
+            ? await tx
+                .select({ id: payslips.id, status: payslips.status })
+                .from(payslips)
+                .where(
+                  and(
+                    eq(payslips.organizationId, organizationId),
+                    inArray(payslips.payrollItemId, itemIds)
+                  )
+                )
+            : []),
+        ];
+        const payslipsById = new Map<string, string>();
+        for (const payslip of owedPayslips) {
+          payslipsById.set(payslip.id, payslip.status);
+        }
+        const payslipIds = [...payslipsById.keys()];
+        const payslipStatuses = [...payslipsById.values()];
+
+        // The deletion rule is pure: any non-revoked payslip (generated,
+        // published or unknown) blocks the delete and names the status.
+        const deletionDecision = buildLockedPayrollPeriodDeletionDecision(
+          payslipStatuses
+        );
+        if (!deletionDecision.allowed) {
+          return {
+            kind: "error" as const,
+            message: deletionDecision.message ?? "The payroll period cannot be deleted.",
+          };
+        }
+
+        let payslipCount = 0;
+        let documentCount = 0;
+        let versionCount = 0;
+        const storageKeys: string[] = [];
+
+        // 0. Revoked payslips only: delete the document/version/payslip graph
+        // in RESTRICT-aware dependency order before the run/item graph.
+        if (payslipIds.length) {
+          const documentRows = await tx
+            .select({
+              id: payslipDocuments.id,
+              storageKey: payslipDocuments.storageKey,
+            })
+            .from(payslipDocuments)
+            .where(
+              and(
+                eq(payslipDocuments.organizationId, organizationId),
+                inArray(payslipDocuments.payslipId, payslipIds)
+              )
+            );
+          const documentIds = documentRows.map((document) => document.id);
+          for (const document of documentRows) {
+            storageKeys.push(document.storageKey);
+          }
+
+          if (documentIds.length) {
+            const versionRows = await tx
+              .select({ storageKey: payslipDocumentVersions.storageKey })
+              .from(payslipDocumentVersions)
+              .where(
+                and(
+                  eq(payslipDocumentVersions.organizationId, organizationId),
+                  inArray(payslipDocumentVersions.payslipDocumentId, documentIds)
+                )
+              );
+            for (const version of versionRows) {
+              storageKeys.push(version.storageKey);
+            }
+            versionCount = versionRows.length;
+
+            // 0a. payslip_document_versions (RESTRICT on documents/payslips)
+            await tx
+              .delete(payslipDocumentVersions)
+              .where(
+                and(
+                  eq(payslipDocumentVersions.organizationId, organizationId),
+                  inArray(payslipDocumentVersions.payslipDocumentId, documentIds)
+                )
+              );
+
+            // 0b. payslip_documents (RESTRICT on payslips)
+            await tx
+              .delete(payslipDocuments)
+              .where(
+                and(
+                  eq(payslipDocuments.organizationId, organizationId),
+                  inArray(payslipDocuments.id, documentIds)
+                )
+              );
+            documentCount = documentRows.length;
+          }
+
+          // 0c. payslips (RESTRICT on items and the period)
+          payslipCount = payslipIds.length;
+          await tx
+            .delete(payslips)
+            .where(
+              and(
+                eq(payslips.organizationId, organizationId),
+                inArray(payslips.id, payslipIds)
+              )
+            );
+        }
+
+        // 1. payroll_item_components (CASCADE from items, deleted explicitly)
+        if (itemIds.length) {
+          await tx
+            .delete(payrollItemComponents)
+            .where(
+              and(
+                eq(payrollItemComponents.organizationId, organizationId),
+                inArray(payrollItemComponents.payrollItemId, itemIds)
+              )
+            );
+        }
+
+        // 2. payroll_items (CASCADE from runs, deleted explicitly)
+        if (itemIds.length) {
+          await tx
+            .delete(payrollItems)
+            .where(
+              and(
+                eq(payrollItems.organizationId, organizationId),
+                inArray(payrollItems.id, itemIds)
+              )
+            );
+        }
+
+        // 3. payroll_runs (NO ACTION on the period, deleted explicitly)
+        if (runIds.length) {
+          await tx
+            .delete(payrollRuns)
+            .where(
+              and(
+                eq(payrollRuns.organizationId, organizationId),
+                inArray(payrollRuns.id, runIds)
+              )
+            );
+        }
+
+        // 4. payroll_events keep their history rows: the period FK is SET NULL.
+        await tx
+          .delete(payrollPeriods)
+          .where(
+            and(
+              eq(payrollPeriods.id, period.periodId),
+              eq(payrollPeriods.organizationId, organizationId)
+            )
+          );
+
+        return {
+          kind: "success" as const,
+          code: period.periodCode,
+          status: period.periodStatus,
+          runCount: runIds.length,
+          itemCount: itemIds.length,
+          payslipCount,
+          documentCount,
+          versionCount,
+          storageKeys: [...new Set(storageKeys)],
+        };
+      }
+
+      // ----------------------------------------------------------------
+      // Non-locked period: same data-integrity safety net as before.
+      // ----------------------------------------------------------------
       if (period.runId) {
         return {
           kind: "error" as const,
@@ -1185,11 +1454,31 @@ export async function deletePayrollPeriodAction(
           )
         );
 
-      return { kind: "success" as const, code: period.periodCode };
+      return {
+        kind: "success" as const,
+        code: period.periodCode,
+        status: period.periodStatus,
+        runCount: 0,
+        itemCount: 0,
+        payslipCount: 0,
+        documentCount: 0,
+        versionCount: 0,
+        storageKeys: [],
+      };
     });
 
     if (outcome.kind === "error") {
       return { ok: false, message: outcome.message };
+    }
+
+    // Stored PDFs are removed best-effort AFTER the DB commit so a filesystem
+    // failure can never roll back a committed period deletion.
+    for (const storageKey of outcome.storageKeys) {
+      try {
+        await removeStoredPayslipPdf(storageKey);
+      } catch (error) {
+        console.error("[payroll] orphaned payslip PDF cleanup failed", error);
+      }
     }
 
     await auditPayroll({
@@ -1198,11 +1487,25 @@ export async function deletePayrollPeriodAction(
       action: "payroll.deleted",
       entityType: "payroll_period",
       entityId: periodId,
-      metadata: { code: outcome.code },
+      metadata: {
+        code: outcome.code,
+        status: outcome.status,
+        runCount: outcome.runCount,
+        itemCount: outcome.itemCount,
+        payslipCount: outcome.payslipCount,
+        documentCount: outcome.documentCount,
+        versionCount: outcome.versionCount,
+      },
     });
     return { ok: true, message: "Payroll period deleted." };
   } catch (error) {
     console.error("[payroll] delete period failed", error);
+    if (typeof error === "object" && error !== null && (error as { code?: unknown }).code === "23503") {
+      return {
+        ok: false,
+        message: "The payroll period has related records that cannot be safely deleted.",
+      };
+    }
     return { ok: false, message: "The payroll period could not be deleted. Please try again." };
   }
 }

@@ -112,11 +112,15 @@ evaluation-time bypass in `lib/auth/rbac.ts`). Row-level scoping (supervisor →
 team, employee → self, finance → payroll) is enforced by the future modules'
 data-access layer, not by this capability layer.
 
-> **Phase 5 semantics:** `employees.delete` maps to *deactivation* (employment
-> status → `inactive`) rather than physical deletion, because HRIS person
-> records are retained and later modules reference them. HR edits employee
-> profiles (`employees.create`/`employees.update`) but does not deactivate;
-> that is an ADMIN capability.
+> **`employees.delete` semantics:** it grants two related but separate
+> operations. Deactivation sets employment status → `inactive` and keeps the
+> employee row and every dependent record, because later modules reference
+> them. A permanent, operator-confirmed delete of the `employees` row itself
+> (`permanentlyDeleteEmployeeAction`, see `docs/employees.md` §7) uses the same
+> capability and is refused whenever any dependent record, a direct report, or
+> the actor's own linked account is present. HR edits employee profiles
+> (`employees.create`/`employees.update`) but does not delete; that is an ADMIN
+> capability.
 
 ## 5. Organization isolation
 

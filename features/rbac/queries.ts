@@ -4,6 +4,7 @@ import { and, asc, eq, inArray, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
+  organizations,
   permissions,
   rolePermissions,
   roles,
@@ -45,6 +46,28 @@ export interface PermissionRow {
   code: Permission;
   module: string;
   description: string | null;
+}
+
+/** List all organizations where status is active. */
+export async function listAllOrganizationsForSuperAdmin(
+): Promise<{ id: string; code: string; name: string; status: string }[]> {
+  return db
+    .select({
+      id: organizations.id,
+      code: organizations.code,
+      name: organizations.name,
+      status: organizations.status,
+    })
+    .from(organizations)
+    .where(eq(organizations.status, "active"))
+    .orderBy(asc(organizations.code));
+}
+
+/** List all roles in one organization for SUPERADMIN. */
+export async function listRolesForSuperAdmin(
+  organizationId: string
+): Promise<RoleListItem[]> {
+  return listRolesByOrganization(organizationId);
 }
 
 /** All roles in one organization, ordered by code, with counts. */

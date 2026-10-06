@@ -22,6 +22,7 @@ import {
   columnHeaders,
   customFieldColumnHeader,
   CUSTOM_FIELDS_SHEET_NAME,
+  type CustomFieldWorkbookColumn,
   DOCUMENTS_SHEET_NAME,
   EDUCATION_SHEET_COLUMNS,
   EDUCATION_SHEET_NAME,
@@ -32,6 +33,10 @@ import {
   INSURANCE_SHEET_COLUMNS,
   INSURANCE_SHEET_NAME,
 } from "./columns.ts";
+import {
+  planCustomTabSheets,
+  type CustomTabWorkbookPlan,
+} from "./custom-tab-sheets.ts";
 
 const HEADER_FILL = {
   type: "pattern",
@@ -75,6 +80,12 @@ export interface TemplateCustomFieldSpec {
   /** select / radio get a strict list; multiselect a warning-only list. */
   fieldType: string;
   options: readonly string[];
+  /**
+   * Custom Tab key this field belongs to, or null when it is unassigned. Used
+   * only to decide which worksheet the column lands on; import never reads the
+   * assignment back out of the file.
+   */
+  tabKey?: string | null;
 }
 
 function columnLetter(columnNumber: number): string {
@@ -126,16 +137,20 @@ function addDropdownFromLists(
   workbook: ExcelJS.Workbook,
   worksheet: ExcelJS.Worksheet,
   listsSheet: ExcelJS.Worksheet,
+  listColumn: number,
   columnIndex: number,
   options: readonly string[],
   strict: boolean
 ): void {
-  const letter = columnLetter(columnIndex);
+  // `listColumn` indexes the hidden `_Lists` sheet (one column per field, so
+  // lists never collide across the custom-data sheets); `columnIndex` indexes
+  // the visible worksheet.
+  const letter = columnLetter(listColumn);
   options.forEach((option, index) => {
     listsSheet.getCell(`${letter}${index + 1}`).value = option;
   });
   const source = `'${LISTS_SHEET_NAME}'!$${letter}$1:$${letter}$${options.length}`;
-  const range = `${letter}2:${letter}${TEMPLATE_LAST_ROW}`;
+  const range = `${columnLetter(columnIndex)}2:${columnLetter(columnIndex)}${TEMPLATE_LAST_ROW}`;
   const withDataValidations = worksheet as unknown as WorksheetWithDataValidations;
   withDataValidations.dataValidations.add(range, {
     type: "list",
@@ -206,6 +221,12 @@ export interface TemplateBuildOptions {
    * dynamically from each definition's options.
    */
   customFields?: TemplateCustomFieldSpec[];
+  /**
+   * Custom Tab worksheet layout, already filtered to the tabs the requesting
+   * user may see. Omit it and the template keeps its historical single
+   * `Custom Fields` sheet, so existing callers and tests are unaffected.
+   */
+  customTabPlan?: CustomTabWorkbookPlan;
 }
 
 /**
@@ -227,16 +248,27 @@ export async function buildTemplateWorkbook(
       fieldType: "text",
       options: [],
     }));
-  const customHeaders = specs.map((spec) =>
-    spec.fieldKey
-      ? customFieldColumnHeader({
-          fieldKey: spec.fieldKey,
+  // Custom data layout: one worksheet per Custom Tab the caller can see, plus
+  // the built-in `Custom Fields` sheet for unassigned fields. Without a plan we
+  // fall back to the historical single sheet.
+  const plan: CustomTabWorkbookPlan =
+    options.customTabPlan ??
+    planCustomTabSheets(
+      [],
+      specs
+        .filter((spec) => spec.fieldKey)
+        .map((spec) => ({
+          fieldKey: spec.fieldKey as string,
           label: spec.label,
           fieldType: spec.fieldType,
           options: spec.options,
-        })
-      : spec.label
-  );
+          tabKey: spec.tabKey ?? null,
+        }))
+    );
+  // Label-only callers (no fieldKey) cannot be grouped, so they stay on the
+  // built-in sheet.
+  const labelOnly = specs.filter((spec) => !spec.fieldKey);
+  const leftoverFields = [...plan.leftover, ...labelOnly];
 
   const instructions = workbook.addWorksheet("Instructions");
   instructions.columns = [{ width: 30 }, { width: 90 }];
@@ -300,42 +332,89 @@ export async function buildTemplateWorkbook(
     ],
   });
 
-  const customFieldsSheet = addTemplateSheet(workbook, {
-    name: CUSTOM_FIELDS_SHEET_NAME,
-    headers: ["Employee No.", ...customHeaders],
-  });
-
   // Dynamic dropdowns for list-style custom fields. A hidden reference sheet
-  // holds each option list so long/comma-containing options stay valid.
-  const needsLists = specs.some(
-    (spec) =>
-      spec.options.length > 0 &&
-      (spec.fieldType === "select" ||
-        spec.fieldType === "radio" ||
-        spec.fieldType === "multiselect")
-  );
-  if (needsLists) {
+  // holds each option list so long/comma-containing options stay valid. One
+  // list per (field) across ALL custom-data sheets, so each dropdown points at
+  // its own `_Lists` column and lists never collide.
+  const customDataSheets: { worksheet: ExcelJS.Worksheet; specs: CustomFieldWorkbookColumn[] }[] = [];
+  for (const sheet of plan.sheets) {
+    if (sheet.fields.length === 0) continue;
+    customDataSheets.push({
+      worksheet: addTemplateSheet(workbook, {
+        name: sheet.sheetName,
+        headers: [
+          "Employee No.",
+          ...sheet.fields.map((field) => customFieldColumnHeader(field)),
+        ],
+      }),
+      specs: sheet.fields,
+    });
+  }
+  if (leftoverFields.length > 0) {
+    customDataSheets.push({
+      worksheet: addTemplateSheet(workbook, {
+        name: CUSTOM_FIELDS_SHEET_NAME,
+        // A label-only caller has no fieldKey, so it falls back to the raw
+        // label header, exactly as it did before Custom Tabs existed.
+        headers: [
+          "Employee No.",
+          ...leftoverFields.map((spec) =>
+            spec.fieldKey
+              ? customFieldColumnHeader({
+                  fieldKey: spec.fieldKey,
+                  label: spec.label,
+                  fieldType: spec.fieldType,
+                  options: spec.options,
+                })
+              : spec.label
+          ),
+        ],
+      }),
+      // Dropdowns only need type + options, so a synthetic key is safe here.
+      specs: leftoverFields.map((spec, index) => ({
+        fieldKey: spec.fieldKey ?? `legacy_${index + 1}`,
+        label: spec.label,
+        fieldType: spec.fieldType,
+        options: spec.options,
+      })),
+    });
+  }
+
+  const listStyle = (spec: { options: readonly string[]; fieldType: string }) =>
+    spec.options.length > 0 &&
+    (spec.fieldType === "select" ||
+      spec.fieldType === "radio" ||
+      spec.fieldType === "multiselect");
+  if (customDataSheets.some((entry) => entry.specs.some(listStyle))) {
     const listsSheet = workbook.addWorksheet(LISTS_SHEET_NAME);
     listsSheet.state = "hidden";
-    specs.forEach((spec, index) => {
-      if (spec.options.length === 0) return;
-      if (
-        spec.fieldType !== "select" &&
-        spec.fieldType !== "radio" &&
-        spec.fieldType !== "multiselect"
-      ) {
-        return;
-      }
-      // Column 2 onward (column 1 = Employee No.).
-      addDropdownFromLists(
-        workbook,
-        customFieldsSheet,
-        listsSheet,
-        index + 2,
-        spec.options,
-        spec.fieldType !== "multiselect"
-      );
-    });
+    // Each list-style field needs its own `_Lists` column. Claim the field's
+    // own visible column first so a single-sheet template keeps the historical
+    // column layout (list for column B lives in column B), and fall back to the
+    // next free column when several custom-data sheets would otherwise claim
+    // the same one.
+    const claimed = new Set<number>();
+    const claimListColumn = (preferred: number): number => {
+      let candidate = preferred;
+      while (claimed.has(candidate)) candidate += 1;
+      claimed.add(candidate);
+      return candidate;
+    };
+    for (const entry of customDataSheets) {
+      entry.specs.forEach((spec, index) => {
+        if (!listStyle(spec)) return;
+        // Column 2 onward (column 1 = Employee No.).
+        addDropdownFromLists(
+          workbook,
+          entry.worksheet,
+          listsSheet,
+          claimListColumn(index + 2),
+          index + 2,
+          spec.options,
+          spec.fieldType !== "multiselect"
+        );
+      });
+    }
   }
 
   const buffer = await workbook.xlsx.writeBuffer();

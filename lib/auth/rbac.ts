@@ -216,3 +216,8 @@ export async function requireAnyPermission(
   if (!(await hasAnyPermission(userId, permissionCodes))) forbidden();
 }
 
+/** Require that the user holds the SUPERADMIN role. */
+export async function requireSuperAdmin(userId: string): Promise<void> {
+  if (!(await isSuperAdmin(userId))) forbidden();
+}
+

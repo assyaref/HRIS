@@ -74,10 +74,20 @@ export type SecondarySheetName =
   | typeof BANK_SHEET_NAME
   | typeof FAMILY_SHEET_NAME
   | typeof EDUCATION_SHEET_NAME
-  | typeof CUSTOM_FIELDS_SHEET_NAME;
+  | typeof CUSTOM_FIELDS_SHEET_NAME
+  // Per-Custom-Tab worksheets, whose names come from the organization's tab
+  // data and are therefore arbitrary strings. `string & {}` keeps editor
+  // autocomplete for the literals above while allowing dynamic names.
+  | (string & {});
 
 export interface SecondarySheetRow {
   sheet: SecondarySheetName;
+  /**
+   * True when this row came from a custom-data worksheet: the built-in
+   * `Custom Fields` sheet or any Custom Tab worksheet. Those rows feed
+   * `customValues` directly instead of the per-section `secondary` list.
+   */
+  isCustomData: boolean;
   rowNumber: number;
   /** Employees-tab employee number (the join key). */
   employeeNumber: string;
@@ -372,6 +382,7 @@ function collectSecondarySheet(
     const error = validateSecondaryRow(sheet, employeeNumber, cells);
     out.push({
       sheet,
+      isCustomData: false,
       rowNumber,
       employeeNumber,
       cells,
@@ -401,6 +412,7 @@ function resolveCustomFieldHeader(
 
 function collectCustomFieldsSheet(
   worksheet: ExcelJS.Worksheet,
+  sheetName: SecondarySheetName,
   specs: CustomFieldImportSpec[],
   out: SecondarySheetRow[]
 ): void {
@@ -452,7 +464,8 @@ function collectCustomFieldsSheet(
     const employeeNumber = cells["employee number"];
     if (!employeeNumber) {
       out.push({
-        sheet: CUSTOM_FIELDS_SHEET_NAME,
+        sheet: sheetName,
+        isCustomData: true,
         rowNumber,
         employeeNumber: "",
         cells,
@@ -464,11 +477,11 @@ function collectCustomFieldsSheet(
 
     let firstError: string | null = null;
     if (duplicateHeader) {
-      firstError = "Custom Fields contains the same field key in more than one column.";
+      firstError = `${sheetName} contains the same field key in more than one column.`;
     } else if (unknownLabels.length > 0) {
       firstError = ambiguousHeader
-        ? "Custom Fields contains an ambiguous legacy column label. Download a current template."
-        : "Custom Fields contains an unknown or unauthorized column.";
+        ? `${sheetName} contains an ambiguous legacy column label. Download a current template.`
+        : `${sheetName} contains an unknown or unauthorized column.`;
     } else {
       for (const spec of specs) {
         const rawValue = cells[spec.fieldKey] ?? "";
@@ -486,7 +499,8 @@ function collectCustomFieldsSheet(
     }
 
     out.push({
-      sheet: CUSTOM_FIELDS_SHEET_NAME,
+      sheet: sheetName,
+      isCustomData: true,
       rowNumber,
       employeeNumber,
       cells,
@@ -503,7 +517,14 @@ function collectCustomFieldsSheet(
  */
 export async function analyzeExcelImport(
   buffer: ArrayBuffer | Buffer,
-  customFields: CustomFieldImportSpec[]
+  customFields: CustomFieldImportSpec[],
+  /**
+   * Extra custom-data worksheets to read, i.e. the sanitized sheet names of the
+   * Custom Tabs the caller may see. `Custom Fields` is always included. Passing
+   * the visible plan is what keeps a tab the caller cannot see out of an
+   * import: its worksheet is never opened, so its columns cannot be written.
+   */
+  customDataSheetNames: readonly string[] = [CUSTOM_FIELDS_SHEET_NAME]
 ): Promise<ExcelImportAnalysis> {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
@@ -619,9 +640,19 @@ export async function analyzeExcelImport(
         secondary
       );
     }
-    const customSheet = workbook.getWorksheet(CUSTOM_FIELDS_SHEET_NAME);
-    if (customSheet) {
-      collectCustomFieldsSheet(customSheet, customFields, secondary);
+    // Custom data is collected from the built-in `Custom Fields` sheet AND from
+    // the Custom Tab worksheets in the caller's VISIBLE tab plan. Reading ONLY
+    // planned sheets is deliberate: a worksheet for a tab the caller may not see
+    // is never opened, so neither its values nor its (possibly hidden) tab name
+    // can reach the preview, the planner or the database. Columns still resolve
+    // by the stable `[fieldKey]` token, so moving a field between two EXISTING
+    // visible tabs keeps older workbooks importable; only a tab RENAME, which
+    // changes a sheet's identity, requires a fresh template.
+    for (const name of customDataSheetNames) {
+      const worksheet = workbook.getWorksheet(name);
+      if (worksheet) {
+        collectCustomFieldsSheet(worksheet, name, customFields, secondary);
+      }
     }
   }
 
@@ -904,6 +935,10 @@ export function planExcelImport(
   const byNumber = new Map(rows.map((row) => [row.employeeNumber, row]));
   const orphans = new Set<string>();
   let secondaryErrorCount = 0;
+  // A field is written by exactly one worksheet in a generated workbook, but a
+  // hand-edited file can repeat a key on two Custom Tab sheets. First sheet
+  // (in tab display order) wins, matching the export's deterministic layout.
+  const seenCustomKeys = new Set<string>();
 
   for (const secondary of deduplicateSecondaryRows(analysis.secondary)) {
     if (secondary.error) secondaryErrorCount += 1;
@@ -916,10 +951,14 @@ export function planExcelImport(
       planned.secondary.push(secondary);
       continue;
     }
-    if (secondary.sheet === CUSTOM_FIELDS_SHEET_NAME) {
+    if (secondary.isCustomData) {
       for (const [key, raw] of Object.entries(secondary.cells)) {
         if (key === "employee number") continue;
-        if (raw) planned.customValues[key] = raw;
+        if (!raw) continue;
+        const dedupeKey = `${secondary.employeeNumber}|${key}`;
+        if (seenCustomKeys.has(dedupeKey)) continue;
+        seenCustomKeys.add(dedupeKey);
+        planned.customValues[key] = raw;
       }
     } else {
       planned.secondary.push(secondary);

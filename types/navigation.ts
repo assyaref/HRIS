@@ -26,7 +26,8 @@ export type NavIconKey =
   | "employee-fields"
   | "test-data"
   | "settings"
-  | "profile";
+  | "profile"
+  | "bell";
 
 export interface NavItem {
   title: string;

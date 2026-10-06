@@ -1,0 +1,187 @@
+-- R20.17 — Employee Delete Safety Reconciliation
+--
+-- Purpose:
+--   Prevent destructive employee deletion from cascading into
+--   attendance, leave, employment history, documents, payroll
+--   components, and other employee historical/detail records.
+--
+-- IMPORTANT:
+--   This migration reconciles the production schema.
+--   It does NOT recreate Employee Master Data tables.
+--   It does NOT modify migration history manually.
+--
+-- Tested first against:
+--   hris_emd_reconciliation_staging
+--
+-- Production rollout requires:
+--   1. verified backup
+--   2. staging restore
+--   3. application delete/archive verification
+--   4. release approval
+
+
+-- ============================================================
+-- Employee Master Data
+-- ============================================================
+
+ALTER TABLE employee_addresses
+  DROP CONSTRAINT IF EXISTS employee_addresses_employee_id_employees_id_fk;
+
+ALTER TABLE employee_addresses
+  ADD CONSTRAINT employee_addresses_employee_id_employees_id_fk
+  FOREIGN KEY (employee_id)
+  REFERENCES employees(id)
+  ON DELETE RESTRICT;
+
+ALTER TABLE employee_bank_accounts
+  DROP CONSTRAINT IF EXISTS employee_bank_accounts_employee_id_employees_id_fk;
+
+ALTER TABLE employee_bank_accounts
+  ADD CONSTRAINT employee_bank_accounts_employee_id_employees_id_fk
+  FOREIGN KEY (employee_id)
+  REFERENCES employees(id)
+  ON DELETE RESTRICT;
+
+ALTER TABLE employee_custom_field_values
+  DROP CONSTRAINT IF EXISTS employee_custom_field_values_employee_id_employees_id_fk;
+
+ALTER TABLE employee_custom_field_values
+  ADD CONSTRAINT employee_custom_field_values_employee_id_employees_id_fk
+  FOREIGN KEY (employee_id)
+  REFERENCES employees(id)
+  ON DELETE RESTRICT;
+
+ALTER TABLE employee_dependents
+  DROP CONSTRAINT IF EXISTS employee_dependents_employee_id_employees_id_fk;
+
+ALTER TABLE employee_dependents
+  ADD CONSTRAINT employee_dependents_employee_id_employees_id_fk
+  FOREIGN KEY (employee_id)
+  REFERENCES employees(id)
+  ON DELETE RESTRICT;
+
+ALTER TABLE employee_documents
+  DROP CONSTRAINT IF EXISTS employee_documents_employee_id_employees_id_fk;
+
+ALTER TABLE employee_documents
+  ADD CONSTRAINT employee_documents_employee_id_employees_id_fk
+  FOREIGN KEY (employee_id)
+  REFERENCES employees(id)
+  ON DELETE RESTRICT;
+
+ALTER TABLE employee_educations
+  DROP CONSTRAINT IF EXISTS employee_educations_employee_id_employees_id_fk;
+
+ALTER TABLE employee_educations
+  ADD CONSTRAINT employee_educations_employee_id_employees_id_fk
+  FOREIGN KEY (employee_id)
+  REFERENCES employees(id)
+  ON DELETE RESTRICT;
+
+ALTER TABLE employee_employment_history
+  DROP CONSTRAINT IF EXISTS employee_employment_history_employee_id_employees_id_fk;
+
+ALTER TABLE employee_employment_history
+  ADD CONSTRAINT employee_employment_history_employee_id_employees_id_fk
+  FOREIGN KEY (employee_id)
+  REFERENCES employees(id)
+  ON DELETE RESTRICT;
+
+ALTER TABLE employee_face_enrollments
+  DROP CONSTRAINT IF EXISTS employee_face_enrollments_employee_id_employees_id_fk;
+
+ALTER TABLE employee_face_enrollments
+  ADD CONSTRAINT employee_face_enrollments_employee_id_employees_id_fk
+  FOREIGN KEY (employee_id)
+  REFERENCES employees(id)
+  ON DELETE RESTRICT;
+
+ALTER TABLE employee_insurances
+  DROP CONSTRAINT IF EXISTS employee_insurances_employee_id_employees_id_fk;
+
+ALTER TABLE employee_insurances
+  ADD CONSTRAINT employee_insurances_employee_id_employees_id_fk
+  FOREIGN KEY (employee_id)
+  REFERENCES employees(id)
+  ON DELETE RESTRICT;
+
+ALTER TABLE employee_payroll_components
+  DROP CONSTRAINT IF EXISTS employee_payroll_components_employee_id_employees_id_fk;
+
+ALTER TABLE employee_payroll_components
+  ADD CONSTRAINT employee_payroll_components_employee_id_employees_id_fk
+  FOREIGN KEY (employee_id)
+  REFERENCES employees(id)
+  ON DELETE RESTRICT;
+
+ALTER TABLE employee_project_assignments
+  DROP CONSTRAINT IF EXISTS employee_project_assignments_employee_id_employees_id_fk;
+
+ALTER TABLE employee_project_assignments
+  ADD CONSTRAINT employee_project_assignments_employee_id_employees_id_fk
+  FOREIGN KEY (employee_id)
+  REFERENCES employees(id)
+  ON DELETE RESTRICT;
+
+-- ============================================================
+-- Attendance / Leave / Permission history
+-- ============================================================
+
+ALTER TABLE attendance_records
+  DROP CONSTRAINT IF EXISTS attendance_records_employee_id_employees_id_fk;
+
+ALTER TABLE attendance_records
+  ADD CONSTRAINT attendance_records_employee_id_employees_id_fk
+  FOREIGN KEY (employee_id)
+  REFERENCES employees(id)
+  ON DELETE RESTRICT;
+
+ALTER TABLE leave_balances
+  DROP CONSTRAINT IF EXISTS leave_balances_employee_id_employees_id_fk;
+
+ALTER TABLE leave_balances
+  ADD CONSTRAINT leave_balances_employee_id_employees_id_fk
+  FOREIGN KEY (employee_id)
+  REFERENCES employees(id)
+  ON DELETE RESTRICT;
+
+ALTER TABLE leave_requests
+  DROP CONSTRAINT IF EXISTS leave_requests_employee_id_employees_id_fk;
+
+ALTER TABLE leave_requests
+  ADD CONSTRAINT leave_requests_employee_id_employees_id_fk
+  FOREIGN KEY (employee_id)
+  REFERENCES employees(id)
+  ON DELETE RESTRICT;
+
+ALTER TABLE permission_requests
+  DROP CONSTRAINT IF EXISTS permission_requests_employee_id_employees_id_fk;
+
+ALTER TABLE permission_requests
+  ADD CONSTRAINT permission_requests_employee_id_employees_id_fk
+  FOREIGN KEY (employee_id)
+  REFERENCES employees(id)
+  ON DELETE RESTRICT;
+
+-- ============================================================
+-- Announcement / Face Template references
+-- ============================================================
+
+ALTER TABLE announcement_recipients
+  DROP CONSTRAINT IF EXISTS announcement_recipients_employee_id_employees_id_fk;
+
+ALTER TABLE announcement_recipients
+  ADD CONSTRAINT announcement_recipients_employee_id_employees_id_fk
+  FOREIGN KEY (employee_id)
+  REFERENCES employees(id)
+  ON DELETE RESTRICT;
+
+ALTER TABLE face_enrollment_templates
+  DROP CONSTRAINT IF EXISTS face_enrollment_templates_employee_id_employees_id_fk;
+
+ALTER TABLE face_enrollment_templates
+  ADD CONSTRAINT face_enrollment_templates_employee_id_employees_id_fk
+  FOREIGN KEY (employee_id)
+  REFERENCES employees(id)
+  ON DELETE RESTRICT;
+

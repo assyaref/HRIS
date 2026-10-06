@@ -5,8 +5,8 @@
  * and the `node:test` suite import this module.
  *
  * Branding reuses the application's existing identity: the sidebar wordmark
- * ("Enterprise HRIS") and the brand tile color from `app/globals.css`
- * (`--primary: #18181b`, `--background: #ffffff`).
+ * ("Enterprise HRIS") and the current design tokens from `app/globals.css`
+ * (`--primary: #1687f8`, `--background: #f7fafc`).
  *
  * `start_url` is intentionally `/` so the same manifest works for local
  * development, a sub-path production deployment that keeps the app at its
@@ -17,8 +17,8 @@ export const PWA_APP_NAME = "Enterprise HRIS";
 export const PWA_APP_SHORT_NAME = "HRIS";
 export const PWA_APP_DESCRIPTION =
   "Enterprise HRIS — a human resource information system for employee records, attendance, leave, and payroll.";
-export const PWA_THEME_COLOR = "#18181b";
-export const PWA_BACKGROUND_COLOR = "#ffffff";
+export const PWA_THEME_COLOR = "#1687f8";
+export const PWA_BACKGROUND_COLOR = "#f7fafc";
 export const PWA_START_URL = "/";
 export const PWA_DISPLAY = "standalone";
 

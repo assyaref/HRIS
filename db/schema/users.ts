@@ -28,6 +28,8 @@ export const users = pgTable(
       () => organizations.id,
       { onDelete: "set null" }
     ),
+    /** Display name for the account (nullable — legacy/employee-linked accounts fall back to the linked employee name). */
+    name: text("name"),
     email: text("email").notNull(),
     status: text("status").notNull().default("active"),
     passwordHash: text("password_hash"),

@@ -9,7 +9,7 @@ import { db } from "@/db";
 import { permissions, rolePermissions, roles, userRoles } from "@/db/schema";
 import { requireUser } from "@/lib/auth/auth";
 import { writeAuditLog } from "@/lib/auth/audit";
-import { PERMISSIONS } from "@/lib/auth/permissions";
+import { PERMISSIONS, isSystemOnlyPermission } from "@/lib/auth/permissions";
 import {
   getUserAuthorization,
   requirePermission,
@@ -220,21 +220,36 @@ export async function updateRoleAction(
     }
   }
 
-  // RULE 5 — Delegation boundary. A non-SUPERADMIN actor may only assign
-  // permissions that fall within the actor's own effective permissions.
-  // Holding `roles.update` does not entitle the actor to delegate
-  // capabilities they do not themselves have (e.g. an ADMIN must not be
-  // able to grant payroll/payslip permissions to any role).
-  if (!actorAuthorization.isSuperAdmin) {
-    const delegatable = new Set(actorAuthorization.permissionCodes);
-    for (const code of permissionCodes) {
-      if (!delegatable.has(code)) {
-        return toStateError(
-          "You can only assign permissions that you are allowed to delegate."
-        );
+// RULE 5 — Delegation boundary. A non-SUPERADMIN actor may only assign
+    // permissions that fall within the actor's own effective permissions.
+    // Holding `roles.update` does not entitle the actor to delegate
+    // capabilities they do not themselves have (e.g. an ADMIN must not be
+    // able to grant payroll/payslip permissions to any role).
+    if (!actorAuthorization.isSuperAdmin) {
+      const delegatable = new Set(actorAuthorization.permissionCodes);
+      for (const code of permissionCodes) {
+        if (!delegatable.has(code)) {
+          return toStateError(
+            "You can only assign permissions that you are allowed to delegate."
+          );
+        }
       }
     }
-  }
+
+    // RULE 6 — System-only capabilities. `employees.permanent_delete` and
+    // `employees.test_data_purge` must never be stored on a tenant role,
+    // whoever is editing it. A SUPERADMIN may adjust other SUPERADMIN-role
+    // grants, but the capability itself stays bound to the role code, so the
+    // grant is rejected on every organization-level role.
+    if (role.code !== SUPERADMIN_ROLE_CODE) {
+      for (const code of permissionCodes) {
+        if (isSystemOnlyPermission(code)) {
+          return toStateError(
+            `"${code}" is a Super Administrator capability and cannot be assigned to this role.`
+          );
+        }
+      }
+    }
 
   // Resolve codes to database permission ids against the seeded catalog.
   const permissionRows = await db

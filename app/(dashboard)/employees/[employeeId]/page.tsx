@@ -15,6 +15,8 @@ import {
 import { updateEmployeeAction, createEmployeeAccountAction } from "@/features/employees/actions";
 import { EmployeeEditor } from "@/features/employees/employee-editor";
 import { EmployeeStatusBadge } from "@/features/employees/employee-status-badge";
+import { EmployeePermanentDeleteDialog } from "@/features/employees/delete-employee-dialog";
+import { canPermanentlyDeleteEmployees } from "@/features/employees/permanent-delete-policy";
 import { CreateAccountDialog } from "@/features/employees/create-account-dialog";
 import {
   Card,
@@ -81,6 +83,16 @@ import {
   PayrollTab,
 } from "@/features/employees/master-data/cross-module-view";
 import { EmployeeTabs } from "@/features/employees/master-data/employee-tabs";
+import { listActiveCustomTabs } from "@/features/employee-tabs/queries";
+import {
+  defaultTabParam,
+  isSelectableTab,
+  mergeTabStrip,
+  parseCustomTabParamKey,
+  partitionFieldsForProfile,
+  selectVisibleCustomTabs,
+  type MergedTabEntry,
+} from "@/features/employee-tabs/tabs";
 import { Suspense } from "react";
 import type { CustomFieldSpec } from "@/features/employees/master-data/custom-fields-section";
 import {
@@ -92,23 +104,10 @@ export const metadata: Metadata = {
   title: "Employee profile",
 };
 
-const TAB_KEYS = [
-  "overview",
-  "personal",
-  "employment",
-  "address",
-  "insurance",
-  "bank",
-  "family",
-  "education",
-  "documents",
-  "custom",
-  "attendance",
-  "leave",
-  "payroll",
-  "history",
-] as const;
-type TabKey = (typeof TAB_KEYS)[number];
+// The system tab param keys now live in features/employee-tabs/tabs.ts
+// (SYSTEM_TABS) so the employee profile and the custom-tab merge order share
+// ONE source of truth. Custom tabs arrive from the database at runtime, so
+// they are not part of this static list.
 
 function iso(value: Date | null): string {
   if (!value) return "";
@@ -144,10 +143,10 @@ export default async function EmployeeDetailPage({
 }) {
   const { employeeId } = await params;
   const search = await searchParams;
-  const requestedTab =
-    typeof search.tab === "string" && (TAB_KEYS as readonly string[]).includes(search.tab)
-      ? (search.tab as TabKey)
-      : "overview";
+  // Validated against the merged strip BELOW (system + database-driven custom
+  // tabs), so a deep link to a retired or unauthorized tab cannot render it.
+  const requestedTabParam =
+    typeof search.tab === "string" ? search.tab : null;
 
   const user = await requireUser();
   await requirePermission(user.id, PERMISSIONS.EMPLOYEES_VIEW);
@@ -219,6 +218,17 @@ export default async function EmployeeDetailPage({
     hasPermission(user.id, PERMISSIONS.PAYROLL_MANAGE),
   ]);
 
+  // One authorization read serves the custom-field visibility rules and the
+  // permanent-delete gate below.
+  const authorization = await getUserAuthorization(user.id);
+
+  // Permanent deletion is a separate, higher-privilege capability: the
+  // `employees.permanent_delete` code AND the system-level SUPERADMIN role. Both
+  // are evaluated server-side from the DB-backed authorization of the session,
+  // and `permanentlyDeleteEmployeeAction` re-checks them — this only decides
+  // whether the destructive action is offered on this page.
+  const canPermanentDelete = canPermanentlyDeleteEmployees(authorization);
+
   // Section data is fetched ONLY for sections the caller may view.
   const [
     masterData,
@@ -258,14 +268,21 @@ export default async function EmployeeDetailPage({
   if (!masterData) forbidden();
 
   // Custom Fields tab: definitions ∩ visibility rules for this caller.
-  const { roleCodes } = await getUserAuthorization(user.id);
-  const roleCodesAsStrings = roleCodes as readonly string[];
+  const roleCodesAsStrings = authorization.roleCodes as readonly string[];
   const visibleDefinitions = customDefinitions.filter((definition) =>
     isFieldVisibleToRoles(definition.visibilityConfig, roleCodesAsStrings)
   );
   const valuesByField = new Map(
     customValues.map((row) => [row.fieldDefinitionId, row])
   );
+  // Employee Custom Tabs 2.0: the organization's ACTIVE tabs, filtered to the
+  // ones this caller's roles may see. Organization scope is enforced by the
+  // query itself (it is scoped to the session organization, never to input).
+  const customTabs = customDataView
+    ? await listActiveCustomTabs(organizationId)
+    : [];
+  const visibleCustomTabs = selectVisibleCustomTabs(customTabs, roleCodesAsStrings);
+
   const customSpecs: CustomFieldSpec[] = visibleDefinitions.map((definition) => {
     const stored = valuesByField.get(definition.id);
     const editable =
@@ -298,6 +315,29 @@ export default async function EmployeeDetailPage({
     };
   });
 
+  // Placement is computed from the VISIBLE tab list: a field parked on a tab
+  // this caller cannot see (or on a retired one) falls through to the built-in
+  // Custom Fields tab rather than vanishing. Partitioning the definitions and
+  // projecting through `specById` keeps each field in exactly one bucket, so
+  // nothing is duplicated and nothing is dropped.
+  const specById = new Map(customSpecs.map((spec) => [spec.id, spec]));
+  const { byTab, fallback } = partitionFieldsForProfile(
+    visibleDefinitions,
+    visibleCustomTabs
+  );
+  const specsByTabKey = new Map<string, CustomFieldSpec[]>();
+  for (const [tabKey, definitions] of byTab) {
+    specsByTabKey.set(
+      tabKey,
+      definitions
+        .map((definition) => specById.get(definition.id))
+        .filter((spec): spec is CustomFieldSpec => Boolean(spec))
+    );
+  }
+  const fallbackSpecs = fallback
+    .map((definition) => specById.get(definition.id))
+    .filter((spec): spec is CustomFieldSpec => Boolean(spec));
+
   const faceEnrollmentSummary = await getFaceEnrollmentSummaryInOrganization(
     organizationId,
     employee.id
@@ -306,25 +346,35 @@ export default async function EmployeeDetailPage({
 
   const displayName = `${employee.firstName} ${employee.lastName}`;
 
-  const tabs: { key: TabKey; label: string; visible: boolean }[] = [
-    { key: "overview", label: "Overview", visible: true },
-    { key: "personal", label: "Personal", visible: personalView },
-    { key: "employment", label: "Employment", visible: employmentView },
-    { key: "address", label: "Address", visible: addressView },
-    { key: "insurance", label: "Insurance", visible: insuranceView },
-    { key: "bank", label: "Bank Account", visible: bankView },
-    { key: "family", label: "Family", visible: familyView },
-    { key: "education", label: "Education", visible: educationView },
-    { key: "documents", label: "Documents", visible: documentView },
-    { key: "custom", label: "Custom Fields", visible: customDataView },
-    { key: "attendance", label: "Attendance", visible: attendanceView },
-    { key: "leave", label: "Leave", visible: leaveView },
-    { key: "payroll", label: "Payroll", visible: payslipView },
-    { key: "history", label: "History", visible: employmentView },
-  ];
-  const activeTab = tabs.find((tab) => tab.key === requestedTab && tab.visible)
-    ? requestedTab
-    : "overview";
+  // One merged, metadata-driven strip. System tabs keep their own permission
+  // gate; custom tabs are the database rows already filtered to active +
+  // role-visible. A custom tab with no visible field renders as a real tab
+  // with an explicit empty state (an administrator is mid-configuration) —
+  // decided in `tabContent` below, not by hiding the tab here.
+  const strip: MergedTabEntry[] = mergeTabStrip(visibleCustomTabs, {
+    overview: true,
+    personal: personalView,
+    employment: employmentView,
+    address: addressView,
+    insurance: insuranceView,
+    bank: bankView,
+    family: familyView,
+    education: educationView,
+    documents: documentView,
+    custom: customDataView,
+    attendance: attendanceView,
+    leave: leaveView,
+    payroll: payslipView,
+    history: employmentView,
+  });
+  const tabs = strip.map((entry) => ({
+    key: entry.key,
+    label: entry.label,
+    visible: entry.visible,
+  }));
+  const activeTab = isSelectableTab(strip, requestedTabParam)
+    ? requestedTabParam
+    : defaultTabParam(strip);
 
   const tabContent: React.ReactNode = (() => {
     switch (activeTab) {
@@ -427,8 +477,13 @@ export default async function EmployeeDetailPage({
           />
         );
       case "custom":
+        // Built-in tab shows only the fields NOT placed on a visible custom tab,
+        // so a field is never rendered in two places.
         return (
-          <CustomFieldsSection employeeId={employeeId} specs={customSpecs} />
+          <CustomFieldsSection
+            employeeId={employeeId}
+            specs={fallbackSpecs}
+          />
         );
       case "attendance":
         return (
@@ -447,8 +502,27 @@ export default async function EmployeeDetailPage({
         );
       case "history":
         return <HistorySection history={history} />;
-      default:
-        return null;
+      default: {
+        // A custom tab (`custom:<tabKey>`): rendered by the SAME generic
+        // definition-driven form as the built-in tab, with the tab's own
+        // name/description from the database. No per-tab component, no
+        // hard-coded tab names. `activeTab` was already proven visible by
+        // `isSelectableTab`, so this can only be an authorized, active tab.
+        const tabKey = parseCustomTabParamKey(activeTab);
+        const tab = tabKey
+          ? visibleCustomTabs.find((candidate) => candidate.tabKey === tabKey)
+          : undefined;
+        if (!tabKey || !tab) return null;
+        return (
+          <CustomFieldsSection
+            employeeId={employeeId}
+            specs={specsByTabKey.get(tabKey) ?? []}
+            title={tab.icon ? `${tab.icon} ${tab.name}` : tab.name}
+            description={tab.description ?? "Fields assigned to this custom tab."}
+            emptyMessage="No visible custom fields are assigned to this tab yet."
+          />
+        );
+      }
     }
   })();
 
@@ -479,6 +553,24 @@ export default async function EmployeeDetailPage({
           >
             Back to employees
           </Link>
+          {/* Same permanent-deletion flow as the employee list — one dialog,
+              one server action, one set of guards. Gated on
+              `employees.permanent_delete`, NOT on `employees.delete`, so
+              Deactivate and Permanent Delete stay independently gated. */}
+          {canPermanentDelete ? (
+            <EmployeePermanentDeleteDialog
+              employee={{
+                id: employee.id,
+                employeeNumber: employee.employeeNumber,
+                firstName: employee.firstName,
+                lastName: employee.lastName,
+                employmentStatus: employee.employmentStatus,
+                department: employee.department,
+                position: employee.position,
+              }}
+              redirectTo="/employees"
+            />
+          ) : null}
         </div>
       </div>
 

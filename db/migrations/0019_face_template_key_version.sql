@@ -1,0 +1,61 @@
+-- 0019 — Face template key_version authority
+--
+-- Purpose:
+--   Make `face_enrollment_templates.key_version` an authoritative label that
+--   selects the encryption key for a stored template, as part of the
+--   credential-rotation architecture (Phase C).
+--
+--   The column already exists but was inert:
+--     * inserts omitted it and inherited the DEFAULT 'v1';
+--     * no read path ever selected a key by it.
+--   During a rotation that combination is unsafe — a template encrypted
+--   with the new key could still be labelled 'v1', and the key ring would
+--   then try to decrypt it with the OLD key and fail.
+--
+--   This migration removes the DEFAULT so every insert must state the key
+--   version it was actually encrypted with. Application code
+--   (`lib/attendance/face-recognition.ts`, via `createFaceTemplateFromEnrollmentCapture`)
+--   now always supplies it explicitly, and reads select it.
+--
+-- SCOPE — SCHEMA / DDL ONLY:
+--   This migration intentionally contains NO encryption key material, NO
+--   re-encryption, and NO data rewrite of `face_enrollment_templates.secret`.
+--
+--   Re-encryption cannot be done here: AES-256-GCM requires key material that
+--   must never live in a migration file, in version control, or in the
+--   migration ledger. Re-keying is performed by the separate, audited,
+--   transactional tool:
+--       scripts/face-template-rekey.mts
+--
+--   That tool depends on this migration having run first (an INSERT that
+--   omits key_version fails once the DEFAULT is gone), so the rollout order is:
+--       0019 (this file) -> restart app with new key version -> re-key rows
+--
+-- NOT INCLUDED (deliberately deferred):
+--   A CHECK constraint restricting the label format. Adding a constraint here
+--   would require a validation scan over live data and creates an additional
+--   failure mode for the rotation window. The label is a free-form text
+--   version string today; enforce a format only if a third key version is
+--   ever introduced.
+--
+-- IDEMPOTENT:
+--   Re-running is a no-op; `DROP DEFAULT` succeeds whether or not a default
+--   is currently set.
+--
+-- CHANGELOG NOTE:
+--   The `drizzle` journal entry for this migration is deliberately NOT
+--   included in this change. 0018 is awaiting production approval, and the
+--   approved candidate journal contains exactly 20 entries. Appending 0019
+--   would mutate that reviewed artifact. The journal entry must be added in a
+--   separate, separately-approved change that runs after 0018.
+--
+-- Rollback: see SECURITY-ROTATION-ROLLBACK.md. Re-adding the default is safe
+--   only if no row has been re-keyed to a non-'v1' version; the application
+--   re-adds the explicit keyVersion on every insert, so the default is a
+--   safety net rather than a behaviour dependency.
+--
+-- Tested first against:
+--   hris_security_rotation_staging
+
+ALTER TABLE face_enrollment_templates
+  ALTER COLUMN key_version DROP DEFAULT;

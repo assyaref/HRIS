@@ -149,9 +149,21 @@ function renderInput(spec: CustomFieldSpec): React.ReactNode {
 export function CustomFieldsSection({
   employeeId,
   specs,
+  title = "Custom Fields",
+  description = "Fields below come from your organization's active custom field definitions.",
+  emptyMessage = "No active custom fields are defined for your organization yet. An administrator can create fields in Settings → Employee Fields — they appear here and in the Excel template automatically.",
 }: {
   employeeId: string;
   specs: CustomFieldSpec[];
+  /**
+   * Metadata-driven overrides (Employee Custom Tabs 2.0): a custom tab renders
+   * this same form with its own name/description from `employee_custom_tabs`,
+   * so no per-tab component is needed. Defaults keep the built-in tab exactly
+   * as it was.
+   */
+  title?: string;
+  description?: string;
+  emptyMessage?: string;
 }) {
   const [state, formAction] = useActionState(
     updateEmployeeCustomDataAction.bind(null, employeeId),
@@ -166,12 +178,10 @@ export function CustomFieldsSection({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Custom Fields</CardTitle>
+          <CardTitle>{title}</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
-          No active custom fields are defined for your organization yet. An
-          administrator can create fields in Settings → Employee Fields —
-          they appear here and in the Excel template automatically.
+          {emptyMessage}
         </CardContent>
       </Card>
     );
@@ -180,11 +190,8 @@ export function CustomFieldsSection({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Custom Fields</CardTitle>
-        <CardDescription>
-          Fields below come from your organization&apos;s active custom field
-          definitions.
-        </CardDescription>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent>
         <form action={formAction} noValidate className="space-y-4">

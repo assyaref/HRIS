@@ -228,6 +228,7 @@ test("plan: repeated bank rows collapse by account identity", () => {
   const first = deduplicateSecondaryRows([
     {
       sheet: "Bank Accounts",
+      isCustomData: false,
       rowNumber: 2,
       employeeNumber: "EMP-1",
       cells: {
@@ -240,6 +241,7 @@ test("plan: repeated bank rows collapse by account identity", () => {
     },
     {
       sheet: "Bank Accounts",
+      isCustomData: false,
       rowNumber: 3,
       employeeNumber: "EMP-1",
       cells: {

@@ -4,7 +4,8 @@ import "server-only";
  * Safe, environment-only configuration access.
  *
  * Rules enforced by this module:
- * - Secrets are never hardcoded; they come from the process environment only.
+ * - Secrets are never hardcoded; they come from the process environment or
+ *   from a systemd credential (see `lib/config/credentials.ts`).
  * - Values are read lazily (per call) and are never bundled to the client.
  * - Only variables prefixed with `NEXT_PUBLIC_` are safe for client components;
  *   every other variable must stay on the server. This file is marked
@@ -14,7 +15,25 @@ import "server-only";
  * `.env.example` (shape only — real values live in the platform secret store).
  */
 
+import { resolveSecret, type SecretKey } from "./credentials";
+
+/**
+ * Every secret is routed through one indirection so that moving it from
+ * `EnvironmentFile=` to a systemd credential requires no call-site change.
+ * `read()` is the single place this policy is applied.
+ */
+const SECRET_ENV_VARS: Record<string, SecretKey> = {
+  DATABASE_URL: "databaseUrl",
+  FACE_TEMPLATE_ENCRYPTION_KEY: "faceTemplateEncryptionKey",
+  FACE_TEMPLATE_ENCRYPTION_KEY_PREVIOUS: "faceTemplatePreviousKey",
+};
+
 function read(name: string): string | undefined {
+  const secretKey = SECRET_ENV_VARS[name];
+  if (secretKey) {
+    // Credential first, legacy environment variable second.
+    return resolveSecret(secretKey);
+  }
   const value = process.env[name];
   return typeof value === "string" && value.trim() !== "" ? value : undefined;
 }

@@ -11,7 +11,8 @@ import path from "node:path";
  * persisted in the database is the path RELATIVE to the private root
  * (`<organization_id>/<employee_id>/<uuid>.<ext>`): both id components come
  * from the authenticated session (never the browser) and the file name is
- * server-generated. Every resolver passes through `resolveWithinRoot`, so a tampered key can
+ * server-generated. Every resolver passes through `resolveWithinRoot`,
+ * mirroring `lib/announcements/attachment-storage.ts`, so a tampered key can
  * never escape the private root. Bytes are stored verbatim after the
  * upload guard has verified extension + MIME + size. Files are served ONLY by
  * the authenticated download route (`app/api/employees/[employeeId]/

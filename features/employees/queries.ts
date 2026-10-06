@@ -11,15 +11,46 @@ import {
   sql,
   type SQL,
 } from "drizzle-orm";
+import type { AnyPgColumn, AnyPgTable } from "drizzle-orm/pg-core";
+import { alias } from "drizzle-orm/pg-core";
 
 import { db } from "@/db";
 import {
+  announcementRecipients,
+  attendanceEvents,
+  attendanceRecords,
+  employeeAddresses,
+  employeeBankAccounts,
   employeeCustomFieldValues,
+  employeeDependents,
+  employeeDocuments,
+  employeeEducations,
+  employeeEmploymentHistory,
+  employeeFaceEnrollments,
+  employeeInsurances,
+  employeePayrollComponents,
+  employeeProjectAssignments,
   employees,
+  faceEnrollmentTemplates,
+  leaveBalances,
+  leaveRequests,
   organizations,
+  payrollItems,
+  payslipDocumentVersions,
+  payslipDocuments,
+  payslips,
+  permissionRequests,
   users,
+  workLocations,
 } from "@/db/schema";
 import type { EmployeeStatus } from "./constants";
+import {
+  EMPLOYEE_DELETABLE_DEPENDENCY_LABELS,
+  EMPLOYEE_PROTECTED_DEPENDENCY_LABELS,
+  employeeDeleteDependencyDisposition,
+  type EmployeeDeleteDependency,
+  type EmployeeDeleteDependencyLabel,
+} from "./permanent-delete-policy";
 import type { EmployeeListSearchInput } from "./schemas";
 import type { CustomFieldFilter } from "@/features/employee-fields/filtering";
 
@@ -39,6 +70,8 @@ export interface EmployeeListItem {
   lastName: string;
   email: string | null;
   phone: string | null;
+  department: string | null;
+  position: string | null;
   employmentStatus: EmployeeStatus;
   hireDate: Date | null;
   linkedUserEmail: string | null;
@@ -236,6 +269,8 @@ export async function listEmployeesByOrganization(
         lastName: employees.lastName,
         email: employees.email,
         phone: employees.phone,
+        department: employees.department,
+        position: employees.position,
         employmentStatus: employees.employmentStatus,
         hireDate: employees.hireDate,
         linkedUserEmail: users.email,
@@ -296,6 +331,8 @@ export async function listEmployeesFlatByOrganization(
       lastName: employees.lastName,
       email: employees.email,
       phone: employees.phone,
+      department: employees.department,
+      position: employees.position,
       employmentStatus: employees.employmentStatus,
       hireDate: employees.hireDate,
       linkedUserEmail: users.email,
@@ -333,6 +370,8 @@ export async function getEmployeeInOrganization(
       lastName: employees.lastName,
       email: employees.email,
       phone: employees.phone,
+      department: employees.department,
+      position: employees.position,
       employmentStatus: employees.employmentStatus,
       hireDate: employees.hireDate,
       linkedUserEmail: users.email,
@@ -368,6 +407,8 @@ function toListItem(row: {
   lastName: string;
   email: string | null;
   phone: string | null;
+  department: string | null;
+  position: string | null;
   employmentStatus: string;
   hireDate: Date | null;
   linkedUserEmail: string | null;
@@ -380,6 +421,8 @@ function toListItem(row: {
     lastName: row.lastName,
     email: row.email,
     phone: row.phone,
+    department: row.department,
+    position: row.position,
     employmentStatus: row.employmentStatus as EmployeeStatus,
     hireDate: row.hireDate,
     linkedUserEmail: row.linkedUserEmail,
@@ -503,3 +546,470 @@ export async function getEmployeeByUserId(
   return row;
 }
 
+/**
+ * Rich self-service profile for the signed-in employee.
+ *
+ * Resolved strictly from the linked user id + organization, so an employee can
+ * only ever read their own record. This is additive to (and does not replace)
+ * `getEmployeeByUserId`, which remains the slim resolver used by guards.
+ */
+export interface EmployeeSelfProfile {
+  id: string;
+  organizationId: string;
+  userId: string | null;
+  employeeNumber: string;
+  firstName: string;
+  lastName: string;
+  nickname: string | null;
+  email: string | null;
+  phone: string | null;
+  position: string | null;
+  department: string | null;
+  division: string | null;
+  employmentStatus: string;
+  hireDate: Date | null;
+  profilePhotoUrl: string | null;
+  workLocationName: string | null;
+  managerName: string | null;
+}
+
+export async function getEmployeeSelfProfile(
+  userId: string,
+  organizationId: string
+): Promise<EmployeeSelfProfile | null> {
+  const managers = alias(employees, "managers");
+
+  const rows = await db
+    .select({
+      id: employees.id,
+      organizationId: employees.organizationId,
+      userId: employees.userId,
+      employeeNumber: employees.employeeNumber,
+      firstName: employees.firstName,
+      lastName: employees.lastName,
+      nickname: employees.nickname,
+      email: employees.email,
+      phone: employees.phone,
+      position: employees.position,
+      department: employees.department,
+      division: employees.division,
+      employmentStatus: employees.employmentStatus,
+      hireDate: employees.hireDate,
+      profilePhotoUrl: employees.profilePhotoUrl,
+      workLocationName: workLocations.name,
+      managerName: sql<
+        string | null
+      >`nullif(concat_ws(' ', ${managers.firstName}, ${managers.lastName}), '')`,
+    })
+    .from(employees)
+    .leftJoin(workLocations, eq(workLocations.id, employees.workLocationId))
+    .leftJoin(managers, eq(managers.id, employees.managerId))
+    .where(
+      and(
+        eq(employees.userId, userId),
+        eq(employees.organizationId, organizationId)
+      )
+    )
+    .limit(1);
+
+  return rows[0] ?? null;
+}
+
+/**
+ * Transaction handle used by the permanent-deletion scan. Derived from the
+ * `db.transaction` signature so the scan can run INSIDE the deletion
+ * transaction (the dependency counts then describe the same snapshot the
+ * DELETE acts on) without importing driver-specific generics.
+ */
+type HrisTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** One employee-scoped table probed for rows that would block a deletion. */
+interface EmployeeDeleteDependencySource {
+  table: AnyPgTable;
+  employeeIdColumn: AnyPgColumn;
+  organizationIdColumn: AnyPgColumn;
+}
+
+/**
+ * Every table that references `employees`, grouped into the operator-facing
+ * categories of `permanent-delete-policy`.
+ *
+ * In production none of these employee foreign keys is `CASCADE` (24
+ * `RESTRICT`, 2 self-referencing `SET NULL`), so a single remaining row makes
+ * the `DELETE` fail. The scan exists to count them before the statement is
+ * issued, to classify each category as protected or deletable, and to describe
+ * exactly which modules still hold the employee.
+ *
+ * Each category's disposition is derived from the policy module rather than
+ * repeated here, so the scan can never disagree with the decision layer.
+ */
+const EMPLOYEE_DELETE_DEPENDENCY_SOURCES: readonly {
+  label: EmployeeDeleteDependencyLabel;
+  tables: readonly EmployeeDeleteDependencySource[];
+}[] = [
+  {
+    label: "Attendance",
+    tables: [
+      {
+        table: attendanceRecords,
+        employeeIdColumn: attendanceRecords.employeeId,
+        organizationIdColumn: attendanceRecords.organizationId,
+      },
+      {
+        table: attendanceEvents,
+        employeeIdColumn: attendanceEvents.employeeId,
+        organizationIdColumn: attendanceEvents.organizationId,
+      },
+    ],
+  },
+  {
+    label: "Leave",
+    tables: [
+      {
+        table: leaveBalances,
+        employeeIdColumn: leaveBalances.employeeId,
+        organizationIdColumn: leaveBalances.organizationId,
+      },
+      {
+        table: leaveRequests,
+        employeeIdColumn: leaveRequests.employeeId,
+        organizationIdColumn: leaveRequests.organizationId,
+      },
+    ],
+  },
+  {
+    label: "Permission",
+    tables: [
+      {
+        table: permissionRequests,
+        employeeIdColumn: permissionRequests.employeeId,
+        organizationIdColumn: permissionRequests.organizationId,
+      },
+    ],
+  },
+  {
+    label: "Payroll",
+    tables: [
+      {
+        table: employeePayrollComponents,
+        employeeIdColumn: employeePayrollComponents.employeeId,
+        organizationIdColumn: employeePayrollComponents.organizationId,
+      },
+      {
+        table: payrollItems,
+        employeeIdColumn: payrollItems.employeeId,
+        organizationIdColumn: payrollItems.organizationId,
+      },
+    ],
+  },
+  {
+    label: "Payslip",
+    tables: [
+      {
+        table: payslips,
+        employeeIdColumn: payslips.employeeId,
+        organizationIdColumn: payslips.organizationId,
+      },
+      {
+        table: payslipDocuments,
+        employeeIdColumn: payslipDocuments.employeeId,
+        organizationIdColumn: payslipDocuments.organizationId,
+      },
+      {
+        table: payslipDocumentVersions,
+        employeeIdColumn: payslipDocumentVersions.employeeId,
+        organizationIdColumn: payslipDocumentVersions.organizationId,
+      },
+    ],
+  },
+  {
+    label: "Documents",
+    tables: [
+      {
+        table: employeeDocuments,
+        employeeIdColumn: employeeDocuments.employeeId,
+        organizationIdColumn: employeeDocuments.organizationId,
+      },
+    ],
+  },
+  {
+    label: "Employment history",
+    tables: [
+      {
+        table: employeeEmploymentHistory,
+        employeeIdColumn: employeeEmploymentHistory.employeeId,
+        organizationIdColumn: employeeEmploymentHistory.organizationId,
+      },
+    ],
+  },
+  {
+    label: "Face ID",
+    tables: [
+      {
+        table: employeeFaceEnrollments,
+        employeeIdColumn: employeeFaceEnrollments.employeeId,
+        organizationIdColumn: employeeFaceEnrollments.organizationId,
+      },
+      {
+        table: faceEnrollmentTemplates,
+        employeeIdColumn: faceEnrollmentTemplates.employeeId,
+        organizationIdColumn: faceEnrollmentTemplates.organizationId,
+      },
+    ],
+  },
+  {
+    label: "Projects",
+    tables: [
+      {
+        table: employeeProjectAssignments,
+        employeeIdColumn: employeeProjectAssignments.employeeId,
+        organizationIdColumn: employeeProjectAssignments.organizationId,
+      },
+    ],
+  },
+  {
+    label: "Other related records",
+    tables: [
+      {
+        table: employeeAddresses,
+        employeeIdColumn: employeeAddresses.employeeId,
+        organizationIdColumn: employeeAddresses.organizationId,
+      },
+      {
+        table: employeeInsurances,
+        employeeIdColumn: employeeInsurances.employeeId,
+        organizationIdColumn: employeeInsurances.organizationId,
+      },
+      {
+        table: employeeBankAccounts,
+        employeeIdColumn: employeeBankAccounts.employeeId,
+        organizationIdColumn: employeeBankAccounts.organizationId,
+      },
+      {
+        table: employeeDependents,
+        employeeIdColumn: employeeDependents.employeeId,
+        organizationIdColumn: employeeDependents.organizationId,
+      },
+      {
+        table: employeeEducations,
+        employeeIdColumn: employeeEducations.employeeId,
+        organizationIdColumn: employeeEducations.organizationId,
+      },
+      {
+        table: employeeCustomFieldValues,
+        employeeIdColumn: employeeCustomFieldValues.employeeId,
+        organizationIdColumn: employeeCustomFieldValues.organizationId,
+      },
+      {
+        table: announcementRecipients,
+        employeeIdColumn: announcementRecipients.employeeId,
+        organizationIdColumn: announcementRecipients.organizationId,
+      },
+    ],
+  },
+];
+
+/**
+ * The explicit delete plan: DELETABLE categories only, each expanded into the
+ * concrete tables to clear.
+ *
+ * Deletion order matters and is fixed here, not derived at call time:
+ * `face_enrollment_templates` is deleted BEFORE `employee_face_enrollments`
+ * because the template row carries its own `ON DELETE CASCADE` to the
+ * enrollment. Emitting the child statement explicitly means the cascade is
+ * never relied upon — if the plan is ever edited, the parent delete fails
+ * loudly instead of quietly removing extra rows.
+ *
+ * Every table here is employee-scoped and organization-scoped, and none of them
+ * is retention-bound. A category that is PROTECTED must never appear in this
+ * list; the guard in `assertEmployeeDeletePlanMatchesPolicy` enforces that.
+ */
+const EMPLOYEE_DELETABLE_DELETE_PLAN: readonly {
+  label: EmployeeDeleteDependencyLabel;
+  tables: readonly EmployeeDeleteDependencySource[];
+}[] = EMPLOYEE_DELETE_DEPENDENCY_SOURCES.filter(
+  (group) =>
+    employeeDeleteDependencyDisposition(group.label) === "deletable"
+).map((group) => ({
+  label: group.label,
+  tables:
+    group.label === "Face ID"
+      ? // Child first: see the order note above.
+        [group.tables[1], group.tables[0]].filter(
+          (source): source is EmployeeDeleteDependencySource =>
+            source !== undefined
+        )
+      : group.tables,
+}));
+
+/**
+ * Fail fast when the delete plan and the policy classification disagree.
+ *
+ * This runs at module load, so a category that becomes protected (or a new
+ * table added to a protected category) cannot silently stay in the plan that
+ * actually issues DELETE statements.
+ */
+function assertEmployeeDeletePlanMatchesPolicy(): void {
+  const planned = new Set(
+    EMPLOYEE_DELETABLE_DELETE_PLAN.map((entry) => entry.label)
+  );
+  for (const label of EMPLOYEE_PROTECTED_DEPENDENCY_LABELS) {
+    if (planned.has(label)) {
+      throw new Error(
+        `Employee permanent delete plan must not delete protected category "${label}".`
+      );
+    }
+  }
+  for (const label of EMPLOYEE_DELETABLE_DEPENDENCY_LABELS) {
+    if (!planned.has(label)) {
+      throw new Error(
+        `Employee permanent delete plan is missing deletable category "${label}".`
+      );
+    }
+  }
+  for (const entry of EMPLOYEE_DELETABLE_DELETE_PLAN) {
+    if (entry.tables.length === 0) {
+      throw new Error(
+        `Employee permanent delete plan has no tables for "${entry.label}".`
+      );
+    }
+  }
+}
+
+assertEmployeeDeletePlanMatchesPolicy();
+
+/** Count rows of one employee-scoped table, always scoped to the organization. */
+async function countEmployeeScopedRows(
+  tx: HrisTransaction,
+  source: EmployeeDeleteDependencySource,
+  employeeId: string,
+  organizationId: string
+): Promise<number> {
+  const rows = await tx
+    .select({ count: sql<number>`count(*)::int` })
+    .from(source.table)
+    .where(
+      and(
+        eq(source.employeeIdColumn, employeeId),
+        eq(source.organizationIdColumn, organizationId)
+      )
+    );
+  return rows[0]?.count ?? 0;
+}
+
+/**
+ * Count every record that still references an employee, grouped by category.
+ *
+ * Callers MUST pass the deletion transaction (or a read-only transaction), so
+ * the counts and the subsequent `DELETE` share one snapshot. Returns one entry
+ * per category (including zeros) in the canonical display order; the decision
+ * layer drops the zero entries.
+ *
+ * Each entry carries the policy `disposition`, so a consumer can never infer
+ * "deletable" from the absence of a protected marker.
+ *
+ * `audit_logs` is intentionally not counted: it is append-only, references
+ * entities by text id and has no foreign key, so it never blocks a deletion
+ * and is never cascaded.
+ */
+export async function listEmployeeDeletionDependencies(
+  tx: HrisTransaction,
+  employeeId: string,
+  organizationId: string
+): Promise<EmployeeDeleteDependency[]> {
+  const counts = await Promise.all(
+    EMPLOYEE_DELETE_DEPENDENCY_SOURCES.map(async (group) => {
+      const tableCounts = await Promise.all(
+        group.tables.map((source) =>
+          countEmployeeScopedRows(tx, source, employeeId, organizationId)
+        )
+      );
+      const count = tableCounts.reduce((total, value) => total + value, 0);
+      return {
+        label: group.label,
+        count,
+        disposition: employeeDeleteDependencyDisposition(group.label),
+      } satisfies EmployeeDeleteDependency;
+    })
+  );
+
+  // One implicit relationship has no dedicated table row but is still affected by
+  // the delete: direct reports, whose `manager_id` is nulled by the
+  // self-referencing SET NULL foreign key. Those employees are NOT deleted — they
+  // only lose their manager — so they are deliberately kept OUT of the counted
+  // categories: the dialog renders the deletable categories as "will be deleted",
+  // and folding a retained row into that total would tell the operator a record
+  // is destroyed when it is not. `countEmployeeDirectReports` exposes the figure
+  // separately so the UI can describe the actual effect.
+  // (A linked login account is not a dependent of the employee:
+  // `employees.user_id` points at `users`, so the account survives; the decision
+  // layer only blocks the self-linked case.)
+  return counts;
+}
+
+/**
+ * Direct reports of an employee, which survive the deletion with a null manager.
+ *
+ * Reported for display only. These rows are never issued a DELETE: the
+ * self-referencing `ON DELETE SET NULL` foreign key does the work, so the count
+ * must not be presented as a removal.
+ */
+export async function countEmployeeDirectReports(
+  tx: HrisTransaction,
+  employeeId: string,
+  organizationId: string
+): Promise<number> {
+  const rows = await tx
+    .select({ count: sql<number>`count(*)::int` })
+    .from(employees)
+    .where(
+      and(
+        eq(employees.organizationId, organizationId),
+        eq(employees.managerId, employeeId)
+      )
+    );
+  return rows[0]?.count ?? 0;
+}
+
+/**
+ * Explicitly delete the DELETABLE related records of one employee.
+ *
+ * MUST be called inside the deletion transaction, immediately before the
+ * employee row itself is removed, and only after
+ * `evaluatePermanentEmployeeDeletion` has returned `allowed: true` — which is
+ * what guarantees no protected row is touched (the plan contains no protected
+ * table, and the `RESTRICT` foreign keys remain the backstop).
+ *
+ * Every statement is scoped by BOTH `employee_id` and `organization_id`, so a
+ * row that belongs to another tenant can never be removed.
+ *
+ * Returns the number of rows removed per category, for the audit summary.
+ */
+export async function deleteEmployeeDeletableRecords(
+  tx: HrisTransaction,
+  employeeId: string,
+  organizationId: string
+): Promise<Record<string, number>> {
+  const removedPerCategory: Record<string, number> = {};
+
+  for (const entry of EMPLOYEE_DELETABLE_DELETE_PLAN) {
+    let removedForCategory = 0;
+    for (const source of entry.tables) {
+      const removed = await tx
+        .delete(source.table)
+        .where(
+          and(
+            eq(source.employeeIdColumn, employeeId),
+            eq(source.organizationIdColumn, organizationId)
+          )
+        )
+        .returning({ id: sql<string>`gen_random_uuid()::text` });
+      removedForCategory += removed.length;
+    }
+    if (removedForCategory > 0) {
+      removedPerCategory[entry.label] = removedForCategory;
+    }
+  }
+
+  return removedPerCategory;
+}
