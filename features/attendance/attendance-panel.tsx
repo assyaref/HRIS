@@ -29,6 +29,10 @@ import {
   NETWORK_REQUIRED_MESSAGE,
   isBrowserOffline,
 } from "./mobile-compat";
+import {
+  isAttendanceSubmitEnabled,
+  type AttendancePanelMode,
+} from "./panel-state";
 import type { AttendanceOption } from "./queries";
 
 type LocationSelection =
@@ -36,7 +40,7 @@ type LocationSelection =
   | { status: "denied" | "unavailable" | "timeout" };
 
 export interface AttendancePanelProps {
-  mode: "check_in" | "check_out";
+  mode: AttendancePanelMode;
   /** Eligible project/work-location pairs (check-in only). */
   options: AttendanceOption[];
   disabled?: boolean;
@@ -199,6 +203,14 @@ export function AttendancePanel({
 
   const isCheckIn = mode === "check_in";
   const actionLabel = isCheckIn ? "Check in" : "Check out";
+  const submitEnabled = isAttendanceSubmitEnabled({
+    mode,
+    disabled,
+    pending,
+    hasLocation: Boolean(location),
+    hasCurrentOption: Boolean(currentOption),
+    hasPhoto: Boolean(photo),
+  });
 
   /* RENDER */
   return (
@@ -307,13 +319,7 @@ export function AttendancePanel({
           <Button
             type="button"
             onClick={submit}
-            disabled={
-              disabled ||
-              pending ||
-              !location ||
-              !currentOption ||
-              (isCheckIn && !photo)
-            }
+            disabled={!submitEnabled}
           >
             {pending ? "Processing…" : actionLabel}
           </Button>
