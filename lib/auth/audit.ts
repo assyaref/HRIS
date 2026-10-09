@@ -52,6 +52,8 @@ export type PermissionAuditAction =
 
 export type PayrollAuditAction =
   | "payroll.period.created"
+  | "payroll.updated"
+  | "payroll.deleted"
   | "payroll.calculated"
   | "payroll.submitted"
   | "payroll.approved"
@@ -61,6 +63,7 @@ export type PayrollAuditAction =
   | "payslip.generated"
   | "payslip.published"
   | "payslip.document.uploaded"
+  | "payslip.document.replaced"
   | "payslip.document.generated"
   | "payslip.document.viewed"
   | "payslip.revoked"
