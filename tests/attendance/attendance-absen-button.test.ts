@@ -67,6 +67,40 @@ describe("ABSEN bottom-navigation button", () => {
     assert.equal(bottomNav.includes("canAttendance ? ("), true);
     assert.equal(bottomNav.includes('aria-label="ABSEN tidak tersedia"'), true);
   });
+
+  it("keeps the unavailable control non-navigating (never a Link)", () => {
+    const ternaryIndex = bottomNav.indexOf("canAttendance ? (");
+    const elseIndex = bottomNav.indexOf(") : (", ternaryIndex);
+    assert.ok(
+      ternaryIndex > 0 && elseIndex > ternaryIndex,
+      "unavailable ABSEN branch not found"
+    );
+    // Slice strictly INSIDE the `) : (` fallback branch so the enabled
+    // <FloatingAttendanceButton> element is never part of the window.
+    const unavailableBranch = bottomNav.slice(
+      elseIndex,
+      bottomNav.indexOf("{notificationCount > 0 ?")
+    );
+    assert.equal(unavailableBranch.includes("<button"), true);
+    assert.equal(unavailableBranch.includes('type="button"'), true);
+    assert.equal(unavailableBranch.includes('aria-disabled="true"'), true);
+    assert.equal(unavailableBranch.includes("<Link"), false);
+    assert.equal(
+      unavailableBranch.includes("FloatingAttendanceButton"),
+      false
+    );
+  });
+
+  it("explains WHY attendance is unavailable when tapped", () => {
+    assert.equal(
+      bottomNav.includes("ABSEN_UNAVAILABLE_NOTICE"),
+      true,
+      "the unavailable ABSEN control must surface an explanation"
+    );
+    assert.match(bottomNav, /role="status"/);
+    assert.match(bottomNav, /Hubungi administrator/);
+    assert.match(bottomNav, /aria-expanded=\{absenNotice\}/);
+  });
 });
 
 describe("ABSEN wiring in the authenticated shell", () => {
@@ -134,5 +168,18 @@ describe("attendance panel loading, error and double-submit handling", () => {
 
   it("does not introduce liveness detection into the flow", () => {
     assert.equal(/liveness/i.test(panel), false);
+  });
+
+  it("does not render the dev-phase identity-verification pre-flight", () => {
+    // The ABSEN flow must not look like a Face ID step: the camera
+    // pre-flight block contributed nothing to the server decision and is
+    // not required for submission. Presence evidence stays with the
+    // required attendance photo capture (check-in only).
+    assert.equal(
+      panel.includes("Identity verification is not configured"),
+      false
+    );
+    assert.equal(panel.includes("<AttendanceCamera"), false);
+    assert.equal(panel.includes("AttendancePhotoCapture"), true);
   });
 });

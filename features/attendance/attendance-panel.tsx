@@ -15,7 +15,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { checkInAction, checkOutAction } from "./actions";
-import { AttendanceCamera } from "./attendance-camera";
 import {
   AttendancePhotoCapture,
   ATTENDANCE_PHOTO_CAPTURE_FILENAME,
@@ -293,15 +292,6 @@ export function AttendancePanel({
             />
           </div>
         ) : null}
-
-        <div className="space-y-2">
-          <Label>Identity verification</Label>
-          <p className="text-sm text-muted-foreground">
-            Identity verification is not configured. Opening a camera is not
-            treated as proof of identity in Phase 6.
-          </p>
-          <AttendanceCamera />
-        </div>
 
         <div className="space-y-2">
           <Label htmlFor="attendance-notes">Notes (optional)</Label>

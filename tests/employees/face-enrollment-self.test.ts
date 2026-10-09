@@ -357,6 +357,11 @@ describe("self-service page + panel never expose an employee selector", () => {
   it("the page shows the safe unlinked message when there is no mapping", () => {
     assert.match(pageSource, /FACE_SELF_ENROLLMENT_UNLINKED_MESSAGE/);
   });
+
+  it("the unlinked state tells the employee who can fix the mapping", () => {
+    assert.match(pageSource, /UNLINKED_GUIDANCE/);
+    assert.match(pageSource, /Hubungi administrator/);
+  });
 });
 
 // CHUNK-END

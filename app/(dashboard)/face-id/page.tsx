@@ -7,6 +7,14 @@ import { getFaceEnrollmentSummaryInOrganization } from "@/features/employees/fac
 import { SelfFaceEnrollmentPanel } from "@/features/employees/face-enrollment-self-panel";
 import { isFaceRecognitionConfigured } from "@/lib/attendance/face-recognition";
 
+/**
+ * Guidance shared by the "no organization" and "no linked employee" states so
+ * the page never dead-ends: the mapping is an administrator action, so the
+ * employee is told exactly who can fix it.
+ */
+const UNLINKED_GUIDANCE =
+  "Akun perlu ditautkan ke data karyawan oleh administrator sebelum Face ID dapat digunakan. Hubungi administrator atau HR Anda.";
+
 export const dynamic = "force-dynamic";
 
 export default async function FaceIdPage() {
@@ -19,6 +27,7 @@ export default async function FaceIdPage() {
         <p className="text-sm text-muted-foreground">
           Akun belum memiliki organisasi.
         </p>
+        <p className="text-sm text-muted-foreground">{UNLINKED_GUIDANCE}</p>
       </div>
     );
   }
@@ -34,6 +43,7 @@ export default async function FaceIdPage() {
         <p className="text-sm text-muted-foreground">
           {FACE_SELF_ENROLLMENT_UNLINKED_MESSAGE}
         </p>
+        <p className="text-sm text-muted-foreground">{UNLINKED_GUIDANCE}</p>
       </div>
     );
   }

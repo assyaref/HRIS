@@ -2,11 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 
 import { HrisIcon, type HrisIconName } from "@/components/layout/icons";
 import { cn } from "@/lib/utils/cn";
 
 import { FloatingAttendanceButton } from "./floating-attendance-button";
+
+/**
+ * Shown when an account without `attendance.view` taps the unavailable ABSEN
+ * action. The control stays non-navigating (the server route guard is the
+ * authority) but must explain WHY attendance is off instead of silently
+ * ignoring the tap.
+ */
+const ABSEN_UNAVAILABLE_NOTICE =
+  "Presensi belum tersedia untuk akun Anda. Hubungi administrator atau HR untuk mengaktifkan izin presensi.";
 
 interface NavEntry {
   key: string;
@@ -69,6 +79,7 @@ export function EmployeeBottomNavigation({
 }) {
   const pathname = usePathname();
   const presensiActive = pathname === "/attendance";
+  const [absenNotice, setAbsenNotice] = useState(false);
 
   return (
     <nav
@@ -84,18 +95,32 @@ export function EmployeeBottomNavigation({
           />
         ))}
 
-        <div className="flex items-start justify-center">
+        <div className="relative flex items-start justify-center">
           {canAttendance ? (
             <FloatingAttendanceButton href="/attendance" active={presensiActive} />
           ) : (
-            <div
-              aria-disabled="true"
-              aria-label="ABSEN tidak tersedia"
-              className="emp-gradient -mt-7 flex size-16 flex-col items-center justify-center gap-0.5 self-center rounded-full border-4 border-white text-white opacity-50 shadow-[0_14px_30px_-10px_rgba(22,119,232,0.85)] ring-1 ring-cyan-200/80"
-            >
-              <HrisIcon name="face" className="size-7" />
-              <span className="text-[10px] font-semibold tracking-wide">ABSEN</span>
-            </div>
+            <>
+              <button
+                type="button"
+                aria-label="ABSEN tidak tersedia"
+                aria-disabled="true"
+                aria-expanded={absenNotice}
+                title="Presensi tidak tersedia untuk akun Anda"
+                onClick={() => setAbsenNotice((visible) => !visible)}
+                className="emp-gradient -mt-7 flex size-16 flex-col items-center justify-center gap-0.5 self-center rounded-full border-4 border-white text-white opacity-50 shadow-[0_14px_30px_-10px_rgba(22,119,232,0.85)] ring-1 ring-cyan-200/80 transition-transform focus-visible:ring-2 focus-visible:ring-[#1677e8] focus-visible:ring-offset-2 focus-visible:outline-none active:scale-95"
+              >
+                <HrisIcon name="face" className="size-7" />
+                <span className="text-[10px] font-semibold tracking-wide">ABSEN</span>
+              </button>
+              {absenNotice ? (
+                <p
+                  role="status"
+                  className="absolute bottom-full left-1/2 z-50 mb-2 w-60 -translate-x-1/2 rounded-2xl bg-slate-900/95 px-4 py-2.5 text-left text-xs font-medium leading-relaxed text-white shadow-xl"
+                >
+                  {ABSEN_UNAVAILABLE_NOTICE}
+                </p>
+              ) : null}
+            </>
           )}
         </div>
 
