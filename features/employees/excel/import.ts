@@ -257,17 +257,124 @@ export function buildExcelUpdatePatch(
   return patch;
 }
 
-/** Normalize any cell value (including Excel dates/numbers) to trimmed text. */
-export function cellText(value: unknown): string {
+/**
+ * Characters that are invisible to a human reading the workbook but are NOT
+ * removed by `String.prototype.trim()`: zero-width space/joiners, BOM and the
+ * other "format" code points \uFEFF/\u200B-\u200F. A cell that only differs
+ * from a valid value by one of these must not be rejected by the validators.
+ */
+const INVISIBLE_CHARS = /[\u200b-\u200f\u2028-\u202f\u2060\ufeff]/g;
+
+/**
+ * Resolve an ExcelJS cell value to its plain text, WITHOUT trimming.
+ *
+ * ExcelJS does not always hand back a string. A cell can carry a hyperlink
+ * (`{ text, hyperlink }`), rich text (`{ richText: [{ text }, …] }`), a formula
+ * (`{ formula, result }`) or an error (`{ error }`). The old implementation
+ * coerced those objects with `String(value)`, which yields the literal
+ * `"[object Object]"` — the exact value that made a visibly-correct email such
+ * as `121@gmail.com` fail the email validator when Excel had auto-formatted the
+ * cell as a `mailto:` hyperlink. Resolve the nested shape instead, preferring
+ * the human-visible text, then the cached formula result.
+ */
+function excelValueToString(value: unknown): string {
   if (value == null) return "";
   if (value instanceof Date) {
     return isNaN(value.getTime()) ? "" : value.toISOString().slice(0, 10);
   }
-  if (typeof value === "number") {
-    return Number.isInteger(value) ? String(value) : String(value);
-  }
+  if (typeof value === "number") return String(value);
   if (typeof value === "boolean") return value ? "true" : "false";
-  return String(value).trim();
+  if (typeof value === "string") return value;
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    // Rich text: concatenate every run's text.
+    if (Array.isArray(record.richText)) {
+      return record.richText
+        .map((run) => excelValueToString((run as { text?: unknown })?.text))
+        .join("");
+    }
+    // Hyperlink cell: the displayed text is the value (`hyperlink` is the URL).
+    if ("text" in record) return excelValueToString(record.text);
+    // Formula / shared-formula cell: fall back to the cached result.
+    if ("result" in record) return excelValueToString(record.result);
+    // Error cell (e.g. #N/A, #REF!): no usable text.
+    if ("error" in record) return "";
+  }
+  // Unknown object shape: keep the old coercion as a last resort.
+  return String(value);
+}
+
+/** Normalize any cell value (including Excel dates/numbers) to trimmed text. */
+export function cellText(value: unknown): string {
+  return excelValueToString(value)
+    .replace(INVISIBLE_CHARS, "")
+    .trim();
+}
+
+/**
+ * Safe, non-PII diagnosis of how one raw cell value was parsed.
+ *
+ * Returns only structural metadata — the JavaScript type, the trimmed length,
+ * whether surrounding whitespace or invisible/control characters were present,
+ * and a masked preview. It never returns the value itself, so it is safe to log
+ * for an email/NIK/phone column without leaking personal data.
+ */
+export interface CellDiagnosis {
+  valueType: string;
+  rawLength: number;
+  trimmedLength: number;
+  hadSurroundingWhitespace: boolean;
+  hadInvisibleCharacters: boolean;
+  /** Whitespace/control code points found, so a stubborn value can be triaged. */
+  controlCodePoints: number[];
+  /** Fully redacted: only `"***"` or a masked `***@domain` for email-shaped text. */
+  maskedPreview: string;
+}
+
+export function diagnoseCellValue(value: unknown): CellDiagnosis {
+  const raw = excelValueToString(value);
+  const strippedInvisible = raw.replace(INVISIBLE_CHARS, "");
+  const trimmed = strippedInvisible.trim();
+  const controlCodePoints: number[] = [];
+  for (const character of raw) {
+    const code = character.codePointAt(0) ?? 0;
+    if (
+      code === 0x09 ||
+      code === 0x0a ||
+      code === 0x0d ||
+      code === 0x20 ||
+      code === 0xa0 ||
+      code === 0xfeff ||
+      (code >= 0x2000 && code <= 0x200f) ||
+      (code >= 0x2028 && code <= 0x202f) ||
+      code === 0x2060
+    ) {
+      controlCodePoints.push(code);
+    }
+  }
+  const at = trimmed.lastIndexOf("@");
+  const maskedPreview =
+    at > 0 && at < trimmed.length - 1
+      ? `***@${trimmed.slice(at + 1)}`
+      : trimmed
+        ? "***"
+        : "";
+  return {
+    valueType:
+      value === null
+        ? "null"
+        : value instanceof Date
+          ? "date"
+          : Array.isArray(value)
+            ? "array"
+            : typeof value,
+    rawLength: raw.length,
+    trimmedLength: trimmed.length,
+    hadSurroundingWhitespace: raw !== raw.trim(),
+    hadInvisibleCharacters: raw !== strippedInvisible,
+    controlCodePoints,
+    maskedPreview,
+  };
 }
 
 /** Map a worksheet's header cells to canonical keys for a column contract. */

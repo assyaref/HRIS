@@ -5,6 +5,8 @@ import ExcelJS from "exceljs";
 
 import {
   analyzeExcelImport,
+  cellText,
+  diagnoseCellValue,
   EXCEL_IMPORT_MAX_ROWS,
   planExcelImport,
   type ExcelImportAnalysis,
@@ -522,4 +524,124 @@ test("excel import: full round trip export → template → analyze", async () =
   assert.equal(analysis.validEmployees.length, 1);
   assert.equal(analysis.secondary.find((r) => r.sheet === "Addresses")?.employeeNumber, "EMP-001");
   assert.equal(EMPLOYEE_SHEET_COLUMNS.length > 10, true);
+});
+
+async function analyzeEmployeesSheet(
+  addRow: (sheet: ExcelJS.Worksheet) => void
+): Promise<Awaited<ReturnType<typeof analyzeExcelImport>>> {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet(EMPLOYEE_SHEET_NAME);
+  sheet.addRow(["Employee No.", "First Name", "Last Name", "Email", "Status"]);
+  addRow(sheet);
+  const buffer = await workbook.xlsx.writeBuffer();
+  return analyzeExcelImport(buffer as unknown as ArrayBuffer, []);
+}
+
+test("excel import: a plain email is accepted and trimmed", async () => {
+  const analysis = await analyzeEmployeesSheet((sheet) => {
+    sheet.addRow(["EMP-200", "Alice", "Smith", "alice@acme.test", "active"]);
+  });
+  assert.equal(analysis.validEmployees.length, 1);
+  assert.equal(analysis.validEmployees[0]?.email, "alice@acme.test");
+});
+
+test("excel import: an email with surrounding whitespace is accepted", async () => {
+  const analysis = await analyzeEmployeesSheet((sheet) => {
+    sheet.addRow(["EMP-201", "Alice", "Smith", "   spaced@acme.test \t", "active"]);
+  });
+  assert.equal(analysis.validEmployees.length, 1);
+  assert.equal(analysis.validEmployees[0]?.email, "spaced@acme.test");
+});
+
+test("excel import: an empty email is allowed (optional field)", async () => {
+  const analysis = await analyzeEmployeesSheet((sheet) => {
+    sheet.addRow(["EMP-202", "Alice", "Smith", "", "active"]);
+  });
+  assert.equal(analysis.validEmployees.length, 1);
+  assert.equal(analysis.validEmployees[0]?.email, null);
+});
+
+test("excel import: an invalid email is still rejected", async () => {
+  const analysis = await analyzeEmployeesSheet((sheet) => {
+    sheet.addRow(["EMP-203", "Alice", "Smith", "not-an-email", "active"]);
+  });
+  assert.equal(analysis.validEmployees.length, 0);
+  assert.equal(analysis.errorEmployees[0]?.error, "Invalid email address.");
+});
+
+test("excel import: a hyperlink email cell is read from the visible text", async () => {
+  // Excel auto-formats a typed email into a `mailto:` hyperlink, so the cell
+  // value is `{ text, hyperlink }`. Regression: it must not become
+  // "[object Object]" and fail the email validator.
+  const analysis = await analyzeEmployeesSheet((sheet) => {
+    const row = sheet.addRow(["170430", "Alice", "Smith", "", "active"]);
+    row.getCell(4).value = {
+      text: "121@gmail.com",
+      hyperlink: "mailto:121@gmail.com",
+    };
+  });
+  assert.equal(analysis.validEmployees.length, 1);
+  assert.equal(analysis.validEmployees[0]?.email, "121@gmail.com");
+});
+
+test("excel import: a rich-text email cell is read from its runs", async () => {
+  const analysis = await analyzeEmployeesSheet((sheet) => {
+    const row = sheet.addRow(["EMP-205", "Alice", "Smith", "", "active"]);
+    row.getCell(4).value = {
+      richText: [{ text: "rich" }, { text: "@acme.test" }],
+    };
+  });
+  assert.equal(analysis.validEmployees.length, 1);
+  assert.equal(analysis.validEmployees[0]?.email, "rich@acme.test");
+});
+
+test("excel import: a formula email cell is read from the cached result", async () => {
+  const analysis = await analyzeEmployeesSheet((sheet) => {
+    const row = sheet.addRow(["EMP-206", "Alice", "Smith", "", "active"]);
+    row.getCell(4).value = {
+      formula: 'CONCAT("formula","@acme.test")',
+      result: "formula@acme.test",
+    };
+  });
+  assert.equal(analysis.validEmployees.length, 1);
+  assert.equal(analysis.validEmployees[0]?.email, "formula@acme.test");
+});
+
+test("excel import: cellText resolves every ExcelJS cell value shape", () => {
+  assert.equal(cellText("  plain@acme.test  "), "plain@acme.test");
+  assert.equal(
+    cellText({ text: "link@acme.test", hyperlink: "mailto:link@acme.test" }),
+    "link@acme.test"
+  );
+  assert.equal(
+    cellText({ richText: [{ text: "rich" }, { text: "@acme.test" }] }),
+    "rich@acme.test"
+  );
+  assert.equal(
+    cellText({ formula: "A1", result: "calc@acme.test" }),
+    "calc@acme.test"
+  );
+  assert.equal(cellText({ error: "#N/A" }), "");
+  assert.equal(cellText(null), "");
+  assert.equal(cellText("zero\u200bwidth@acme.test"), "zerowidth@acme.test");
+});
+
+test("excel import: diagnosis is safe and never exposes the raw value", () => {
+  const hyperlink = diagnoseCellValue({
+    text: "121@gmail.com",
+    hyperlink: "mailto:121@gmail.com",
+  });
+  assert.equal(hyperlink.valueType, "object");
+  assert.equal(hyperlink.trimmedLength, 13);
+  assert.equal(hyperlink.maskedPreview, "***@gmail.com");
+  assert.equal(hyperlink.maskedPreview.includes("121"), false);
+
+  const padded = diagnoseCellValue("  secret@acme.test \n");
+  assert.equal(padded.hadSurroundingWhitespace, true);
+  assert.ok(padded.controlCodePoints.includes(0x20));
+  assert.ok(padded.controlCodePoints.includes(0x0a));
+  assert.equal(padded.maskedPreview, "***@acme.test");
+
+  assert.equal(diagnoseCellValue("").maskedPreview, "");
+  assert.equal(diagnoseCellValue(null).valueType, "null");
 });
