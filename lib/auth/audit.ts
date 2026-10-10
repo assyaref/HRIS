@@ -28,7 +28,8 @@ export type UserAuditAction =
   | "user.created"
   | "user.updated"
   | "user.deleted"
-  | "user.password_changed";
+  | "user.password_changed"
+  | "user.password_reset";
 
 export type EmployeeAuditAction =
   | "employee.created"
@@ -123,7 +124,8 @@ export type WorkLocationAuditAction =
 export type ProjectAuditAction =
   | "project.created"
   | "project.updated"
-  | "project.status_changed";
+  | "project.status_changed"
+  | "project.deleted";
 
 export type AssignmentAuditAction =
   | "assignment.created"

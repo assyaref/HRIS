@@ -1,8 +1,11 @@
 "use server";
 
+import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { db } from "@/db";
+import { users } from "@/db/schema";
 import { authenticateUser, logoutUser } from "@/lib/auth/auth";
 import {
   createSession,
@@ -24,10 +27,10 @@ import { loginSchema } from "./login-schema";
 export interface LoginState {
   status: "idle" | "error";
   error?: string;
-  fieldErrors?: { email?: string; password?: string };
+  fieldErrors?: { identifier?: string; password?: string };
 }
 
-const GENERIC_AUTH_ERROR = "Invalid email or password.";
+const GENERIC_AUTH_ERROR = "Invalid credentials. Check your Employee Number / Email and password.";
 const LOCKED_ERROR =
   "Too many failed sign-in attempts. Try again later.";
 
@@ -134,15 +137,15 @@ export async function loginAction(
   const headerStore = await headers();
   const clientIp = resolveClientIp(headerStore);
 
-  const email = String(formData.get("email") ?? "").trim();
+  const identifier = String(formData.get("identifier") ?? "").trim();
   const password = String(formData.get("password") ?? "");
 
-  const parsed = loginSchema.safeParse({ email, password });
+  const parsed = loginSchema.safeParse({ identifier, password });
   if (!parsed.success) {
     const fieldErrors: NonNullable<LoginState["fieldErrors"]> = {};
     for (const issue of parsed.error.issues) {
       const key = issue.path[0];
-      if (key === "email" || key === "password") {
+      if (key === "identifier" || key === "password") {
         fieldErrors[key] = issue.message;
       }
     }
@@ -151,12 +154,17 @@ export async function loginAction(
 
   // Reject attempts from a throttled key before doing any work. Gated on
   // production so development flows are never locked out.
-  if (isProduction() && isLoginLocked(parsed.data.email, clientIp)) {
+  if (isProduction() && isLoginLocked(parsed.data.identifier, clientIp)) {
     return { status: "error", error: LOCKED_ERROR };
   }
 
+  let pendingPasswordChange = false;
+
   try {
-    const result = await authenticateUser(parsed.data.email, parsed.data.password);
+    const result = await authenticateUser(
+      parsed.data.identifier,
+      parsed.data.password
+    );
     if (!result.ok) {
       if (result.reason === "account_not_active") {
         // Only reachable with a correct password — no unauthenticated
@@ -166,16 +174,16 @@ export async function loginAction(
           error: "This account is not active. Contact your administrator.",
         };
       }
-      // Wrong credentials: advance the throttle counter for this email+IP.
+      // Wrong credentials: advance the throttle counter for this key.
       if (isProduction()) {
-        recordLoginFailure(parsed.data.email, clientIp);
+        recordLoginFailure(parsed.data.identifier, clientIp);
       }
       return { status: "error", error: GENERIC_AUTH_ERROR };
     }
 
     // Valid credentials reset the attempt counter for this key.
     if (isProduction()) {
-      clearLoginFailures(parsed.data.email, clientIp);
+      clearLoginFailures(parsed.data.identifier, clientIp);
     }
 
     const session = await createSession(result.user.id, {
@@ -184,6 +192,21 @@ export async function loginAction(
     });
 
     await setSessionCookie(session.token, session.expiresAt);
+
+    // Best-effort last-login stamp for the User Management "Last Login"
+    // column; never blocks the login flow.
+    try {
+      await db
+        .update(users)
+        .set({ lastLoginAt: new Date() })
+        .where(eq(users.id, result.user.id));
+    } catch (error) {
+      console.error("[auth] last_login_at update failed", error);
+    }
+
+    // Accounts provisioned through the employee import or after an
+    // administrative reset must change their password before anything else.
+    pendingPasswordChange = result.user.mustChangePassword;
   } catch (error) {
     // Never surface stack traces or SQL details to the client. The error is
     // logged server-side without credential material.
@@ -195,7 +218,7 @@ export async function loginAction(
   }
 
   // Successful login. `redirect` throws, so it stays outside try/catch.
-  redirect("/dashboard");
+  redirect(pendingPasswordChange ? "/change-password" : "/dashboard");
 }
 
 export async function logoutAction(): Promise<void> {

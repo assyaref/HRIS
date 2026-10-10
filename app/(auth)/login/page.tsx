@@ -36,7 +36,7 @@ export default async function LoginPage() {
         <CardHeader>
           <CardTitle>Sign in</CardTitle>
           <CardDescription>
-            Enter your work email and password to access Enterprise HRIS.
+            Enter your Employee Number or Email and password to access Enterprise HRIS.
           </CardDescription>
         </CardHeader>
         <CardContent>

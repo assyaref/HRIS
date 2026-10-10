@@ -47,6 +47,7 @@ export interface UserAccountListItem {
   employeeName: string | null;
   createdAt: Date;
   updatedAt: Date;
+  lastLoginAt: Date | null;
 }
 
 export type UserAccountDetail = UserAccountListItem;
@@ -106,6 +107,7 @@ export async function listUsersForOrganization(
       employeeName: sql<string | null>`CASE WHEN ${employees.firstName} IS NULL THEN NULL ELSE (${employees.firstName} || ' ' || ${employees.lastName}) END`,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
+      lastLoginAt: users.lastLoginAt,
     })
     .from(users)
     .leftJoin(employees, eq(employees.userId, users.id))
@@ -149,6 +151,7 @@ export async function listUsersForOrganization(
       employeeName: row.employeeName,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+      lastLoginAt: row.lastLoginAt,
     };
   });
 }

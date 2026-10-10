@@ -1,11 +1,11 @@
 import { z } from "zod";
 
+import { validatePasswordPolicy, PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH } from "../../lib/auth/password-policy.ts";
+
 /**
  * Change password validation schema.
+ * Uses the shared password policy from lib/auth/password-policy.ts
  */
-const PASSWORD_MIN_LENGTH = 8;
-const PASSWORD_MAX_LENGTH = 128;
-
 export const changePasswordSchema = z
   .object({
     currentPassword: z.string().min(1, "Password saat ini wajib diisi."),
@@ -21,6 +21,13 @@ export const changePasswordSchema = z
   })
   .refine((data) => data.newPassword !== data.currentPassword, {
     message: "Password baru harus berbeda dari password saat ini.",
+    path: ["newPassword"],
+  })
+  .refine((data) => {
+    const result = validatePasswordPolicy(data.newPassword, { complexity: true });
+    return result.ok;
+  }, {
+    message: "Password baru harus memenuhi: minimal 8 karakter, huruf besar, huruf kecil, angka, dan karakter khusus.",
     path: ["newPassword"],
   });
 

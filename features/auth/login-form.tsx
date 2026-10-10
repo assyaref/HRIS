@@ -23,11 +23,12 @@ function SubmitButton() {
  * Professional HRIS sign-in form.
  * Server-action powered (no client-side database access, no token storage);
  * loading, validation and authentication errors are all rendered here.
+ * Accepts Employee Number OR Email as identifier.
  */
 export function LoginForm() {
   const [state, formAction] = useActionState(loginAction, initialState);
 
-  const emailError = state.fieldErrors?.email;
+  const identifierError = state.fieldErrors?.identifier;
   const passwordError = state.fieldErrors?.password;
 
   return (
@@ -42,22 +43,22 @@ export function LoginForm() {
       ) : null}
 
       <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="identifier">Employee Number / Email</Label>
         <Input
-          id="email"
-          name="email"
-          type="email"
-          autoComplete="email"
-          placeholder="you@company.com"
+          id="identifier"
+          name="identifier"
+          type="text"
+          autoComplete="username"
+          placeholder="Contoh: EMP-0021 atau andi@company.com"
           required
           autoFocus
-          invalid={Boolean(emailError)}
-          aria-invalid={Boolean(emailError)}
-          aria-describedby={emailError ? "email-error" : undefined}
+          invalid={Boolean(identifierError)}
+          aria-invalid={Boolean(identifierError)}
+          aria-describedby={identifierError ? "identifier-error" : undefined}
         />
-        {emailError ? (
-          <p id="email-error" className="text-sm text-destructive">
-            {emailError}
+        {identifierError ? (
+          <p id="identifier-error" className="text-sm text-destructive">
+            {identifierError}
           </p>
         ) : null}
       </div>
@@ -69,7 +70,7 @@ export function LoginForm() {
           name="password"
           type="password"
           autoComplete="current-password"
-          placeholder="Enter your password"
+          placeholder="Masukkan password"
           required
           invalid={Boolean(passwordError)}
           aria-invalid={Boolean(passwordError)}

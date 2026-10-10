@@ -54,6 +54,7 @@ export const PERMISSIONS = {
   USERS_CREATE: "users.create",
   USERS_UPDATE: "users.update",
   USERS_DELETE: "users.delete",
+  USERS_PASSWORD_RESET: "users.password.reset",
   ROLES_VIEW: "roles.view",
   ROLES_CREATE: "roles.create",
   ROLES_UPDATE: "roles.update",
@@ -187,6 +188,12 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     code: PERMISSIONS.USERS_DELETE,
     module: PERMISSION_MODULES.USERS,
     description: "Delete user accounts.",
+  },
+  {
+    code: PERMISSIONS.USERS_PASSWORD_RESET,
+    module: PERMISSION_MODULES.USERS,
+    description:
+      "Reset a user account password and force a password change on next login.",
   },
   // Roles
   {
@@ -554,16 +561,19 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     module: PERMISSION_MODULES.PAYSLIP,
     description: "Manage payslip issuance.",
   },
-  // Projects
+  // Projects (menu is SUPERADMIN-only; every projects page and server action
+  // re-checks the system-level SUPERADMIN role server-side, so these codes are
+  // catalog/audit expressibility only — a tenant role holding them still
+  // cannot access the Projects CRUD surface).
   {
     code: PERMISSIONS.PROJECTS_VIEW,
     module: PERMISSION_MODULES.PROJECTS,
-    description: "View projects.",
+    description: "View projects (Super Administrator only).",
   },
   {
     code: PERMISSIONS.PROJECTS_MANAGE,
     module: PERMISSION_MODULES.PROJECTS,
-    description: "Administer projects.",
+    description: "Administer projects (Super Administrator only).",
   },
   // Reports
   {

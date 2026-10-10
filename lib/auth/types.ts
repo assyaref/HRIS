@@ -22,6 +22,14 @@ export interface CurrentUser {
   status: UserStatus;
   organizationId: string | null;
   createdAt: Date;
+  /**
+   * Password lifecycle (0020): while true, the authenticated session may only
+   * reach /change-password and /logout — every other authenticated surface
+   * redirects to /change-password (see `requireUser`).
+   */
+  mustChangePassword: boolean;
+  /** When the owner last set the current password; null after an admin reset. */
+  passwordChangedAt: Date | null;
 }
 
 export type AuthenticateErrorReason =

@@ -95,7 +95,13 @@ function SubmitButton({ pending }: { pending: boolean }) {
   );
 }
 
-export function ChangePasswordForm() {
+interface ChangePasswordFormProps {
+  /** When true, this is a forced password change (after import or admin reset).
+   * The form will include forcedChange=true and on success redirect to dashboard. */
+  forcedChange?: boolean;
+}
+
+export function ChangePasswordForm({ forcedChange = false }: ChangePasswordFormProps) {
   const router = useRouter();
   const [state, formAction] = useActionState(changePasswordAction, initialState);
   const [pending, startTransition] = useTransition();
@@ -104,7 +110,11 @@ export function ChangePasswordForm() {
     if (state.status === "success") {
       notifier.success(state.message ?? "Password berhasil diubah.");
       const timeout = window.setTimeout(() => {
-        router.push("/login");
+        if (forcedChange) {
+          router.push("/dashboard");
+        } else {
+          router.push("/login");
+        }
         router.refresh();
       }, 500);
       return () => window.clearTimeout(timeout);
@@ -112,12 +122,15 @@ export function ChangePasswordForm() {
     if (state.status === "error" && state.message) {
       notifier.error(state.message);
     }
-  }, [state, router]);
+  }, [state, router, forcedChange]);
 
   return (
     <form
       action={(formData) => {
         startTransition(() => {
+          if (forcedChange) {
+            formData.set("forcedChange", "true");
+          }
           formAction(formData);
         });
       }}

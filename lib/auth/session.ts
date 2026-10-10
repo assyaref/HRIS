@@ -122,6 +122,8 @@ export async function validateSession(
       userStatus: users.status,
       userOrganizationId: users.organizationId,
       userCreatedAt: users.createdAt,
+      userMustChangePassword: users.mustChangePassword,
+      userPasswordChangedAt: users.passwordChangedAt,
     })
     .from(sessions)
     .innerJoin(users, eq(sessions.userId, users.id))
@@ -145,6 +147,8 @@ export async function validateSession(
       status: row.userStatus as CurrentUser["status"],
       organizationId: row.userOrganizationId,
       createdAt: row.userCreatedAt,
+      mustChangePassword: row.userMustChangePassword,
+      passwordChangedAt: row.userPasswordChangedAt,
     },
   };
 }

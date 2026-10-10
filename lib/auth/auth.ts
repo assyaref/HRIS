@@ -1,10 +1,10 @@
 import "server-only";
 
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 
 import { db } from "@/db";
-import { users } from "@/db/schema";
+import { employees, users } from "@/db/schema";
 import {
   deleteSessionCookie,
   getSessionCookieValue,
@@ -25,8 +25,8 @@ import type {
  *
  * Only `active` users authenticate (see db/schema/users.ts for the status
  * contract). Credential errors are intentionally indistinguishable between
- * "email unknown" and "wrong password" (see Task 16); the database and the
- * HTTP layer never see password material from here.
+ * "identifier unknown" and "wrong password" (see Task 16); the database and
+ * the HTTP layer never see password material from here.
  */
 
 function toCurrentUser(row: {
@@ -35,6 +35,8 @@ function toCurrentUser(row: {
   status: string;
   organizationId: string | null;
   createdAt: Date;
+  mustChangePassword: boolean;
+  passwordChangedAt: Date | null;
 }): CurrentUser {
   return {
     id: row.id,
@@ -42,30 +44,69 @@ function toCurrentUser(row: {
     status: row.status as UserStatus,
     organizationId: row.organizationId,
     createdAt: row.createdAt,
+    mustChangePassword: row.mustChangePassword,
+    passwordChangedAt: row.passwordChangedAt,
   };
 }
 
 /**
- * Authenticate an email + password pair.
+ * Resolve a login identifier to candidate user rows.
+ *
+ * The identifier is either the account email or the linked employee's
+ * employee number (the import provisions accounts whose initial password is
+ * the employee number, and the login page accepts both). The employee-number
+ * path joins through `employees.user_id`; when several organizations reuse
+ * the same employee number the lookup is ambiguous and fails closed.
+ */
+async function findUserRowsByIdentifier(
+  identifier: string
+): Promise<Array<typeof users.$inferSelect>> {
+  const normalized = identifier.trim();
+
+  if (normalized.includes("@")) {
+    return db
+      .select()
+      .from(users)
+      .where(eq(users.email, normalized.toLowerCase()))
+      .limit(2);
+  }
+
+  const rows = await db
+    .select({ user: users })
+    .from(employees)
+    .innerJoin(users, eq(employees.userId, users.id))
+    .where(sql`lower(${employees.employeeNumber}) = lower(${normalized})`)
+    .limit(2);
+
+  return rows.map((row) => row.user);
+}
+
+/**
+ * Authenticate an identifier (email OR employee number) + password pair.
  *
  * Returns a discriminated result — never throws for bad credentials, never
  * returns the password hash or any session material.
  */
 export async function authenticateUser(
-  email: string,
+  identifier: string,
   password: string
 ): Promise<AuthenticateResult> {
-  const normalizedEmail = email.trim().toLowerCase();
+  const trimmed = identifier.trim();
 
-  const rows = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, normalizedEmail))
-    .limit(1);
-  const userRow = rows[0];
+  // Unknown identifier, lookup failure or account without a password yet:
+  // still burn one Argon2id verification so response timing does not reveal
+  // account existence.
+  let candidates: Array<typeof users.$inferSelect>;
+  try {
+    candidates = await findUserRowsByIdentifier(trimmed);
+  } catch (error) {
+    // Lookup failures must behave exactly like unknown credentials.
+    console.error("[auth] identifier lookup failed", error);
+    await verifyPasswordTimingEqualizer(password);
+    return { ok: false, reason: "invalid_credentials" };
+  }
 
-  // Unknown email or account without a password yet: still burn one Argon2id
-  // verification so response timing does not reveal account existence.
+  const userRow = candidates.length === 1 ? candidates[0] : undefined;
   if (!userRow || !userRow.passwordHash) {
     await verifyPasswordTimingEqualizer(password);
     return { ok: false, reason: "invalid_credentials" };
@@ -100,15 +141,35 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   return validated?.user ?? null;
 }
 
+/** Options for `requireUser`. */
+export interface RequireUserOptions {
+  /**
+   * Allow the request through even while `must_change_password` is true.
+   * Reserved for the change-password surface itself (and nothing else): the
+   * guard is enforced centrally so every other authenticated page, server
+   * action and API route is protected without per-caller changes.
+   */
+  allowPendingPasswordChange?: boolean;
+}
+
 /**
  * Server-side auth guard for protected route groups/layouts.
- * Redirects unauthenticated requests to /login and returns the current user
- * for authenticated ones.
+ *
+ * Redirects unauthenticated requests to /login. Additionally, when the
+ * account still owes a password change (provisioned through the employee
+ * import or after an administrative reset), every request is redirected to
+ * /change-password — the user cannot reach any other authenticated surface
+ * until the password is changed.
  */
-export async function requireUser(): Promise<CurrentUser> {
+export async function requireUser(
+  options: RequireUserOptions = {}
+): Promise<CurrentUser> {
   const user = await getCurrentUser();
   if (!user) {
     redirect("/login");
+  }
+  if (user.mustChangePassword && !options.allowPendingPasswordChange) {
+    redirect("/change-password");
   }
   return user;
 }

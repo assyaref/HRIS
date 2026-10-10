@@ -29,8 +29,8 @@ describe("change password schema", () => {
   it("accepts a valid payload", () => {
     const result = parse({
       currentPassword: "current-secret",
-      newPassword: "brand-new-secret",
-      confirmPassword: "brand-new-secret",
+      newPassword: "BrandNew1!",
+      confirmPassword: "BrandNew1!",
     });
     assert.equal(result.success, true);
   });
@@ -74,14 +74,17 @@ describe("change password schema", () => {
   it("accepts a new password of exactly 8 characters", () => {
     const result = parse({
       currentPassword: "current-secret",
-      newPassword: "12345678",
-      confirmPassword: "12345678",
+      newPassword: "Abcdef1!",
+      confirmPassword: "Abcdef1!",
     });
     assert.equal(result.success, true);
   });
 
   it("accepts a new password of exactly 128 characters", () => {
-    const newPassword = "a".repeat(128);
+    // Create a 128-char password meeting complexity requirements
+    const base = "Abcdef1!";
+    const repeatCount = Math.floor(128 / base.length);
+    const newPassword = base.repeat(repeatCount).slice(0, 128);
     const result = parse({
       currentPassword: "current-secret",
       newPassword,
@@ -120,6 +123,54 @@ describe("change password schema", () => {
       currentPassword: "same-secret",
       newPassword: "same-secret",
       confirmPassword: "same-secret",
+    });
+    assert.equal(result.success, false);
+    if (!result.success) {
+      assert.equal(result.error.issues[0]?.path[0], "newPassword");
+    }
+  });
+
+  it("rejects a new password without uppercase letter", () => {
+    const result = parse({
+      currentPassword: "current-secret",
+      newPassword: "abcdef1!",
+      confirmPassword: "abcdef1!",
+    });
+    assert.equal(result.success, false);
+    if (!result.success) {
+      assert.equal(result.error.issues[0]?.path[0], "newPassword");
+    }
+  });
+
+  it("rejects a new password without lowercase letter", () => {
+    const result = parse({
+      currentPassword: "current-secret",
+      newPassword: "ABCDEF1!",
+      confirmPassword: "ABCDEF1!",
+    });
+    assert.equal(result.success, false);
+    if (!result.success) {
+      assert.equal(result.error.issues[0]?.path[0], "newPassword");
+    }
+  });
+
+  it("rejects a new password without digit", () => {
+    const result = parse({
+      currentPassword: "current-secret",
+      newPassword: "Abcdefg!",
+      confirmPassword: "Abcdefg!",
+    });
+    assert.equal(result.success, false);
+    if (!result.success) {
+      assert.equal(result.error.issues[0]?.path[0], "newPassword");
+    }
+  });
+
+  it("rejects a new password without special character", () => {
+    const result = parse({
+      currentPassword: "current-secret",
+      newPassword: "Abcdefg1",
+      confirmPassword: "Abcdefg1",
     });
     assert.equal(result.success, false);
     if (!result.success) {

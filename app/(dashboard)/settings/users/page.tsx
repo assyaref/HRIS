@@ -87,6 +87,7 @@ export default async function UsersSettingsPage({
     const canCreate = await hasPermission(user.id, PERMISSIONS.USERS_CREATE);
     const canUpdate = await hasPermission(user.id, PERMISSIONS.USERS_UPDATE);
     const canDelete = await hasPermission(user.id, PERMISSIONS.USERS_DELETE);
+    const canReset = await hasPermission(user.id, PERMISSIONS.USERS_PASSWORD_RESET);
 
     const [users, roles, employees, activeSuperAdminCount] =
       await Promise.all([
@@ -131,6 +132,7 @@ export default async function UsersSettingsPage({
           roles={roles}
           employees={employees}
           canUpdate={canUpdate}
+          canReset={canReset}
           canDeleteMap={canDeleteMap}
           actorIsSuperAdmin={true}
         />
@@ -153,6 +155,7 @@ export default async function UsersSettingsPage({
   const canCreate = await hasPermission(user.id, PERMISSIONS.USERS_CREATE);
   const canUpdate = await hasPermission(user.id, PERMISSIONS.USERS_UPDATE);
   const canDelete = await hasPermission(user.id, PERMISSIONS.USERS_DELETE);
+  const canReset = await hasPermission(user.id, PERMISSIONS.USERS_PASSWORD_RESET);
 
   const [users, roles, employees, activeSuperAdminCount] = await Promise.all([
     listUsersForOrganization(organizationId),
@@ -183,6 +186,7 @@ export default async function UsersSettingsPage({
         roles={roles}
         employees={employees}
         canUpdate={canUpdate}
+        canReset={canReset}
         canDeleteMap={canDeleteMap}
         actorIsSuperAdmin={false}
       />

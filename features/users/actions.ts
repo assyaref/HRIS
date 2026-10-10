@@ -3,6 +3,7 @@
 import { and, eq, ilike, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { forbidden } from "next/navigation";
+import { randomBytes } from "node:crypto";
 import type { z } from "zod";
 
 import { db } from "@/db";
@@ -16,7 +17,9 @@ import {
 import { requireUser } from "@/lib/auth/auth";
 import { writeAuditLog } from "@/lib/auth/audit";
 import { hashPassword } from "@/lib/auth/password";
+import { revokeAllUserSessions } from "@/lib/auth/session";
 import { PERMISSIONS } from "@/lib/auth/permissions";
+import { validatePasswordPolicy } from "@/lib/auth/password-policy";
 import {
   isSuperAdmin,
   requirePermission,
@@ -60,6 +63,7 @@ export interface UserActionState {
   status: "idle" | "error" | "success";
   message?: string;
   fieldErrors?: Record<string, string>;
+  temporaryPassword?: string;
 }
 
 const DB_UNIQUE_VIOLATION = "23505";
@@ -182,7 +186,7 @@ async function validateEmployeeLink(
 
 /** Write an audit event, never failing the operation. */
 async function audit(
-  action: "user.created" | "user.updated" | "user.deleted",
+  action: "user.created" | "user.updated" | "user.deleted" | "user.password_reset",
   input: {
     organizationId: string | null;
     actorUserId: string;
@@ -692,4 +696,131 @@ export async function deleteUserAction(
 
   revalidatePath("/settings/users");
   return { status: "success", message: "User account deleted." };
+}
+
+/**
+ * RESET PASSWORD — Super Administrator resets a user's password.
+ *
+ * The temporary password is set to the employee's number (if linked) or a
+ * generated secure password. The account is forced to change password on
+ * next login. All sessions are revoked.
+ */
+export async function resetUserPasswordAction(
+  userId: string,
+  _prevState: UserActionState,
+  formData: FormData
+): Promise<UserActionState> {
+  const actor = await resolveActor();
+  await requirePermission(actor.userId, PERMISSIONS.USERS_PASSWORD_RESET);
+
+  if (!isUuid(userId)) {
+    return error("Invalid user account.");
+  }
+
+  const targetRows = await db
+    .select({
+      id: users.id,
+      organizationId: users.organizationId,
+      email: users.email,
+      name: users.name,
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  const target = targetRows[0];
+  if (!target || !target.organizationId) {
+    return error("The user account was not found.");
+  }
+  const organizationId = target.organizationId;
+
+  // Check scope (tenant actors can only manage their own org)
+  if (
+    !actor.isSuperAdmin &&
+    !sameOrganization(actor.organizationId, organizationId)
+  ) {
+    return error("You do not have permission to reset passwords in this organization.");
+  }
+
+  // Check if target is SUPERADMIN (tenant actors cannot manage SUPERADMIN)
+  const targetIsSuperAdmin = await isSuperAdminAccount(userId);
+  if (targetIsSuperAdmin && !actor.isSuperAdmin) {
+    return error("You do not have permission to manage a Super Administrator account.");
+  }
+
+  // Get employee number if linked (for temporary password default)
+  let employeeNumber: string | null = null;
+  if (target.name) {
+    // Try to find linked employee
+    const empRows = await db
+      .select({ employeeNumber: employees.employeeNumber })
+      .from(employees)
+      .where(eq(employees.userId, target.id))
+      .limit(1);
+    if (empRows[0]) {
+      employeeNumber = empRows[0].employeeNumber;
+    }
+  }
+
+  // Get temporary password from form (defaults to employee number if provided)
+  const temporaryPassword = String(formData.get("temporaryPassword") ?? "").trim();
+  const finalTempPassword = temporaryPassword || employeeNumber || generateTemporaryPassword();
+
+  // Validate temporary password (length only, complexity not required as forced change follows)
+  const policyResult = validatePasswordPolicy(finalTempPassword, { complexity: false });
+  if (!policyResult.ok) {
+    return error("Temporary password must be at least 8 characters long.");
+  }
+
+  try {
+    const passwordHash = await hashPassword(finalTempPassword);
+
+    await db
+      .update(users)
+      .set({
+        passwordHash,
+        mustChangePassword: true,
+        passwordChangedAt: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+
+    // Revoke all sessions for the target user
+    await revokeAllUserSessions(userId);
+
+    await audit("user.password_reset", {
+      organizationId,
+      actorUserId: actor.userId,
+      entityId: userId,
+      metadata: {
+        targetUserId: userId,
+        targetEmail: target.email,
+        employeeNumber,
+        temporaryPasswordProvided: Boolean(temporaryPassword),
+        forcedChange: true,
+      },
+    });
+
+    revalidatePath("/settings/users");
+    return {
+      status: "success",
+      message: "Password berhasil direset.",
+      temporaryPassword: finalTempPassword,
+    };
+  } catch (caught) {
+    console.error("[users] reset password failed", caught);
+    return error("Could not reset the password. Please try again.");
+  }
+}
+
+/**
+ * Generate a cryptographically secure temporary password.
+ * Used when no employee number is available for the default.
+ */
+function generateTemporaryPassword(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%^&*";
+  const bytes = randomBytes(16);
+  return Array.from(bytes)
+    .map((b) => chars[b % chars.length])
+    .join("");
 }

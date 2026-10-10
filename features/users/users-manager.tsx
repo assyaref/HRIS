@@ -15,6 +15,7 @@ import type { LinkableEmployeeAccount, UserAccountListItem } from "./queries";
 import { UserStatusBadge } from "./status-badge";
 import { EditUserDialog } from "./user-edit-dialog";
 import { DeleteUserDialog } from "./user-delete-dialog";
+import { ResetPasswordDialog } from "./user-reset-password-dialog";
 import type { RoleOption } from "./user-create-dialog";
 
 function formatDate(value: Date): string {
@@ -32,6 +33,7 @@ interface UsersManagerProps {
   roles: RoleOption[];
   employees: LinkableEmployeeAccount[];
   canUpdate: boolean;
+  canReset: boolean;
   /** Per-account delete eligibility (independent of the server's re-check). */
   canDeleteMap: Record<string, boolean>;
   actorIsSuperAdmin: boolean;
@@ -48,6 +50,7 @@ export function UsersManager({
   roles,
   employees,
   canUpdate,
+  canReset,
   canDeleteMap,
   actorIsSuperAdmin,
 }: UsersManagerProps) {
@@ -72,6 +75,7 @@ export function UsersManager({
               {actorIsSuperAdmin ? <TableHead>Organization</TableHead> : null}
               <TableHead>Employee</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Last Login</TableHead>
               <TableHead>Created</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -106,10 +110,24 @@ export function UsersManager({
                 <TableCell className="text-muted-foreground">
                   {formatDate(user.createdAt)}
                 </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {user.lastLoginAt ? formatDate(user.lastLoginAt) : "—"}
+                </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
                     {canUpdate ? (
                       <EditUserDialog user={user} roles={roles} employees={employees} />
+                    ) : null}
+                    {canReset ? (
+                      <ResetPasswordDialog
+                        user={{
+                          id: user.id,
+                          name: user.name,
+                          email: user.email,
+                          employeeNumber: user.employeeNumber,
+                          employeeName: user.employeeName,
+                        }}
+                      />
                     ) : null}
                     {canDeleteMap[user.id] ? <DeleteUserDialog user={user} /> : null}
                   </div>
@@ -153,6 +171,10 @@ export function UsersManager({
                 </dd>
               </div>
               <div>
+                <dt className="text-xs text-muted-foreground">Last Login</dt>
+                <dd>{user.lastLoginAt ? formatDate(user.lastLoginAt) : "—"}</dd>
+              </div>
+              <div>
                 <dt className="text-xs text-muted-foreground">Created</dt>
                 <dd>{formatDate(user.createdAt)}</dd>
               </div>
@@ -160,6 +182,17 @@ export function UsersManager({
             <div className="mt-3 flex justify-end gap-1">
               {canUpdate ? (
                 <EditUserDialog user={user} roles={roles} employees={employees} />
+              ) : null}
+              {canReset ? (
+                <ResetPasswordDialog
+                  user={{
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    employeeNumber: user.employeeNumber,
+                    employeeName: user.employeeName,
+                  }}
+                />
               ) : null}
               {canDeleteMap[user.id] ? <DeleteUserDialog user={user} /> : null}
             </div>

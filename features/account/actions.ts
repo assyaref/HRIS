@@ -2,6 +2,7 @@
 
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import type { z } from "zod";
 
 import { db } from "@/db";
@@ -12,6 +13,7 @@ import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { revokeAllUserSessions } from "@/lib/auth/session";
 
 import { changePasswordSchema } from "./change-password-schema";
+import { validatePasswordPolicy, passwordPolicyMessage } from "@/lib/auth/password-policy";
 
 export interface ChangePasswordState {
   status: "idle" | "error" | "success";
@@ -54,7 +56,8 @@ export async function changePasswordAction(
   _prevState: ChangePasswordState,
   formData: FormData
 ): Promise<ChangePasswordState> {
-  const user = await requireUser();
+  const isForcedChange = formData.get("forcedChange") === "true";
+  const user = await requireUser({ allowPendingPasswordChange: isForcedChange });
 
   const currentPassword = field(formData, "currentPassword");
   const newPassword = field(formData, "newPassword");
@@ -73,12 +76,28 @@ export async function changePasswordAction(
     };
   }
 
+  // Validate new password against policy (complexity rules)
+  const policyResult = validatePasswordPolicy(parsed.data.newPassword, {
+    complexity: true,
+  });
+  if (!policyResult.ok) {
+    const fieldErrors: Record<string, string> = {};
+    for (const failure of policyResult.failures) {
+      fieldErrors[`newPassword`] = passwordPolicyMessage({ ok: false, failures: [failure] }) ?? "Password tidak memenuhi kebijakan.";
+    }
+    return {
+      status: "error",
+      fieldErrors,
+    };
+  }
+
   try {
     const rows = await db
       .select({
         id: users.id,
         passwordHash: users.passwordHash,
         organizationId: users.organizationId,
+        mustChangePassword: users.mustChangePassword,
       })
       .from(users)
       .where(eq(users.id, user.id))
@@ -99,37 +118,68 @@ export async function changePasswordAction(
 
     const newPasswordHash = await hashPassword(parsed.data.newPassword);
 
+    // For forced change (import/reset flow), clear mustChangePassword and set passwordChangedAt
+    const updateData: {
+      passwordHash: string;
+      updatedAt: Date;
+      mustChangePassword?: boolean;
+      passwordChangedAt?: Date;
+    } = {
+      passwordHash: newPasswordHash,
+      updatedAt: new Date(),
+    };
+
+    if (isForcedChange || userRow.mustChangePassword) {
+      updateData.mustChangePassword = false;
+      updateData.passwordChangedAt = new Date();
+    }
+
     await db
       .update(users)
-      .set({
-        passwordHash: newPasswordHash,
-        updatedAt: new Date(),
-      })
+      .set(updateData)
       .where(eq(users.id, user.id));
 
     try {
       await writeAuditLog({
         organizationId: user.organizationId,
         actorUserId: user.id,
-        action: "user.password_changed",
+        action: isForcedChange ? "user.password_reset" : "user.password_changed",
         entityType: "user",
         entityId: user.id,
         metadata: {
-          reason: "self_service_change_password",
+          reason: isForcedChange ? "admin_reset_password" : "self_service_change_password",
         },
       });
     } catch (auditError) {
       console.error("[account] audit failed", auditError);
     }
 
-    try {
-      await revokeAllUserSessions(user.id);
-    } catch (sessionError) {
-      console.error("[account] session revocation failed", sessionError);
+    if (isForcedChange) {
+      // For forced change, only revoke OTHER sessions, keep current one
+      // (The current session is validated by requireUser with allowPendingPasswordChange)
+      try {
+        await revokeAllUserSessions(user.id);
+      } catch (sessionError) {
+        console.error("[account] session revocation failed", sessionError);
+      }
+      redirect("/dashboard");
+    } else {
+      // Self-service: revoke all sessions, user must log in again
+      try {
+        await revokeAllUserSessions(user.id);
+      } catch (sessionError) {
+        console.error("[account] session revocation failed", sessionError);
+      }
+      revalidatePath("/settings/account");
     }
-
-    revalidatePath("/settings/account");
   } catch (unknownError) {
+    // Check if it's a redirect (from forced change flow)
+    if (unknownError && typeof unknownError === "object" && "digest" in unknownError) {
+      const digest = (unknownError as { digest: string }).digest;
+      if (digest.startsWith("NEXT_REDIRECT")) {
+        throw unknownError;
+      }
+    }
     console.error("[account] change password failed", unknownError);
     if (isUniqueViolation(unknownError)) {
       return error("Terjadi kesalahan saat mengubah password. Silakan coba lagi.");
@@ -139,6 +189,8 @@ export async function changePasswordAction(
 
   return {
     status: "success",
-    message: "Password berhasil diubah. Silakan login kembali.",
+    message: isForcedChange
+      ? "Password berhasil diubah. Mengarahkan ke dashboard..."
+      : "Password berhasil diubah. Silakan login kembali.",
   };
 }
