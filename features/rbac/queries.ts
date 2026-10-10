@@ -196,3 +196,49 @@ export async function listPermissionCatalog(): Promise<PermissionRow[]> {
   }));
 }
 
+/**
+ * Simple role options for dropdowns (id, code, name only).
+ */
+export interface RoleOption {
+  id: string;
+  code: string;
+  name: string;
+  organizationId: string;
+}
+
+export async function listRoleOptionsByOrganization(
+  organizationId: string
+): Promise<RoleOption[]> {
+  return db
+    .select({
+      id: roles.id,
+      code: roles.code,
+      name: roles.name,
+      organizationId: roles.organizationId,
+    })
+    .from(roles)
+    .where(eq(roles.organizationId, organizationId))
+    .orderBy(asc(roles.code));
+}
+
+/**
+ * Role options across ALL organizations (Super Administrator surface).
+ *
+ * The Employee Import Wizard lets a Super Administrator choose the target
+ * tenant in place, so it needs every role with its owning `organizationId`
+ * and narrows them client-side to the selected tenant. `validateImportSettings`
+ * re-checks that the submitted role belongs to the selected organization
+ * before the account is provisioned.
+ */
+export async function listRoleOptionsForSuperAdmin(): Promise<RoleOption[]> {
+  return db
+    .select({
+      id: roles.id,
+      code: roles.code,
+      name: roles.name,
+      organizationId: roles.organizationId,
+    })
+    .from(roles)
+    .orderBy(asc(roles.code));
+}
+

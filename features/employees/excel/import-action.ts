@@ -13,6 +13,10 @@ import {
   employeeEmploymentHistory,
   employeeInsurances,
   employees,
+  organizations,
+  projects,
+  roles,
+  users,
   workLocations,
 } from "@/db/schema";
 import { requireUser } from "@/lib/auth/auth";
@@ -43,6 +47,8 @@ import {
   type ExcelImportAnalysis,
   type ExcelPlanOperation,
 } from "./import.ts";
+
+import { validateImportSettings, provisionEmployeeAccounts, provisionEmployeeAssignments, type ImportSettings, type ImportResultDetail } from "./import-settings";
 
 /**
  * Employee Master Data Excel import (Upload → Validate → Preview → Import).
@@ -122,7 +128,28 @@ export interface ExcelImportPreviewResult {
   sheetNames: string[];
   /** Plan summary sent back on confirm (informational; server re-plans). */
   plan: { rowNumber: number; employeeNumber: string; operation: ExcelPlanOperation }[];
+  /** Detailed result for the Result step. */
+  details?: ImportResultDetail[];
+  accountsProvisioned?: number;
+  assignmentsCreated?: number;
+  /** Fatal problems (empty on success — any entry means nothing was written). */
+  errors?: string[];
+  /** Non-fatal notes, e.g. skipped account provisioning. */
+  warnings?: string[];
+  /** Summary for result display */
+  summary?: {
+    employeesCreated: number;
+    employeesUpdated: number;
+    employeesFailed: number;
+    accountsCreated: number;
+    accountsExisting: number;
+    accountsFailed: number;
+    assignmentsCreated: number;
+    assignmentsExisting: number;
+    assignmentsFailed: number;
+  };
 }
+
 
 function emptyPreview(): ExcelImportPreviewResult {
   return {
@@ -134,14 +161,36 @@ function emptyPreview(): ExcelImportPreviewResult {
     previewErrors: [],
     sheetNames: [],
     plan: [],
+    errors: [],
+    warnings: [],
+    summary: {
+      employeesCreated: 0,
+      employeesUpdated: 0,
+      employeesFailed: 0,
+      accountsCreated: 0,
+      accountsExisting: 0,
+      accountsFailed: 0,
+      assignmentsCreated: 0,
+      assignmentsExisting: 0,
+      assignmentsFailed: 0,
+    },
   };
 }
 
 function previewError(message: string): ExcelImportPreviewResult {
-  return { ...emptyPreview(), status: "error", message };
+  const base = emptyPreview();
+  return {
+    ...base,
+    status: "error",
+    message,
+    errors: [message],
+    summary: base.summary,
+  };
 }
 
-async function loadImportContext(): Promise<{
+async function loadImportContext(
+  targetOrganizationId?: string
+): Promise<{
   userId: string;
   organizationId: string;
   customSpecs: CustomFieldImportSpec[];
@@ -159,10 +208,15 @@ async function loadImportContext(): Promise<{
   if (!user.organizationId) {
     throw new Error("Your account is not assigned to an organization.");
   }
+  // Import settings are validated by `validateImportSettings` before this
+  // runs, so a caller other than SUPERADMIN can only ever target their own
+  // organization. The field definitions and Custom Tab worksheets are loaded
+  // for the TARGET organization so the workbook columns match its schema.
+  const organizationId = targetOrganizationId ?? user.organizationId;
   const [authorization, definitions, tabs] = await Promise.all([
     getUserAuthorization(user.id),
-    listActiveFieldDefinitions(user.organizationId),
-    listActiveCustomTabs(user.organizationId),
+    listActiveFieldDefinitions(organizationId),
+    listActiveCustomTabs(organizationId),
   ]);
   const canViewCustomData =
     authorization.isSuperAdmin ||
@@ -211,11 +265,48 @@ async function loadImportContext(): Promise<{
 
   return {
     userId: user.id,
-    organizationId: user.organizationId,
+    organizationId,
     customSpecs,
     inaccessibleRequiredField,
     customDataSheetNames: customDataSheetNames(tabPlan),
   };
+}
+
+/**
+ * Parse settings from formData.
+ *
+ * The payload comes from the browser, so every field is type-checked and
+ * normalized here before `validateImportSettings` confirms it against
+ * PostgreSQL.
+ */
+function parseSettings(formData: FormData): ImportSettings | null {
+  const settingsJson = formData.get("settings");
+  if (!settingsJson || typeof settingsJson !== "string") {
+    return null;
+  }
+  try {
+    const raw = JSON.parse(settingsJson) as Partial<ImportSettings>;
+    if (typeof raw !== "object" || raw === null) return null;
+    const organizationId =
+      typeof raw.organizationId === "string" ? raw.organizationId.trim() : "";
+    const projectId =
+      typeof raw.projectId === "string" ? raw.projectId.trim() : "";
+    const roleId = typeof raw.roleId === "string" ? raw.roleId.trim() : "";
+    if (!organizationId || !projectId || !roleId) return null;
+    const workLocationId =
+      typeof raw.workLocationId === "string" && raw.workLocationId.trim()
+        ? raw.workLocationId.trim()
+        : null;
+    return {
+      organizationId,
+      projectId,
+      workLocationId,
+      roleId,
+      provisionAccounts: raw.provisionAccounts !== false,
+    };
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -229,9 +320,21 @@ export async function previewExcelImportAction(
   _prevState: ExcelImportPreviewResult,
   formData: FormData
 ): Promise<ExcelImportPreviewResult> {
+  // Parse and validate settings first so the analysis, the custom field
+  // definitions and the CREATE/UPDATE classification all run against the
+  // organization the import will actually write to.
+  const settings = parseSettings(formData);
+  if (!settings) {
+    return previewError("Pengaturan import tidak valid. Harap lengkapi Pengaturan.");
+  }
+  const settingsError = await validateImportSettings(settings);
+  if (settingsError) {
+    return previewError(settingsError);
+  }
+
   let context: Awaited<ReturnType<typeof loadImportContext>>;
   try {
-    context = await loadImportContext();
+    context = await loadImportContext(settings.organizationId);
   } catch {
     return previewError("You are not allowed to import employees.");
   }
@@ -445,14 +548,37 @@ function findUnauthorizedSections(
 
 class ImportError extends Error {}
 
-/** Step 3+4 — commit. Re-parses the file and applies everything in one tx. */
+/**
+ * Step 3+4 — commit. Re-parses the file and applies everything in one tx.
+ *
+ * Import settings (organization / project / work location / role) are parsed
+ * and validated against PostgreSQL BEFORE the transaction opens, and are then
+ * used as the source of the employee assignment: every employee written here
+ * is provisioned with an account (initial password = employee number, hashed,
+ * `must_change_password = true`) and a project assignment inside the SAME
+ * transaction. Any provisioning failure rolls the whole import back, so the
+ * database never holds an employee without its account/assignment.
+ */
 export async function confirmExcelImportAction(
   _prevState: ExcelImportPreviewResult,
   formData: FormData
 ): Promise<ExcelImportPreviewResult> {
+  // -- 1. Parse + validate import settings (pre-transaction) ---------------
+  const settings = parseSettings(formData);
+  if (!settings) {
+    return previewError(
+      "Pengaturan import tidak valid. Organization, Project, dan Role wajib diisi."
+    );
+  }
+  const settingsError = await validateImportSettings(settings);
+  if (settingsError) {
+    return previewError(settingsError);
+  }
+
+  // -- 2. Re-authenticate + re-authorize against the TARGET organization ---
   let context: Awaited<ReturnType<typeof loadImportContext>>;
   try {
-    context = await loadImportContext();
+    context = await loadImportContext(settings.organizationId);
   } catch {
     return previewError("You are not allowed to import employees.");
   }
@@ -640,11 +766,63 @@ export async function confirmExcelImportAction(
     throw error;
   }
 
+  // Display labels for the assignment described by the validated settings.
+  // Resolved once so every result row and the audit entry can name them
+  // without re-querying inside the transaction.
+  const [orgRows, projectRows, roleRows, settingsLocationRows] =
+    await Promise.all([
+      db
+        .select({ name: organizations.name })
+        .from(organizations)
+        .where(eq(organizations.id, settings.organizationId))
+        .limit(1),
+      db
+        .select({ name: projects.name })
+        .from(projects)
+        .where(eq(projects.id, settings.projectId))
+        .limit(1),
+      db
+        .select({ name: roles.name, code: roles.code })
+        .from(roles)
+        .where(eq(roles.id, settings.roleId))
+        .limit(1),
+      settings.workLocationId
+        ? db
+            .select({ name: workLocations.name })
+            .from(workLocations)
+            .where(eq(workLocations.id, settings.workLocationId))
+            .limit(1)
+        : Promise.resolve([]),
+    ]);
+  const settingsLabels = {
+    organization: orgRows[0]?.name ?? null,
+    project: projectRows[0]?.name ?? null,
+    role: roleRows[0]
+      ? `${roleRows[0].name} (${roleRows[0].code})`
+      : null,
+    workLocation: settingsLocationRows[0]?.name ?? null,
+  };
+
   try {
     const summary = await db.transaction(async (tx) => {
       let created = 0;
       let updated = 0;
       let secondaryRows = 0;
+      /**
+       * Every employee written by this import, in row order, so account and
+       * assignment provisioning can run against exactly the same set inside
+       * this transaction.
+       */
+      const processedEmployees: Array<{
+        row: number;
+        employeeId: string;
+        employeeNumber: string;
+        employeeName: string;
+        email: string | null;
+        employmentStatus: string;
+        userId: string | null;
+        operation: "create" | "update";
+      }> = [];
 
       for (const row of plan.rows) {
         const cells = row.cells;
@@ -705,6 +883,14 @@ export async function confirmExcelImportAction(
             );
           }
           write.workLocationId = resolved;
+        } else if (
+          permissions.employment &&
+          settings.workLocationId &&
+          row.operation === "create"
+        ) {
+          // New employees are assigned to the work location chosen in the
+          // import settings; a Work Location cell in the workbook always wins.
+          write.workLocationId = settings.workLocationId;
         }
         if (permissions.employment && cells.manager) {
           const resolved = managerByNumber.get(cells.manager);
@@ -717,6 +903,13 @@ export async function confirmExcelImportAction(
         }
 
         let employeeId: string;
+        let effectiveEmail: string | null;
+        let effectiveStatus: string;
+        let effectiveUserId: string | null;
+        const employeeName =
+          `${(cells["first name"] ?? "").trim()} ${(cells["last name"] ?? "").trim()}`.trim() ||
+          row.employeeNumber;
+
         if (row.operation === "create") {
           const inserted = await tx
             .insert(employees)
@@ -731,6 +924,9 @@ export async function confirmExcelImportAction(
           const record = inserted[0];
           if (!record) throw new Error("Employee insert returned no row.");
           employeeId = record.id;
+          effectiveEmail = write.email ?? null;
+          effectiveStatus = write.employmentStatus ?? "active";
+          effectiveUserId = null;
           await tx.insert(employeeEmploymentHistory).values({
             organizationId,
             employeeId,
@@ -756,6 +952,8 @@ export async function confirmExcelImportAction(
               managerId: employees.managerId,
               workLocationId: employees.workLocationId,
               employmentType: employees.employmentType,
+              email: employees.email,
+              userId: employees.userId,
             })
             .from(employees)
             .where(
@@ -782,6 +980,11 @@ export async function confirmExcelImportAction(
             );
           }
           employeeId = existing.id;
+          // Existing credentials are NEVER touched by an import update: only
+          // employee columns change here, `users.password_hash` is left alone.
+          effectiveEmail = write.email ?? existing.email;
+          effectiveStatus = write.employmentStatus ?? existing.status;
+          effectiveUserId = existing.userId;
           const effectiveFrom = new Date();
           if (Object.keys(write).length > 0) {
             const changed = await tx
@@ -817,6 +1020,17 @@ export async function confirmExcelImportAction(
           }
           updated += 1;
         }
+
+        processedEmployees.push({
+          row: row.rowNumber,
+          employeeId,
+          employeeNumber: row.employeeNumber,
+          employeeName,
+          email: effectiveEmail,
+          employmentStatus: effectiveStatus,
+          userId: effectiveUserId,
+          operation: row.operation,
+        });
 
         // -- secondary sheets ------------------------------------------------
         for (const secondary of row.secondary) {
@@ -1223,7 +1437,186 @@ export async function confirmExcelImportAction(
         }
       }
 
-      return { created, updated, secondaryRows };
+      // -- account + assignment provisioning (SAME transaction) ------------
+      // Called for every employee written above (created AND updated). The
+      // helpers decide per employee: an employee that already has a user gets
+      // `existing` (never a duplicate row), an employee already assigned to
+      // this project gets `existing`. Any `failed` result throws, which rolls
+      // back the employee rows too — the database never ends up with an
+      // employee lacking its account or its assignment.
+      const provisioningList = processedEmployees.map((emp) => ({
+        id: emp.employeeId,
+        employeeNumber: emp.employeeNumber,
+        email: emp.email,
+        employmentStatus: emp.employmentStatus,
+        userId: emp.userId,
+      }));
+
+      const accountResults = await provisionEmployeeAccounts(
+        tx,
+        provisioningList,
+        settings,
+        userId
+      );
+      const assignmentResults = await provisionEmployeeAssignments(
+        tx,
+        provisioningList,
+        settings
+      );
+
+      const failedAccounts = accountResults.filter(
+        (result) => result.operation === "failed"
+      );
+      if (failedAccounts.length > 0) {
+        const first = failedAccounts[0];
+        throw new ImportError(
+          `Account provisioning failed for ${first?.employeeNumber ?? "?"}: ${
+            first?.error ?? "unknown error"
+          }.`
+        );
+      }
+      const failedAssignments = assignmentResults.filter(
+        (result) => result.operation === "failed"
+      );
+      if (failedAssignments.length > 0) {
+        const first = failedAssignments[0];
+        throw new ImportError(
+          `Assignment provisioning failed for ${first?.employeeNumber ?? "?"}: ${
+            first?.error ?? "unknown error"
+          }.`
+        );
+      }
+
+      const accountByNumber = new Map(
+        accountResults.map((result) => [result.employeeNumber, result])
+      );
+      const assignmentByNumber = new Map(
+        assignmentResults.map((result) => [result.employeeNumber, result])
+      );
+
+      // must_change_password of every account the helpers resolved (created
+      // or already existing) — read from the row inside this transaction.
+      const accountUserIds = [
+        ...new Set(
+          accountResults
+            .map((result) => result.userId)
+            .filter((id): id is string => typeof id === "string")
+        ),
+      ];
+      const accountUsers =
+        accountUserIds.length > 0
+          ? await tx
+              .select({
+                id: users.id,
+                mustChangePassword: users.mustChangePassword,
+              })
+              .from(users)
+              .where(inArray(users.id, accountUserIds))
+          : [];
+      const mustChangeByUserId = new Map(
+        accountUsers.map((row) => [row.id, row.mustChangePassword])
+      );
+
+      const warnings: string[] = [];
+      const details: ImportResultDetail[] = [];
+      let accountsCreated = 0;
+      let accountsExisting = 0;
+      let accountsFailed = 0;
+      let assignmentsCreatedCount = 0;
+      let assignmentsExisting = 0;
+      let assignmentsFailed = 0;
+
+      for (const emp of processedEmployees) {
+        const account = accountByNumber.get(emp.employeeNumber);
+        const assignment = assignmentByNumber.get(emp.employeeNumber);
+
+        let accountStatus: ImportResultDetail["account"];
+        if (!account) {
+          accountStatus = "skipped_no_email";
+        } else if (
+          account.operation === "skipped_no_email" &&
+          !settings.provisionAccounts
+        ) {
+          accountStatus = "skipped_not_enabled";
+        } else {
+          accountStatus = account.operation;
+        }
+
+        const assignmentStatus: ImportResultDetail["assignment"] =
+          assignment?.operation ?? "failed";
+
+        if (accountStatus === "created") accountsCreated += 1;
+        else if (accountStatus === "existing") accountsExisting += 1;
+        else if (accountStatus === "failed") accountsFailed += 1;
+
+        if (assignmentStatus === "created") assignmentsCreatedCount += 1;
+        else if (assignmentStatus === "existing") assignmentsExisting += 1;
+        else assignmentsFailed += 1;
+
+        if (accountStatus === "created") {
+          warnings.push(
+            `${emp.employeeNumber}: account created — initial password configured as the employee number (must be changed on first login).`
+          );
+        } else if (accountStatus === "skipped_no_email") {
+          warnings.push(
+            `${emp.employeeNumber}: no user account created — no email address.`
+          );
+        } else if (accountStatus === "skipped_inactive") {
+          warnings.push(
+            `${emp.employeeNumber}: no user account created — employee is inactive.`
+          );
+        } else if (accountStatus === "skipped_not_enabled") {
+          warnings.push(
+            `${emp.employeeNumber}: account provisioning was disabled for this import.`
+          );
+        }
+
+        details.push({
+          row: emp.row,
+          employeeNumber: emp.employeeNumber,
+          employeeName: emp.employeeName,
+          email: emp.email,
+          operation: emp.operation,
+          account: accountStatus,
+          assignment: assignmentStatus,
+          error: null,
+          organization: settingsLabels.organization,
+          project: settingsLabels.project,
+          workLocation: settingsLabels.workLocation,
+          role: settingsLabels.role,
+          mustChangePassword:
+            accountStatus === "created"
+              ? true
+              : accountStatus === "existing"
+              ? (account?.userId
+                  ? (mustChangeByUserId.get(account.userId) ?? false)
+                  : false)
+              : false,
+          passwordNote:
+            accountStatus === "created"
+              ? "Initial password configured: Employee Number"
+              : null,
+        });
+      }
+
+      return {
+        created,
+        updated,
+        secondaryRows,
+        details,
+        warnings,
+        summary: {
+          employeesCreated: created,
+          employeesUpdated: updated,
+          employeesFailed: 0,
+          accountsCreated,
+          accountsExisting,
+          accountsFailed,
+          assignmentsCreated: assignmentsCreatedCount,
+          assignmentsExisting,
+          assignmentsFailed,
+        },
+      };
     });
 
     try {
@@ -1238,6 +1631,14 @@ export async function confirmExcelImportAction(
           created: summary.created,
           updated: summary.updated,
           secondaryRows: summary.secondaryRows,
+          // Provisioning outcome only — never credential material.
+          accountsCreated: summary.summary.accountsCreated,
+          accountsExisting: summary.summary.accountsExisting,
+          assignmentsCreated: summary.summary.assignmentsCreated,
+          assignmentsExisting: summary.summary.assignmentsExisting,
+          projectId: settings.projectId,
+          workLocationId: settings.workLocationId,
+          roleId: settings.roleId,
           employeeNumbers: plan.rows.map((row) => row.employeeNumber),
         },
       });
@@ -1252,7 +1653,19 @@ export async function confirmExcelImportAction(
       totalRows: plan.rows.length,
       createCount: summary.created,
       updateCount: summary.updated,
-      message: `Import complete: ${summary.created} created, ${summary.updated} updated.`,
+      details: summary.details,
+      summary: summary.summary,
+      errors: [],
+      warnings: summary.warnings,
+      accountsProvisioned: summary.summary.accountsCreated,
+      assignmentsCreated: summary.summary.assignmentsCreated,
+      message:
+        `Import complete: ${summary.created} created, ${summary.updated} updated. ` +
+        `${summary.summary.accountsCreated} account(s) provisioned, ` +
+        `${summary.summary.assignmentsCreated} assignment(s) created.` +
+        (summary.warnings.length > 0
+          ? ` ${summary.warnings.length} warning(s).`
+          : ""),
     };
   } catch (error) {
     if (error instanceof ImportError) {

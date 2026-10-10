@@ -764,7 +764,10 @@ test("wiring: template export applies the same visible-tab filter", () => {
 });
 
 test("wiring: import only opens the visible tab sheets", () => {
-  assert.match(importActionSource, /listActiveCustomTabs\(user\.organizationId\)/);
+  // Tabs are resolved server-side for the TARGET organization of the import
+  // (validated settings org; non-superadmins can only target their own), then
+  // filtered by role. The client can never name a tab or an organization.
+  assert.match(importActionSource, /listActiveCustomTabs\(organizationId\)/);
   assert.match(importActionSource, /customDataSheetNames\(tabPlan\)/);
   assert.match(importActionSource, /analyzeExcelImport\(\s*buffer,\s*customSpecs,\s*customDataSheetNames\s*\)/);
   assert.match(

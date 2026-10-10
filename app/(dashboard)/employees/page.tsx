@@ -22,6 +22,7 @@ import { EmployeeTable } from "@/features/employees/employee-table";
 import {
   listEmployeesByOrganization,
   listLinkableUsers,
+  getOrganizationName,
 } from "@/features/employees/queries";
 import { employeeListSearchSchema } from "@/features/employees/schemas";
 import { canPermanentlyDeleteEmployees } from "@/features/employees/permanent-delete-policy";
@@ -34,6 +35,15 @@ import {
   toCustomFieldFilterSpec,
   type CustomFieldFilterSpec,
 } from "@/features/employee-fields/filtering";
+import {
+  listAllOrganizationsForSuperAdmin,
+  listRoleOptionsByOrganization,
+  listRoleOptionsForSuperAdmin,
+} from "@/features/rbac/queries";
+import { listActiveWorkLocationOptionsForSuperAdmin } from "@/features/work-locations/queries";
+import { listWorkLocationOptions } from "@/features/work-locations/queries";
+import { listActiveProjectOptionsForSuperAdmin } from "@/features/projects/queries";
+import { listProjectOptionsByOrganization } from "@/features/projects/queries";
 
 export const metadata: Metadata = {
   title: "Employees",
@@ -165,9 +175,52 @@ export default async function EmployeesPage({
   );
   const activeCustomParams = collectCustomFilterParams(params);
 
-  const [result, linkableUsers] = await Promise.all([
+  const [result, linkableUsers, importData] = await Promise.all([
     listEmployeesByOrganization(organizationId, filters, customFilters),
     canCreate ? listLinkableUsers(organizationId) : Promise.resolve([]),
+    (async () => {
+      if (!canImportExcel) return null;
+      const isSuperAdmin = authorization.isSuperAdmin;
+
+      // Fetch organizations (for SUPERADMIN: all active orgs; for others: just their own)
+      const organizations = isSuperAdmin
+        ? await listAllOrganizationsForSuperAdmin()
+        : [{ id: organizationId, code: "", name: "" }];
+
+      // Get organization names for non-superadmin
+      let orgList = organizations;
+      if (!authorization.isSuperAdmin) {
+        const orgName = await getOrganizationName(organizationId);
+        orgList = [{ id: organizationId, code: "", name: orgName ?? "" }];
+      }
+
+      // The wizard is one in-place dialog where a SUPERADMIN can switch the
+      // target organization, so it needs the option lists for EVERY active
+      // tenant (filtered client-side by the selected organization). A tenant
+      // user only ever receives their own organization's options. Either way
+      // `validateImportSettings` re-checks organization/project/work-location/
+      // role membership server-side before anything is written.
+      const [projects, workLocations, roles] = isSuperAdmin
+        ? await Promise.all([
+            listActiveProjectOptionsForSuperAdmin(),
+            listActiveWorkLocationOptionsForSuperAdmin(),
+            listRoleOptionsForSuperAdmin(),
+          ])
+        : await Promise.all([
+            listProjectOptionsByOrganization(organizationId),
+            listWorkLocationOptions(organizationId),
+            listRoleOptionsByOrganization(organizationId),
+          ]);
+
+      return {
+        isSuperAdmin,
+        organizations: orgList,
+        projects,
+        workLocations,
+        roles,
+        userOrganizationId: authorization.isSuperAdmin ? null : organizationId,
+      };
+    })(),
   ]);
   const customFieldSpecs =
     canCreate && customDataView && customDataUpdate
@@ -228,7 +281,16 @@ export default async function EmployeesPage({
           {canCreate ? (
             <>
               <ImportEmployeesDialog />
-              {canImportExcel ? <ImportExcelDialog /> : null}
+              {canImportExcel && importData ? (
+                <ImportExcelDialog
+                  organizations={importData.organizations}
+                  projects={importData.projects}
+                  workLocations={importData.workLocations}
+                  roles={importData.roles}
+                  isSuperAdmin={importData.isSuperAdmin}
+                  userOrganizationId={importData.userOrganizationId}
+                />
+              ) : null}
               <CreateEmployeeDialog
                 linkableUsers={linkableUsers}
                 customFieldSpecs={customFieldSpecs}
