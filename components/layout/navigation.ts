@@ -65,8 +65,11 @@ export const supportNavigation: NavItem[] = [
   {
     title: "Projects",
     href: "/projects",
-    permission: PERMISSIONS.PROJECTS_VIEW,
     icon: "projects",
+    // SUPERADMIN-only (like Organizations, R19): decided by the
+    // system-level role, not by the projects.* permission codes. The page
+    // and every project server action re-verify requireSuperAdmin.
+    superadminOnly: true,
   },
   {
     title: "Attendance Recap",

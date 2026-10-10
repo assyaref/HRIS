@@ -1,6 +1,8 @@
+"use client";
+
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+
+import { buttonVariants } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -9,109 +11,196 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { ProjectListItem } from "./queries";
 
-function statusLabel(status: string) {
-  switch (status) {
-    case "active":
-      return "Active";
-    case "inactive":
-      return "Inactive";
-    case "completed":
-      return "Completed";
-    default:
-      return status;
-  }
+import { formatDate } from "@/features/payroll/format";
+
+import type { ProjectWithOrganization } from "./queries";
+import type { OrganizationSelectOption } from "./organization-select";
+import { ProjectStatusBadge } from "./project-status-badge";
+import { ProjectEditDialog } from "./project-edit-dialog";
+import { ProjectDeleteDialog } from "./project-delete-dialog";
+
+interface ProjectTableProps {
+  projects: ProjectWithOrganization[];
+  /** Active organizations for the edit dialog's organization selector. */
+  organizations: OrganizationSelectOption[];
+  /** Server-computed dependency totals per project id. */
+  dependencyTotals: Record<string, number>;
 }
 
-function statusVariant(
-  status: string
-): "primary" | "secondary" | "outline" | "destructive" {
-  switch (status) {
-    case "active":
-      return "primary";
-    case "completed":
-      return "secondary";
-    case "inactive":
-      return "outline";
-    default:
-      return "outline";
-  }
+function ensureOrganizationOptions(
+  organizations: OrganizationSelectOption[],
+  project: ProjectWithOrganization
+): OrganizationSelectOption[] {
+  const exists = organizations.some(
+    (organization) => organization.id === project.organizationId
+  );
+  if (exists) return organizations;
+  return [
+    ...organizations,
+    {
+      id: project.organizationId,
+      name: project.organizationName,
+      code: project.organizationCode,
+      status: project.organizationStatus,
+    },
+  ];
 }
 
-function formatDate(date: Date | null) {
-  if (!date) return "-";
-
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(date);
-}
-
-type ProjectTableProps = {
-  projects: ProjectListItem[];
-};
-
-export function ProjectTable({ projects }: ProjectTableProps) {
-  if (projects.length === 0) {
-    return (
-      <div className="rounded-lg border p-8 text-center">
-        <p className="text-sm font-medium">No projects found.</p>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Create a project to make it available for project assignments
-          and work locations.
-        </p>
-      </div>
-    );
-  }
-
+/**
+ * Projects list for the Super Administrator surface: desktop table + mobile
+ * cards (same pattern as `features/organizations/organizations-manager.tsx`).
+ * Every row shows its owning organization, and the row actions mirror what
+ * the server accepts — Delete only appears when the pre-computed dependency
+ * total is zero (the action re-verifies; a race maps to a refusal toast).
+ */
+export function ProjectTable({
+  projects,
+  organizations,
+  dependencyTotals,
+}: ProjectTableProps) {
   return (
-    <div className="rounded-lg border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Code</TableHead>
-            <TableHead>Name</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Start Date</TableHead>
-            <TableHead>End Date</TableHead>
-            <TableHead className="text-right">Action</TableHead>
-          </TableRow>
-        </TableHeader>
-
-        <TableBody>
-          {projects.map((project) => (
-            <TableRow key={project.id}>
-              <TableCell className="font-medium">
-                {project.code}
-              </TableCell>
-
-              <TableCell>{project.name}</TableCell>
-
-              <TableCell>
-                <Badge variant={statusVariant(project.status)}>
-                  {statusLabel(project.status)}
-                </Badge>
-              </TableCell>
-
-              <TableCell>{formatDate(project.startDate)}</TableCell>
-
-              <TableCell>{formatDate(project.endDate)}</TableCell>
-
-              <TableCell className="text-right">
-                <Link
-                  href={`/projects/${project.id}`}
-                  className="inline-flex h-8 items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
-                >
-                  View
-                </Link>
-              </TableCell>
+    <>
+      <div className="hidden rounded-lg border border-border bg-card sm:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Code</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Organization</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Start Date</TableHead>
+              <TableHead>End Date</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+          </TableHeader>
+          <TableBody>
+            {projects.map((project) => {
+              const dependencyTotal = dependencyTotals[project.id] ?? 0;
+              return (
+                <TableRow key={project.id}>
+                  <TableCell className="font-medium">
+                    <span className="font-mono text-sm">{project.code}</span>
+                  </TableCell>
+                  <TableCell>
+                    <Link
+                      href={`/projects/${project.id}`}
+                      className="block max-w-[16rem] truncate hover:underline"
+                    >
+                      {project.name}
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <span className="block max-w-[14rem] truncate" title={project.organizationName}>
+                      {project.organizationName}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <ProjectStatusBadge status={project.status} />
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {formatDate(project.startDate)}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {formatDate(project.endDate)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Link
+                        href={`/projects/${project.id}`}
+                        className={buttonVariants({
+                          variant: "outline",
+                          size: "sm",
+                        })}
+                      >
+                        View
+                      </Link>
+                      <ProjectEditDialog
+                        project={project}
+                        organizations={ensureOrganizationOptions(
+                          organizations,
+                          project
+                        )}
+                        canChangeOrganization={dependencyTotal === 0}
+                        compact
+                      />
+                      {dependencyTotal === 0 ? (
+                        <ProjectDeleteDialog
+                          project={project}
+                          dependencyTotal={dependencyTotal}
+                          compact
+                        />
+                      ) : null}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+
+      <div className="space-y-3 sm:hidden">
+        {projects.map((project) => {
+          const dependencyTotal = dependencyTotals[project.id] ?? 0;
+          return (
+            <div
+              key={project.id}
+              className="rounded-lg border border-border bg-card p-4"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <Link
+                    href={`/projects/${project.id}`}
+                    className="block truncate font-medium hover:underline"
+                  >
+                    {project.name}
+                  </Link>
+                  <p className="truncate text-sm text-muted-foreground">
+                    <span className="font-mono">{project.code}</span>
+                    {" · "}
+                    {project.organizationName}
+                  </p>
+                </div>
+                <ProjectStatusBadge status={project.status} />
+              </div>
+              <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+                <div>
+                  <dt className="text-xs text-muted-foreground">Start</dt>
+                  <dd>{formatDate(project.startDate)}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">End</dt>
+                  <dd>{formatDate(project.endDate)}</dd>
+                </div>
+              </dl>
+              {dependencyTotal > 0 ? (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Referenced by {dependencyTotal} record(s) — delete protected.
+                </p>
+              ) : null}
+              <div className="mt-3 flex justify-end gap-1">
+                <ProjectEditDialog
+                  project={project}
+                  organizations={ensureOrganizationOptions(
+                    organizations,
+                    project
+                  )}
+                  canChangeOrganization={dependencyTotal === 0}
+                  compact
+                />
+                {dependencyTotal === 0 ? (
+                  <ProjectDeleteDialog
+                    project={project}
+                    dependencyTotal={dependencyTotal}
+                    compact
+                  />
+                ) : null}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 }

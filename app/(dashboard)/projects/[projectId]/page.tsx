@@ -1,12 +1,26 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { requirePermission } from "@/lib/auth/rbac";
-import { requireUser } from "@/lib/auth/auth";
-import { PERMISSIONS } from "@/lib/auth/permissions";
-import { getProjectById } from "@/features/projects/queries";
-import { Button } from "@/components/ui/button";
+import { forbidden, notFound } from "next/navigation";
+import type { Metadata } from "next";
+
+import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ProjectEditForm } from "@/features/projects/project-edit-form";
+import { requireUser } from "@/lib/auth/auth";
+import { isSuperAdmin } from "@/lib/auth/rbac";
+
+import { listOrganizationOptions } from "@/features/organizations/queries";
+import {
+  detectProjectDependencies,
+  getProjectWithOrganization,
+} from "@/features/projects/queries";
+import { summarizeProjectDependencies } from "@/features/projects/policy";
+import { ProjectStatusBadge } from "@/features/projects/project-status-badge";
+import { ProjectEditDialog } from "@/features/projects/project-edit-dialog";
+import { ProjectStatusDialog } from "@/features/projects/project-status-dialog";
+import { ProjectDeleteDialog } from "@/features/projects/project-delete-dialog";
+
+export const metadata: Metadata = {
+  title: "Project detail",
+};
 
 function formatDate(date: Date | null) {
   if (!date) return "-";
@@ -19,66 +33,54 @@ function formatDate(date: Date | null) {
   }).format(date);
 }
 
-function statusLabel(status: string) {
-  switch (status) {
-    case "active":
-      return "Active";
-    case "inactive":
-      return "Inactive";
-    case "completed":
-      return "Completed";
-    default:
-      return status;
-  }
-}
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function statusVariant(
-  status: string
-): "primary" | "secondary" | "outline" | "destructive" {
-  switch (status) {
-    case "active":
-      return "primary";
-    case "completed":
-      return "secondary";
-    case "inactive":
-      return "outline";
-    default:
-      return "outline";
-  }
-}
-
+/**
+ * Project detail — SUPERADMIN ONLY (same gate as the projects list and every
+ * project server action; non-superadmin users get 403).
+ */
 export default async function ProjectDetailPage({
   params,
 }: {
   params: Promise<{ projectId: string }>;
 }) {
-  const user = await requireUser();
-
-  if (!user.organizationId) {
-    throw new Error("Unauthorized");
+  const { projectId } = await params;
+  if (!UUID_PATTERN.test(projectId)) {
+    notFound();
   }
 
-  await requirePermission(user.id, PERMISSIONS.PROJECTS_VIEW);
+  const user = await requireUser();
+  if (!(await isSuperAdmin(user.id))) {
+    forbidden();
+  }
 
-  const { projectId } = await params;
-
-  const project = await getProjectById(
-    user.organizationId,
-    projectId
-  );
+  const project = await getProjectWithOrganization(projectId);
 
   if (!project) {
     notFound();
   }
 
-  let canManage = false;
+  const [dependencyCounts, activeOrganizations] = await Promise.all([
+    detectProjectDependencies(projectId),
+    listOrganizationOptions({ activeOnly: true }),
+  ]);
 
-  try {
-    await requirePermission(user.id, PERMISSIONS.PROJECTS_MANAGE);
-    canManage = true;
-  } catch {
-    canManage = false;
-  }
+  const dependencySummary = summarizeProjectDependencies(dependencyCounts);
+
+  const organizationOptions = activeOrganizations.some(
+    (organization) => organization.id === project.organizationId
+  )
+    ? activeOrganizations
+    : [
+        ...activeOrganizations,
+        {
+          id: project.organizationId,
+          name: project.organizationName,
+          code: project.organizationCode,
+          status: project.organizationStatus,
+        },
+      ];
 
   return (
     <div className="space-y-6">
@@ -86,55 +88,93 @@ export default async function ProjectDetailPage({
         <div className="flex items-center gap-3">
           <Link
             href="/projects"
-            className="inline-flex h-8 items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
           >
             Back
           </Link>
 
           <div>
-            <h1 className="text-2xl font-semibold">
-              {project.name}
-            </h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl font-semibold">{project.name}</h1>
+            <p className="text-muted-foreground font-mono text-sm">
               {project.code}
             </p>
           </div>
         </div>
 
-        <ProjectEditForm
-          project={project}
-          canManage={canManage}
-        />
+        <div className="flex flex-wrap gap-2">
+          <ProjectEditDialog
+            project={project}
+            organizations={organizationOptions}
+            canChangeOrganization={!dependencySummary.hasAny}
+          />
+          <ProjectStatusDialog project={project} />
+          {!dependencySummary.hasAny ? (
+            <ProjectDeleteDialog
+              project={project}
+              dependencyTotal={dependencySummary.total}
+            />
+          ) : null}
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-lg border p-5">
-          <p className="text-muted-foreground text-sm">Code</p>
-          <p className="mt-1 font-medium">{project.code}</p>
+          <p className="text-muted-foreground text-sm">Organization</p>
+          <p className="mt-1 font-medium">{project.organizationName}</p>
+          <p className="text-muted-foreground mt-1 font-mono text-xs">
+            {project.organizationCode}
+          </p>
         </div>
 
         <div className="rounded-lg border p-5">
           <p className="text-muted-foreground text-sm">Status</p>
           <div className="mt-2">
-            <Badge variant={statusVariant(project.status)}>
-              {statusLabel(project.status)}
-            </Badge>
+            <ProjectStatusBadge status={project.status} />
           </div>
         </div>
 
         <div className="rounded-lg border p-5">
           <p className="text-muted-foreground text-sm">Start Date</p>
-          <p className="mt-1 font-medium">
-            {formatDate(project.startDate)}
-          </p>
+          <p className="mt-1 font-medium">{formatDate(project.startDate)}</p>
         </div>
 
         <div className="rounded-lg border p-5">
           <p className="text-muted-foreground text-sm">End Date</p>
-          <p className="mt-1 font-medium">
-            {formatDate(project.endDate)}
-          </p>
+          <p className="mt-1 font-medium">{formatDate(project.endDate)}</p>
         </div>
+      </div>
+
+      <div className="rounded-lg border p-5">
+        <p className="text-muted-foreground text-sm">Linked records</p>
+        {dependencySummary.hasAny ? (
+          <ul className="mt-2 space-y-1 text-sm">
+            {dependencySummary.categories.map(
+              ({ category, count }) => (
+                <li key={category} className="flex items-center gap-2">
+                  <Badge variant="secondary">{count}</Badge>
+                  <span>
+                    {category === "assignments"
+                      ? "Employee assignments"
+                      : category === "attendance"
+                        ? "Attendance records"
+                        : "Work locations"}
+                  </span>
+                </li>
+              )
+            )}
+          </ul>
+        ) : (
+          <p className="mt-1 text-sm">
+            None — this project is not referenced by assignments, attendance
+            or work locations.
+          </p>
+        )}
+        {dependencySummary.hasAny ? (
+          <p className="text-muted-foreground mt-2 text-xs">
+            Projects with linked records cannot be deleted or moved to
+            another organization. Set the project to Inactive instead.
+          </p>
+        ) : null}
       </div>
     </div>
   );

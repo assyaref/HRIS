@@ -356,3 +356,37 @@ export async function isOrganizationNameTaken(
     .limit(1);
   return rows.length > 0;
 }
+
+/** Lightweight option row for selectors and filters (no aggregate counts). */
+export interface OrganizationOption {
+  id: string;
+  name: string;
+  code: string;
+  status: string;
+}
+
+/**
+ * Organization options for dropdowns.
+ *
+ * Used by the Super Administrator project flows (organization selector and
+ * list filter). `activeOnly` limits the options to organizations that may
+ * receive new data; every row still carries its status so callers can badge
+ * or filter as needed. This is a read-only catalog lookup — callers remain
+ * responsible for their own authorization.
+ */
+export async function listOrganizationOptions(input: {
+  activeOnly?: boolean;
+} = {}): Promise<OrganizationOption[]> {
+  return db
+    .select({
+      id: organizations.id,
+      name: organizations.name,
+      code: organizations.code,
+      status: organizations.status,
+    })
+    .from(organizations)
+    .where(
+      input.activeOnly ? eq(organizations.status, "active") : undefined
+    )
+    .orderBy(asc(organizations.name));
+}

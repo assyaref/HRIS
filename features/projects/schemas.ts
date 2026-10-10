@@ -13,6 +13,8 @@ export const PROJECT_CODE_PATTERN =
 
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 
+const uuidSchema = z.string().uuid("Invalid identifier format.");
+
 const projectCodeSchema = z
   .string()
   .trim()
@@ -38,11 +40,14 @@ const projectStatusSchema = z.enum(PROJECT_STATUSES);
 /**
  * Create project.
  *
- * organizationId is intentionally absent.
- * It must always come from the authenticated user's session.
+ * `organizationId` is REQUIRED and selects the tenant the project will belong
+ * to. The value itself is never trusted: the server action validates that the
+ * organization exists, is active and is a real `organizations.id` row before
+ * inserting (Super Administrator organization selector).
  */
 export const createProjectSchema = z
   .object({
+    organizationId: uuidSchema,
     code: projectCodeSchema,
     name: projectNameSchema,
     status: projectStatusSchema.default("active"),
@@ -63,11 +68,14 @@ export const createProjectSchema = z
 /**
  * Update project profile/lifecycle.
  *
- * organizationId and projectId are intentionally absent.
- * Both are supplied by the server-side action.
+ * `organizationId` is optional and only honored when the server action's
+ * dependency guard allows moving the project to another organization.
+ * `projectId` is intentionally absent — it is supplied by the server-side
+ * action from its own bound argument, never from the client payload.
  */
 export const updateProjectSchema = z
   .object({
+    organizationId: uuidSchema.optional(),
     code: projectCodeSchema.optional(),
     name: projectNameSchema.optional(),
     status: projectStatusSchema.optional(),
@@ -95,6 +103,7 @@ export const updateProjectStatusSchema = z.object({
 export const projectListSearchSchema = z.object({
   q: z.string().trim().max(80).optional(),
   status: projectStatusSchema.optional(),
+  organizationId: uuidSchema.optional(),
   page: z.coerce.number().int().min(1).optional(),
 });
 

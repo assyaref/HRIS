@@ -1,23 +1,57 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
+
 import { db } from "@/db";
 import { projects } from "@/db/schema";
-import { requirePermission } from "@/lib/auth/rbac";
+import { requireSuperAdmin } from "@/lib/auth/rbac";
 import { requireUser } from "@/lib/auth/auth";
-import { PERMISSIONS } from "@/lib/auth/permissions";
 import { writeAuditLog } from "@/lib/auth/audit";
 import {
   createProjectSchema,
   updateProjectSchema,
   updateProjectStatusSchema,
 } from "./schemas";
+import {
+  isDuplicateProjectError,
+  isForeignKeyViolation,
+  isUuid,
+  evaluateProjectDelete,
+  evaluateProjectOrganizationChange,
+  summarizeProjectDependencies,
+  PROJECT_DEPENDENCY_CATEGORY_LABELS,
+} from "./policy";
+import {
+  detectProjectDependencies,
+  getActiveOrganization,
+  getProjectWithOrganization,
+  isProjectCodeTaken,
+} from "./queries";
 
-type ActionResult = {
+export type ActionResult = {
   success: boolean;
   message: string;
   projectId?: string;
 };
+
+/**
+ * Projects CRUD — server actions (Super Administrator only).
+ *
+ * Security rulebook (same contract as features/organizations/actions.ts):
+ * 1. Re-authenticate (`requireUser`) — never trust the request body.
+ * 2. Re-authorize with `requireSuperAdmin`: the system-level SUPERADMIN role
+ *    is resolved from PostgreSQL on EVERY call. The `projects.*` permission
+ *    codes are catalog expressibility only — they are never sufficient, so
+ *    no tenant role can manage projects even by direct action invocation.
+ * 3. The target project and organization are loaded from the database BY ID;
+ *    ids and organization scopes sent by the client are never trusted.
+ * 4. Pure policy (`./policy.ts`) rejects: deletion while ANY dependent record
+ *    exists (assignments, attendance, work locations — history protected),
+ *    and organization moves that would break the same-organization invariant
+ *    of employee↔project assignments.
+ * 5. Every mutation audits actor, target and outcome — never secrets.
+ */
 
 function normalizeCode(code: string) {
   return code.trim().toUpperCase();
@@ -27,28 +61,60 @@ function normalizeName(name: string) {
   return name.trim();
 }
 
+async function requireSuperAdminActor() {
+  const user = await requireUser();
+  await requireSuperAdmin(user.id);
+  return user;
+}
+
+async function audit(
+  organizationId: string | null,
+  actorUserId: string,
+  action: Parameters<typeof writeAuditLog>[0]["action"],
+  entityId: string | null,
+  metadata?: Record<string, unknown>
+): Promise<void> {
+  try {
+    await writeAuditLog({
+      organizationId,
+      actorUserId,
+      action,
+      entityType: "project",
+      entityId,
+      metadata,
+    });
+  } catch (auditError) {
+    // The mutation already committed; never fail the UX for a lost audit row.
+    console.error(`[projects] audit failed after ${action}`, auditError);
+  }
+}
+
+function revalidateProjects(projectId?: string) {
+  revalidatePath("/projects");
+  if (projectId) {
+    revalidatePath(`/projects/${projectId}`);
+  }
+}
+
+function field(formData: FormData, name: string): string {
+  const value = formData.get(name);
+  return typeof value === "string" ? value.trim() : "";
+}
+
+/** Create a project inside the Super Administrator's chosen organization. */
 export async function createProjectAction(
   _previousState: ActionResult | null,
   formData: FormData
 ): Promise<ActionResult> {
-  const user = await requireUser();
-  await requirePermission(user.id, PERMISSIONS.PROJECTS_MANAGE);
-
-  const organizationId = user.organizationId;
-
-  if (!organizationId) {
-    return {
-      success: false,
-      message: "User is not associated with an organization.",
-    };
-  }
+  const user = await requireSuperAdminActor();
 
   const parsed = createProjectSchema.safeParse({
-    code: formData.get("code"),
-    name: formData.get("name"),
-    status: formData.get("status") || "active",
-    startDate: formData.get("startDate") || undefined,
-    endDate: formData.get("endDate") || undefined,
+    organizationId: field(formData, "organizationId"),
+    code: field(formData, "code"),
+    name: field(formData, "name"),
+    status: field(formData, "status") || "active",
+    startDate: field(formData, "startDate") || undefined,
+    endDate: field(formData, "endDate") || undefined,
   });
 
   if (!parsed.success) {
@@ -58,85 +124,105 @@ export async function createProjectAction(
     };
   }
 
+  const { organizationId } = parsed.data;
   const code = normalizeCode(parsed.data.code);
   const name = normalizeName(parsed.data.name);
 
-  const [existing] = await db
-    .select({ id: projects.id })
-    .from(projects)
-    .where(
-      and(
-        eq(projects.organizationId, organizationId),
-        eq(projects.code, code)
-      )
-    )
-    .limit(1);
-
-  if (existing) {
+  // Never trust the client's organization id: it must be a real, ACTIVE
+  // tenant organization.
+  const organization = await getActiveOrganization(organizationId);
+  if (!organization) {
     return {
       success: false,
-      message: "Project code already exists in this organization.",
+      message:
+        "Organization not found or inactive. Select an active organization.",
     };
   }
 
-  const [project] = await db
-    .insert(projects)
-    .values({
-      organizationId,
-      code,
-      name,
-      status: parsed.data.status,
-      startDate: parsed.data.startDate
-        ? new Date(`${parsed.data.startDate}T00:00:00.000Z`)
-        : null,
-      endDate: parsed.data.endDate
-        ? new Date(`${parsed.data.endDate}T00:00:00.000Z`)
-        : null,
-    })
-    .returning({
-      id: projects.id,
-    });
-
-  if (!project) {
+  if (await isProjectCodeTaken(organizationId, code)) {
     return {
       success: false,
-      message: "Failed to create project.",
+      message: `Project code "${code}" already exists in organization "${organization.name}".`,
     };
   }
 
-  await writeAuditLog({
-    organizationId,
-    actorUserId: user.id,
-    action: "project.created",
-    entityType: "project",
-    entityId: project.id,
-    metadata: {
-      code,
-      name,
-      status: parsed.data.status,
-    },
+  let projectId: string;
+
+  try {
+    const [project] = await db
+      .insert(projects)
+      .values({
+        organizationId,
+        code,
+        name,
+        status: parsed.data.status,
+        startDate: parsed.data.startDate
+          ? new Date(`${parsed.data.startDate}T00:00:00.000Z`)
+          : null,
+        endDate: parsed.data.endDate
+          ? new Date(`${parsed.data.endDate}T00:00:00.000Z`)
+          : null,
+      })
+      .returning({
+        id: projects.id,
+      });
+
+    if (!project) {
+      return {
+        success: false,
+        message: "Failed to create project.",
+      };
+    }
+
+    projectId = project.id;
+  } catch (unknownError) {
+    if (isDuplicateProjectError(unknownError)) {
+      return {
+        success: false,
+        message: `Project code "${code}" already exists in organization "${organization.name}".`,
+      };
+    }
+    console.error("[projects] create failed", unknownError);
+    return {
+      success: false,
+      message: "The project could not be created. Please try again.",
+    };
+  }
+
+  await audit(organizationId, user.id, "project.created", projectId, {
+    code,
+    name,
+    status: parsed.data.status,
+    organizationCode: organization.code,
+    organizationName: organization.name,
   });
+  revalidateProjects(projectId);
 
   return {
     success: true,
-    message: "Project created successfully.",
-    projectId: project.id,
+    message: `Project "${name}" created in organization "${organization.name}".`,
+    projectId,
   };
 }
 
+/**
+ * Update a project's profile/lifecycle, including its organization.
+ *
+ * An organization move is only accepted while the project holds no dependent
+ * rows (assignments, attendance records, work locations): the invariant
+ * "employee and project belong to the same organization" would otherwise
+ * break silently for Employee/Attendance/Work Location data.
+ */
 export async function updateProjectAction(
   projectId: string,
   input: unknown
 ): Promise<ActionResult> {
-  const user = await requireUser();
-  await requirePermission(user.id, PERMISSIONS.PROJECTS_MANAGE);
+  const user = await requireSuperAdminActor();
 
-  const organizationId = user.organizationId;
-
-  if (!organizationId) {
+  if (!isUuid(projectId)) {
     return {
       success: false,
-      message: "User is not associated with an organization.",
+      message: "Invalid project.",
     };
   }
 
@@ -149,21 +235,7 @@ export async function updateProjectAction(
     };
   }
 
-  const [existing] = await db
-    .select({
-      id: projects.id,
-      code: projects.code,
-      name: projects.name,
-      status: projects.status,
-    })
-    .from(projects)
-    .where(
-      and(
-        eq(projects.id, projectId),
-        eq(projects.organizationId, organizationId)
-      )
-    )
-    .limit(1);
+  const existing = await getProjectWithOrganization(projectId);
 
   if (!existing) {
     return {
@@ -176,24 +248,63 @@ export async function updateProjectAction(
     updatedAt: new Date(),
   };
 
+  const organizationChange =
+    parsed.data.organizationId !== undefined &&
+    parsed.data.organizationId !== existing.organizationId;
+
+  let targetOrganization: { id: string; name: string; code: string } | null =
+    null;
+
+  if (organizationChange) {
+    const dependencyCounts = await detectProjectDependencies(projectId);
+    const decision = evaluateProjectOrganizationChange({
+      actorIsSuperAdmin: true,
+      dependencyCounts,
+    });
+
+    if (!decision.allowed) {
+      const summary = summarizeProjectDependencies(dependencyCounts);
+      const details = summary.categories
+        .map(
+          ({ category, count }) =>
+            `${PROJECT_DEPENDENCY_CATEGORY_LABELS[category]}: ${count}`
+        )
+        .join(", ");
+      return {
+        success: false,
+        message: `${decision.message} Dependent records: ${details}. Remove those references first, or keep the project in its current organization.`,
+      };
+    }
+
+    targetOrganization = await getActiveOrganization(
+      parsed.data.organizationId!
+    );
+
+    if (!targetOrganization) {
+      return {
+        success: false,
+        message:
+          "Target organization not found or inactive. Select an active organization.",
+      };
+    }
+
+    values.organizationId = parsed.data.organizationId;
+  }
+
+  // Code uniqueness is evaluated within the organization the project will
+  // belong to after this update.
+  const effectiveOrganizationId =
+    values.organizationId ?? existing.organizationId;
+
   if (parsed.data.code !== undefined) {
     const code = normalizeCode(parsed.data.code);
 
-    const [duplicate] = await db
-      .select({ id: projects.id })
-      .from(projects)
-      .where(
-        and(
-          eq(projects.organizationId, organizationId),
-          eq(projects.code, code)
-        )
-      )
-      .limit(1);
-
-    if (duplicate && duplicate.id !== projectId) {
+    if (
+      await isProjectCodeTaken(effectiveOrganizationId, code, projectId)
+    ) {
       return {
         success: false,
-        message: "Project code already exists in this organization.",
+        message: `Project code "${code}" already exists in this organization.`,
       };
     }
 
@@ -220,58 +331,69 @@ export async function updateProjectAction(
     );
   }
 
-  const [updated] = await db
-    .update(projects)
-    .set(values)
-    .where(
-      and(
-        eq(projects.id, projectId),
-        eq(projects.organizationId, organizationId)
-      )
-    )
-    .returning({
-      id: projects.id,
-    });
+  try {
+    const [updated] = await db
+      .update(projects)
+      .set(values)
+      .where(eq(projects.id, projectId))
+      .returning({
+        id: projects.id,
+      });
 
-  if (!updated) {
+    if (!updated) {
+      return {
+        success: false,
+        message: "Project not found.",
+      };
+    }
+  } catch (unknownError) {
+    if (isDuplicateProjectError(unknownError)) {
+      return {
+        success: false,
+        message: "Project code already exists in this organization.",
+      };
+    }
+    console.error("[projects] update failed", unknownError);
     return {
       success: false,
-      message: "Failed to update project.",
+      message: "The project could not be updated. Please try again.",
     };
   }
 
-  await writeAuditLog({
-    organizationId,
-    actorUserId: user.id,
-    action: "project.updated",
-    entityType: "project",
-    entityId: projectId,
-    metadata: {
-      before: existing,
-      after: parsed.data,
-    },
+  await audit(existing.organizationId, user.id, "project.updated", projectId, {
+    code: values.code ?? existing.code,
+    name: values.name ?? existing.name,
+    status: values.status ?? existing.status,
+    ...(organizationChange && targetOrganization
+      ? {
+          organizationChanged: true,
+          fromOrganization: existing.organizationName,
+          toOrganization: targetOrganization.name,
+        }
+      : {}),
   });
+  revalidateProjects(projectId);
 
   return {
     success: true,
-    message: "Project updated successfully.",
+    message: organizationChange
+      ? `Project moved to organization "${targetOrganization?.name}".`
+      : "Project updated successfully.",
     projectId,
   };
 }
 
+/** Explicit lifecycle transition. */
 export async function updateProjectStatusAction(
   projectId: string,
   input: unknown
 ): Promise<ActionResult> {
-  const user = await requireUser();
-  await requirePermission(user.id, PERMISSIONS.PROJECTS_MANAGE);
+  const user = await requireSuperAdminActor();
 
-  const organizationId = user.organizationId;
-
-  if (!organizationId) {
+  if (!isUuid(projectId)) {
     return {
       success: false,
-      message: "User is not associated with an organization.",
+      message: "Invalid project.",
     };
   }
 
@@ -284,20 +406,7 @@ export async function updateProjectStatusAction(
     };
   }
 
-  const [existing] = await db
-    .select({
-      id: projects.id,
-      code: projects.code,
-      status: projects.status,
-    })
-    .from(projects)
-    .where(
-      and(
-        eq(projects.id, projectId),
-        eq(projects.organizationId, organizationId)
-      )
-    )
-    .limit(1);
+  const existing = await getProjectWithOrganization(projectId);
 
   if (!existing) {
     return {
@@ -320,12 +429,7 @@ export async function updateProjectStatusAction(
       status: parsed.data.status,
       updatedAt: new Date(),
     })
-    .where(
-      and(
-        eq(projects.id, projectId),
-        eq(projects.organizationId, organizationId)
-      )
-    )
+    .where(eq(projects.id, projectId))
     .returning({
       id: projects.id,
     });
@@ -337,22 +441,120 @@ export async function updateProjectStatusAction(
     };
   }
 
-  await writeAuditLog({
-    organizationId,
-    actorUserId: user.id,
-    action: "project.status_changed",
-    entityType: "project",
-    entityId: projectId,
-    metadata: {
-      code: existing.code,
-      from: existing.status,
-      to: parsed.data.status,
-    },
+  await audit(existing.organizationId, user.id, "project.status_changed", projectId, {
+    code: existing.code,
+    from: existing.status,
+    to: parsed.data.status,
   });
+  revalidateProjects(projectId);
 
   return {
     success: true,
     message: "Project status updated successfully.",
+    projectId,
+  };
+}
+
+/**
+ * Hard-delete a project. Rejected whenever ANY dependent record exists
+ * (assignments — active or ended, attendance records, work locations):
+ * the schema would cascade assignments and null out attendance/work-location
+ * history, which this application treats as protected data. Deactivating the
+ * project (status change) is the sanctioned alternative.
+ */
+export async function deleteProjectAction(
+  projectId: string
+): Promise<ActionResult> {
+  const user = await requireSuperAdminActor();
+
+  if (!isUuid(projectId)) {
+    return {
+      success: false,
+      message: "Invalid project.",
+    };
+  }
+
+  const existing = await getProjectWithOrganization(projectId);
+
+  if (!existing) {
+    return {
+      success: false,
+      message: "Project not found.",
+    };
+  }
+
+  const dependencyCounts = await detectProjectDependencies(projectId);
+  const decision = evaluateProjectDelete({
+    actorIsSuperAdmin: true,
+    dependencyCounts,
+  });
+
+  if (!decision.allowed) {
+    const summary = summarizeProjectDependencies(dependencyCounts);
+    if (decision.reason === "dependent.records" && summary.hasAny) {
+      const details = summary.categories
+        .map(
+          ({ category, count }) =>
+            `${PROJECT_DEPENDENCY_CATEGORY_LABELS[category]}: ${count}`
+        )
+        .join(", ");
+      return {
+        success: false,
+        message: `${decision.message} Dependent records: ${details}. Set the project to Inactive instead of deleting it.`,
+      };
+    }
+    return {
+      success: false,
+      message: decision.message ?? "Operation not allowed.",
+    };
+  }
+
+  try {
+    // Destructive: the delete and its audit row commit atomically.
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(projects)
+        .where(eq(projects.id, projectId));
+
+      await writeAuditLog(
+        {
+          organizationId: existing.organizationId,
+          actorUserId: user.id,
+          action: "project.deleted",
+          entityType: "project",
+          entityId: projectId,
+          metadata: {
+            code: existing.code,
+            name: existing.name,
+            organizationCode: existing.organizationCode,
+            organizationName: existing.organizationName,
+          },
+        },
+        tx
+      );
+    });
+  } catch (unknownError) {
+    // A dependent row appeared between the scan and the delete — refuse
+    // with the same message; never cascade.
+    if (isForeignKeyViolation(unknownError)) {
+      return {
+        success: false,
+        message:
+          "Project cannot be deleted because it is still referenced by other records. Set it to Inactive instead.",
+      };
+    }
+    console.error("[projects] delete failed", unknownError);
+    return {
+      success: false,
+      message: "The project could not be deleted. Please try again.",
+    };
+  }
+
+  revalidateProjects(projectId);
+
+  return {
+    success: true,
+    message: `Project "${existing.name}" deleted.`,
     projectId,
   };
 }
