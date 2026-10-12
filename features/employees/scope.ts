@@ -70,6 +70,64 @@ export function resolveEmployeeScope(input: EmployeeScopeInput): EmployeeScope {
   return { organizationId: userOrganizationId, viewingOtherOrganization: false };
 }
 
+export interface EmployeeDetailScopeInput {
+  /**
+   * The organization that owns the employee record, read from the database.
+   * This value is AUTHORITATIVE: it is never taken from the request.
+   */
+  employeeOrganizationId: string;
+  /** The authenticated user's own organization (from the session). */
+  userOrganizationId: string | null;
+  /** Whether the caller holds the system-level SUPERADMIN role. */
+  isSuperAdmin: boolean;
+  /**
+   * Raw `org` query parameter (URL context), already trimmed. Only ever a
+   * consistency assertion — it can never widen access.
+   */
+  requestedOrganizationId?: string | null;
+}
+
+export interface EmployeeDetailScope {
+  /** The organization whose employee data may be read. */
+  organizationId: string;
+  /** True only when a SUPERADMIN is looking at a different tenant. */
+  viewingOtherOrganization: boolean;
+}
+
+/**
+ * Resolve whether the caller may read ONE employee detail, and in which
+ * organization's scope.
+ *
+ * The employee's OWN organization (read from the record, not the browser) is
+ * authoritative. Returns `null` (the caller responds with forbidden) when:
+ *  - the session has no organization;
+ *  - the employee belongs to another tenant and the caller is not a Super
+ *    Administrator (tenant isolation, unaffected by URL tampering);
+ *  - a URL `org` context was supplied that does NOT match the employee's
+ *    owning organization (an inconsistent context is refused, never followed).
+ *
+ * A Super Administrator viewing another tenant's employee is reported through
+ * `viewingOtherOrganization`, which callers use to render the page read-only
+ * while the write actions stay scoped to the session organization.
+ */
+export function resolveEmployeeDetailScope(
+  input: EmployeeDetailScopeInput
+): EmployeeDetailScope | null {
+  const { userOrganizationId, employeeOrganizationId } = input;
+  if (!userOrganizationId || !isUuid(employeeOrganizationId)) return null;
+
+  const isOwnOrganization = employeeOrganizationId === userOrganizationId;
+  if (!isOwnOrganization && !input.isSuperAdmin) return null;
+
+  const requested = input.requestedOrganizationId?.trim();
+  if (requested && requested !== employeeOrganizationId) return null;
+
+  return {
+    organizationId: employeeOrganizationId,
+    viewingOtherOrganization: !isOwnOrganization,
+  };
+}
+
 export interface ProjectScopeInput {
   /** Raw `projectId` query parameter. */
   requestedProjectId?: string | null;

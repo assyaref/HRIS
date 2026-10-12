@@ -334,6 +334,14 @@ export default async function EmployeesPage({
     );
   }
 
+  // Carry the active organization + project scope into each row's View/Edit
+  // target. Only the validated `org`/`projectId` values are used, so the detail
+  // page receives a context it can independently re-verify.
+  const detailContextParams = new URLSearchParams();
+  if (viewedOrganizationId) detailContextParams.set("org", viewedOrganizationId);
+  if (projectId) detailContextParams.set("projectId", projectId);
+  const employeeDetailContext = detailContextParams.toString() || undefined;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -439,6 +447,7 @@ export default async function EmployeesPage({
             canEdit={canEdit}
             canDelete={canDelete}
             canPermanentDelete={canPermanentDelete}
+            detailContext={employeeDetailContext}
           />
 
           {totalPages > 1 ? (

@@ -26,23 +26,29 @@ function rowActions({
   canEdit,
   canDelete,
   canPermanentDelete,
+  detailContext,
 }: {
   employee: EmployeeListItem;
   canEdit: boolean;
   canDelete: boolean;
   canPermanentDelete: boolean;
+  /** Query string (no leading `?`) carrying the active org/project scope. */
+  detailContext?: string;
 }) {
+  const detailHref = detailContext
+    ? `/employees/${employee.id}?${detailContext}`
+    : `/employees/${employee.id}`;
   return (
     <>
       <Link
-        href={`/employees/${employee.id}`}
+        href={detailHref}
         className={buttonVariants({ variant: "ghost", size: "sm" })}
       >
         View
       </Link>
       {canEdit ? (
         <Link
-          href={`/employees/${employee.id}`}
+          href={detailHref}
           className={buttonVariants({ variant: "ghost", size: "sm" })}
         >
           Edit
@@ -77,11 +83,18 @@ export function EmployeeTable({
   canEdit = false,
   canDelete = false,
   canPermanentDelete = false,
+  detailContext,
 }: {
   employees: EmployeeListItem[];
   canEdit?: boolean;
   canDelete?: boolean;
   canPermanentDelete?: boolean;
+  /**
+   * Active organization + project scope (as a query string) forwarded to the
+   * View/Edit targets so the detail page and its "back" control keep the
+   * filters the user was browsing.
+   */
+  detailContext?: string;
 }) {
   return (
     <div className="rounded-lg border border-border bg-card">
@@ -133,7 +146,7 @@ export function EmployeeTable({
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex flex-wrap justify-end gap-1">
-                  {rowActions({ employee, canEdit, canDelete, canPermanentDelete })}
+                  {rowActions({ employee, canEdit, canDelete, canPermanentDelete, detailContext })}
                 </div>
               </TableCell>
             </TableRow>
@@ -161,7 +174,7 @@ export function EmployeeTable({
             <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
               <span>Hired {formatDate(employee.hireDate)}</span>
               <div className="flex flex-wrap justify-end gap-1">
-                {rowActions({ employee, canEdit, canDelete, canPermanentDelete })}
+                {rowActions({ employee, canEdit, canDelete, canPermanentDelete, detailContext })}
               </div>
             </div>
           </li>

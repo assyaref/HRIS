@@ -377,6 +377,76 @@ export async function listEmployeesFlatByOrganization(
   return rows.map(toListItem);
 }
 
+const employeeDetailSelection = {
+  id: employees.id,
+  organizationId: employees.organizationId,
+  userId: employees.userId,
+  employeeNumber: employees.employeeNumber,
+  firstName: employees.firstName,
+  lastName: employees.lastName,
+  email: employees.email,
+  phone: employees.phone,
+  department: employees.department,
+  position: employees.position,
+  employmentStatus: employees.employmentStatus,
+  hireDate: employees.hireDate,
+  linkedUserEmail: users.email,
+  linkedUserStatus: users.status,
+  createdAt: employees.createdAt,
+  updatedAt: employees.updatedAt,
+} as const;
+
+function toEmployeeDetail(row: {
+  id: string;
+  organizationId: string;
+  userId: string | null;
+  employeeNumber: string;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  phone: string | null;
+  department: string | null;
+  position: string | null;
+  employmentStatus: string;
+  hireDate: Date | null;
+  linkedUserEmail: string | null;
+  linkedUserStatus: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): EmployeeDetail {
+  return {
+    ...toListItem(row),
+    organizationId: row.organizationId,
+    userId: row.userId,
+    linkedUserStatus: row.linkedUserStatus,
+    updatedAt: row.updatedAt,
+  };
+}
+
+/**
+ * Load one employee by id WITHOUT an organization filter.
+ *
+ * This is the ONLY unscoped employee read. It exists so the detail page can
+ * discover the record's OWNING organization from the database (which is then
+ * treated as authoritative) instead of trusting an organization id from the
+ * browser. Authorization MUST be applied by the caller before rendering any
+ * field — see `getEmployeeInOrganization` for the org-scoped variant used by
+ * every write path.
+ */
+export async function getEmployeeById(
+  employeeId: string
+): Promise<EmployeeDetail | null> {
+  const rows = await db
+    .select(employeeDetailSelection)
+    .from(employees)
+    .leftJoin(users, eq(users.id, employees.userId))
+    .where(eq(employees.id, employeeId))
+    .limit(1);
+
+  const row = rows[0];
+  return row ? toEmployeeDetail(row) : null;
+}
+
 /**
  * Load one employee, but only when it belongs to `organizationId`.
  * Returns `null` for unknown employees and for employees owned by another
@@ -388,24 +458,7 @@ export async function getEmployeeInOrganization(
   organizationId: string
 ): Promise<EmployeeDetail | null> {
   const rows = await db
-    .select({
-      id: employees.id,
-      organizationId: employees.organizationId,
-      userId: employees.userId,
-      employeeNumber: employees.employeeNumber,
-      firstName: employees.firstName,
-      lastName: employees.lastName,
-      email: employees.email,
-      phone: employees.phone,
-      department: employees.department,
-      position: employees.position,
-      employmentStatus: employees.employmentStatus,
-      hireDate: employees.hireDate,
-      linkedUserEmail: users.email,
-      linkedUserStatus: users.status,
-      createdAt: employees.createdAt,
-      updatedAt: employees.updatedAt,
-    })
+    .select(employeeDetailSelection)
     .from(employees)
     .leftJoin(users, eq(users.id, employees.userId))
     .where(
@@ -418,13 +471,7 @@ export async function getEmployeeInOrganization(
 
   const row = rows[0];
   if (!row || row.organizationId !== organizationId) return null;
-  return {
-    ...toListItem(row),
-    organizationId: row.organizationId,
-    userId: row.userId,
-    linkedUserStatus: row.linkedUserStatus,
-    updatedAt: row.updatedAt,
-  };
+  return toEmployeeDetail(row);
 }
 
 function toListItem(row: {

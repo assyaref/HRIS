@@ -26,10 +26,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  getEmployeeById,
   getEmployeeInOrganization,
   getOrganizationName,
   listLinkableUsers,
 } from "@/features/employees/queries";
+import { resolveEmployeeDetailScope } from "@/features/employees/scope";
+import { getActiveOrganization } from "@/features/projects/queries";
 import { isFaceRecognitionConfigured } from "@/lib/attendance/face-recognition";
 import { FaceEnrollmentPanel } from "@/features/employees/face-enrollment-panel";
 import { FaceVerificationPanel } from "@/features/employees/face-verification-panel";
@@ -147,14 +150,52 @@ export default async function EmployeeDetailPage({
   // tabs), so a deep link to a retired or unauthorized tab cannot render it.
   const requestedTabParam =
     typeof search.tab === "string" ? search.tab : null;
+  // Optional, non-authoritative URL context carried from the employee list so
+  // the "back" control can restore the org + project filters.
+  const requestedOrganizationId =
+    typeof search.org === "string" && search.org.trim() !== ""
+      ? search.org
+      : null;
+  const requestedProjectId =
+    typeof search.projectId === "string" && search.projectId.trim() !== ""
+      ? search.projectId
+      : null;
 
   const user = await requireUser();
   await requirePermission(user.id, PERMISSIONS.EMPLOYEES_VIEW);
   if (!user.organizationId) forbidden();
-  const organizationId = user.organizationId;
 
-  const employee = await getEmployeeInOrganization(employeeId, organizationId);
+  const authorization = await getUserAuthorization(user.id);
+
+  // The employee's OWNING organization is read from the record and is
+  // authoritative — never the `org` value from the browser. A tenant can only
+  // reach its own employees; a Super Administrator may reach any tenant's, but
+  // only through the server-verified SUPERADMIN role and only when the URL
+  // context (if any) matches the record's owner.
+  const employee = await getEmployeeById(employeeId);
   if (!employee) forbidden();
+
+  const scope = resolveEmployeeDetailScope({
+    employeeOrganizationId: employee.organizationId,
+    userOrganizationId: user.organizationId,
+    isSuperAdmin: authorization.isSuperAdmin,
+    requestedOrganizationId,
+  });
+  if (!scope) forbidden();
+  // Cross-tenant Super Administrator reads additionally require the target to
+  // be a real, ACTIVE organization — the same validation the list page applies.
+  if (
+    scope.viewingOtherOrganization &&
+    !(await getActiveOrganization(scope.organizationId))
+  ) {
+    forbidden();
+  }
+
+  const organizationId = scope.organizationId;
+  const viewingOtherOrganization = scope.viewingOtherOrganization;
+  // Cross-tenant views are READ-ONLY: every write action remains scoped to the
+  // authenticated session's organization, so no cross-tenant write is offered.
+  const canWrite = !viewingOtherOrganization;
 
   const [
     organizationName,
@@ -218,16 +259,23 @@ export default async function EmployeeDetailPage({
     hasPermission(user.id, PERMISSIONS.PAYROLL_MANAGE),
   ]);
 
-  // One authorization read serves the custom-field visibility rules and the
-  // permanent-delete gate below.
-  const authorization = await getUserAuthorization(user.id);
+  // One authorization read (`authorization`, resolved above) serves the
+  // custom-field visibility rules and the permanent-delete gate below.
 
   // Permanent deletion is a separate, higher-privilege capability: the
   // `employees.permanent_delete` code AND the system-level SUPERADMIN role. Both
   // are evaluated server-side from the DB-backed authorization of the session,
   // and `permanentlyDeleteEmployeeAction` re-checks them — this only decides
-  // whether the destructive action is offered on this page.
-  const canPermanentDelete = canPermanentlyDeleteEmployees(authorization);
+  // whether the destructive action is offered on this page. The action itself
+  // is scoped to the session organization, so it is never offered for a
+  // cross-tenant view.
+  const canPermanentDelete =
+    canWrite && canPermanentlyDeleteEmployees(authorization);
+
+  // Section/row edit affordances are offered only for the session's own
+  // organization (see `canWrite`). Sensitive-value reveal is intentionally NOT
+  // gated this way: it stays tied to the underlying update permission.
+  const canEditInScope = (allowed: boolean): boolean => canWrite && allowed;
 
   // Section data is fetched ONLY for sections the caller may view.
   const [
@@ -286,6 +334,7 @@ export default async function EmployeeDetailPage({
   const customSpecs: CustomFieldSpec[] = visibleDefinitions.map((definition) => {
     const stored = valuesByField.get(definition.id);
     const editable =
+      canWrite &&
       customDataUpdate &&
       isFieldEditableByRoles(definition.editableByConfig, roleCodesAsStrings);
     return {
@@ -383,8 +432,8 @@ export default async function EmployeeDetailPage({
           <div className="space-y-6">
             <OverviewSection
               employee={masterData}
-              canUpdate={canUpdate}
-              canDeactivate={canDeactivate}
+              canUpdate={canEditInScope(canUpdate)}
+              canDeactivate={canEditInScope(canDeactivate)}
               organizationName={organizationName}
               revealPhone={personalUpdate}
             />
@@ -392,15 +441,15 @@ export default async function EmployeeDetailPage({
               <AccountCard
                 employeeId={employee.id}
                 employeeEmail={employee.email}
-                canCreate={canCreateAccount}
+                canCreate={canEditInScope(canCreateAccount)}
                 action={createEmployeeAccountAction}
               />
             ) : null}
             <FaceIdentityCards
               employee={employee}
               displayName={displayName}
-              canUpdate={canUpdate}
-              canDeactivate={canDeactivate}
+              canUpdate={canEditInScope(canUpdate)}
+              canDeactivate={canEditInScope(canDeactivate)}
               linkableUsers={linkableUsers}
               faceEnrollmentSummary={faceEnrollmentSummary}
               faceEngineConfigured={faceEngineConfigured}
@@ -411,7 +460,7 @@ export default async function EmployeeDetailPage({
         return (
           <PersonalSection
             employee={masterData}
-            canEdit={personalUpdate}
+            canEdit={canEditInScope(personalUpdate)}
             reveal={personalUpdate}
           />
         );
@@ -419,7 +468,7 @@ export default async function EmployeeDetailPage({
         return (
           <EmploymentSection
             employee={masterData}
-            canEdit={employmentUpdate}
+            canEdit={canEditInScope(employmentUpdate)}
             workLocations={workLocations}
             managers={managerOptions}
           />
@@ -429,7 +478,7 @@ export default async function EmployeeDetailPage({
           <AddressesSection
             employeeId={employeeId}
             addresses={addresses}
-            canEdit={addressUpdate}
+            canEdit={canEditInScope(addressUpdate)}
           />
         );
       case "insurance":
@@ -437,7 +486,7 @@ export default async function EmployeeDetailPage({
           <InsuranceSection
             employeeId={employeeId}
             insurance={insurance}
-            canEdit={insuranceUpdate}
+            canEdit={canEditInScope(insuranceUpdate)}
             reveal={insuranceUpdate}
           />
         );
@@ -446,7 +495,7 @@ export default async function EmployeeDetailPage({
           <BankAccountsSection
             employeeId={employeeId}
             accounts={bankAccounts}
-            canEdit={bankUpdate}
+            canEdit={canEditInScope(bankUpdate)}
             reveal={bankUpdate}
           />
         );
@@ -455,7 +504,7 @@ export default async function EmployeeDetailPage({
           <FamilySection
             employeeId={employeeId}
             dependents={dependents}
-            canEdit={familyUpdate}
+            canEdit={canEditInScope(familyUpdate)}
             reveal={personalUpdate}
           />
         );
@@ -464,7 +513,7 @@ export default async function EmployeeDetailPage({
           <EducationSection
             employeeId={employeeId}
             educations={educations}
-            canEdit={educationUpdate}
+            canEdit={canEditInScope(educationUpdate)}
           />
         );
       case "documents":
@@ -472,8 +521,8 @@ export default async function EmployeeDetailPage({
           <DocumentsSection
             employeeId={employeeId}
             documents={documents}
-            canUpload={documentUpload}
-            canDelete={documentDelete}
+            canUpload={canEditInScope(documentUpload)}
+            canDelete={canEditInScope(documentDelete)}
           />
         );
       case "custom":
@@ -526,6 +575,21 @@ export default async function EmployeeDetailPage({
     }
   })();
 
+  // Preserve the active organization + project scope on the way back to the
+  // list. The org context is only ever the employee's real owner (the only
+  // value this page accepts), so the list re-resolves the same tenant, and the
+  // project id is re-validated there against that organization.
+  const backParams = new URLSearchParams();
+  if (viewingOtherOrganization) backParams.set("org", organizationId);
+  if (requestedProjectId) backParams.set("projectId", requestedProjectId);
+  const backHref =
+    backParams.toString().length > 0
+      ? `/employees?${backParams.toString()}`
+      : "/employees";
+  const exportHref = `/api/employees/export?format=excel&employeeNo=${encodeURIComponent(
+    employee.employeeNumber
+  )}${viewingOtherOrganization ? `&org=${organizationId}` : ""}`;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -541,14 +605,14 @@ export default async function EmployeeDetailPage({
         <div className="flex flex-wrap items-center gap-2">
           {payslipView ? (
             <Link
-              href={`/api/employees/export?format=excel&employeeNo=${encodeURIComponent(employee.employeeNumber)}`}
+              href={exportHref}
               className={buttonVariants({ variant: "outline", size: "sm" })}
             >
               Export Excel
             </Link>
           ) : null}
           <Link
-            href="/employees"
+            href={backHref}
             className={buttonVariants({ variant: "outline", size: "sm" })}
           >
             Back to employees
@@ -574,13 +638,31 @@ export default async function EmployeeDetailPage({
         </div>
       </div>
 
+      {viewingOtherOrganization ? (
+        <div className="flex flex-col gap-2 rounded-md border border-sky-600/40 bg-sky-600/10 px-3 py-2 text-sm text-sky-800 sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            Anda sedang melihat karyawan organisasi{" "}
+            <span className="font-semibold">
+              {organizationName ?? organizationId}
+            </span>
+            . Tampilan ini hanya-baca.
+          </p>
+          <Link
+            href="/employees"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            Kembali ke organisasi saya
+          </Link>
+        </div>
+      ) : null}
+
       <Suspense>
         <EmployeeTabs tabs={tabs} active={activeTab} />
       </Suspense>
 
       {tabContent}
 
-      {!canUpdate && activeTab === "overview" ? (
+      {!canEditInScope(canUpdate) && activeTab === "overview" ? (
         <div className="flex items-center gap-2">
           <Badge variant="outline">Read only</Badge>
           <span className="text-sm text-muted-foreground">
@@ -589,7 +671,7 @@ export default async function EmployeeDetailPage({
         </div>
       ) : null}
 
-      {canManageAssignments ? (
+      {canEditInScope(canManageAssignments) ? (
         <AssignmentSection
           employeeId={employeeId}
           organizationId={organizationId}
