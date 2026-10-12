@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { forbidden } from "next/navigation";
 
+import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireUser } from "@/lib/auth/auth";
@@ -43,10 +44,20 @@ import {
   listRoleOptionsByOrganization,
   listRoleOptionsForSuperAdmin,
 } from "@/features/rbac/queries";
-import { listActiveWorkLocationOptionsForSuperAdmin } from "@/features/work-locations/queries";
+import {
+  listActiveWorkLocationOptionsForSuperAdmin,
+} from "@/features/work-locations/queries";
 import { listWorkLocationOptions } from "@/features/work-locations/queries";
-import { listActiveProjectOptionsForSuperAdmin } from "@/features/projects/queries";
-import { listProjectOptionsByOrganization } from "@/features/projects/queries";
+import {
+  getActiveOrganization,
+  getProjectById,
+  listActiveProjectOptionsForSuperAdmin,
+  listProjectOptionsByOrganization,
+} from "@/features/projects/queries";
+import {
+  resolveEmployeeScope,
+  resolveSelectedProjectId,
+} from "@/features/employees/scope";
 
 export const metadata: Metadata = {
   title: "Employees",
@@ -76,12 +87,14 @@ function filterQuery(
   filters: { q?: string; status?: string },
   customParams: Record<string, string | string[] | undefined>,
   page: number,
-  org?: string
+  org?: string,
+  projectId?: string
 ): string {
   const search = new URLSearchParams();
   if (filters.q) search.set("q", filters.q);
   if (filters.status) search.set("status", filters.status);
   if (org) search.set("org", org);
+  if (projectId) search.set("projectId", projectId);
   for (const [key, value] of Object.entries(customParams)) {
     if (typeof value === "string" && value) search.set(key, value);
     else if (Array.isArray(value) && value.length > 0) {
@@ -117,7 +130,6 @@ export default async function EmployeesPage({
     status: readParam(params.status),
     page: readParam(params.page),
   });
-  const filters = parsed.success ? parsed.data : {};
 
   const user = await requireUser();
   await requirePermission(user.id, PERMISSIONS.EMPLOYEES_VIEW);
@@ -132,28 +144,66 @@ export default async function EmployeesPage({
    * Explicit, server-validated organization selection.
    *
    * The `org` query parameter is honored ONLY for the cross-organization
-   * (SUPERADMIN) role and only after the id is confirmed to be a real
+   * (SUPERADMIN) role and only after the id is confirmed to be a real, ACTIVE
    * organization. For every other caller the parameter is ignored outright,
    * so tenant isolation cannot be bypassed by editing the URL. The default
    * remains the authenticated user's own organization.
    */
   const requestedOrganizationId = readParam(params.org);
-  let viewedOrganizationId: string | null = null;
-  let viewedOrganizationName: string | null = null;
-  if (
+  const requestedOrganizationIsActive =
     authorization.isSuperAdmin &&
-    requestedOrganizationId &&
-    UUID_PATTERN.test(requestedOrganizationId) &&
-    requestedOrganizationId !== user.organizationId
-  ) {
-    const requestedName = await getOrganizationName(requestedOrganizationId);
-    if (requestedName) {
-      viewedOrganizationId = requestedOrganizationId;
-      viewedOrganizationName = requestedName;
-    }
+    requestedOrganizationId !== undefined &&
+    requestedOrganizationId !== user.organizationId &&
+    UUID_PATTERN.test(requestedOrganizationId)
+      ? Boolean(await getActiveOrganization(requestedOrganizationId))
+      : false;
+
+  const scope = resolveEmployeeScope({
+    requestedOrganizationId,
+    userOrganizationId: user.organizationId,
+    isSuperAdmin: authorization.isSuperAdmin,
+    requestedOrganizationIsActive,
+  });
+  const organizationId = scope.organizationId;
+  if (!organizationId) {
+    forbidden();
   }
-  const organizationId = viewedOrganizationId ?? user.organizationId;
-  const viewingOtherOrganization = viewedOrganizationId !== null;
+  const viewingOtherOrganization = scope.viewingOtherOrganization;
+  const viewedOrganizationId = viewingOtherOrganization ? organizationId : null;
+  const viewedOrganizationName = viewedOrganizationId
+    ? await getOrganizationName(viewedOrganizationId)
+    : null;
+
+  /**
+   * Optional project filter. Accepted only when the id is a well-formed UUID
+   * AND the project belongs to the effective organization — otherwise the
+   * selection is reset. This makes "changing organization resets a stale
+   * project" automatic (the lookup runs against the new organization).
+   */
+  const requestedProjectId = readParam(params.projectId);
+  const projectBelongsToOrganization =
+    requestedProjectId && UUID_PATTERN.test(requestedProjectId)
+      ? Boolean(await getProjectById(organizationId, requestedProjectId))
+      : false;
+  const projectId =
+    resolveSelectedProjectId({
+      requestedProjectId,
+      projectBelongsToOrganization,
+    }) ?? undefined;
+
+  const filters = {
+    ...(parsed.success ? parsed.data : {}),
+    projectId,
+  };
+  const projectOptions = await listProjectOptionsByOrganization(organizationId);
+  const organizationOptions = authorization.isSuperAdmin
+    ? await listAllOrganizationsForSuperAdmin()
+    : [];
+  const activeOrganizationName =
+    viewedOrganizationName ??
+    (authorization.isSuperAdmin
+      ? await getOrganizationName(organizationId)
+      : null);
 
   const [
     canCreate,
@@ -274,7 +324,7 @@ export default async function EmployeesPage({
 
   const { items, total, page, totalPages } = result;
   const hasActiveFilters = Boolean(
-    filters.q || filters.status || customFilters.length > 0
+    filters.q || filters.status || filters.projectId || customFilters.length > 0
   );
   const search = filters.q ?? "";
   const selectedCustomValues: Record<string, string> = {};
@@ -288,14 +338,21 @@ export default async function EmployeesPage({
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            Employees
-          </h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+              Employees
+            </h1>
+            {authorization.isSuperAdmin && activeOrganizationName ? (
+              <Badge variant="outline" aria-label="Active organization">
+                {activeOrganizationName}
+              </Badge>
+            ) : null}
+          </div>
           <p className="mt-1 text-sm text-muted-foreground sm:text-base">
             {total} {total === 1 ? "employee" : "employees"}
             {hasActiveFilters ? " match your filters" : ""}
-            {viewingOtherOrganization && viewedOrganizationName
-              ? ` in ${viewedOrganizationName}.`
+            {activeOrganizationName
+              ? ` in ${activeOrganizationName}.`
               : " in your organization."}
           </p>
         </div>
@@ -303,10 +360,15 @@ export default async function EmployeesPage({
           <EmployeeExportButton
             search={search}
             status={filters.status ?? ""}
+            organizationId={viewedOrganizationId ?? undefined}
+            projectId={projectId}
             canExport={canExportExcel}
           />
           <EmployeeExcelButtons
             search={search}
+            status={filters.status ?? ""}
+            organizationId={viewedOrganizationId ?? undefined}
+            projectId={projectId}
             canExport={canExportExcel}
             canTemplate={canImportExcel}
           />
@@ -353,6 +415,12 @@ export default async function EmployeesPage({
         status={filters.status ?? ""}
         customFieldSpecs={filterSpecs}
         selectedCustomValues={selectedCustomValues}
+        organizations={organizationOptions}
+        selectedOrganizationId={organizationId}
+        activeOrganizationName={activeOrganizationName}
+        canSwitchOrganization={authorization.isSuperAdmin}
+        projects={projectOptions}
+        selectedProjectId={projectId ?? ""}
       />
 
       {items.length === 0 ? (
@@ -388,7 +456,8 @@ export default async function EmployeesPage({
                       filters,
                       activeCustomParams,
                       page - 1,
-                      viewedOrganizationId ?? undefined
+                      viewedOrganizationId ?? undefined,
+                      projectId
                     )}`}
                     className={buttonVariants({
                       variant: "outline",
@@ -404,7 +473,8 @@ export default async function EmployeesPage({
                       filters,
                       activeCustomParams,
                       page + 1,
-                      viewedOrganizationId ?? undefined
+                      viewedOrganizationId ?? undefined,
+                      projectId
                     )}`}
                     className={buttonVariants({
                       variant: "outline",

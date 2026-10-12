@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, eq, ilike, inArray, or, type SQL } from "drizzle-orm";
+import { and, asc, eq, inArray, type SQL } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
@@ -17,6 +17,7 @@ import {
 } from "@/db/schema";
 
 import type { EmployeeListSearchInput } from "../schemas.ts";
+import { buildEmployeeSearchConditions } from "../queries.ts";
 import type { CustomFieldWorkbookColumn } from "./columns.ts";
 import { listActiveFieldDefinitions } from "../../employee-fields/queries.ts";
 import { formatStoredValue } from "../../employee-fields/validation.ts";
@@ -147,22 +148,12 @@ export async function loadEmployeeMasterExportData(
   ];
   // Filters only narrow the ALL-employees export; an explicit selection
   // (Export Selected / Export Individual) always wins so the user gets the
-  // exact rows they picked.
+  // exact rows they picked. The predicate builder is shared with the list page
+  // so search/status/project filters can never drift between the two.
   if (options.employeeNumbers === null && options.filters) {
-    const search = options.filters.q?.trim();
-    if (search) {
-      const pattern = `%${search}%`;
-      const clause = or(
-        ilike(employees.employeeNumber, pattern),
-        ilike(employees.firstName, pattern),
-        ilike(employees.lastName, pattern),
-        ilike(employees.email, pattern)
-      );
-      if (clause) conditions.push(clause);
-    }
-    if (options.filters.status) {
-      conditions.push(eq(employees.employmentStatus, options.filters.status));
-    }
+    conditions.push(
+      ...buildEmployeeSearchConditions(organizationId, options.filters)
+    );
   }
 
   const [

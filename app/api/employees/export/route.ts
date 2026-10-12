@@ -7,8 +7,19 @@ import {
 } from "@/lib/auth/rbac";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { buildEmployeesCsv } from "@/features/employees/export/export-csv";
-import { listEmployeesFlatByOrganization } from "@/features/employees/queries";
+import {
+  listEmployeesFlatByOrganization,
+} from "@/features/employees/queries";
 import { employeeListSearchSchema } from "@/features/employees/schemas";
+import {
+  isUuid,
+  resolveEmployeeScope,
+  resolveSelectedProjectId,
+} from "@/features/employees/scope";
+import {
+  getActiveOrganization,
+  getProjectById,
+} from "@/features/projects/queries";
 import {
   buildMainExportWorkbook,
   type ExportMaskPolicy,
@@ -33,8 +44,11 @@ import {
 export const dynamic = "force-dynamic";
 
 /**
- * Reject client attempts to provide tenant/authority identifiers. The
- * organization always comes from the authenticated session/database.
+ * Reject client attempts to provide authority identifiers directly. The
+ * effective organization is resolved below: it defaults to the authenticated
+ * session's organization and is overridable ONLY by the system-level
+ * SUPERADMIN through the validated `org` parameter (same contract as the
+ * employees page). `organizationId` is never accepted.
  */
 const FORBIDDEN_QUERY_KEYS = ["organizationId", "employeeId"] as const;
 
@@ -114,20 +128,57 @@ export async function GET(request: Request): Promise<Response> {
   if (!user.organizationId) {
     return notFound();
   }
-  const organizationId = user.organizationId;
 
   if (!(await hasPermission(user.id, PERMISSIONS.EMPLOYEES_VIEW))) {
     return forbiddenResponse();
   }
 
-  // The CSV always reflects the filters active on the employees page — the
-  // same query-parameter names (`q`, `status`) and the same validation schema.
-  // Unparseable filter values fall back to "no filter", matching the page.
+  // Resolve the effective organization. `org` is honored for a SUPERADMIN
+  // only, and only after the id is confirmed to be an existing ACTIVE
+  // organization; for every other caller it is ignored outright. This mirrors
+  // the employees page exactly, so an export can never widen the tenant scope
+  // the page honored.
+  const authorization = await getUserAuthorization(user.id);
+  const requestedOrganizationId = readParam(search, "org");
+  const requestedOrganizationIsActive =
+    authorization.isSuperAdmin &&
+    requestedOrganizationId !== undefined &&
+    requestedOrganizationId !== user.organizationId &&
+    isUuid(requestedOrganizationId)
+      ? Boolean(await getActiveOrganization(requestedOrganizationId))
+      : false;
+  const scope = resolveEmployeeScope({
+    requestedOrganizationId,
+    userOrganizationId: user.organizationId,
+    isSuperAdmin: authorization.isSuperAdmin,
+    requestedOrganizationIsActive,
+  });
+  const organizationId = scope.organizationId;
+  if (!organizationId) {
+    return notFound();
+  }
+
+  // The project filter is accepted only when it belongs to the effective
+  // organization; otherwise it is silently reset (matching the page).
+  const requestedProjectId = readParam(search, "projectId");
+  const projectBelongsToOrganization =
+    requestedProjectId && isUuid(requestedProjectId)
+      ? Boolean(await getProjectById(organizationId, requestedProjectId))
+      : false;
+  const projectId =
+    resolveSelectedProjectId({
+      requestedProjectId,
+      projectBelongsToOrganization,
+    }) ?? undefined;
+
+  // The export always reflects the filters active on the employees page — the
+  // same query-parameter names (`q`, `status`, `projectId`) and the same
+  // validation schema. Unparseable filter values fall back to "no filter".
   const parsed = employeeListSearchSchema.safeParse({
     q: readParam(search, "q"),
     status: readParam(search, "status"),
   });
-  const filters = parsed.success ? parsed.data : {};
+  const filters = { ...(parsed.success ? parsed.data : {}), projectId };
 
   const format = (readParam(search, "format") ?? "csv").toLowerCase();
 
@@ -245,7 +296,12 @@ async function handleExcelExport(
         .map(toCustomFieldFilterSpec);
       customFilters = parseCustomFieldFilters(cfParams, specs);
     }
-    if (filters.q || filters.status || customFilters.length > 0) {
+    if (
+      filters.q ||
+      filters.status ||
+      filters.projectId ||
+      customFilters.length > 0
+    ) {
       // Export Filtered: reuse the exact same search path as the page.
       const matching = await listEmployeesFlatByOrganization(
         organizationId,

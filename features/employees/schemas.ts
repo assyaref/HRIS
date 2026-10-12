@@ -115,6 +115,13 @@ export const employeeListSearchSchema = z.object({
   q: z.string().trim().max(80).optional(),
   status: z.enum(EMPLOYEE_STATUSES).optional(),
   page: z.coerce.number().int().min(1).optional(),
+  /**
+   * Optional project filter. Only the UUID *shape* is validated here; whether
+   * the project actually belongs to the selected organization is enforced
+   * server-side by the page/route (and again by the organization-scoped
+   * EXISTS predicate in the query), so a cross-tenant id can never match.
+   */
+  projectId: z.string().regex(UUID_PATTERN, "Invalid project id.").optional(),
 });
 
 export type CreateEmployeeInput = z.infer<typeof createEmployeeSchema>;

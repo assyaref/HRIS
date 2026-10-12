@@ -106,7 +106,7 @@ export const EMPLOYEE_PAGE_SIZE = 20;
  * and the (unpaginated) CSV export so the export always mirrors the filters
  * applied on the employees page (`q` + `status`, same query-parameter names).
  */
-function buildEmployeeSearchConditions(
+export function buildEmployeeSearchConditions(
   organizationId: string,
   input: EmployeeListSearchInput,
   customFilters: readonly CustomFieldFilter[] = []
@@ -133,8 +133,35 @@ function buildEmployeeSearchConditions(
     conditions.push(eq(employees.employmentStatus, input.status));
   }
 
+  if (input.projectId) {
+    conditions.push(buildProjectAssignmentCondition(organizationId, input.projectId));
+  }
+
   conditions.push(...buildCustomFieldFilterConditions(organizationId, customFilters));
   return conditions;
+}
+
+/**
+ * Employees currently assigned to one project, as a correlated EXISTS.
+ *
+ * The subquery is pinned to the caller's organization as well as the project,
+ * so a project id from another tenant can never widen the result set. An
+ * EXISTS (rather than a JOIN) keeps exactly one row per employee even when the
+ * assignment table holds several rows for the same person — pagination and
+ * `count(*)` therefore stay consistent. Employees without any assignment are
+ * deliberately NOT required to have one; the predicate is only added when a
+ * project filter is active.
+ */
+export function buildProjectAssignmentCondition(
+  organizationId: string,
+  projectId: string
+): SQL<unknown> {
+  return sql`EXISTS (SELECT 1 FROM ${employeeProjectAssignments} WHERE ${and(
+    eq(employeeProjectAssignments.organizationId, organizationId),
+    eq(employeeProjectAssignments.employeeId, employees.id),
+    eq(employeeProjectAssignments.projectId, projectId),
+    eq(employeeProjectAssignments.active, true)
+  )})`;
 }
 
 /** Escape ILIKE metacharacters so user text is matched literally. */
