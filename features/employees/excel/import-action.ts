@@ -148,6 +148,13 @@ export interface ExcelImportPreviewResult {
     assignmentsExisting: number;
     assignmentsFailed: number;
   };
+  /**
+   * The organization the import actually wrote to, as validated on the server
+   * from the import settings (never from the client payload). Present only on
+   * a successful import; `null`/absent otherwise. Lets the result screen name
+   * the target tenant explicitly and offer a server-validated link to it.
+   */
+  targetOrganization?: { id: string; name: string } | null;
 }
 
 
@@ -1659,6 +1666,11 @@ export async function confirmExcelImportAction(
       warnings: summary.warnings,
       accountsProvisioned: summary.summary.accountsCreated,
       assignmentsCreated: summary.summary.assignmentsCreated,
+      // Server-validated target tenant for the result screen.
+      targetOrganization: {
+        id: organizationId,
+        name: settingsLabels.organization ?? "",
+      },
       message:
         `Import complete: ${summary.created} created, ${summary.updated} updated. ` +
         `${summary.summary.accountsCreated} account(s) provisioned, ` +

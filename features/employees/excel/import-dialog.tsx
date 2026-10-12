@@ -323,6 +323,17 @@ export function ImportExcelDialog({
     ? organizations
     : organizations.filter((o) => o.id === userOrganizationId);
 
+  /**
+   * Target organization label for the result screen. Prefers the name the
+   * server validated and wrote to; falls back to the selected organization
+   * from the option list. Never derived from the client payload.
+   */
+  const targetOrganization = result.targetOrganization ?? null;
+  const targetOrganizationName =
+    targetOrganization?.name ||
+    effectiveOrganizations.find((o) => o.id === settings.organizationId)?.name ||
+    null;
+
   return (
     <>
       <Button
@@ -645,6 +656,14 @@ export function ImportExcelDialog({
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-foreground">
                   Import Completed
                 </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {result.summary?.employeesCreated ?? result.createCount} karyawan dibuat,{" "}
+                  {result.summary?.employeesUpdated ?? result.updateCount} karyawan diperbarui
+                  {targetOrganizationName
+                    ? ` di Organisasi: ${targetOrganizationName}`
+                    : ""}
+                  . {result.errorCount > 0 ? `${result.errorCount} error.` : "0 error."}
+                </p>
               </div>
               <div className="grid gap-4 sm:grid-cols-3">
                 <SummaryCard
@@ -821,6 +840,23 @@ export function ImportExcelDialog({
                   onClick={downloadImportLog}
                 >
                   Download Import Log
+                </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  disabled={!targetOrganization?.id}
+                  onClick={() => {
+                    const organizationId = targetOrganization?.id;
+                    setOpen(false);
+                    router.push(
+                      organizationId
+                        ? `/employees?org=${organizationId}`
+                        : "/employees"
+                    );
+                  }}
+                >
+                  Lihat Karyawan
+                  {targetOrganizationName ? ` ${targetOrganizationName}` : ""}
                 </Button>
                 <Button
                   type="button"

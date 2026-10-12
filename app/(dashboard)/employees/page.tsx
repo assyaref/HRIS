@@ -24,7 +24,10 @@ import {
   listLinkableUsers,
   getOrganizationName,
 } from "@/features/employees/queries";
-import { employeeListSearchSchema } from "@/features/employees/schemas";
+import {
+  employeeListSearchSchema,
+  UUID_PATTERN,
+} from "@/features/employees/schemas";
 import { canPermanentlyDeleteEmployees } from "@/features/employees/permanent-delete-policy";
 import { listActiveFieldDefinitions } from "@/features/employee-fields/queries";
 import {
@@ -72,11 +75,13 @@ function collectCustomFilterParams(
 function filterQuery(
   filters: { q?: string; status?: string },
   customParams: Record<string, string | string[] | undefined>,
-  page: number
+  page: number,
+  org?: string
 ): string {
   const search = new URLSearchParams();
   if (filters.q) search.set("q", filters.q);
   if (filters.status) search.set("status", filters.status);
+  if (org) search.set("org", org);
   for (const [key, value] of Object.entries(customParams)) {
     if (typeof value === "string" && value) search.set(key, value);
     else if (Array.isArray(value) && value.length > 0) {
@@ -121,7 +126,34 @@ export default async function EmployeesPage({
     // org-scoped), but guard defensively.
     forbidden();
   }
-  const organizationId = user.organizationId;
+  const authorization = await getUserAuthorization(user.id);
+
+  /**
+   * Explicit, server-validated organization selection.
+   *
+   * The `org` query parameter is honored ONLY for the cross-organization
+   * (SUPERADMIN) role and only after the id is confirmed to be a real
+   * organization. For every other caller the parameter is ignored outright,
+   * so tenant isolation cannot be bypassed by editing the URL. The default
+   * remains the authenticated user's own organization.
+   */
+  const requestedOrganizationId = readParam(params.org);
+  let viewedOrganizationId: string | null = null;
+  let viewedOrganizationName: string | null = null;
+  if (
+    authorization.isSuperAdmin &&
+    requestedOrganizationId &&
+    UUID_PATTERN.test(requestedOrganizationId) &&
+    requestedOrganizationId !== user.organizationId
+  ) {
+    const requestedName = await getOrganizationName(requestedOrganizationId);
+    if (requestedName) {
+      viewedOrganizationId = requestedOrganizationId;
+      viewedOrganizationName = requestedName;
+    }
+  }
+  const organizationId = viewedOrganizationId ?? user.organizationId;
+  const viewingOtherOrganization = viewedOrganizationId !== null;
 
   const [
     canCreate,
@@ -131,7 +163,6 @@ export default async function EmployeesPage({
     canExportExcel,
     customDataView,
     customDataUpdate,
-    authorization,
   ] = await Promise.all([
     hasPermission(user.id, PERMISSIONS.EMPLOYEES_CREATE),
     hasPermission(user.id, PERMISSIONS.EMPLOYEES_UPDATE),
@@ -140,7 +171,6 @@ export default async function EmployeesPage({
     hasPermission(user.id, PERMISSIONS.EMPLOYEES_EXPORT),
     hasPermission(user.id, PERMISSIONS.EMPLOYEE_CUSTOM_DATA_VIEW),
     hasPermission(user.id, PERMISSIONS.EMPLOYEE_CUSTOM_DATA_UPDATE),
-    getUserAuthorization(user.id),
   ]);
 
   // Permanent deletion is a separate, higher-privilege capability: the
@@ -263,8 +293,10 @@ export default async function EmployeesPage({
           </h1>
           <p className="mt-1 text-sm text-muted-foreground sm:text-base">
             {total} {total === 1 ? "employee" : "employees"}
-            {hasActiveFilters ? " match your filters" : ""} in your
-            organization.
+            {hasActiveFilters ? " match your filters" : ""}
+            {viewingOtherOrganization && viewedOrganizationName
+              ? ` in ${viewedOrganizationName}.`
+              : " in your organization."}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -299,6 +331,22 @@ export default async function EmployeesPage({
           ) : null}
         </div>
       </div>
+
+      {viewingOtherOrganization && viewedOrganizationName ? (
+        <div className="flex flex-col gap-2 rounded-md border border-sky-600/40 bg-sky-600/10 px-3 py-2 text-sm text-sky-800 sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            Anda sedang melihat karyawan organisasi{" "}
+            <span className="font-semibold">{viewedOrganizationName}</span>.
+            Perubahan di sini berlaku untuk tenant tersebut.
+          </p>
+          <Link
+            href="/employees"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            Kembali ke organisasi saya
+          </Link>
+        </div>
+      ) : null}
 
       <EmployeeFilters
         search={search}
@@ -339,7 +387,8 @@ export default async function EmployeesPage({
                     href={`/employees?${filterQuery(
                       filters,
                       activeCustomParams,
-                      page - 1
+                      page - 1,
+                      viewedOrganizationId ?? undefined
                     )}`}
                     className={buttonVariants({
                       variant: "outline",
@@ -354,7 +403,8 @@ export default async function EmployeesPage({
                     href={`/employees?${filterQuery(
                       filters,
                       activeCustomParams,
-                      page + 1
+                      page + 1,
+                      viewedOrganizationId ?? undefined
                     )}`}
                     className={buttonVariants({
                       variant: "outline",
