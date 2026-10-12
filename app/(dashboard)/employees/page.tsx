@@ -444,6 +444,7 @@ export default async function EmployeesPage({
         <>
           <EmployeeTable
             employees={items}
+            organizationId={organizationId}
             canEdit={canEdit}
             canDelete={canDelete}
             canPermanentDelete={canPermanentDelete}

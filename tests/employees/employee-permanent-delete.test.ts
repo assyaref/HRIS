@@ -63,6 +63,7 @@ import {
   matchesEmployeeNumberConfirmation,
   presentEmployeeDeleteDependencies,
   presentEmployeeDependenciesByDisposition,
+  resolveEmployeePermanentDeleteScope,
   totalEmployeeDeleteDependencyCount,
   type EmployeeDeleteDependency,
 } from "../../features/employees/permanent-delete-policy.ts";
@@ -413,7 +414,7 @@ describe("server action: authorization is enforced server-side", () => {
       "the permission check precedes the transaction"
     );
     assert.equal(
-      deniedAt < permanentDelete.indexOf("getEmployeeInOrganization("),
+      deniedAt < permanentDelete.indexOf("getEmployeeById("),
       true,
       "the permission check precedes the employee load"
     );
@@ -430,7 +431,7 @@ describe("server action: authorization is enforced server-side", () => {
     );
     assert.equal(
       preflight.indexOf("canPermanentlyDeleteEmployees(") <
-        preflight.indexOf("getEmployeeInOrganization("),
+        preflight.indexOf("getEmployeeById("),
       true
     );
     assert.equal(
@@ -817,32 +818,46 @@ describe("EMP-TEST-* records use the generic path (no special case)", () => {
 });
 
 describe("server action: organization scoping", () => {
-  it("takes the organization from the authenticated session only", () => {
+  it("derives the session organization and never trusts a form organization", () => {
     assert.equal(permanentDelete.includes("user.organizationId"), true);
     assert.equal(
       permanentDelete.includes('field(formData, "organizationId")'),
       false,
       "an organization_id from the browser must never be trusted"
     );
+    assert.equal(
+      permanentDelete.includes('formData.get("organizationId")'),
+      false,
+      "an organization_id from the browser must never be trusted"
+    );
   });
 
-  it("loads the employee org-scoped and never reveals cross-org existence", () => {
+  it("loads the employee by id and resolves its OWNING organization from the DB", () => {
     assert.equal(
-      permanentDelete.includes(
-        "getEmployeeInOrganization(employeeId, organizationId)"
-      ),
+      permanentDelete.includes("getEmployeeById(employeeId)"),
+      true
+    );
+    assert.equal(
+      permanentDelete.includes("resolveEmployeePermanentDeleteScope("),
       true
     );
     assert.equal(
       permanentDelete.includes("EMPLOYEE_PERMANENT_DELETE_NOT_FOUND_MESSAGE"),
       true
     );
+    // The browser/listing organization is never a lookup key: the action
+    // scopes every statement to the record's DB-resolved owner.
+    assert.equal(
+      permanentDelete.includes("getEmployeeInOrganization(employeeId, organizationId)"),
+      false,
+      "the owning organization must come from the database, not the session"
+    );
   });
 
-  it("re-reads and locks the row inside the transaction, still org-scoped", () => {
+  it("re-reads and locks the row inside the transaction, still scoped to the owner", () => {
     assert.equal(permanentDelete.includes('.for("update")'), true);
     assert.equal(
-      permanentDelete.includes("eq(employees.organizationId, organizationId)"),
+      permanentDelete.includes("eq(employees.organizationId, scopedOrganizationId)"),
       true
     );
   });
@@ -960,7 +975,7 @@ describe("server action: transaction and explicit deletion", () => {
     const statement = permanentDelete.slice(permanentDelete.indexOf(".delete(employees)"));
     assert.equal(statement.includes("eq(employees.id, current.id)"), true);
     assert.equal(
-      statement.includes("eq(employees.organizationId, organizationId)"),
+      statement.includes("eq(employees.organizationId, scopedOrganizationId)"),
       true
     );
     assert.equal(statement.includes(".returning({ id: employees.id })"), true);
@@ -1025,7 +1040,7 @@ describe("server action: transaction and explicit deletion", () => {
 
   it("removes the employee's private document folder only AFTER the commit", () => {
     assert.equal(
-      permanentDelete.includes("deleteEmployeeDocumentStorage(organizationId, employeeId)"),
+      permanentDelete.includes("deleteEmployeeDocumentStorage(scopedOrganizationId, employeeId)"),
       true
     );
     const successAt = permanentDelete.indexOf('result: "SUCCESS"');
@@ -1660,15 +1675,14 @@ describe("backend: the pre-flight is read-only and fails closed", () => {
     }
   });
 
-  it("the pre-flight keeps the same organization scope", () => {
+  it("the pre-flight keeps the same scope as the delete", () => {
     assert.equal(
-      preflight.includes(
-        "getEmployeeInOrganization(employeeId, organizationId)"
-      ),
+      preflight.includes("getEmployeeById(employeeId)"),
       true
     );
+    assert.equal(preflight.includes("resolveEmployeePermanentDeleteScope("), true);
     assert.equal(
-      /readEmployeeDeletionDependencies\(\s*employee\.id,\s*organizationId\s*\)/.test(
+      /readEmployeeDeletionDependencies\(\s*employee\.id,\s*scope\.organizationId\s*\)/.test(
         normalize(preflight)
       ),
       true
@@ -1728,7 +1742,7 @@ describe("backend: the pre-flight is read-only and fails closed", () => {
     assert.equal(permanentDelete.includes("listEmployeeDeletionDependencies("), true);
     assert.equal(
       permanentDelete.includes(
-        "getEmployeeInOrganization(employeeId, organizationId)"
+        "getEmployeeById(employeeId)"
       ),
       true
     );
@@ -1859,6 +1873,274 @@ describe("retained relationships are never presented as deleted rows", () => {
       ),
       false,
       "the retained figure must not sit inside the will-be-deleted block"
+    );
+  });
+});
+
+describe("permanent-delete cross-organization scope (P0 fix)", () => {
+  const SYSTEM = "3f66da05-2817-4ea8-98db-5b3094c09626";
+  const SUPRACO = "651cc79b-8ff5-4f5a-bbae-22a7d05f0b50";
+  const OTHER_ORG = "11111111-2222-3333-4444-555555555555";
+
+  it("lets a System-session SUPERADMIN delete a SUPRACO employee (matching context)", () => {
+    assert.deepEqual(
+      resolveEmployeePermanentDeleteScope({
+        employeeOrganizationId: SUPRACO,
+        userOrganizationId: SYSTEM,
+        isSuperAdmin: true,
+        requestedOrganizationId: SUPRACO,
+      }),
+      { organizationId: SUPRACO, viewingOtherOrganization: true }
+    );
+  });
+
+  it("resolves the owning organization from the DB even with no URL context", () => {
+    assert.deepEqual(
+      resolveEmployeePermanentDeleteScope({
+        employeeOrganizationId: SUPRACO,
+        userOrganizationId: SYSTEM,
+        isSuperAdmin: true,
+      }),
+      { organizationId: SUPRACO, viewingOtherOrganization: true }
+    );
+  });
+
+  it("resolves a SUPERADMIN's own-organization employee as non-cross", () => {
+    assert.deepEqual(
+      resolveEmployeePermanentDeleteScope({
+        employeeOrganizationId: SYSTEM,
+        userOrganizationId: SYSTEM,
+        isSuperAdmin: true,
+        requestedOrganizationId: SYSTEM,
+      }),
+      { organizationId: SYSTEM, viewingOtherOrganization: false }
+    );
+  });
+
+  it("refuses a tenant user permanently deleting — even within their own tenant", () => {
+    assert.equal(
+      resolveEmployeePermanentDeleteScope({
+        employeeOrganizationId: SUPRACO,
+        userOrganizationId: SUPRACO,
+        isSuperAdmin: false,
+        requestedOrganizationId: SUPRACO,
+      }),
+      null,
+      "permanent deletion is a SUPERADMIN-only capability"
+    );
+    assert.equal(
+      resolveEmployeePermanentDeleteScope({
+        employeeOrganizationId: SUPRACO,
+        userOrganizationId: SYSTEM,
+        isSuperAdmin: false,
+        requestedOrganizationId: SUPRACO,
+      }),
+      null,
+      "a forged organization cannot buy a tenant permanent deletion"
+    );
+  });
+
+  it("refuses a tampered organization context that does not match the owner", () => {
+    assert.equal(
+      resolveEmployeePermanentDeleteScope({
+        employeeOrganizationId: SUPRACO,
+        userOrganizationId: SYSTEM,
+        isSuperAdmin: true,
+        requestedOrganizationId: OTHER_ORG,
+      }),
+      null
+    );
+    assert.equal(
+      resolveEmployeePermanentDeleteScope({
+        employeeOrganizationId: SUPRACO,
+        userOrganizationId: SYSTEM,
+        isSuperAdmin: true,
+        requestedOrganizationId: SYSTEM,
+      }),
+      null,
+      "the System org context cannot select a SUPRACO employee"
+    );
+  });
+
+  it("refuses when the session has no organization", () => {
+    assert.equal(
+      resolveEmployeePermanentDeleteScope({
+        employeeOrganizationId: SUPRACO,
+        userOrganizationId: null,
+        isSuperAdmin: true,
+        requestedOrganizationId: SUPRACO,
+      }),
+      null
+    );
+  });
+
+  it("ignores a blank organization context (nothing to be inconsistent against)", () => {
+    assert.deepEqual(
+      resolveEmployeePermanentDeleteScope({
+        employeeOrganizationId: SUPRACO,
+        userOrganizationId: SYSTEM,
+        isSuperAdmin: true,
+        requestedOrganizationId: "   ",
+      }),
+      { organizationId: SUPRACO, viewingOtherOrganization: true }
+    );
+  });
+
+  it("the action never uses the supplied organization as a lookup key", () => {
+    assert.equal(
+      permanentDelete.includes(
+        "getEmployeeById(employeeId)"
+      ),
+      true
+    );
+    assert.equal(
+      permanentDelete.includes("resolveEmployeePermanentDeleteScope("),
+      true
+    );
+    assert.equal(
+      permanentDelete.includes("requestedOrganizationId,"),
+      true,
+      "the context is only a consistency assertion"
+    );
+    assert.equal(
+      permanentDelete.includes("getEmployeeInOrganization(employeeId, organizationId)"),
+      false,
+      "the session organization must never scope the SUPERADMIN delete"
+    );
+    assert.equal(
+      permanentDelete.includes("getEmployeeInOrganization(employeeId, scopedOrganizationId)"),
+      false,
+      "the owning organization is resolved from the record, not re-queried org-scoped"
+    );
+  });
+
+  it("keeps the System org from being used to look up a SUPRACO employee", () => {
+    assert.equal(
+      permanentDelete.includes(
+        "getEmployeeById(employeeId)"
+      ),
+      true,
+      "the load is by id so the DB-owner decides the scope"
+    );
+    assert.equal(
+      permanentDelete.includes("eq(employees.organizationId, scopedOrganizationId)"),
+      true
+    );
+  });
+
+  it("an unknown or out-of-scope target resolves as not-found before any transaction", () => {
+    assert.equal(
+      permanentDelete.indexOf("EMPLOYEE_PERMANENT_DELETE_NOT_FOUND_MESSAGE") <
+        permanentDelete.indexOf("db.transaction"),
+      true,
+      "a missing/inconsistent record is refused without touching the transaction"
+    );
+  });
+});
+
+describe("P0: related-record pre-flight loads a valid cross-tenant target", () => {
+  it("the dialog threads the selected organization into the pre-flight", () => {
+    assert.equal(
+      dialogSource.includes(
+        "checkEmployeeDeletionDependenciesAction(\n        employee.id,\n        organizationId\n      )"
+      ),
+      true
+    );
+    assert.equal(dialogSource.includes("prepend"), false);
+  });
+
+  it("the pre-flight resolves the owning organization from the record", () => {
+    assert.equal(preflight.includes("getEmployeeById(employeeId)"), true);
+    assert.equal(preflight.includes("resolveEmployeePermanentDeleteScope("), true);
+    assert.equal(
+      /readEmployeeDeletionDependencies\(\s*employee\.id,\s*scope\.organizationId\s*\)/.test(
+        normalize(preflight)
+      ),
+      true
+    );
+  });
+
+  it("the listing and detail pages thread the resolved organization into the dialog", () => {
+    assert.equal(listPageSource.includes("organizationId={organizationId}"), true);
+    assert.equal(detailPageSource.includes("organizationId={organizationId}"), true);
+    assert.equal(
+      tableSource.includes(
+        "<EmployeePermanentDeleteDialog\n          employee={employee}\n          organizationId={organizationId}\n        />"
+      ),
+      true
+    );
+  });
+});
+
+describe("P0: rollback guarantees of the delete transaction", () => {
+  it("keeps all writes inside the single shared transaction", () => {
+    assert.equal((permanentDelete.match(/db\.transaction\(/g) ?? []).length, 1);
+    for (const write of ["db.delete(", "db.update(", "db.insert("]) {
+      assert.equal(
+        permanentDelete.includes(write),
+        false,
+        `${write} outside the transaction would break atomicity`
+      );
+    }
+  });
+
+  it("deletes the employee row and the deletable rows on the same handle", () => {
+    assert.equal(
+      permanentDelete.indexOf("deleteEmployeeDeletableRecords(") <
+        permanentDelete.indexOf(".delete(employees)"),
+      true
+    );
+    const inside = permanentDelete.slice(
+      permanentDelete.indexOf("db.transaction")
+    );
+    assert.equal(inside.includes(".delete(employees)"), true);
+  });
+
+  it("reports a refused delete without reporting success", () => {
+    assert.equal(
+      permanentDelete.includes('reason: "UNEXPECTED_ERROR"'),
+      true
+    );
+    assert.equal(
+      permanentDelete.includes("EMPLOYEE_PERMANENT_DELETE_FAILED_MESSAGE"),
+      true
+    );
+    assert.equal(
+      permanentDelete.includes('status: "success"'),
+      true,
+      "the success state exists for the confirmed, committed path"
+    );
+  });
+});
+
+describe("P0: no regression for edit, deactivate and ordinary delete", () => {
+  it("deactivate (deleteEmployeeAction) still works unchanged", () => {
+    const deactivate = actionBlock(actionsSource, "deleteEmployeeAction");
+    assert.equal(
+      deactivate.includes("requirePermission(user.id, PERMISSIONS.EMPLOYEES_DELETE)"),
+      true
+    );
+    assert.equal(deactivate.includes(".delete(employees)"), false);
+    assert.equal(deactivate.includes("getEmployeeInOrganization("), true);
+  });
+
+  it("ordinary update actions keep session-organization scoping", () => {
+    const start = actionsSource.indexOf("export async function updateEmployeeAction");
+    const block = actionsSource.slice(start, start + 900);
+    assert.equal(block.includes("getEmployeeInOrganization("), true);
+    assert.equal(block.includes("const organizationId = user.organizationId;"), true);
+  });
+
+  it("the list still renders permanent delete only for entitled callers", () => {
+    assert.equal(
+      listPageSource.includes("canPermanentDelete={canPermanentDelete}"),
+      true
+    );
+    assert.equal(
+      /\{canPermanentDelete \? \(\s*<EmployeePermanentDeleteDialog/.test(
+        normalize(tableSource)
+      ),
+      true
     );
   });
 });

@@ -337,6 +337,66 @@ export function canPermanentlyDeleteEmployees(
   );
 }
 
+export interface EmployeePermanentDeleteScopeInput {
+  /**
+   * The organization that owns the employee record, read from the database.
+   * AUTHORITATIVE: never taken from the browser.
+   */
+  employeeOrganizationId: string;
+  /** The authenticated user's own organization (from the session). */
+  userOrganizationId: string | null;
+  /** Whether the caller holds the system-level SUPERADMIN role. */
+  isSuperAdmin: boolean;
+  /**
+   * The organization context the operation was initiated from (the listing's
+   * selected tenant, or the validated `org` of the detail URL). Only ever a
+   * consistency assertion: it can never widen access and is never used as a
+   * lookup key.
+   */
+  requestedOrganizationId?: string | null;
+}
+
+export interface EmployeePermanentDeleteScope {
+  /** The owning organization whose data may be permanently deleted. */
+  organizationId: string;
+  /** True only when a SUPERADMIN is operating on another tenant's record. */
+  viewingOtherOrganization: boolean;
+}
+
+/**
+ * Resolve whether the actor may permanently delete ONE employee, and in which
+ * organization scope.
+ *
+ * The employee's OWNING organization (read from the record, not the browser)
+ * is authoritative. Returns `null` when:
+ *  - the actor is not the system-level SUPERADMIN (tenant roles can never
+ *    permanently delete, regardless of any URL or form they submit);
+ *  - the session has no organization;
+ *  - the employee record carries no organization;
+ *  - an explicit organization context was supplied that does NOT match the
+ *    record's owner (an inconsistent context is refused, never followed).
+ *
+ * This is the scope half of `canPermanentlyDeleteEmployees`: that gate decides
+ * whether the actor may permanently delete at all, this decides on which
+ * tenant's record. Both are evaluated from server-side facts only.
+ */
+export function resolveEmployeePermanentDeleteScope(
+  input: EmployeePermanentDeleteScopeInput
+): EmployeePermanentDeleteScope | null {
+  if (!input.isSuperAdmin) return null;
+  if (!input.userOrganizationId) return null;
+  const owning = input.employeeOrganizationId;
+  if (!owning) return null;
+
+  const requested = input.requestedOrganizationId?.trim();
+  if (requested && requested !== owning) return null;
+
+  return {
+    organizationId: owning,
+    viewingOtherOrganization: owning !== input.userOrganizationId,
+  };
+}
+
 export type PermanentEmployeeDeleteDecision =
   | {
       allowed: true;

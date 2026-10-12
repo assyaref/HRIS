@@ -23,12 +23,14 @@ function formatDate(value: Date | null): string {
 
 function rowActions({
   employee,
+  organizationId,
   canEdit,
   canDelete,
   canPermanentDelete,
   detailContext,
 }: {
   employee: EmployeeListItem;
+  organizationId: string;
   canEdit: boolean;
   canDelete: boolean;
   canPermanentDelete: boolean;
@@ -64,7 +66,10 @@ function rowActions({
           role's behavior changes. The server action re-authorizes regardless;
           hiding the row action is UX, not security. */}
       {canPermanentDelete ? (
-        <EmployeePermanentDeleteDialog employee={employee} />
+        <EmployeePermanentDeleteDialog
+          employee={employee}
+          organizationId={organizationId}
+        />
       ) : null}
     </>
   );
@@ -80,12 +85,18 @@ function rowActions({
  */
 export function EmployeeTable({
   employees,
+  organizationId,
   canEdit = false,
   canDelete = false,
   canPermanentDelete = false,
   detailContext,
 }: {
   employees: EmployeeListItem[];
+  /**
+   * The organization whose rows are listed. Threaded into the permanent-delete
+   * dialog and re-validated against the record's owner server-side.
+   */
+  organizationId: string;
   canEdit?: boolean;
   canDelete?: boolean;
   canPermanentDelete?: boolean;
@@ -146,7 +157,7 @@ export function EmployeeTable({
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex flex-wrap justify-end gap-1">
-                  {rowActions({ employee, canEdit, canDelete, canPermanentDelete, detailContext })}
+{rowActions({ employee, organizationId, canEdit, canDelete, canPermanentDelete, detailContext })}
                 </div>
               </TableCell>
             </TableRow>
@@ -174,7 +185,7 @@ export function EmployeeTable({
             <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
               <span>Hired {formatDate(employee.hireDate)}</span>
               <div className="flex flex-wrap justify-end gap-1">
-                {rowActions({ employee, canEdit, canDelete, canPermanentDelete, detailContext })}
+                {rowActions({ employee, organizationId, canEdit, canDelete, canPermanentDelete, detailContext })}
               </div>
             </div>
           </li>

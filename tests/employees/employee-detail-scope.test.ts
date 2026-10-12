@@ -11,9 +11,11 @@
  *    non-superadmins on their own tenant, renders cross-tenant views read-only,
  *    and preserves the org/project context on the way back to the list.
  *
- * The write paths are audited here too: every employee server action must keep
- * scoping to the SESSION organization, so the page change cannot open a
- * cross-tenant write bypass.
+ * The write paths are audited here too: every employee server action except the
+ * SINGLE explicitly-authorized cross-tenant write — SUPERADMIN permanent
+ * deletion, whose scope is re-derived from the employee record's OWNING
+ * organization — must stay scoped to the SESSION organization, so the page
+ * change cannot open a cross-tenant write bypass.
  */
 
 import { readFileSync } from "node:fs";
@@ -191,10 +193,24 @@ describe("employee detail page — cross-organization read", () => {
     assert.equal(pageSource.includes("canEditInScope("), true);
   });
 
-  it("keeps the superadmin-only destructive action off cross-tenant views", () => {
+  it("keeps the permanent-delete action available on cross-tenant views, DB-org-scoped", () => {
+    // Permanent deletion is the ONE cross-tenant write the policy explicitly
+    // authorizes (`employees.permanent_delete` + SUPERADMIN). It is not gated
+    // on `canWrite`; instead the owning organization (this page's resolved
+    // `organizationId`, validated against the record owner) is threaded into
+    // the shared dialog, and the server action re-derives it from the database.
     assert.match(
       pageSource,
-      /canWrite && canPermanentlyDeleteEmployees\(authorization\)/
+      /const canPermanentDelete = canPermanentlyDeleteEmployees\(authorization\);/
+    );
+    assert.equal(pageSource.includes("organizationId={organizationId}"), true);
+  });
+
+  it("keeps every OTHER write action off cross-tenant views", () => {
+    assert.equal(pageSource.includes("canEditInScope("), true);
+    assert.equal(
+      pageSource.includes("const canWrite = !viewingOtherOrganization;"),
+      true
     );
   });
 
@@ -222,7 +238,7 @@ describe("employee list → detail context handoff", () => {
   });
 });
 
-describe("employee write actions stay session-organization scoped (no bypass)", () => {
+describe("employee write actions stay session-organization scoped (no cross-tenant bypass except the explicitly-authorized permanent delete)", () => {
   it("updateEmployeeAction scopes to the session organization", () => {
     const start = actionsSource.indexOf("export async function updateEmployeeAction");
     assert.notEqual(start, -1);
@@ -244,14 +260,22 @@ describe("employee write actions stay session-organization scoped (no bypass)", 
     assert.equal(block.includes("getEmployeeInOrganization(employeeId, organizationId)"), true);
   });
 
-  it("permanentlyDeleteEmployeeAction uses the session organization", () => {
+  it("permanentlyDeleteEmployeeAction derives the owning org from the database", () => {
     assert.equal(
       actionsSource.includes("const sessionOrganizationId = user.organizationId ?? null;"),
       true
     );
     assert.match(
       actionsSource,
-      /getEmployeeInOrganization\(employeeId, organizationId\)/
+      /getEmployeeById\(employeeId\)/
+    );
+    assert.match(
+      actionsSource,
+      /resolveEmployeePermanentDeleteScope\(/
+    );
+    assert.match(
+      actionsSource,
+      /eq\(employees\.organizationId, scopedOrganizationId\)/
     );
   });
 

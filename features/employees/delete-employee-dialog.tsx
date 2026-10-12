@@ -52,6 +52,14 @@ export interface PermanentDeleteEmployeeTarget {
 
 interface EmployeePermanentDeleteDialogProps {
   employee: PermanentDeleteEmployeeTarget;
+  /**
+   * The organization this employee belongs to (the listing's validated tenant,
+   * or the owning organization of the detail page). Threaded into the server
+   * action where it is treated as a consistency assertion only — the action
+   * re-derives the OWNING organization from the database and never trusts this
+   * value as a lookup key.
+   */
+  organizationId: string;
   /** Page to land on after a successful delete (detail → list). */
   redirectTo?: string;
   /** Renders the trigger as a full destructive button instead of a row action. */
@@ -82,7 +90,9 @@ const idleDependencyCheck: DependencyCheckState = { status: "idle" };
  * authorization, the organization scope, both confirmation layers, the
  * protected-record classification and the transaction all live in
  * `permanentlyDeleteEmployeeAction`, so a direct call from any other role is
- * refused server-side.
+ * refused server-side. A Super Administrator may use this flow for another
+ * tenant's employee (listed under that tenant); the action re-derives the
+ * record's owning organization from the database.
  *
  * Layered confirmation (all three must hold before the request is sent):
  * 1. the typed Employee Number matches exactly, character for character;
@@ -100,6 +110,7 @@ const idleDependencyCheck: DependencyCheckState = { status: "idle" };
  */
 export function EmployeePermanentDeleteDialog({
   employee,
+  organizationId,
   redirectTo = "/employees",
   variant = "row",
 }: EmployeePermanentDeleteDialogProps) {
@@ -111,7 +122,7 @@ export function EmployeePermanentDeleteDialog({
   const [dependencyCheck, setDependencyCheck] =
     useState<DependencyCheckState>(idleDependencyCheck);
   const [state, formAction, isPending] = useActionState(
-    permanentlyDeleteEmployeeAction.bind(null, employee.id),
+    permanentlyDeleteEmployeeAction.bind(null, employee.id, organizationId),
     initialState
   );
 
@@ -121,7 +132,10 @@ export function EmployeePermanentDeleteDialog({
   const runDependencyCheck = useCallback(async () => {
     setDependencyCheck({ status: "loading" });
     try {
-      const report = await checkEmployeeDeletionDependenciesAction(employee.id);
+      const report = await checkEmployeeDeletionDependenciesAction(
+        employee.id,
+        organizationId
+      );
       setDependencyCheck({
         status: report.status === "success" ? "ready" : "error",
         dependencies: report.dependencies,
@@ -145,7 +159,7 @@ export function EmployeePermanentDeleteDialog({
         message: EMPLOYEE_PERMANENT_DELETE_FAILED_MESSAGE,
       });
     }
-  }, [employee.id]);
+  }, [employee.id, organizationId]);
 
   // Opening the dialog is an event, so the pre-flight fires from the open
   // handlers — never from an effect — and the report is reset before the

@@ -266,11 +266,11 @@ export default async function EmployeeDetailPage({
   // `employees.permanent_delete` code AND the system-level SUPERADMIN role. Both
   // are evaluated server-side from the DB-backed authorization of the session,
   // and `permanentlyDeleteEmployeeAction` re-checks them — this only decides
-  // whether the destructive action is offered on this page. The action itself
-  // is scoped to the session organization, so it is never offered for a
-  // cross-tenant view.
-  const canPermanentDelete =
-    canWrite && canPermanentlyDeleteEmployees(authorization);
+  // whether the destructive action is offered on this page. The action re-derives
+  // the employee's OWNING organization from the database and validates the `org`
+  // context passed below against it, so the flow is offered for the tenant this
+  // page is scoped to (a SUPERADMIN cross-tenant view included).
+  const canPermanentDelete = canPermanentlyDeleteEmployees(authorization);
 
   // Section/row edit affordances are offered only for the session's own
   // organization (see `canWrite`). Sensitive-value reveal is intentionally NOT
@@ -632,6 +632,7 @@ export default async function EmployeeDetailPage({
                 department: employee.department,
                 position: employee.position,
               }}
+              organizationId={organizationId}
               redirectTo="/employees"
             />
           ) : null}

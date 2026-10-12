@@ -46,12 +46,14 @@ import {
   matchesEmployeeNumberConfirmation,
   presentEmployeeDeleteDependencies,
   presentEmployeeDependenciesByDisposition,
+  resolveEmployeePermanentDeleteScope,
   totalEmployeeDeleteDependencyCount,
   type EmployeeDeleteDependency,
 } from "./permanent-delete-policy";
 import {
   countEmployeeDirectReports,
   deleteEmployeeDeletableRecords,
+  getEmployeeById,
   getEmployeeInOrganization,
   listEmployeeDeletionDependencies,
   listLinkableUsers,
@@ -922,9 +924,14 @@ async function readEmployeeDeletionDependencies(
  *    `employees.permanent_delete` code AND `isSuperAdmin`. The dialog hiding
  *    its button is a convenience only; a direct server-action call from a
  *    non-SUPERADMIN actor is refused here with `FORBIDDEN` (403).
- * 3. Organization scoping: the employee's organization is the caller's
- *    organization, resolved server-side. An id that belongs to another
- *    organization resolves like an unknown id, so existence never leaks → 404.
+ * 3. Organization scoping: the employee is loaded by id and its OWNING
+ *    organization (read from the database) is authoritative. A Super
+ *    Administrator may therefore permanently delete an employee of the tenant
+ *    they explicitly selected (e.g. SUPRACO from a System session) without the
+ *    record being resolved against the session organization. An explicit
+ *    organization context that does not match the record's owner is refused,
+ *    and an id that belongs outside a non-SUPERADMIN's organization resolves
+ *    like an unknown id, so existence never leaks → 404.
  * 4. Employee-number confirmation, compared against the number loaded from
  *    the database — the browser value is only the typed confirmation → 400.
  * 5. PROTECTED historical records (attendance, leave, permission, payroll,
@@ -946,6 +953,7 @@ async function readEmployeeDeletionDependencies(
  */
 export async function permanentlyDeleteEmployeeAction(
   employeeId: string,
+  requestedOrganizationId: string | null,
   _prevState: EmployeePermanentDeleteState,
   formData: FormData
 ): Promise<EmployeePermanentDeleteState> {
@@ -991,15 +999,27 @@ export async function permanentlyDeleteEmployeeAction(
       "Your account is not assigned to an organization."
     );
   }
-  const organizationId = sessionOrganizationId;
-
-  // Org-scoped load. Unknown id and another organization's id are
-  // indistinguishable from the caller's seat (both 404).
-  const employee = await getEmployeeInOrganization(employeeId, organizationId);
-  if (!employee) {
+  // The employee's OWNING organization is read from the database and is
+  // authoritative — `requestedOrganizationId` (the listing's selected tenant)
+  // is only a consistency assertion, never a lookup key. This is what lets a
+  // System-session Super Administrator permanently delete a SUPRACO employee:
+  // the row is found by id, its owner is SUPRACO, and every statement below is
+  // scoped to SUPRACO rather than the System organization. Unknown ids, a
+  // mismatched context, and a non-SUPERADMIN's foreign id all resolve as
+  // "not found" so cross-tenant existence never leaks.
+  const employee = await getEmployeeById(employeeId);
+  const scope = employee
+    ? resolveEmployeePermanentDeleteScope({
+        employeeOrganizationId: employee.organizationId,
+        userOrganizationId: sessionOrganizationId,
+        isSuperAdmin: authorization.isSuperAdmin,
+        requestedOrganizationId,
+      })
+    : null;
+  if (!employee || !scope) {
     await auditPermanentEmployeeDelete({
       ...auditContext,
-      organizationId,
+      organizationId: sessionOrganizationId,
       result: "DENIED",
       reason: "NOT_FOUND",
     });
@@ -1008,11 +1028,12 @@ export async function permanentlyDeleteEmployeeAction(
       EMPLOYEE_PERMANENT_DELETE_NOT_FOUND_MESSAGE
     );
   }
+  const scopedOrganizationId = scope.organizationId;
 
   const employeeName = `${employee.firstName} ${employee.lastName}`;
   const employeeContext = {
     ...auditContext,
-    organizationId,
+    organizationId: scopedOrganizationId,
     employeeNumber: employee.employeeNumber,
     employeeName,
   };
@@ -1077,7 +1098,7 @@ export async function permanentlyDeleteEmployeeAction(
         .where(
           and(
             eq(employees.id, employeeId),
-            eq(employees.organizationId, organizationId)
+            eq(employees.organizationId, scopedOrganizationId)
           )
         )
         .for("update")
@@ -1095,7 +1116,7 @@ export async function permanentlyDeleteEmployeeAction(
       const dependencies = await listEmployeeDeletionDependencies(
         tx,
         current.id,
-        organizationId
+        scopedOrganizationId
       );
       const decision = evaluatePermanentEmployeeDeletion({
         actorUserId: user.id,
@@ -1137,7 +1158,7 @@ export async function permanentlyDeleteEmployeeAction(
       const removedSummary = await deleteEmployeeDeletableRecords(
         tx,
         current.id,
-        organizationId
+        scopedOrganizationId
       );
 
       // Scoped delete of exactly this one employee row.
@@ -1146,7 +1167,7 @@ export async function permanentlyDeleteEmployeeAction(
         .where(
           and(
             eq(employees.id, current.id),
-            eq(employees.organizationId, organizationId)
+            eq(employees.organizationId, scopedOrganizationId)
           )
         )
         .returning({ id: employees.id });
@@ -1162,7 +1183,7 @@ export async function permanentlyDeleteEmployeeAction(
       // related-record rejection instead of a generic failure.
       const dependencies = await readEmployeeDeletionDependencies(
         employeeId,
-        organizationId
+        scopedOrganizationId
       ).catch((summaryError) => {
         // The refusal stands either way: the foreign key already rejected the
         // statement. Only the per-module breakdown is lost, so keep the reason
@@ -1220,7 +1241,7 @@ export async function permanentlyDeleteEmployeeAction(
     // transaction. Remove it after the commit so a rolled-back delete can never
     // lose files, and never before it so a committed delete never leaves them
     // orphaned.
-    await deleteEmployeeDocumentStorage(organizationId, employeeId);
+    await deleteEmployeeDocumentStorage(scopedOrganizationId, employeeId);
     revalidatePath("/employees");
     revalidatePath(`/employees/${employeeId}`);
     return {
@@ -1312,15 +1333,18 @@ function deniedDependencyReport(
  * foreign-key backstop) is unchanged and remains authoritative — this report is
  * a UX affordance, never the guard.
  *
- * Scoped exactly like the delete itself: the organization always comes from the
- * session, so a foreign `employeeId` resolves as "not found" and cannot reveal
- * another organization's dependency counts.
+ * Scoped exactly like the delete itself: the employee's OWNING organization is
+ * read from the database (SUPERADMIN may therefore pre-flight another tenant's
+ * record), the requested organization context is only a consistency assertion,
+ * and a foreign/mismatched `employeeId` resolves as "not found" — it cannot
+ * reveal another organization's dependency counts.
  */
 export async function checkEmployeeDeletionDependenciesAction(
-  employeeId: string
+  employeeId: string,
+  requestedOrganizationId: string | null
 ): Promise<EmployeePermanentDeleteDependencyReport> {
   const user = await requireUser();
-  const organizationId = user.organizationId ?? null;
+  const sessionOrganizationId = user.organizationId ?? null;
 
   const authorization = await getUserAuthorization(user.id);
   const canPermanentlyDelete = canPermanentlyDeleteEmployees(authorization);
@@ -1330,21 +1354,29 @@ export async function checkEmployeeDeletionDependenciesAction(
     );
   }
 
-  if (!organizationId) {
+  if (!sessionOrganizationId) {
     return deniedDependencyReport(
       "Your account is not assigned to an organization."
     );
   }
 
-  const employee = await getEmployeeInOrganization(employeeId, organizationId);
-  if (!employee) {
+  const employee = await getEmployeeById(employeeId);
+  const scope = employee
+    ? resolveEmployeePermanentDeleteScope({
+        employeeOrganizationId: employee.organizationId,
+        userOrganizationId: sessionOrganizationId,
+        isSuperAdmin: authorization.isSuperAdmin,
+        requestedOrganizationId,
+      })
+    : null;
+  if (!employee || !scope) {
     return deniedDependencyReport(EMPLOYEE_PERMANENT_DELETE_NOT_FOUND_MESSAGE);
   }
 
   try {
     const { dependencies, directReportCount } = await readEmployeeDeletionDependencies(
       employee.id,
-      organizationId
+      scope.organizationId
     );
     return {
       status: "success",
