@@ -2,9 +2,10 @@
 
 **Report date:** 2026-10-21 (UTC)
 **Last updated:** 2026-10-21 (UTC) — see §10 (review package, approval matrix,
-lineage record, staging checklist, payroll scope decision, re-verification) and
-**§11 (owner-approved payroll deletion scope: implemented, verified in
-isolation, still RELEASE BLOCKED)**.
+lineage record, staging checklist, payroll scope decision, re-verification),
+§11 (owner-approved payroll deletion scope: implemented, verified in
+isolation) and **§12 (finalization: auditable file purge, full re-verification,
+production data-state finding — still RELEASE BLOCKED)**.
 **Repository:** `/opt/hris`
 **Requested release commit:** `4d41a5af`
 **Base release-candidate commit:** `4d415afbbd43d8e53951a5af13d6aca95f10409d` (`4d415af`)
@@ -680,7 +681,7 @@ plan guards.
 | 3 | Staging evidence (`B-01`–`B-15`), Part A signatures, authorized staging rehearsal | DBA + Application Lead |
 | 4 | Lineage reconciliation (R2→R4→R5) and journaling of `0019`–`0022` | DBA |
 | 5 | Production Part B, write-freeze/payroll cutoff window, RPO/RTO | DBA + App Lead + Payroll/HR |
-| 6 | Payslip PDF storage purge procedure for deleted employees (orphaned files) | Security + DBA + App Lead |
+| 6 | Payslip PDF storage purge **execution** (procedure implemented + rehearsed 2026-10-21 — see §12.4; production run pending approval) | Security + DBA + App Lead |
 | 7 | Branch protection / deployment gate; push of the release candidate | Application Lead |
 
 ### 11.8 Final status after this addendum
@@ -698,3 +699,138 @@ migrated, deployed, pushed or used for a deletion test. The release remains
 blocked on the DBA review of the revised migrations, the Legal/DPO/HR-Payroll
 sign-offs, lineage reconciliation, and the authorized staging rehearsal. No
 approval, attestation, signature or gate was fabricated.
+
+---
+
+## 12. Addendum 2026-10-21 (finalization session) — FILE PURGE, full re-verification, production data-state finding
+
+This addendum records the finalization session on top of commits `9f15938` +
+`8c17edf`. **Production was not pushed, migrated, deployed or deleted from.**
+The deployed build `kR0L8QnWCFjO3oU4Qb4w3` is preserved; `hris.service`
+stayed `active` with `GET /` → `307` throughout; the migration ledger remains
+18 rows.
+
+### 12.1 Production data-state verification (operator observation — not a DBA attestation)
+
+The owner states the application "is not yet using real operational data".
+The operator CANNOT verify that claim and records what is actually observable
+in the production database (read-only, 2026-10-21):
+
+| Observation | Value |
+| --- | --- |
+| Employees | **12**, all with names (e.g. real-looking personal names), employee numbers (03233, 170865, …) |
+| Organizations | **3**, with real company names (KSO - PT. Len Railway Systems & PT. Tritama Aji Laksana; SUPRACO; System) |
+| Users | **6**, with emails on real-looking domains (sadmin@…, hr@…, admin@…) |
+| Attendance / payroll / audit | attendance_records 2, payroll_items 1, audit_logs **442** |
+| Payslip private tree | 2 stored PDFs (~984 KB each) + 1 legacy workspace dir |
+
+**Conclusion recorded for governance:** the production database contains
+personal-looking data of identifiable people and companies. Regardless of the
+owner's statement, the operator treats it as REAL data: no production
+deletion, no destructive production test, no synthetic test subject created
+in production. The owner's "no real data" statement **does not relax any
+release gate** below.
+
+### 12.2 Owner authorization recorded (owner level only)
+
+The owner re-authorized proceeding with "all remaining work". Recorded as
+owner approval only in `docs/employee-deletion-owner-scope-approval-20261021.md`
+(§1); it grants no DBA, Legal, DPO, HR/Payroll, Security, staging or
+production authorization, and the approval matrix totals are unchanged
+(Part A 0/14, Part B 0/13, §4 0/6, gates BLOCKED, 47-artifact register 0/47).
+
+### 12.3 Technical completion this session — auditable file purge
+
+Implemented (local, unpushed):
+
+| Piece | What |
+| --- | --- |
+| `lib/payroll/payslip-file-purge.ts` | per-key purge of stored payslip PDFs: existing→`purged`, absent→`missing` (idempotent), invalid/tampered/I-O→`failed`; key validation makes path escape impossible; no tree enumeration |
+| `lib/payroll/payslip-pdf.ts` | `storedPayslipPdfExists` (validated existence probe) |
+| `lib/employee-documents/storage.ts` | `deleteEmployeeDocumentStorage` now reports `{removed, error}` instead of swallowing |
+| `features/employees/queries.ts` | `collectEmployeePayslipFileKeys` — DISTINCT keys from `payslip_documents` + `payslip_document_versions`, org+employee scoped, to be called INSIDE the deletion transaction before the rows are deleted |
+| `features/employees/actions.ts` | STEP 1.5 collects the keys in-tx; SUCCESS audit records the key scope; post-commit STEP A (document folder, outcome captured) + STEP B (payslip purge, best-effort, failures never change the result) + STEP C (dedicated `employee.permanently_deleted_files` audit row with purged/missing/failed + folder outcome, `SUCCESS`/`PARTIAL`) |
+| `lib/auth/audit.ts` | new audit action `employee.permanently_deleted_files` |
+| `scripts/purge-deleted-employee-pdfs.mjs` | operator sweep: dry-run default; `--execute` requires `--confirm PURGE-DELETED-EMPLOYEE-PDFS`; delete scope ONLY from SUCCESS `employee.permanently_deleted` audits (organization_id read from the audit COLUMN, never metadata); live-referenced files never touched; `unattributed_orphan` files reported and never deleted; per-item resilience (`left_behind`); post-purge re-scan; sandbox-rehearsable roots |
+| `tests/employees/employee-file-purge.test.ts` | 19 source-contract tests pinning collection scope, dedup, ordering (after commit), key validation, audit fields, failure semantics, sweep guards |
+
+Full procedure + safety record: `docs/employee-deletion-file-purge-runbook.md`
+(includes the backup/recovery limitation: files are NOT in `pg_dump`; a purged
+file is unrecoverable without a filesystem backup).
+
+### 12.4 Rehearsal and verification evidence (this session, actual commands/results)
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Full test suite | `npm test` | **PASS — 1,978/1,978 tests, 406 suites, 0 fail** (was 1,956; +22 file-purge/audit tests) |
+| TypeScript | `npx tsc --noEmit` | **PASS — exit 0** |
+| Lint | `npm run lint` | **PASS — exit 0; 0 errors, 15 warnings** |
+| Production build (isolated copy) | `npm run build` in `/tmp/opencode/build-verify-filepurge-20261021T121*Z` | **PASS — exit 0, 37/37 static pages, verification BUILD_ID `IjfjwkOHcBOyCgLWlZc7E`**; live `.next` untouched (`kR0L8QnWCFjO3oU4Qb4w3`) |
+| Migration apply/re-apply | `0021`, `0022` on disposable DB `hris_control_fk_20261021T120007Z` | **PASS** — apply exit 0 ×2, re-apply exit 0 ×2 (idempotent) |
+| Post-apply FK invariants | catalog | **26 employee FKs = 10 `SET NULL` + 16 `RESTRICT` + 0 `CASCADE`; 6 retained-identity CHECKs** |
+| Control-plane regression | `scripts/verify-employee-deletion-control-fks.sql` | **`CONTROL_FK_REGRESSION_PASS`** |
+| Destructive rehearsal phase 1 (DB) | harness on `hris_force_delete_rehearsal_20261021T102744Z` | **`HARNESS_RESULT=PASS` (443 ms)** — payroll chain deleted exactly; retained 6 tables detached+snapshotted; B/C intact; org-level payroll intact; C's chain fully rolled back on injected failure; NEW: wrong typed confirmation refused; cross-tenant attempt NOT_FOUND; re-delete NOT_FOUND; ACTIVE legal hold refuses the live path AND the raw `DELETE` (CHECK 23514); PENDING request refuses, REJECTED request does not |
+| Destructive rehearsal phase 2 (files) | `file-purge-rehearsal.ts` (real `purgeStoredPayslipPdfs`, real payslip root, synthetic keys) | **`FILE_PURGE_REHEARSAL_RESULT=PASS`** — collected key purged; valid-but-missing key → `missing`; tampered `../../…` key → `failed` ("Invalid payslip storage key."); every pre-existing file byte-for-byte untouched |
+| Sweep dry-run (PRODUCTION, read-only) | `node scripts/purge-deleted-employee-pdfs.mjs` | **PASS** — `attributable=0`, `unattributed_orphan=2` (pre-existing test PDFs), report-only |
+| Sweep `--execute` happy path | sandbox root + disposable DB (real SUCCESS audit) | **PASS** — attributable key + deleted-employee document folder purged (`purged=2, left_behind=0`), unattributed file untouched, `post_purge_verification attributable_remaining=0` |
+| Sweep `--execute` resilience | one un-removable folder | **PASS** — recorded `left_behind=1` with path, attributable key still purged, exit 1 |
+| Sweep refusal guard | `--execute` without confirmation | **PASS — refuses, exit 1** |
+| Production backup + restore | fresh `pg_dump`/`pg_restore` | **PASS** — `production-db-20261021T120334Z-pre-superadmin-force-delete-finalization.dump` (SHA-256 `fd79366e8777883c8bf38eeec1679e81be827b1219d57615201a5c173c03a3cb`, 0600 postgres); restore verified employees 12 / organizations 3 / users 6 / audit_logs 442 / ledger 18, `max(created_at)=1790661254287` |
+| Delete-plan coverage vs live production catalog | read-only FK enumeration | **every one of the 24 production employee FKs is classified** (16 deleted-with-employee incl. 5 payroll; 6 retained-detach; 2 manager self-references SET NULL; +2 control-plane FKs arrive with 0021) — no unmapped reference |
+| Schema unchanged by the destructive rehearsal | before/after catalog on the rehearsal DB | identical (26 FKs, 10 `n` / 16 `r`, 6 retained CHECKs, 0 CASCADE) |
+
+Key artifacts (operator workspace `/tmp/opencode`, not repo):
+`payroll-scope-rehearsal2-20261021T102744Z/` (`04-harness.out` SHA-256
+`6afc9783…76ae3`, `05-file-purge-rehearsal.out` `6ec67384…f396`,
+`06-post-rehearsal-invariants.txt` `0709a7cd…d2b2f`, `collected-keys.json`
+`ee2f6c3c…19a84`); `migreg-final-20261021T120007Z/`. All disposable databases
+were dropped; synthetic files cleaned up; the two pre-existing production
+orphan PDFs are untouched (`bcfdd5b9…ce598f`, `f220c0f2…f3aa13a`).
+
+### 12.5 Staging rehearsal status — NOT AUTHORIZED (unchanged)
+
+There is still **no confirmed staging target** for this feature (Part A `A4`
+isolation evidence absent; staging ledger/catalog uncaptured — `B-02`, `B-03`,
+`B-05` open) and `A1`/`A2` are unsigned, so **the authorized staging rehearsal
+was NOT executed**. The disposable-database rehearsals above are operator
+evidence only, not a gate pass. The staging checklist
+(`docs/employee-deletion-staging-rehearsal-checklist-20261021.md`) now also
+pins the file-purge and sweep-script steps (§5.3, steps 14a/14b) so the
+authorized run covers them.
+
+### 12.6 Production release status — NOT EXECUTED (gates missing)
+
+No push (`origin/main` = `e735f47`, local ahead), no production migration
+(ledger 18), no deployment (build `kR0L8QnWCFjO3oU4Qb4w3` serving), no
+production deletion. The deploy workflow still lacks an approval environment,
+CI test gate and a migration step, and `main` is not branch-protected.
+
+### 12.7 Outstanding blockers and responsible approvers (unchanged owners)
+
+| # | Outstanding action | Responsible |
+| --- | --- | --- |
+| 1 | DBA + Security review of revised `0021` (`585dd2d7…c452`) AND revised `0022` (`3750812f…0b5`) — review package ready (`docs/employee-deletion-0021-dba-review-package.md` §9 rows 1–7, §10.5 rows 8–12) | DBA + Security |
+| 2 | Policy §4 sign-off: retention schedule, eligible categories, legal-hold procedure, backup/PITR, security controls, final DPO/Data Owner authorization (0/6) | HR/Payroll, Legal, DPO, Security, DBA |
+| 3 | Staging evidence (47-artifact register, `B-01`–`B-15`), staging isolation attestation, Part A `A1`–`A14` signatures, then the authorized staging rehearsal (incl. file-purge steps 14a/14b) | DBA + Application Lead |
+| 4 | Drizzle lineage reconciliation (R2→R4→R5) and journaling of `0019`–`0022` | DBA |
+| 5 | Production Part B `B1`–`B13`, write-freeze/payroll-cutoff window, RPO/RTO acceptance | DBA + Application Lead + Payroll/HR |
+| 6 | File-purge production execution approval (runbook §7; includes the filesystem-backup position for `/opt/hris-private`) | Security + DBA + App Lead |
+| 7 | Disposition of the 2 pre-existing unattributed orphan payslip PDFs (report-only today) | Data Owner + Security |
+| 8 | Branch protection / deployment-environment approval; push of the release candidate; migration-first deploy order | Application Lead |
+
+### 12.8 Final status after this session
+
+**RELEASE BLOCKED.**
+
+The engineering scope is complete and proven end-to-end in isolation:
+1,978/1,978 tests, clean TypeScript, lint 0 errors, isolated production build,
+idempotent revised migrations, exact FK invariants, control-plane regression,
+a destructive rehearsal covering payroll deletion + retention + rollback +
+authorization denials + cross-tenant + idempotency + control-plane blocks, and
+an audit-attributable file purge (in-flow + sweep) proven against the real
+storage root with pre-existing files untouched. Production is verified
+untouched and freshly backed up with a restore-checked dump. The release
+remains blocked on external approvals: DBA/Security SQL review, Legal/DPO/
+HR-Payroll §4 sign-off, staging evidence + authorization, lineage
+reconciliation and the approved deployment workflow. No approval, attestation,
+gate or deployment was fabricated.

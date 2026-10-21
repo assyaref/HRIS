@@ -172,6 +172,28 @@ employee reference**.
 RESTRICT`, `approver_user_id SET NULL`. Full inventory:
 `docs/employee-deletion-0021-dba-review-package.md` §4.
 
+### 3.4 File-backed dependency closure (reconciled 2026-10-21, later session)
+
+Employee deletion also orphans FILE artifacts outside the database. The
+complete closure:
+
+| File-backed record | Storage | Parent table(s) | On employee delete | Procedure |
+| --- | --- | --- | --- | --- |
+| Employee private documents | `/opt/hris-private/employee-documents/<org>/<employee>/…` | `employee_documents` (DELETED) | folder removed after commit | in-flow `deleteEmployeeDocumentStorage`, outcome audited |
+| Stored payslip PDFs | `/opt/hris-private/payslips/<uuid>.pdf` | `payslip_documents`, `payslip_document_versions` (DELETED) | keys collected in-tx, files purged after commit | in-flow `purgeStoredPayslipPdfs` + sweep `scripts/purge-deleted-employee-pdfs.mjs` |
+| Attendance photos | DB bytea (`attendance_photos`) — no files | `attendance_records` (RETAINED) | **never touched** | n/a (rows retained) |
+| Announcement attachments | `/opt/hris-private/announcements/…` | announcements (org-level) | **never touched** | n/a (not employee-scoped) |
+| Profile photos | none — `employees.profile_photo_url` is a URL text column with no file storage behind it (no production values) | `employees` | nothing to purge | n/a (verified) |
+
+Every file purge is audit-attributed (SUCCESS deletion audit carries the key
+scope; a dedicated `employee.permanently_deleted_files` row records the
+outcome) and never deletes unattributed files. Full contract and isolated
+evidence: `docs/employee-deletion-file-purge-runbook.md`. Two pre-existing
+unattributed orphan PDFs exist in the production payslip root
+(`6de46bf1…pdf`, `aff343f2…pdf`, from pre-feature testing) — classified
+`unattributed_orphan` by the sweep dry-run and deliberately left untouched;
+their removal is a separate decision.
+
 ---
 
 ## 4. Payroll deletion scope — **owner-approved and implemented (2026-10-21)**

@@ -542,9 +542,15 @@ row records Payroll/Payslip under **removed**, not retained. Evidence
    `production-db-20261021T061854Z-pre-superadmin-force-delete-payroll-scope.dump`
    (SHA-256 `2e4aee6b…f6b5`) as the pre-apply restore point for any future
    approved window?
-7. Payslip **PDF storage files** are not removed by the DB transaction
-   (orphaned files require a separate approved purge step). Who owns that
-   procedure in the production runbook?
+7. Payslip **PDF storage files**: the deletion now also purges them — the
+   action collects the storage keys INSIDE the transaction, removes the files
+   AFTER the commit, and writes a dedicated
+   `employee.permanently_deleted_files` audit row; the operator sweep
+   `scripts/purge-deleted-employee-pdfs.mjs` (dry-run default, typed
+   confirmation, audit-attributed delete scope, unattributed orphans never
+   deleted, post-purge verification) is the retry path. Full contract:
+   `docs/employee-deletion-file-purge-runbook.md`. Do DBA + Security accept
+   this procedure, and who schedules any production `--execute` run?
 
 ### 10.5 DBA decision record for the revised `0022` — **NOT SIGNED (BLOCKED)**
 

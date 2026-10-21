@@ -212,6 +212,8 @@ Reference isolated run (evidence, not a gate pass):
 | Detached retained rows | still listed/searchable by snapshot identity |
 | Audit | exactly one `employee.permanently_deleted` `SUCCESS` row with reason + removed/retained/snapshotted scope; **Payroll/Payslip reported under removed, not retained** |
 | Injected failure (employee C) | full atomic rollback **including C's entire payroll/payslip chain**; `FAILED` audit row; no `SUCCESS` audit for C |
+| **File purge (post-commit)** | `employee.permanently_deleted` `SUCCESS` audit carries the collected `payslipFileKeys`; the real purge removes exactly those files; `employee.permanently_deleted_files` audit row records purged/missing/failed + document-folder outcome; a tampered key is rejected and touches nothing; every pre-existing file is byte-for-byte unchanged (`docs/employee-deletion-file-purge-runbook.md`) |
+| **Sweep script** | dry-run classifies attributable/referenced/unattributed; `--execute` without the typed confirmation refuses; execute purges only audit-attributable keys with `left_behind=0` |
 
 Reference isolated run (evidence, not a gate pass):
 `hris_force_delete_rehearsal_20261021T061529Z`, `HARNESS_RESULT=PASS`
@@ -254,6 +256,8 @@ the **revised** `0021`+`0022` pair:
 | 12 | Control-plane regression (§5.4) | regression output | `CONTROL_FK_REGRESSION_PASS` | ☐ **BLOCKED** |
 | 13 | Rollback test A/B/C (§5.7) | rollback fingerprints | catalog + row counts unchanged after injected failure | ☐ **BLOCKED** |
 | 14 | Historical reporting (§5.8) | reporting assertions | retained (time/history) rows listed; B/C payslip PDF passwords resolve | ☐ **BLOCKED** |
+| 14a | File purge rehearsal (post-commit, sandbox keys only) | file-purge rehearsal output | `FILE_PURGE_REHEARSAL_RESULT=PASS`; pre-existing files untouched | ☐ **BLOCKED** |
+| 14b | Sweep script dry-run + refusal guard | sweep output | classification correct; `--execute` without confirm refuses | ☐ **BLOCKED** |
 | 15 | Hash evidence, index it, hand to reviewers | `99-evidence-sha256.txt` | reviewer ≠ collector | ☐ **BLOCKED** |
 | 16 | Drop/retain disposable DBs per change record | cleanup log | no production/staging residue | ☐ **BLOCKED** |
 

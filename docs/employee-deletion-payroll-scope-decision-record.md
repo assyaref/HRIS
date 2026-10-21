@@ -80,11 +80,17 @@ production baseline for the payroll tables.
    period rows themselves survive (organization-level records).
 2. **Issued payslips and their document/version chains are destroyed** with the
    employee, including the metadata rows that point at stored PDFs.
-3. **Stored payslip PDF files are NOT removed by the database transaction.**
-   The plan deletes the DB rows; the physical files under the payslip storage
-   tree remain as orphans. A separate, approved storage-purge step is required
-   after any production deletion (operator runbook item; NOT implemented in
-   this change). Recorded here so it is not discovered later.
+3. **Stored payslip PDF files are removed by the auditable file purge.**
+   The deletion transaction orphans the encrypted PDFs; the in-flow purge
+   removes exactly the keys collected inside the transaction
+   (`collectEmployeePayslipFileKeys`), after the commit and per key, with a
+   dedicated `employee.permanently_deleted_files` audit row recording
+   purged/missing/failed. The operator sweep
+   `scripts/purge-deleted-employee-pdfs.mjs` (dry-run default, typed
+   confirmation, audit-attributed scope, unattributed orphans never deleted,
+   post-purge verification) is the retry path. Full contract + evidence:
+   `docs/employee-deletion-file-purge-runbook.md`. Production execution of the
+   purge remains gated on the same approvals as the release itself.
 4. **`payroll_item_components` rows are deleted via the pre-existing
    `ON DELETE CASCADE` from `payroll_items`.** This is the only cascade the
    deletion relies on, it is pre-existing production schema, it is exercised
@@ -213,7 +219,7 @@ dropped after evidence capture. Production was never connected for writes.
 | 2 | Legal/Compliance, DPO, HR/Payroll review of the payroll-deletion scope effects (§4) — policy §4 sign-off 0/6 | Legal / DPO / HR-Payroll |
 | 3 | Staging Part A `A1`–`A14` (0/14) and the authorized staging rehearsal | DBA + Application Lead |
 | 4 | Production Part B `B1`–`B13` (0/13), lineage reconciliation, branch/deploy gates | DBA + App Lead + others |
-| 5 | Payslip PDF storage purge procedure for deleted employees (§4.3) — design + approval | Security + DBA + App Lead |
+| 5 | Payslip PDF storage purge **execution** for deleted employees (procedure implemented + rehearsed, §4.3; runbook `docs/employee-deletion-file-purge-runbook.md`; production run pending approval) | Security + DBA + App Lead |
 | 6 | Production apply/deploy/delete | Blocked until 1–5 |
 
 ## 9. History — previous state of this record (superseded)
