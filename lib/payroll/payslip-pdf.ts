@@ -549,6 +549,27 @@ export async function readStoredPayslipPdf(
 }
 
 /**
+ * Whether a stored payslip PDF currently exists on disk.
+ *
+ * The key is validated by `resolveStoragePath` first, so a tampered key is
+ * reported as an error (never silently answered with `false`, and it can never
+ * make the probe inspect a path outside the private root). Used by the
+ * employee file purge to distinguish "purged" from "already missing".
+ */
+export async function storedPayslipPdfExists(
+  storageKey: string
+): Promise<boolean> {
+  const filePath = resolveStoragePath(storageKey);
+
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Removes a stored payslip PDF after a database operation fails.
  */
 export async function removeStoredPayslipPdf(

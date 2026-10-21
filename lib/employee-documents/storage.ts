@@ -73,17 +73,36 @@ export async function deleteEmployeeDocumentFile(
   }
 }
 
-/** Remove the whole employee folder when the employee is purged. */
+/** Outcome of a whole-folder removal, for the deletion audit trail. */
+export interface EmployeeDocumentStorageRemoval {
+  /** False when the folder was already absent (still a success). */
+  removed: boolean;
+  /** Non-null only when the removal was attempted and threw. */
+  error: string | null;
+}
+
+/**
+ * Remove the whole employee folder when the employee is purged.
+ *
+ * Never throws: the deletion transaction has already committed by the time
+ * this runs, so the caller records the outcome in the file-purge audit row
+ * instead of failing the request. The operator sweep script is the retry
+ * path when `removed` is false with an `error`.
+ */
 export async function deleteEmployeeDocumentStorage(
   organizationId: string,
   employeeId: string
-): Promise<void> {
+): Promise<EmployeeDocumentStorageRemoval> {
   try {
     await rm(
       resolveWithinRoot(PRIVATE_ROOT, `${organizationId}/${employeeId}`),
       { recursive: true, force: true }
     );
-  } catch {
-    // Folder may not exist — nothing to do.
+    return { removed: true, error: null };
+  } catch (error) {
+    return {
+      removed: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }

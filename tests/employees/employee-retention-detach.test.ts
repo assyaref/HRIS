@@ -935,7 +935,9 @@ describe("authorization and isolation under the detach design", () => {
 
   it("the document folder is removed only after the commit", () => {
     assert.equal(
-      permanentDelete.includes("deleteEmployeeDocumentStorage(scopedOrganizationId, employeeId)"),
+      permanentDelete.includes(
+        "deleteEmployeeDocumentStorage(\n      scopedOrganizationId,\n      employeeId\n    )"
+      ),
       true
     );
     assert.equal(

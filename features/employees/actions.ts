@@ -57,6 +57,7 @@ import {
   isValidDeletionReason,
 } from "./deletion-control-policy";
 import {
+  collectEmployeePayslipFileKeys,
   countEmployeeDirectReports,
   deleteEmployeeDeletableRecords,
   getEmployeeById,
@@ -67,6 +68,10 @@ import {
   snapshotEmployeeRetainedRecords,
   type EmployeeDeletionControlState,
 } from "./queries";
+import {
+  purgeStoredPayslipPdfs,
+  type PayslipFilePurgeResult,
+} from "@/lib/payroll/payslip-file-purge";
 import {
   createEmployeeSchema,
   updateEmployeeSchema,
@@ -916,6 +921,13 @@ async function auditPermanentEmployeeDelete(input: {
    * deletion, per table (migration 0022). Present on SUCCESS only.
    */
   snapshottedRetainedRecords?: Record<string, number>;
+  /**
+   * Stored payslip PDF keys orphaned by this deletion (owner-approved
+   * payroll scope), collected inside the transaction. Present on SUCCESS
+   * only; the post-commit purge and the operator sweep script both use this
+   * list as their exact file scope.
+   */
+  payslipFileKeys?: string[];
 }): Promise<void> {
   try {
     await writeAuditLog({
@@ -940,6 +952,9 @@ async function auditPermanentEmployeeDelete(input: {
         ...(input.snapshottedRetainedRecords
           ? { snapshottedRetainedRecords: input.snapshottedRetainedRecords }
           : {}),
+        ...(input.payslipFileKeys
+          ? { payslipFileKeys: input.payslipFileKeys }
+          : {}),
         ...(input.reason ? { reason: input.reason } : {}),
         ...(input.deletionReason
           ? { deletionReason: input.deletionReason }
@@ -948,6 +963,62 @@ async function auditPermanentEmployeeDelete(input: {
     });
   } catch (error) {
     console.error("[employees] permanent delete audit failed", error);
+  }
+}
+
+/**
+ * Best-effort audit row for the POST-COMMIT file purge of a permanently
+ * deleted employee (owner-approved payroll scope): which stored payslip PDFs
+ * were removed / already missing / failed, and whether the employee's private
+ * document folder was removed. Written only after the deletion transaction
+ * has committed; a lost audit row is logged, never fatal — the deletion
+ * result was already returned to the operator by then.
+ */
+async function auditPermanentEmployeeDeleteFilePurge(input: {
+  organizationId: string | null;
+  actorUserId: string;
+  actorEmail: string | null;
+  actorRole: string | null;
+  employeeId: string;
+  employeeNumber: string | null;
+  employeeName: string | null;
+  payslipFileKeys: string[];
+  payslipFilePurge: PayslipFilePurgeResult;
+  documentFolderRemoval: { removed: boolean; error: string | null };
+}): Promise<void> {
+  try {
+    await writeAuditLog({
+      organizationId: input.organizationId,
+      actorUserId: input.actorUserId,
+      action: "employee.permanently_deleted_files",
+      entityType: "employee",
+      entityId: input.employeeId,
+      metadata: {
+        operation: "EMPLOYEE_PERMANENT_DELETE_FILE_PURGE",
+        actorUserId: input.actorUserId,
+        actorEmail: input.actorEmail,
+        actorRole: input.actorRole,
+        employeeId: input.employeeId,
+        employeeNumber: input.employeeNumber,
+        employeeName: input.employeeName,
+        payslipFileScopeCount: input.payslipFileKeys.length,
+        payslipFilesPurged: input.payslipFilePurge.purged,
+        payslipFilesMissing: input.payslipFilePurge.missing,
+        payslipFileFailures: input.payslipFilePurge.failed,
+        documentFolderRemoved: input.documentFolderRemoval.removed,
+        documentFolderError: input.documentFolderRemoval.error,
+        result:
+          input.payslipFilePurge.failed.length === 0 &&
+          input.documentFolderRemoval.error === null
+            ? "SUCCESS"
+            : "PARTIAL",
+      },
+    });
+  } catch (error) {
+    console.error(
+      "[employees] permanent delete file-purge audit failed",
+      error
+    );
   }
 }
 
@@ -1196,6 +1267,13 @@ export async function permanentlyDeleteEmployeeAction(
         retainedDependencies: EmployeeDeleteDependency[];
         /** Retained rows whose identity snapshot was frozen, per table. */
         snapshottedRecords: Record<string, number>;
+        /**
+         * Stored payslip PDF keys orphaned by this deletion, collected inside
+         * the transaction before the payroll rows were removed. The SUCCESS
+         * audit carries them and the post-commit purge removes exactly these
+         * files — nothing else.
+         */
+        payslipFileKeys: string[];
       }
     | { code: "NOT_FOUND" | "CONFIRMATION_MISMATCH" }
     | {
@@ -1342,6 +1420,17 @@ export async function permanentlyDeleteEmployeeAction(
         { employeeNumber: current.employeeNumber, employeeName }
       );
 
+      // STEP 1.5 — collect the stored payslip PDF keys BEFORE the payroll rows
+      // are deleted: once the rows are gone the keys can no longer be read
+      // from the database, and the post-commit file purge needs the exact
+      // list. Org+employee scoped like every other statement of the flow, and
+      // recorded on the SUCCESS audit so the purge is attributable afterwards.
+      const payslipFileKeys = await collectEmployeePayslipFileKeys(
+        tx,
+        current.id,
+        scopedOrganizationId
+      );
+
       // STEP 2 — explicit, table-by-table removal of the DELETABLE related
       // records, immediately before the employee row so the two stay atomic.
       // No CASCADE is relied upon, and every statement is org-scoped.
@@ -1372,6 +1461,7 @@ export async function permanentlyDeleteEmployeeAction(
         removedSummary,
         retainedDependencies: decision.retained,
         snapshottedRecords,
+        payslipFileKeys,
       } as const;
     });
   } catch (error) {
@@ -1490,12 +1580,66 @@ export async function permanentlyDeleteEmployeeAction(
         ])
       ),
       snapshottedRetainedRecords: outcome.snapshottedRecords,
+      // The exact stored payslip PDF keys orphaned by this deletion. The
+      // post-commit purge removes exactly these files, and the operator
+      // sweep script re-derives its safe scope from this list.
+      payslipFileKeys: outcome.payslipFileKeys,
     });
-    // The employee's private document folder is the only artifact outside the
-    // transaction. Remove it after the commit so a rolled-back delete can never
-    // lose files, and never before it so a committed delete never leaves them
-    // orphaned.
-    await deleteEmployeeDocumentStorage(scopedOrganizationId, employeeId);
+
+    // POST-COMMIT STEP A — remove the employee's private document folder. It
+    // is an artifact outside the transaction: only touched after the commit
+    // (so a rolled-back delete can never lose files) and never before it (so
+    // a committed delete never leaves them orphaned). The outcome is
+    // captured for the file-purge audit below instead of being swallowed.
+    const documentFolderRemoval = await deleteEmployeeDocumentStorage(
+      scopedOrganizationId,
+      employeeId
+    );
+
+    // POST-COMMIT STEP B — purge the stored payslip PDFs orphaned by the
+    // committed payroll deletion, exactly the keys collected inside the
+    // transaction. Best-effort and per-key: a failure never rolls anything
+    // back (the deletion is committed) and is reported on the dedicated
+    // file-purge audit row below, where the operator sweep script can find
+    // and retry it. Files are NOT in the database backup: a purged file is
+    // unrecoverable without a separate filesystem backup.
+    let payslipFilePurge: PayslipFilePurgeResult = {
+      purged: [],
+      missing: [],
+      failed: [],
+    };
+    try {
+      payslipFilePurge = await purgeStoredPayslipPdfs(
+        outcome.payslipFileKeys
+      );
+    } catch (error) {
+      console.error(
+        "[employees] payslip file purge failed after committed deletion",
+        error
+      );
+      payslipFilePurge = {
+        purged: [],
+        missing: [],
+        failed: outcome.payslipFileKeys.map((storageKey) => ({
+          storageKey,
+          error:
+            error instanceof Error ? error.message : "purge did not complete",
+        })),
+      };
+    }
+
+    // POST-COMMIT STEP C — dedicated, best-effort audit row for the file
+    // purge (the SUCCESS row above was written inside the transaction and
+    // cannot know the post-commit outcome). A failure to WRITE this audit row
+    // is logged but never changes the reported result; the console error and
+    // the sweep script's dry-run inventory are the remaining traces.
+    await auditPermanentEmployeeDeleteFilePurge({
+      ...deletionContext,
+      payslipFileKeys: outcome.payslipFileKeys,
+      payslipFilePurge,
+      documentFolderRemoval,
+    });
+
     revalidatePath("/employees");
     revalidatePath(`/employees/${employeeId}`);
     return {

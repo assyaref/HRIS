@@ -1191,6 +1191,53 @@ export async function deleteEmployeeDeletableRecords(
   return removedPerCategory;
 }
 
+/**
+ * Collect every stored payslip PDF storage key that belongs to one employee —
+ * from `payslip_documents` AND the append-only `payslip_document_versions`
+ * chain — so the post-commit file purge can remove exactly the files the
+ * deletion transaction is about to orphan.
+ *
+ * MUST run INSIDE the deletion transaction, BEFORE
+ * `deleteEmployeeDeletableRecords` removes the rows: once the rows are gone
+ * the keys are unrecoverable from the database. The keys are scoped by BOTH
+ * `employee_id` and `organization_id` like every other statement of the plan,
+ * so another tenant's files can never be collected.
+ *
+ * Returns DISTINCT keys (a document and its current version intentionally
+ * share the same storage key; superseded versions carry their own).
+ */
+export async function collectEmployeePayslipFileKeys(
+  tx: HrisTransaction,
+  employeeId: string,
+  organizationId: string
+): Promise<string[]> {
+  const documentRows = await tx
+    .select({ storageKey: payslipDocuments.storageKey })
+    .from(payslipDocuments)
+    .where(
+      and(
+        eq(payslipDocuments.employeeId, employeeId),
+        eq(payslipDocuments.organizationId, organizationId)
+      )
+    );
+  const versionRows = await tx
+    .select({ storageKey: payslipDocumentVersions.storageKey })
+    .from(payslipDocumentVersions)
+    .where(
+      and(
+        eq(payslipDocumentVersions.employeeId, employeeId),
+        eq(payslipDocumentVersions.organizationId, organizationId)
+      )
+    );
+
+  return [
+    ...new Set([
+      ...documentRows.map((row) => row.storageKey),
+      ...versionRows.map((row) => row.storageKey),
+    ]),
+  ];
+}
+
 /* ------------------------------------------------------------------ */
 /* Retained-record identity snapshots (migration 0022)                  */
 /* ------------------------------------------------------------------ */

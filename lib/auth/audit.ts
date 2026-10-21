@@ -38,6 +38,7 @@ export type EmployeeAuditAction =
   | "employee.account.created"
   | "employee.deleted"
   | "employee.permanently_deleted"
+  | "employee.permanently_deleted_files"
   | "employee.legal_hold.placed"
   | "employee.legal_hold.released"
   | "employee.deletion.requested"

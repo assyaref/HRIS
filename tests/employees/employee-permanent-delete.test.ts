@@ -1376,7 +1376,9 @@ describe("server action: transaction and explicit deletion", () => {
 
   it("removes the employee's private document folder only AFTER the commit", () => {
     assert.equal(
-      permanentDelete.includes("deleteEmployeeDocumentStorage(scopedOrganizationId, employeeId)"),
+      permanentDelete.includes(
+        "deleteEmployeeDocumentStorage(\n      scopedOrganizationId,\n      employeeId\n    )"
+      ),
       true
     );
     const successAt = permanentDelete.indexOf('result: "SUCCESS"');
@@ -1385,6 +1387,69 @@ describe("server action: transaction and explicit deletion", () => {
       successAt < storageAt,
       true,
       "files must never be removed before the transaction commits"
+    );
+  });
+
+  it("collects the payslip file keys INSIDE the transaction, before the payroll rows are deleted", () => {
+    const collectAt = permanentDelete.indexOf("collectEmployeePayslipFileKeys(");
+    const transactionAt = permanentDelete.indexOf("db.transaction");
+    const deletableAt = permanentDelete.indexOf("deleteEmployeeDeletableRecords(");
+    assert.notEqual(collectAt, -1, "the action must collect the file keys");
+    assert.equal(
+      transactionAt < collectAt,
+      true,
+      "the keys are collected on the transaction handle (rows still exist)"
+    );
+    assert.equal(
+      collectAt < deletableAt,
+      true,
+      "the keys must be read before the payroll rows are deleted"
+    );
+  });
+
+  it("purges the orphaned payslip PDFs only AFTER the commit and audits the outcome", () => {
+    const successAt = permanentDelete.indexOf('result: "SUCCESS"');
+    const purgeAt = permanentDelete.indexOf("purgeStoredPayslipPdfs(");
+    assert.notEqual(purgeAt, -1, "the action must purge the payslip files");
+    assert.equal(
+      successAt < purgeAt,
+      true,
+      "files must never be removed before the transaction commits"
+    );
+    assert.equal(
+      permanentDelete.includes("auditPermanentEmployeeDeleteFilePurge("),
+      true,
+      "the purge outcome must land on a dedicated audit row"
+    );
+    assert.equal(
+      auditSource.includes('"employee.permanently_deleted_files"'),
+      true,
+      "the audit action is typed in the audit catalog"
+    );
+  });
+
+  it("a payslip file purge failure never changes the deletion result", () => {
+    const purgeAt = permanentDelete.indexOf("purgeStoredPayslipPdfs(");
+    const purgeAuditAt = permanentDelete.indexOf(
+      "auditPermanentEmployeeDeleteFilePurge("
+    );
+    assert.notEqual(purgeAt, -1);
+    assert.notEqual(purgeAuditAt, -1);
+    const purgeBlock = permanentDelete.slice(purgeAt, purgeAuditAt);
+    assert.equal(
+      purgeBlock.includes("catch (error)"),
+      true,
+      "a purge throw is caught after the committed deletion"
+    );
+    assert.equal(
+      purgeBlock.includes("console.error"),
+      true,
+      "the failure is logged for the operator"
+    );
+    assert.equal(
+      purgeBlock.includes("failed:"),
+      true,
+      "every un-purged key is reported as failed, never silently dropped"
     );
   });
 
