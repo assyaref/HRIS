@@ -1,6 +1,9 @@
 # Superadmin Force Delete — Production Release Report
 
 **Report date:** 2026-10-21 (UTC)
+**Last updated:** 2026-10-21 (UTC) — see §10 for the review package, approval
+matrix, lineage record, staging checklist, payroll scope decision and the
+re-verification run.
 **Repository:** `/opt/hris`
 **Requested release commit:** `4d41a5af`
 **Base release-candidate commit:** `4d415afbbd43d8e53951a5af13d6aca95f10409d` (`4d415af`)
@@ -100,7 +103,11 @@ restored `BUILD_ID` is `kR0L8QnWCFjO3oU4Qb4w3`.
 ### 3.2 Foreign-key coverage
 
 Production `hris` (baseline) has **24 employee FKs**: 22 `RESTRICT` + 2
-self-referencing `manager_id` `SET NULL`; **no `CASCADE`**.
+`SET NULL`; **no `CASCADE`**. (Re-verified read-only 2026-10-21: the two
+`SET NULL` are `employees.manager_id` (self-reference) and one
+`employee_employment_history → employees` FK — see §10.6. The earlier wording
+"2 self-referencing manager_id" described the count correctly but only one of
+the two is self-referencing.)
 
 After the revised, **not-yet-applied** `0021` + `0022` chain, an isolated
 database has **26 employee FKs**:
@@ -390,3 +397,145 @@ boundary, not at the code/test boundary. Production must not be migrated,
 deployed, or used for a deletion test until the blockers in §7 are recorded,
 the revised 0021 is DBA-reviewed, and the payroll-scope conflict is resolved by
 the responsible owners.
+
+---
+
+## 10. Addendum 2026-10-21 — review package, approval matrix, lineage record, staging checklist, payroll scope, re-verification
+
+This addendum records the work done after commits `6e49e44` and `831027b`.
+**No code, migration, journal, ledger or production object was changed.** The
+only working-tree changes are documentation. Nothing was pushed.
+
+### 10.1 Deliverables produced
+
+| # | Deliverable | Path | Status |
+| --- | --- | --- | --- |
+| 1 | DBA review package for revised `0021` | `docs/employee-deletion-0021-dba-review-package.md` | **READY FOR REVIEW — BLOCKED** (no DBA signature) |
+| 2 | Consolidated approval matrix (Part A, Part B, §4) | `docs/employee-deletion-approval-matrix.md` | **0 recorded / all BLOCKED** |
+| 3 | Lineage reconciliation record (employee dependencies + payroll scope) | `docs/employee-deletion-lineage-reconciliation-record-20261021.md` | Repo + isolated DB complete; live environment **BLOCKED** |
+| 4 | Staging rehearsal checklist (fixtures, invariants, evidence) | `docs/employee-deletion-staging-rehearsal-checklist-20261021.md` | **PREPARED — NOT AUTHORIZED** |
+| 5 | Payroll deletion scope decision record | `docs/employee-deletion-payroll-scope-decision-record.md` | **DEFERRED / BLOCKED** — payroll retained |
+| 6 | This addendum | `docs/SUPERADMIN-FORCE-DELETE-PRODUCTION-REPORT.md` §10 | Recorded |
+
+### 10.2 Fresh verification run (this session, same tree)
+
+Commands run in `/opt/hris` at HEAD `831027b` (docs-only changes after the code
+commit `6e49e44`):
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Unit/integration tests | `npm test` | **PASS** — tests 1941, suites 397, pass 1941, fail 0, cancelled 0, skipped 0, duration 6.2 s |
+| TypeScript | `npx tsc --noEmit` | **PASS** — exit 0 |
+| Lint | `npm run lint` | **PASS** — exit 0; 15 warnings, 0 errors |
+| Production build | `npm run build` (isolated copy of HEAD) | **PASS** — exit 0, “Compiled successfully in 14.2 s”, 37/37 static pages, verification `BUILD_ID = jZtVF-pkftgNIBoRE_LT-` |
+
+Verification log SHA-256 (operator workspace `/tmp/opencode`, not repo):
+
+| Log | SHA-256 |
+| --- | --- |
+| `verify-20261021-tests.log` | `714927abd6524067b16be4b9e781c95e0c098bbd7511759bb065ec47912824fc` |
+| `verify-20261021-tsc.log` | `418a5c17f33c70e99b0cc0a07fce69191489cfedc94164bfa903785777c5bd4b` |
+| `verify-20261021-lint.log` | `7e311f2a68e03c36eb2c3e169bac61ace6bf9ecb859c7be11239654810bd877f` |
+| `verify-20261021-build.log` | `9af16ad9abba976696eda2e323d1c95d29c768ed89541dbced1c2ea24b03e5db` |
+
+**Build isolation (improvement over §2).** The build was run in a copy of HEAD
+at `/tmp/opencode/build-verify-20261021T035417Z` with hardlinked
+`node_modules` and a symlink to `.env.production`, so the live production
+`.next` was **not** replaced this time. Verified after the build: live
+`/opt/hris/.next/BUILD_ID` is still `kR0L8QnWCFjO3oU4Qb4w3`, `hris.service` is
+`active`, `GET /` returns `307` (and `200` when following redirects). No
+service restart occurred.
+
+### 10.3 Fresh isolated migration regression
+
+Disposable DB `hris_control_fk_20261021T035639Z`, restored from the staging dump
+`staging-db-20261021T005459Z-pre-0022.dump` (**not production**), then:
+
+- `0021` apply → **exit 0**; `0022` apply → **exit 0**.
+- Re-apply `0021` → **exit 0**; re-apply `0022` → **exit 0** (idempotent).
+- FKs referencing `employees`: **24 → 26** (15 `SET NULL`, 11 `RESTRICT`,
+  **0 `CASCADE`**).
+- `RETAINED_IDENTITY_CHECKS=11`, `LIVE_CONTROL_CHECKS=2`, `CONTROL_TABLES=3`,
+  `ANONYMOUS_RETAINED_ROWS=0`.
+- `scripts/verify-employee-deletion-control-fks.sql` → **`CONTROL_FK_REGRESSION_PASS`**
+  (catalog + 4 scenarios).
+
+Evidence directory `/tmp/opencode/migreg-20261021-20261021T035639Z/`; key
+SHA-256: `05-apply-0021.log` `5945e055…`, `06-apply-0022.log` `abc1868c…`,
+`07-rerun-0021.log` `0d7f966d…`, `08-rerun-0022.log` `10888de1…`,
+`09-invariants.out` `2cfc4adb…`, `10-post-fk-to-employees.txt` `a1022523…`,
+`11-control-fk-regression.out` `96976f07…`. Combined index:
+`/tmp/opencode/evidence-combined-20261021.sha256`
+(`a0660b249aeaae9429c50ef6931ae17aea548b1d55d7898ae88f274c3199f6ab`).
+
+### 10.4 Payroll scope — requirement vs result
+
+- Requirement: permanently delete payroll history.
+- Observed (fresh, disposable DB `hris_force_delete_rehearsal_20261021T040023Z`):
+  `employee_payroll_components 3→3`, `payroll_items 3→3`, `payslips 3→3`,
+  `payslip_documents 3→3`, `payslip_document_versions 3→3`,
+  **`payroll rows deleted = 0`**; `HARNESS_RESULT=PASS` (377 ms);
+  1 detached payroll/payslip row per table with identity snapshots;
+  `PAYROLL_ROWS_WITHOUT_IDENTITY_SNAPSHOT=0`.
+- Decision gate: implement payroll deletion only if the policy decision is
+  recorded **and** the scope is explicitly approved. **Both are absent**
+  (policy §4.1 0/6; Part B / §4 signatures 0), so **payroll deletion was not
+  implemented and no code was changed**. See
+  `docs/employee-deletion-payroll-scope-decision-record.md`.
+
+Evidence SHA-256: `05-harness.out` `e7cc226e…`, `06-post-payroll-scope.txt`
+`6e130c61…`, `07-payroll-rows-deleted.txt` `cf4cb738…`.
+
+### 10.5 Read-only production re-check (2026-10-21, operator observation — not a DBA attestation)
+
+| Object / marker | Value |
+| --- | --- |
+| `drizzle.__drizzle_migrations` | 18 rows; `max(created_at) = 1790661254287` |
+| FKs referencing `employees` | **24** = 22 `r` + 2 `n` + 0 `c` |
+| `employee_legal_holds` / `_deletion_requests` / `_deletion_approvals` | **absent** (0021 not applied) |
+| `face_enrollment_templates.key_version` default | `'v1'::text` **present** ⇒ 0019 not applied |
+| `users.password_changed_at` | present (0020 applied) |
+| `attendance_records.employee_number_snapshot` | **absent** ⇒ 0022 not applied |
+| `hris.service` | `active (running)` |
+| Live `BUILD_ID` | `kR0L8QnWCFjO3oU4Qb4w3` (unchanged; no restart) |
+| `origin/main` | `e735f47d…` (local `main` not pushed) |
+
+Staging ledger/catalog remains uncaptured → `B-02`, `B-03`, `B-05` stay OPEN.
+
+### 10.6 Approval state (unchanged by this addendum)
+
+`docs/employee-deletion-approval-matrix.md` records: Part A **0/14**, Part B
+**0/13**, policy §4 **0/6**, gates `G1-S`–`G5-S` **BLOCKED**, gates
+`G1-P`–`G4-P` **BLOCKED**, evidence artifacts **0/47**, blockers **14 OPEN /
+1 CLOSED (`B-12`)**, DBA attestation **none**. No signature was fabricated; all
+blank name/signature/timestamp cells remain blank.
+
+### 10.7 Outstanding owners / actions
+
+| # | Action | Owner | Unblocks |
+| --- | --- | --- | --- |
+| 1 | Review revised `0021` (`585dd2d7…c452`, package §9): checksum, `23514` semantics, nullable `employee_id`, rollback limits | DBA (+ Security) | `A6`, `B1`, `B-14` |
+| 2 | Return staging + production ledger/catalog evidence (`0019`–`0022`) | DBA | `B-02`, `B-03`, `B-05` |
+| 3 | Capture staging backup + restore test + PITR posture | DBA | `A5`, `B-06`, `G4-S` |
+| 4 | Attest staging isolation, guard, synthetic-data-only | DBA + operator | `B-01`, `B-08`, `B-13`, `G5-S` |
+| 5 | Open change record; record rollback + historical-reporting plans and STOP ack | DBA + Application Lead | `A3`, `A9`–`A11`, `B-10` |
+| 6 | Pin build + migration-first order + compatibility statement | Application Lead | `A8`, `B-07` |
+| 7 | Record control-plane disabled config + test evidence | Application Lead | `A14`, `B-09` |
+| 8 | Collect, checksum and independently review `A1`–`H3` artifacts | DBA / Security / App Lead | 47/47 register |
+| 9 | Sign `A1`/`A2` **last**, after `B-01`…`B-10` are evidenced | DBA + Application Lead | `B-11`; rehearsal authorization |
+| 10 | Run the authorized staging rehearsal per the checklist | DBA + App Lead | `B-15`; `B1` evidence |
+| 11 | Record policy §4 decisions (retention schedule, eligible categories, legal hold, backup/PITR, security, Data Owner) | HR/Payroll, Legal, DBA, Security, DPO | §4; `B2`–`B4`, `B7`–`B9` |
+| 12 | Execute lineage reconciliation R2 → R4 → R5 and journal `0019`–`0022` | DBA | `B6` |
+| 13 | Approve production window (write-freeze, payroll cutoff, RPO/RTO) and post-deploy verification plan | DBA + App Lead + Payroll/HR | `B10`, `B13` |
+| 14 | Decide payroll deletion (retain vs delete) with a written scope; if delete, new design + additive migration + tests + rehearsal | Data Owner / DPO / Legal / HR-Payroll + App Lead | payroll scope |
+| 15 | Approve branch protection / deployment-environment gate; push release commit through the approved path | Application Lead | deployment boundary |
+
+### 10.8 Status after this addendum
+
+**RELEASE BLOCKED.**
+
+The code/test boundary remains green (1,941/1,941 tests, clean TypeScript,
+lint 0 errors, successful production build; isolated migrations apply,
+re-apply and pass the FK/control-plane regression). The release is blocked at
+the **approval, lineage and staging-rehearsal boundary**. Production has not
+been migrated, deployed or used for a deletion test; no push was made.
