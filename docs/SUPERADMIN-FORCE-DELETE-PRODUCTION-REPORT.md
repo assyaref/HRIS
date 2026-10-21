@@ -1,9 +1,10 @@
 # Superadmin Force Delete — Production Release Report
 
 **Report date:** 2026-10-21 (UTC)
-**Last updated:** 2026-10-21 (UTC) — see §10 for the review package, approval
-matrix, lineage record, staging checklist, payroll scope decision and the
-re-verification run.
+**Last updated:** 2026-10-21 (UTC) — see §10 (review package, approval matrix,
+lineage record, staging checklist, payroll scope decision, re-verification) and
+**§11 (owner-approved payroll deletion scope: implemented, verified in
+isolation, still RELEASE BLOCKED)**.
 **Repository:** `/opt/hris`
 **Requested release commit:** `4d41a5af`
 **Base release-candidate commit:** `4d415afbbd43d8e53951a5af13d6aca95f10409d` (`4d415af`)
@@ -539,3 +540,161 @@ lint 0 errors, successful production build; isolated migrations apply,
 re-apply and pass the FK/control-plane regression). The release is blocked at
 the **approval, lineage and staging-rehearsal boundary**. Production has not
 been migrated, deployed or used for a deletion test; no push was made.
+
+---
+
+## 11. Addendum 2026-10-21 (later session) — OWNER-APPROVED PAYROLL DELETION SCOPE: implemented, verified, still RELEASE BLOCKED
+
+This addendum records the work done after commits `6e49e44`, `831027b` and
+`00e4655`. **Production was not migrated, deployed, pushed or used for any
+deletion test. The deployed build `kR0L8QnWCFjO3oU4Qb4w3` is preserved and the
+service stayed healthy.** The only persistent-environment write was none; all
+databases used for destructive testing were disposable and have been dropped.
+
+### 11.1 Owner scope approval (recorded separately from all other approvals)
+
+The project owner explicitly approved, on 2026-10-21 (UTC):
+
+1. proceeding with the Superadmin Force Delete release;
+2. the intended permanent employee deletion scope; and
+3. **including payroll history in the deletion scope**.
+
+Record: `docs/employee-deletion-owner-scope-approval-20261021.md` —
+**OWNER APPROVAL ONLY.** It is not a DBA attestation, not a Legal/DPO/HR/
+Payroll/Security sign-off, not staging-rehearsal authorization, and not
+production authorization. Part A (0/14), Part B (0/13), policy §4 (0/6), all
+evidence gates and all blockers remain exactly as recorded in
+`docs/employee-deletion-approval-matrix.md` (§6a there records the owner scope
+approval; §0 totals are unchanged).
+
+This resolves the §1 item-3 scope conflict at the **owner level**: payroll
+history is now an owner-approved **deletable** category.
+
+### 11.2 Implementation of the approved scope (local, unpushed)
+
+| Artifact | Change |
+| --- | --- |
+| `features/employees/permanent-delete-policy.ts` | `Payroll`, `Payslip` → DELETABLE; protected = Attendance, Leave, Permission, Employment history |
+| `features/employees/queries.ts` | delete plan: fixed execution order (`Payslip` before `Payroll`), child-first reversal (payslip versions → documents → payslips; face templates before enrollments), extended module-load guards (order, exact partition, snapshot-plan/policy agreement); retained snapshot plan = the six retained tables |
+| `db/schema/payroll.ts` | the five payroll tables restored to `NOT NULL` + `ON DELETE RESTRICT`; retention-only snapshot columns/CHECKs removed; PDF-password snapshots (0013/0014) and `payroll_items` creation snapshots kept |
+| `db/migrations/0022_employee_retention_detach.sql` | **rewritten** (checksum `3750812f76be5cef1f3356eaf7872208494a31b26b4a2d5ef7433c1ae69160b5`): retention detach for the six retained tables only; payroll tables restored to RESTRICT + NOT NULL with retention-only artifacts dropped; closing verification asserts retained-table AND deleted-payroll-table invariants |
+| `features/employees/actions.ts` | transaction unchanged; comments corrected |
+| `features/payroll/*` | removed references to the deleted retention-only snapshot columns; payslip names resolve from `payroll_items` creation snapshots + live employee |
+| `features/employees/delete-employee-dialog.tsx` | retained-records copy corrected (payroll history is deleted, not retained) |
+| tests | `employee-retention-detach`, `employee-permanent-delete`, `employee-deletion-controls` updated; **new** `tests/employees/employee-payroll-deletion-scope.test.ts` |
+| docs | owner approval record (new), payroll scope decision record (rewritten), approval matrix (§6a), 0021 DBA review package (§10 revised-0022 addendum), lineage record, staging checklist |
+
+Exact implemented scope (proven in §11.4): **deleted with the employee** —
+`payslip_document_versions`, `payslip_documents`, `payslips`, `payroll_items`
+(+ `payroll_item_components` via the pre-existing item CASCADE),
+`employee_payroll_components`, plus the profile deletables;
+**retained, detached with identity snapshots** — `attendance_records`,
+`attendance_events`, `leave_balances`, `leave_requests`,
+`permission_requests`, `employee_employment_history`;
+**retained untouched** — `payroll_periods`, `payroll_runs`,
+`payroll_components`, `payroll_events` (organization-level) and every other
+employee's rows. Known effects (payroll reports lose the deleted employee's
+lines; stored payslip PDF files are orphaned and need a separate approved
+purge step; deletion is irreversible) are recorded in
+`docs/employee-deletion-payroll-scope-decision-record.md` §4.
+
+### 11.3 Verification results (this session, actual)
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Unit/integration tests | `npm test` | **PASS** — tests **1,956**, suites 401, pass 1,956, fail 0, cancelled 0, skipped 0 |
+| TypeScript | `npx tsc --noEmit` | **PASS** — exit 0 |
+| Lint | `npm run lint` | **PASS** — exit 0; 15 warnings, 0 errors |
+| Production build | `npm run build` (isolated copy `/tmp/opencode/build-verify-payroll-scope-20261021T055752Z`) | **PASS** — exit 0, 37/37 static pages, verification `BUILD_ID = vXFvOg4GJHGJuufKTg4s0`; live `/opt/hris/.next/BUILD_ID` unchanged (`kR0L8QnWCFjO3oU4Qb4w3`) |
+| Migration apply | `0021` then revised `0022` on disposable DB `hris_control_fk_20261021T060118Z` (staging restore) | **PASS** — both exit 0 |
+| Migration re-apply | `0021`, `0022` again | **PASS** — both exit 0 (idempotent) |
+| FK catalog | post-apply inventory | **26 employee FKs = 10 `SET NULL` (6 retained + 2 manager + 2 control-plane) + 16 `RESTRICT` (11 deletable + 5 payroll) + 0 `CASCADE`; 6 retained-identity CHECKs; payroll `employee_id` NOT NULL 5/5; 0 retention-only payroll snapshot columns; 0 anonymous retained rows** |
+| Control-plane DB regression | `scripts/verify-employee-deletion-control-fks.sql` | **PASS** — `CONTROL_FK_REGRESSION_PASS` |
+| Destructive rehearsal (payroll scope) | adapted harness on `hris_force_delete_rehearsal_20261021T061529Z` | **PASS** — `HARNESS_RESULT=PASS` (421 ms), see §11.4 |
+| Production backup + restore verify | fresh `pg_dump` + restore into disposable DB | **PASS** — see §11.5 |
+
+Evidence directory (operator workspace `/tmp/opencode`, not repo):
+`migreg-payroll-scope-20261021T060118Z/` (apply/rerun logs, `06-invariants.out`,
+`07-control-fk-regression.out`), `payroll-scope-rehearsal-20261021T061529Z/`
+(`04-harness.out` SHA-256 `4600920619687103d4648d45011718c17dd02e0e395033ea00a08c980ae8f510`,
+`05-post-payroll-scope.txt` `eb9691d33fb72ec2667cefd137d317a48711be400acff655ec9c6edefcc0c1f3`).
+All disposable databases created for this work were dropped after evidence
+capture.
+
+### 11.4 Destructive rehearsal — exact deleted/retained proof (disposable DB)
+
+Synthetic employees A (target) / B (control) / C (rollback), full record sets
+incl. payroll chain; real application helpers driven inside one transaction.
+
+| Table | A (deleted) | B/C (must survive) | Result |
+| --- | --- | --- | --- |
+| `payslip_document_versions` / `payslip_documents` / `payslips` | **1 row each deleted** | 1 row each intact | PASS |
+| `payroll_items` | **1 row deleted** | 1 row each intact | PASS |
+| `payroll_item_components` | **1 row deleted (item CASCADE)** | 1 row each intact | PASS |
+| `employee_payroll_components` | **1 row deleted** | 1 row each intact | PASS |
+| retained six tables | **1 row each detached, identity snapshots set, 0 anonymous** | 1 row each intact | PASS |
+| profile deletables (6 tables) | **1 row each deleted** | 1 row each intact | PASS |
+| `employees` | **row deleted** | intact | PASS |
+| `payroll_periods` / `payroll_runs` / `payroll_components` | **untouched** | — | PASS |
+
+Audit: exactly one `SUCCESS` row; `removedSummary = {Payslip: 3, Payroll: 2,
+Documents: 1, Face ID: 2, Projects: 1, Other related records: 2}`;
+retained categories = exactly Attendance/Leave/Permission/Employment history
+(**Payroll/Payslip NOT listed as retained**); snapshotted tables = exactly the
+six retained tables. Rollback (injected `BEFORE DELETE` trigger, employee C):
+**the entire transaction rolled back including C's full payroll/payslip chain**;
+no SUCCESS audit for C. Authorization/tenant-isolation/idempotency guards
+unchanged and re-proven by the unit suite (1,956 tests) and the module-load
+plan guards.
+
+### 11.5 Fresh production backup + restore verification (read-only on production)
+
+| Item | Value |
+| --- | --- |
+| Dump | `/var/lib/postgresql/hris-backups/production-db-20261021T061854Z-pre-superadmin-force-delete-payroll-scope.dump` |
+| Size / SHA-256 | 349,481 bytes / `2e4aee6b6bfadfc62e414d3b07478c027eaac103c715015f1ca0064fb93ff6b5` |
+| Permissions | `0600`, owner `postgres` |
+| Restore target | `hris_backup_verify_20261021T061854Z` (disposable; dropped after verification) |
+| Result | **PASS** — employees 12, organizations 3, users 6, audit_logs 442, ledger 18, `max(created_at) = 1790661254287` — identical to production |
+
+### 11.6 Approval state after this addendum (unchanged for third parties)
+
+| Gate set | State |
+| --- | --- |
+| Owner scope approval (release + deletion scope + payroll in scope) | **RECORDED — owner level only** |
+| Staging Part A `A1`–`A14` | **0/14 — BLOCKED** |
+| Production Part B `B1`–`B13` | **0/13 — BLOCKED** |
+| Policy §4.1 retention sign-off | **0/6 — BLOCKED** |
+| Evidence register / gates | **0/47 — BLOCKED** |
+| DBA review of revised `0021` | **NOT SIGNED** |
+| **DBA review of revised `0022` (new checksum `3750812f…0b5`)** | **NOT SIGNED — required before any application** |
+| Staging rehearsal authorization | **BLOCKED** |
+| Push / deploy / production migration / production deletion | **NOT PERFORMED — BLOCKED** |
+
+### 11.7 Outstanding blockers and responsible approvers (payroll-scope release)
+
+| # | Blocker | Responsible |
+| --- | --- | --- |
+| 1 | Review revised `0022` (checksum `3750812f…0b5`, package §10) and revised `0021` (`585dd2d7…c452`) | DBA (+ Security) |
+| 2 | §4 retention/payroll sign-off (retention schedule, eligible categories, legal hold, backup/PITR, security, final DPO/Data Owner authorization) | HR/Payroll, Legal, DPO, Security, DBA |
+| 3 | Staging evidence (`B-01`–`B-15`), Part A signatures, authorized staging rehearsal | DBA + Application Lead |
+| 4 | Lineage reconciliation (R2→R4→R5) and journaling of `0019`–`0022` | DBA |
+| 5 | Production Part B, write-freeze/payroll cutoff window, RPO/RTO | DBA + App Lead + Payroll/HR |
+| 6 | Payslip PDF storage purge procedure for deleted employees (orphaned files) | Security + DBA + App Lead |
+| 7 | Branch protection / deployment gate; push of the release candidate | Application Lead |
+
+### 11.8 Final status after this addendum
+
+**RELEASE BLOCKED.**
+
+The code/test boundary is green with the **owner-approved payroll deletion
+scope fully implemented and proven**: 1,956/1,956 tests, clean TypeScript, lint
+0 errors, successful isolated production build (live build untouched),
+revised `0021`+`0022` apply/re-apply/idempotency PASS, FK invariants exact
+(26 = 10 `n` + 16 `r`, 0 `c`), control-plane regression PASS, destructive
+payroll-scope rehearsal PASS with exact deleted/retained/rollback evidence,
+fresh production backup restore-verified. Production has **not** been
+migrated, deployed, pushed or used for a deletion test. The release remains
+blocked on the DBA review of the revised migrations, the Legal/DPO/HR-Payroll
+sign-offs, lineage reconciliation, and the authorized staging rehearsal. No
+approval, attestation, signature or gate was fabricated.

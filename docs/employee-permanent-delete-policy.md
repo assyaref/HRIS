@@ -47,10 +47,14 @@ employee-scoped history; two self-referencing `manager_id` FKs are `SET NULL`;
 `face_enrollment_templates` carries a CASCADE to its own enrollment, so the
 delete plan deletes the template row explicitly first).
 
-Migration `0022_employee_retention_detach.sql` (unapplied, pre-release) revises
-the **11 payroll/time-history tables** to nullable `employee_id` +
+Migration `0022_employee_retention_detach.sql` (unapplied, pre-release; revised
+2026-10-21 for the owner-approved payroll-deletion scope) revises the **six
+time/employment-history tables** to nullable `employee_id` +
 `ON DELETE SET NULL`, with employee-number/name snapshots, so retained history
-survives without a live reference. Migration `0021` gives the control-plane
+survives without a live reference. The **five payroll/payslip tables are
+DELETED with the employee** (owner-approved scope) and keep
+`employee_id NOT NULL` + `ON DELETE RESTRICT` as the deletion backstop.
+Migration `0021` gives the control-plane
 tables the same treatment for **terminal history only**: released legal holds
 and rejected/cancelled/executed requests detach; active holds and
 pending/approved requests are still enforced by database CHECK constraints.
@@ -61,8 +65,8 @@ pending/approved requests are still enforced by database CHECK constraints.
 | Attendance | `attendance_records`, `attendance_events` | PROTECTED | time record |
 | Leave | `leave_balances`, `leave_requests` | PROTECTED | time record |
 | Permission | `permission_requests` | PROTECTED | time record |
-| Payroll | `employee_payroll_components`, `payroll_items` | PROTECTED | financial record |
-| Payslip | `payslips`, `payslip_documents`, `payslip_document_versions` | PROTECTED | financial record |
+| Payroll | `employee_payroll_components`, `payroll_items` | **DELETABLE** (owner-approved scope, 2026-10-21) | deleted with the employee |
+| Payslip | `payslips`, `payslip_documents`, `payslip_document_versions` | **DELETABLE** (owner-approved scope, 2026-10-21) | deleted with the employee, children first |
 | Employment history | `employee_employment_history` | PROTECTED | legal timeline |
 | Documents | `employee_documents` | DELETABLE | person-owned |
 | Face ID | `employee_face_enrollments`, `face_enrollment_templates` | DELETABLE | biometric, consent-bound |
@@ -209,6 +213,12 @@ are proposals only — the organisation owns the decision.
 
 - Attendance / leave / permission: employer time record (proposed ≥ 5 years).
 - Payroll / payslip: financial record (proposed ≥ 10 years, jurisdiction).
+  **Owner decision 2026-10-21:** the project owner approved including payroll
+  history in the permanent-deletion scope
+  (`docs/employee-deletion-owner-scope-approval-20261021.md`), which overrides
+  this proposal **at the owner level only**; the Legal/DPO/HR-Payroll §4.1
+  confirmation of that override remains **pending** and production remains
+  untouched.
 - Employment history: legal employment timeline (proposed ≥ statute of
   limitations + contract period).
 - Legal hold: indefinite until formally released by Legal.
@@ -364,13 +374,19 @@ not this policy — keeps the final word on referential integrity.
 
 ### 7.3.1 After migration `0022` (designed, rehearsed, NOT applied)
 
-`0022_employee_retention_detach.sql` changes the 11 retained tables to nullable
-`employee_id` + `ON DELETE SET NULL` with employee-number/name (and payslip
-identity/password) snapshots. The delete plan therefore **detaches** retained
-rows and deletes **zero** payroll/time-history rows.
-`employee_deletion_approvals.request_id` remains `RESTRICT`. Payroll *history deletion* is not
-implemented or approved; it would require a separate design, migration, tests,
-rehearsal and §4 Legal/DPO/HR approval.
+`0022_employee_retention_detach.sql` (revised 2026-10-21) changes the **six
+retained** tables to nullable `employee_id` + `ON DELETE SET NULL` with
+employee-number/name snapshots; the delete plan therefore **detaches** those
+rows. The **five payroll/payslip tables are NOT detached**: they keep
+`employee_id NOT NULL` + `ON DELETE RESTRICT` and the delete plan removes them
+explicitly, children first (payslip versions → documents → payslips, then
+payroll items — cascading `payroll_item_components` — then component
+assignments), before the employee row. Payroll *history deletion* is
+**owner-approved** (2026-10-21,
+`docs/employee-deletion-owner-scope-approval-20261021.md`), implemented and
+rehearsed in isolation; the multi-role §4 Legal/DPO/HR sign-off remains
+pending and production is untouched.
+`employee_deletion_approvals.request_id` remains `RESTRICT`.
 
 ### 7.4 Per-table disposition under the revised policy
 
@@ -383,8 +399,8 @@ rehearsal and §4 Legal/DPO/HR approval.
 | Attendance | `attendance_records`, `attendance_events` | **Retained**: row preserved, `employee_id` detached, identity snapshotted |
 | Leave | `leave_balances`, `leave_requests` | **Retained**: detach + snapshot |
 | Permission | `permission_requests` | **Retained**: detach + snapshot |
-| Payroll | `employee_payroll_components`, `payroll_items` | **Retained**: detach + snapshot; zero rows deleted |
-| Payslip | `payslips`, `payslip_documents`, `payslip_document_versions` | **Retained**: detach + snapshot; PDF password reconstructs from snapshot |
+| Payroll | `employee_payroll_components`, `payroll_items` (+ cascaded `payroll_item_components`) | **Deleted** with the employee (owner-approved scope, 2026-10-21) |
+| Payslip | `payslip_document_versions`, `payslip_documents`, `payslips` | **Deleted** with the employee, children first; org-level period/run/component retained |
 | Employment history | `employee_employment_history` | **Retained**: detach + snapshot |
 | Direct reports | `employees.manager_id` self-FK | **Retained**; manager link cleared (`SET NULL`) |
 | Linked login account | `employees.user_id → users` | **Retained** (link removed with the row) |
@@ -437,9 +453,16 @@ unchanged; the control plane (§2/§3) remains disabled
   and inside the deletion transaction, refuses with `LEGAL_HOLD` /
   `ACTIVE_DELETION_REQUEST`, and maps constraint `23514` violations by name as
   the race backstop. The preflight report and dialog expose the same state.
-- Payroll is retained, not deleted: `0022` preserves all 11 protected tables
-  through detach + snapshots. The isolated rehearsal reports zero payroll rows
-  deleted and confirms each detached row retains identity.
+- **2026-10-21 (later session):** the project owner approved including payroll
+  history in the deletion scope
+  (`docs/employee-deletion-owner-scope-approval-20261021.md` — owner approval
+  only). `0022` was rewritten accordingly (checksum `3750812f…0b5`): the six
+  time/employment-history tables stay retained via detach + snapshots, while
+  the five payroll/payslip tables keep `NOT NULL` + `RESTRICT` and are deleted
+  explicitly, children first. The isolated rehearsal proves A's full payroll
+  chain deleted, B/C intact, org-level payroll records intact, and full
+  rollback of C's payroll chain on injected failure
+  (`docs/employee-deletion-payroll-scope-decision-record.md` §7).
 - A disposable-database regression script
   (`scripts/verify-employee-deletion-control-fks.sql`) covers active-hold block,
   pending/approved-request block, and released/terminal detach with snapshots.

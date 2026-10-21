@@ -4,13 +4,17 @@
 approval, a change record, a sign-off, or an instruction to execute anything.
 **Status:** **READY FOR DBA REVIEW — BLOCKED** (no DBA decision recorded; see §9).
 
-**Prepared:** 2026-10-21 (UTC)
+**Prepared:** 2026-10-21 (UTC) · **Addendum:** 2026-10-21 (UTC) — §10 records
+the **revised `0022`** (owner-approved payroll-deletion scope, checksum
+`3750812f…0b5`) which **replaces every `0022` fact in §7 of this package**
+(checksum, FK counts, CHECK counts). The DBA must review §10 **in addition to**
+the `0021` sections.
 **Repository:** `/opt/hris`, branch `main` (local only — **not pushed**)
 **Package commit:** `6e49e44fa8c8971e79d24793d4cb371fe595f6fe` (`6e49e44`)
 **Package HEAD:** `831027b3116ca591b4f07b9e151da712f4343937` (`831027b`, docs only)
-**Environment impact so far:** **NONE.** `0021` has never been applied to
-production or to a shared staging database. Every run cited below used a
-disposable database on the local cluster.
+**Environment impact so far:** **NONE.** `0021` and `0022` have never been
+applied to production or to a shared staging database. Every run cited below
+used a disposable database on the local cluster.
 
 Related: `docs/employee-deletion-0021-staging-runbook.md`,
 `docs/employee-permanent-delete-0022-lineage-reconciliation-plan.md`,
@@ -227,7 +231,15 @@ employee_deletion_requests_active_requires_employee
 
 ### 5.1 Employee FK population (disposable database, before → after `0021` + `0022`)
 
-| Metric | Baseline (restore of `staging-db-20261021T005459Z-pre-0022.dump`) | After `0021` + `0022` |
+> **2026-10-21 addendum:** the "After" column below reflects the
+> **retention-era `0022`** (checksum `724db82d…`). With the **revised `0022`**
+> (owner-approved payroll-deletion scope, §10) the "After" column becomes:
+> **26 total = 10 `SET NULL` (6 retained tables + 2 manager self-references +
+> 2 control-plane) + 16 `RESTRICT` (11 deletable + 5 payroll) + 0 `CASCADE`;
+> retained-identity CHECKs = 6** (fresh run §10.3). The baseline column and
+> the control-plane rows of §5.2 are unchanged.
+
+| Metric | Baseline (restore of `staging-db-20261021T005459Z-pre-0022.dump`) | After `0021` + retention-era `0022` (superseded for `0022` by §10) |
 | --- | ---: | ---: |
 | FKs referencing `employees` | **24** | **26** |
 | — `ON DELETE CASCADE` | 0 | **0** |
@@ -241,10 +253,12 @@ Baseline detail (24): 22 `RESTRICT` on the 11 deletable + 11 protected tables,
 plus 2 `SET NULL` (`employees.manager_id` self-reference and one
 `employee_employment_history → employees` FK).
 
-After (26): the 11 protected history tables move to `SET NULL`, the 11
-deletable tables stay `RESTRICT`, and `0021` adds 2 control-plane `SET NULL`
-references. The approval FK stays `RESTRICT`. **No `CASCADE` exists anywhere
-in the employee FK set.**
+After (retention-era 26): the 11 protected history tables move to `SET NULL`,
+the 11 deletable tables stay `RESTRICT`, and `0021` adds 2 control-plane
+`SET NULL` references. The approval FK stays `RESTRICT`. **No `CASCADE`
+exists anywhere in the employee FK set.** With the revised `0022`, only the
+**six** retained history tables move to `SET NULL` and the five payroll
+tables **stay `RESTRICT`** (§10.3).
 
 ### 5.2 Control-plane semantics after this migration
 
@@ -327,6 +341,13 @@ journal-driven migrator does not execute rollbacks (`node_modules/drizzle-orm`
 ## 7. Isolated regression evidence (disposable databases only)
 
 ### 7.1 Fresh run — 2026-10-21T03:56:39Z (this package)
+
+> **2026-10-21 addendum:** this run applied the **retention-era `0022`**
+> (checksum `724db82d…65c`). The `0022` artifact has since been **rewritten**
+> for the owner-approved payroll-deletion scope (checksum `3750812f…0b5`); the
+> equivalent fresh run for the revised pair is in **§10.3** and **replaces**
+> the `0022` rows of this table (`0021` rows remain valid — that migration did
+> not change).
 
 Database `hris_control_fk_20261021T035639Z`, restored from
 `/tmp/opencode/rehearsal-20261021/staging-db-20261021T005459Z-pre-0022.dump`
@@ -420,10 +441,120 @@ anyone other than the named owner.**
 | 2 | SQL review of the revised `0021` accepted (`B1`) | DBA | *(blank — **BLOCKED**)* | *(blank)* | |
 | 3 | §3.2 behavioural consequences accepted (notably `23514` mapping) | DBA + Security | *(blank — **BLOCKED**)* | *(blank)* | |
 | 4 | §6 rollback limitations accepted; restore point defined | DBA | *(blank — **BLOCKED**)* | *(blank)* | |
-| 5 | §5.1 FK invariant set accepted (0 `CASCADE`, 15 `SET NULL`, 11 `RESTRICT`) | DBA | *(blank — **BLOCKED**)* | *(blank)* | |
+| 5 | §5.1 FK invariant set accepted for the **revised** pair (0 `CASCADE`, 10 `SET NULL`, 16 `RESTRICT`, per §10.3; the pre-addendum 15/11 counts described the retention-era `0022` and are superseded) | DBA | *(blank — **BLOCKED**)* | *(blank)* | |
 | 6 | Authorization to apply on staging under the approved change record (`A1`) | DBA | *(blank — **BLOCKED**)* | *(blank)* | |
 | 7 | Authorization to apply on production (`B1`) | DBA | *(blank — **BLOCKED**)* | *(blank)* | |
 
 **Status of this package: READY FOR DBA REVIEW — BLOCKED pending rows 1–7 and
 the Part A / Part B approvals tracked in
 `docs/employee-deletion-approval-matrix.md`.**
+
+---
+
+## 10. ADDENDUM 2026-10-21 — REVISED `0022` (owner-approved payroll-deletion scope)
+
+**Why this addendum exists.** After this package was prepared, the project
+owner explicitly approved including **payroll history in the permanent
+deletion scope** (`docs/employee-deletion-owner-scope-approval-20261021.md`).
+Migration `0022` was rewritten accordingly
+(`docs/employee-deletion-payroll-scope-decision-record.md`). **No DBA has
+reviewed the revised `0022` yet; nothing has been applied anywhere
+persistent.** The owner approval is owner-level only and does not substitute
+for any signature in §9 or §10.5.
+
+### 10.1 Revised artifact identity
+
+| Item | Old (retention-era `0022`, reviewed nowhere) | **Revised (current)** |
+| --- | --- | --- |
+| File | `db/migrations/0022_employee_retention_detach.sql` | same path, rewritten |
+| SHA-256 | `724db82db69769763ead7009be9378b9863a900539a6a1254e446e0dd72c765c` | **`3750812f76be5cef1f3356eaf7872208494a31b26b4a2d5ef7433c1ae69160b5`** |
+| Retained/detached tables | 11 (incl. 5 payroll/payslip) | **6** (attendance ×2, leave ×2, permission, employment history) |
+| Payroll/payslip tables | nullable `employee_id`, `ON DELETE SET NULL`, identity snapshots, retained-identity CHECKs | **`employee_id` NOT NULL, `ON DELETE RESTRICT` restored; retention-only snapshot columns and CHECKs dropped** |
+| New statements vs. the old draft | — | `ALTER COLUMN employee_id SET NOT NULL` (×5), `ADD CONSTRAINT … ON DELETE RESTRICT` (×5), guarded `DROP CONSTRAINT IF EXISTS …retained_identity_check` (×5), guarded `DROP COLUMN IF EXISTS employee_number_snapshot/employee_name_snapshot` (×8 columns across 4 tables) |
+| Closing verification | 11-table retained invariant block | **6-table retained invariant block + 5-table deleted-payroll invariant block** (asserts NOT NULL, `confdeltype='r'`, and the ABSENCE of any retention CHECK on the payroll tables) |
+
+Because the retention-era `0022` was never applied to production or any
+persistent environment (the staging dump is explicitly *pre-0022*), the
+retention-only columns/CHECKs it would have added never existed outside
+disposable databases. On a production-baseline database every `DROP` in the
+revised migration is a **no-op** and the payroll sections reduce to a
+re-assert of the existing `RESTRICT` + `NOT NULL` contract plus the closing
+verification.
+
+### 10.2 Application-level contract shipped with the same change
+
+- `features/employees/permanent-delete-policy.ts`: `Payroll` and `Payslip`
+  are **deletable** categories; protected = attendance, leave, permission,
+  employment history only.
+- `features/employees/queries.ts`: the delete plan executes **Payslip before
+  Payroll** (children first: versions → documents → payslips, because
+  `payslips.payroll_item_id` is `ON DELETE RESTRICT`); deleting
+  `payroll_items` relies on the **pre-existing** `payroll_item_components`
+  CASCADE (child rows carry no `employee_id`); every statement stays
+  org-scoped; module-load guards enforce the order and the exact
+  retained/deleted partition.
+- Retained-snapshot plan covers the six retained tables only.
+- `db/schema/payroll.ts` mirrors the restored contract (NOT NULL + RESTRICT).
+
+### 10.3 Fresh isolated regression — revised pair (2026-10-21T06:01:18Z)
+
+Database `hris_control_fk_20261021T060118Z`, restored from
+`staging-db-20261021T005459Z-pre-0022.dump` (**not production**). Evidence:
+`/tmp/opencode/migreg-payroll-scope-20261021T060118Z/` (operator workspace).
+
+| Step | Result |
+| --- | --- |
+| Apply `0021` → apply `0022` (revised) | **exit 0 / exit 0** |
+| Re-apply `0021` → re-apply `0022` (idempotency) | **exit 0 / exit 0** |
+| Employee FKs after the pair | **26 total = 10 `SET NULL` (6 retained + 2 manager + 2 control-plane) + 16 `RESTRICT` (11 deletable + 5 payroll) + 0 `CASCADE`** |
+| Retained-identity CHECKs | **6** |
+| Payroll `employee_id` NOT NULL | **5/5 tables** |
+| Retention-only payroll snapshot columns remaining | **0** |
+| `payslips.employee_number_snapshot` (0013) / `birth_date_snapshot` (0014) | **present (PDF password contract intact)** |
+| Anonymous retained rows | **0** |
+| `scripts/verify-employee-deletion-control-fks.sql` | **`CONTROL_FK_REGRESSION_PASS`** |
+
+Destructive rehearsal (revised scope), `hris_force_delete_rehearsal_20261021T061529Z`:
+**`HARNESS_RESULT=PASS` (421 ms)** — target employee A's payroll chain
+(component assignment, payroll item + cascaded item components, payslip,
+document, version) deleted; retained tables detached with identity snapshots;
+control employees B/C fully intact; org-level period/run/component survive;
+injected-failure rollback restored C's entire payroll chain; SUCCESS audit
+row records Payroll/Payslip under **removed**, not retained. Evidence
+`04-harness.out` `46009206…`, `05-post-payroll-scope.txt` `eb9691d3…`
+(`docs/employee-deletion-payroll-scope-decision-record.md` §7).
+
+### 10.4 Questions the DBA must answer for the revised `0022`
+
+1. Do you accept the **reduced detach set** (6 tables) and the payroll tables
+   returning to `NOT NULL` + `ON DELETE RESTRICT` (the deletion backstop)?
+2. Do you accept the guarded `DROP CONSTRAINT`/`DROP COLUMN IF EXISTS`
+   statements as no-ops on the production baseline (they only remove objects
+   the unapplied retention-era draft would have created)?
+3. Do you accept the extended closing verification (deleted-table invariants:
+   NOT NULL, RESTRICT, no retention CHECK)?
+4. Do you accept the `payroll_item_components` CASCADE dependency (pre-existing
+   production schema) for the deleted employee's own item rows?
+5. Do you confirm the revised checksum `3750812f…0b5` and record the `A6`
+   re-verification against it?
+6. Backup/PITR: with payroll rows deletable, do you accept the fresh verified
+   restore point
+   `production-db-20261021T061854Z-pre-superadmin-force-delete-payroll-scope.dump`
+   (SHA-256 `2e4aee6b…f6b5`) as the pre-apply restore point for any future
+   approved window?
+7. Payslip **PDF storage files** are not removed by the DB transaction
+   (orphaned files require a separate approved purge step). Who owns that
+   procedure in the production runbook?
+
+### 10.5 DBA decision record for the revised `0022` — **NOT SIGNED (BLOCKED)**
+
+| # | Decision | Owner | Name / signature | UTC | Evidence ref |
+| --- | --- | --- | --- | --- | --- |
+| 8 | Revised `0022` checksum `3750812f…0b5` re-verified (`A6`, `B-14`) | DBA | *(blank — **BLOCKED**)* | *(blank)* | |
+| 9 | SQL review of the revised `0022` accepted (`B1`) | DBA | *(blank — **BLOCKED**)* | *(blank)* | |
+| 10 | §10.4 behavioural consequences accepted | DBA + Security | *(blank — **BLOCKED**)* | *(blank)* | |
+| 11 | §10.1 rollback implications accepted (payroll deletion is irreversible; restore point required) | DBA | *(blank — **BLOCKED**)* | *(blank)* | |
+| 12 | §10.3 FK invariant set accepted (0 `CASCADE`, 10 `SET NULL`, 16 `RESTRICT`, 6 retained CHECKs) | DBA | *(blank — **BLOCKED**)* | *(blank)* | |
+
+**Rows 1–7 (§9) and 8–12 (§10.5) are all blank. No production, staging,
+journal or deployment action is authorized by this package.**

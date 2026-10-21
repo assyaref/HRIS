@@ -6,10 +6,13 @@ recorded and staging gates `G1-S`–`G5-S` are `BLOCKED`
 (`docs/employee-deletion-approval-matrix.md`). This checklist may be executed
 **only** inside an opened change record, on an isolated staging environment,
 with `A1`/`A2` signed.
-**Prepared:** 2026-10-21 (UTC) · **Repo:** `/opt/hris`, local `main`, HEAD
-`831027b` (not pushed).
+**Prepared:** 2026-10-21 (UTC) · **Repo:** `/opt/hris`, local `main`, work on
+top of `00e4655` (not pushed). **Updated 2026-10-21 (UTC):** expected
+invariants revised for the owner-approved payroll-deletion scope.
 **Artifacts under rehearsal:** `0021` = `585dd2d7…c452`,
-`0022` = `724db82d…65c`.
+`0022` (revised, payroll-deletion scope) = `3750812f…0b5`.
+`docs/employee-deletion-owner-scope-approval-20261021.md` records the
+owner-level scope approval; it does NOT authorize this rehearsal.
 
 Related: `docs/employee-permanent-delete-0022-staging-runbook.md` §5,
 `docs/employee-deletion-0021-staging-runbook.md` §3,
@@ -76,7 +79,12 @@ organization. No production PII is used or copied.
 | Confirmation | typed employee number of A (exact match required) |
 | Actor | synthetic SUPERADMIN user row (session layer simulated; authorization pinned by unit tests) |
 
-### 3.1 Per-employee record set (15 record types)
+### 3.1 Per-employee record set
+
+> **Updated 2026-10-21 (owner-approved scope):** rows 6–10 (and the seeded
+> `payroll_item_components`, 1 per employee) are **DELETED with employee A**
+> in §5.3; rows 1–5 and 11 are **retained/detached**. The per-employee counts
+> below are the seeding fixtures and are unchanged.
 
 | # | Table | A | B | C |
 | --- | --- | ---: | ---: | ---: |
@@ -97,6 +105,8 @@ organization. No production PII is used or copied.
 | 15 | `employee_project_assignments` | 1 | 1 | 1 |
 | 16 | `employee_face_enrollments` | 1 | 1 | 1 |
 | 17 | `face_enrollment_templates` | 1 | 1 | 1 |
+| 18 | `payroll_item_components` (1 per payroll item; deleted via the item CASCADE) | 1 | 1 | 1 |
+| 19 | `payroll_periods` / `payroll_runs` / `payroll_components` (org-level, shared; **never deleted**) | 1 each (org) | — | — |
 
 Expected pre-counts (per synthetic org): `employees = 3`; every protected table
 `= 3`; every deletable table `= 3`; `face_enrollment_templates = 3`.
@@ -172,14 +182,20 @@ log, PITR posture, private-file restore, explicit yes/no).
 
 | Invariant | Expected |
 | --- | --- |
-| FKs referencing `employees` | **26** = 15 `n` + 11 `r` + **0 `c`** |
-| Protected tables `employee_id` | nullable, `SET NULL` |
-| Retained-identity CHECKs | **11** (`CHECK (employee_id IS NOT NULL OR employee_number_snapshot IS NOT NULL)`) |
+| FKs referencing `employees` | **26** = **10 `n`** + **16 `r`** + **0 `c`** |
+| Retained (6) tables `employee_id` | nullable, `SET NULL` |
+| **Payroll (5) tables `employee_id`** | **`NOT NULL`, `RESTRICT`** (owner-approved deletion scope; backstop for the explicit plan) |
+| Retained-identity CHECKs | **6** (`CHECK (employee_id IS NOT NULL OR employee_number_snapshot IS NOT NULL)`) on the retained tables only |
+| Retention-only payroll snapshot columns | **absent** (never existed in production; drops are no-ops on baseline) |
 | Control tables | **3**; 6 declared indexes; 2 live-control CHECKs; approval FK `RESTRICT` |
 | Anonymous retained rows | **0** |
 | `employee_legal_holds` / `employee_deletion_requests` `employee_id` | nullable |
 | `employee_legal_holds` snapshots | `employee_number_snapshot` / `employee_name_snapshot` `NOT NULL` |
 | Re-apply `0021` / `0022` | exit 0, no data change (idempotent) |
+
+Reference isolated run (evidence, not a gate pass):
+`hris_control_fk_20261021T060118Z` — all of the above PASS
+(`/tmp/opencode/migreg-payroll-scope-20261021T060118Z/06-invariants.out`).
 
 ### 5.3 After the destructive rehearsal (employee A)
 
@@ -187,14 +203,19 @@ log, PITR posture, private-file restore, explicit yes/no).
 | --- | --- |
 | Employee A | **deleted** |
 | Employees B and C | **intact** (all rows) |
-| 11 protected tables — totals | preserved; exactly **1 detached row** for A with identity snapshots |
-| Deletable tables — rows | only A's rows removed; B/C untouched |
-| Payroll/payslip rows deleted | **0** (retained; detached) |
-| `PAYROLL_ROWS_WITHOUT_IDENTITY_SNAPSHOT` | **0** |
-| Payslip PDF password | reconstructs from snapshots (A's employee number + birth date) |
-| Detached rows | still listed/searchable by snapshot identity |
-| Audit | exactly one `employee.permanently_deleted` `SUCCESS` row with reason + removed/retained/snapshotted scope |
-| Injected failure (employee C) | full atomic rollback (employee + snapshots + deletables); `FAILED` audit row |
+| Retained (6) tables — totals | preserved; exactly **1 detached row** for A with identity snapshots, **0 anonymous** |
+| **Payroll (5) tables** | **exactly A's row deleted per table; B/C rows intact; `employee_id IS NULL` rows = 0 (deleted, never detached)** |
+| `payroll_item_components` | A's row deleted via the item CASCADE; B/C rows intact |
+| Org-level `payroll_periods` / `payroll_runs` / `payroll_components` | **intact** (1 row each) |
+| Deletable profile tables — rows | only A's rows removed; B/C untouched |
+| B's payslip PDF password | reconstructs from B's snapshots (control employee, live row) |
+| Detached retained rows | still listed/searchable by snapshot identity |
+| Audit | exactly one `employee.permanently_deleted` `SUCCESS` row with reason + removed/retained/snapshotted scope; **Payroll/Payslip reported under removed, not retained** |
+| Injected failure (employee C) | full atomic rollback **including C's entire payroll/payslip chain**; `FAILED` audit row; no `SUCCESS` audit for C |
+
+Reference isolated run (evidence, not a gate pass):
+`hris_force_delete_rehearsal_20261021T061529Z`, `HARNESS_RESULT=PASS`
+(`/tmp/opencode/payroll-scope-rehearsal-20261021T061529Z/04-harness.out`).
 
 ### 5.4 Control-plane invariants (separate disposable DB)
 
@@ -207,9 +228,10 @@ log, PITR posture, private-file restore, explicit yes/no).
 4. Pending request blocks; rejected request detaches.
 5. Approved request blocks.
 
-Observed on 2026-10-21 in a disposable DB (evidence, not a gate pass):
-`/tmp/opencode/migreg-20261021-20261021T035639Z/11-control-fk-regression.out`
-(SHA-256 `96976f07a8b1f856caba8466df90bac0787b62de67bf1b3c08d09d785da7e1a5`).
+Observed on 2026-10-21 in a disposable DB (evidence, not a gate pass) with
+the **revised** `0021`+`0022` pair:
+`/tmp/opencode/migreg-payroll-scope-20261021T060118Z/07-control-fk-regression.out`
+— `CONTROL_FK_REGRESSION_PASS`.
 
 ---
 
@@ -221,17 +243,17 @@ Observed on 2026-10-21 in a disposable DB (evidence, not a gate pass):
 | 1 | Capture environment identity + isolation | `EVD-E1-*`, `EVD-ISO-C1-*` | all 7 controls attested | ☐ **BLOCKED** |
 | 2 | Capture ledger + catalog before | `EVD-E2-*`, `EVD-E3-*` | 0019–0022 classified, zero `unexplained` | ☐ **BLOCKED** |
 | 3 | Backup + restore test (§4) | `EVD-E5-*` | counts match, restore exit 0 | ☐ **BLOCKED** |
-| 4 | Re-verify checksums (DBA, in-session) | `EVD-A6-*` | `585dd2d7…c452`, `724db82d…65c` | ☐ **BLOCKED** |
+| 4 | Re-verify checksums (DBA, in-session) | `EVD-A6-*` | `585dd2d7…c452`, `3750812f…0b5` | ☐ **BLOCKED** |
 | 5 | Capture BEFORE contract (§5.1) | `EVD-E3-4-PRE-*` | 24 FKs, 0 CHECKs, tables absent | ☐ **BLOCKED** |
 | 6 | Apply `0021` then `0022` | apply logs | both exit 0 / committed | ☐ **BLOCKED** |
-| 7 | Validate AFTER contract (§5.2) | `EVD-E3-4-*` | 26 FKs, 11 CHECKs, 0 anonymous, 0 CASCADE | ☐ **BLOCKED** |
+| 7 | Validate AFTER contract (§5.2) | `EVD-E3-4-*` | 26 FKs (10 `n` + 16 `r`), 6 retained CHECKs, payroll NOT NULL/RESTRICT, 0 anonymous, 0 CASCADE | ☐ **BLOCKED** |
 | 8 | Re-apply both (idempotency) | rerun logs | exit 0, no data change | ☐ **BLOCKED** |
 | 9 | Seed fixture (§3) | seed log + pre-counts | counts as specified | ☐ **BLOCKED** |
 | 10 | Drive delete of A through the app helpers | harness output | A deleted, B/C intact | ☐ **BLOCKED** |
-| 11 | Assert retained/detached/snapshots/audit (§5.3) | assertion log | all PASS, payroll deleted = 0 | ☐ **BLOCKED** |
+| 11 | Assert retained/deleted/snapshots/audit (§5.3) | assertion log | all PASS; A's payroll chain deleted (5 tables + item components), retained 6 tables detached with snapshots | ☐ **BLOCKED** |
 | 12 | Control-plane regression (§5.4) | regression output | `CONTROL_FK_REGRESSION_PASS` | ☐ **BLOCKED** |
 | 13 | Rollback test A/B/C (§5.7) | rollback fingerprints | catalog + row counts unchanged after injected failure | ☐ **BLOCKED** |
-| 14 | Historical reporting (§5.8) | reporting assertions | payslip PDF password resolves; detached rows listed | ☐ **BLOCKED** |
+| 14 | Historical reporting (§5.8) | reporting assertions | retained (time/history) rows listed; B/C payslip PDF passwords resolve | ☐ **BLOCKED** |
 | 15 | Hash evidence, index it, hand to reviewers | `99-evidence-sha256.txt` | reviewer ≠ collector | ☐ **BLOCKED** |
 | 16 | Drop/retain disposable DBs per change record | cleanup log | no production/staging residue | ☐ **BLOCKED** |
 
@@ -243,8 +265,9 @@ Observed on 2026-10-21 in a disposable DB (evidence, not a gate pass):
 - Any detached retained row lacks its identity snapshot.
 - Re-running a migration errors or changes data.
 - Rollback fingerprint changes (transaction guarantee broken).
-- A retained record disappears from a listing, or a payslip PDF password
-  cannot be reconstructed.
+- A retained record disappears from a listing, or a payroll/payslip row of a
+  control employee (B/C) disappears or is detached instead of deleted for the
+  target (A), or a live payslip PDF password cannot be reconstructed.
 - Anyone attempts `drizzle-kit generate`/`push`, edits the journal, or edits
   ledger rows.
 - `DELETION_EXECUTION_ENABLED` becomes `true` or

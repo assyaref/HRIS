@@ -6,8 +6,13 @@ authorize a reconciliation execution.
 **Status:** **REPOSITORY + ISOLATED-DATABASE RECONCILIATION COMPLETE;
 ENVIRONMENT LIVE RECONCILIATION STILL BLOCKED** (production/staging evidence
 owned by the DBA).
-**Prepared:** 2026-10-21 (UTC) · **Repo:** `/opt/hris`, local `main`, HEAD
-`831027b` (not pushed).
+**Prepared:** 2026-10-21 (UTC) · **Repo:** `/opt/hris`, local `main`, work on
+top of `00e4655` (not pushed). **Updated 2026-10-21 (UTC):** the payroll tables
+moved from *retained/detach* to **deleted** under the owner-approved scope
+(`docs/employee-deletion-owner-scope-approval-20261021.md`); migration `0022`
+was rewritten (checksum `3750812f…0b5`) and re-verified on a fresh disposable
+database (§3.1/§3.2 updated below; the pre-update retention-era tables remain
+in §9 History).
 
 This record completes the reconciliation **that can be completed without a DBA
 change record**: every employee-related dependency is enumerated and classified,
@@ -36,7 +41,7 @@ Related: `docs/employee-permanent-delete-0022-lineage-reconciliation-plan.md`
 | Isolated apply / idempotency / invariants | **YES** (disposable DB) | PASS | DBA must reproduce in the approved environment |
 | Production catalog state of `0019`/`0020`/`0021`/`0022` | **OBSERVED READ-ONLY** | see §5 | **DBA** to attest |
 | Staging catalog/ledger state | **NO** | unavailable to the operator | **DBA** |
-| Approved payroll deletion scope | **YES** | **NONE approved — payroll is retained** | **DPO / Legal / HR-Payroll / Data Owner** |
+| Approved payroll deletion scope | **YES** | **Owner-approved (2026-10-21) — payroll DELETED with the employee; third-party (DPO/Legal/HR-Payroll) sign-off still pending** | **DPO / Legal / HR-Payroll** (owner approval recorded at owner level only) |
 | Ledger repair (`when` values, journal entries) | **NO** | must not be attempted speculatively | **DBA** (R2/R4/R5) |
 
 **The reconciliation is not "complete" in the sense of being applied.** It is
@@ -54,13 +59,13 @@ DBA-owned and blocked.
 | 0019 | `0019_face_template_key_version.sql` | `21752cce27b490807854a5c27387d8525738d1a9fe718b9dada1e89b63042d27` | 61 | unchanged |
 | 0020 | `0020_user_password_lifecycle.sql` | `baf1887559aa0d8cb7905a17d5a71c8a8b506431624d9445747ca88d0f3a4eaa` | 52 | unchanged |
 | 0021 | `0021_employee_deletion_controls.sql` | `585dd2d79a5e1147a57127bc1cb569985cdb76224714b9754498e8f6b028c452` | 141 | **revised** (supersedes `0e234c6e…7764`) |
-| 0022 | `0022_employee_retention_detach.sql` | `724db82db69769763ead7009be9378b9863a900539a6a1254e446e0dd72c765c` | 570 | unchanged |
+| 0022 | `0022_employee_retention_detach.sql` | `3750812f76be5cef1f3356eaf7872208494a31b26b4a2d5ef7433c1ae69160b5` | 421 | **revised 2026-10-21** (supersedes `724db82d…65c`; owner-approved payroll-deletion scope — see `docs/employee-deletion-payroll-scope-decision-record.md`) |
 
-`0021` is the only artifact whose hash moved since the last lineage audit; the
-reason is the control-plane detachment revision documented in
-`docs/employee-deletion-0021-dba-review-package.md` §3. **The lineage plan must
-be read with the revised hash; the previously reviewed `0e234c6e…7764` is
-obsolete.**
+Both `0021` and `0022` are revised artifacts: `0021` for the control-plane
+detachment (`docs/employee-deletion-0021-dba-review-package.md` §3) and `0022`
+for the payroll-deletion scope. **The lineage plan must be read with the
+revised hashes; the previously reviewed `0e234c6e…7764` (`0021`) and
+`724db82d…65c` (`0022`, never applied anywhere persistent) are obsolete.**
 
 ### 2.2 Journal / snapshot state (repository facts, unchanged)
 
@@ -98,8 +103,11 @@ Baseline (restore of `staging-db-20261021T005459Z-pre-0022.dump`, and identical
 counts observed read-only on production): **24 FKs = 22 `RESTRICT` + 2
 `SET NULL` + 0 `CASCADE`.**
 
-After `0021` + `0022` (disposable DB `hris_control_fk_20261021T035639Z`):
-**26 FKs = 15 `SET NULL` + 11 `RESTRICT` + 0 `CASCADE`.**
+After `0021` + **revised** `0022` (disposable DB
+`hris_control_fk_20261021T060118Z`, fresh run 2026-10-21):
+**26 FKs = 10 `SET NULL` + 16 `RESTRICT` + 0 `CASCADE`.**
+(The retention-era counts — 15 `SET NULL` + 11 `RESTRICT` from
+`hris_control_fk_20261021T035639Z` — are superseded.)
 
 | # | Table | FK to `employees` | Baseline rule | Reconciled rule | Disposition |
 | ---: | --- | --- | --- | --- | --- |
@@ -108,11 +116,11 @@ After `0021` + `0022` (disposable DB `hris_control_fk_20261021T035639Z`):
 | 3 | `leave_balances` | ✓ | `RESTRICT` | `SET NULL` | retained / detach |
 | 4 | `leave_requests` | ✓ | `RESTRICT` | `SET NULL` | retained / detach |
 | 5 | `permission_requests` | ✓ | `RESTRICT` | `SET NULL` | retained / detach |
-| 6 | `employee_payroll_components` | ✓ | `RESTRICT` | `SET NULL` | retained / detach |
-| 7 | `payroll_items` | ✓ | `RESTRICT` | `SET NULL` | retained / detach |
-| 8 | `payslips` | ✓ | `RESTRICT` | `SET NULL` | retained / detach |
-| 9 | `payslip_documents` | ✓ | `RESTRICT` | `SET NULL` | retained / detach |
-| 10 | `payslip_document_versions` | ✓ | `RESTRICT` | `SET NULL` | retained / detach |
+| 6 | `employee_payroll_components` | ✓ | `RESTRICT` | `RESTRICT` | **deleted** (owner-approved payroll scope; explicit plan, backstop) |
+| 7 | `payroll_items` | ✓ | `RESTRICT` | `RESTRICT` | **deleted** (owner-approved payroll scope; explicit plan, backstop) |
+| 8 | `payslips` | ✓ | `RESTRICT` | `RESTRICT` | **deleted** (owner-approved payroll scope; explicit plan, backstop) |
+| 9 | `payslip_documents` | ✓ | `RESTRICT` | `RESTRICT` | **deleted** (owner-approved payroll scope; explicit plan, backstop) |
+| 10 | `payslip_document_versions` | ✓ | `RESTRICT` | `RESTRICT` | **deleted** (owner-approved payroll scope; explicit plan, backstop) |
 | 11 | `employee_employment_history` | ✓ (×2) | 1 `RESTRICT` + 1 `SET NULL` | 2 `SET NULL` | retained / detach |
 | 12 | `employees.manager_id` (self) | ✓ | `SET NULL` | `SET NULL` | retained; manager link cleared |
 | 13 | `employee_documents` | ✓ | `RESTRICT` | `RESTRICT` | **deleted** |
@@ -143,10 +151,10 @@ Verified on the disposable database:
 | `attendance_photos` → `attendance_records` | `CASCADE` | parent is **retained**, so the cascade never fires during employee deletion |
 | `leave_request_events` → `leave_requests` | `CASCADE` | parent retained — no cascade on employee deletion |
 | `permission_request_events` → `permission_requests` | `CASCADE` | parent retained — no cascade |
-| `payroll_item_components` → `payroll_items` | `CASCADE` | parent retained — no cascade |
-| `payslips` → `payroll_items` | `RESTRICT` | both retained |
-| `payslip_documents` → `payslips` | `RESTRICT` | both retained |
-| `payslip_document_versions` → `payslips` / `payslip_documents` | `RESTRICT` | all retained |
+| `payroll_item_components` → `payroll_items` | `CASCADE` | parent is **deleted** with the employee — the pre-existing cascade removes exactly the employee's own item-component rows; other employees' rows untouched (proven in the 2026-10-21 payroll-scope rehearsal) |
+| `payslips` → `payroll_items` | `RESTRICT` | both **deleted**; the plan removes payslips (children first) strictly before payroll items |
+| `payslip_documents` → `payslips` | `RESTRICT` | both **deleted** (versions → documents → payslips order) |
+| `payslip_document_versions` → `payslips` / `payslip_documents` | `RESTRICT` | all **deleted** (versions first) |
 | `face_enrollment_templates` → `employee_face_enrollments` | `CASCADE` | **both are deleted**; the plan deletes templates **before** enrollments, so the explicit delete order — not the cascade — is authoritative |
 | `employee_deletion_approvals` → `employee_deletion_requests` | `RESTRICT` | approval rows pin their request; both handled by the control plane |
 
@@ -166,53 +174,70 @@ RESTRICT`, `approver_user_id SET NULL`. Full inventory:
 
 ---
 
-## 4. Approved payroll deletion scope — **there is none**
+## 4. Payroll deletion scope — **owner-approved and implemented (2026-10-21)**
 
 The release request asks for **permanent deletion of payroll history**. The
-reconciled state of the approvals is:
+project owner explicitly approved that scope on 2026-10-21 (UTC)
+(`docs/employee-deletion-owner-scope-approval-20261021.md` — **owner approval
+only**; it does not replace Legal/DPO/HR-Payroll sign-off, which remains
+pending). The reconciled state is now:
 
 | Question | Recorded answer | Source |
 | --- | --- | --- |
-| Is there an approved scope to delete payroll rows? | **NO** | policy §4.1 all pending; matrix §3 |
-| Which payroll rows would be deleted? | **None** — implemented plan deletes 0 | `features/employees/queries.ts` retained snapshot plan; `0022` detach design |
-| What happens to payroll/payslip rows on a permanent delete? | **Retained**, `employee_id` detached (`SET NULL`), identity + PDF password snapshots preserved | `0022_employee_retention_detach.sql` |
-| Is tier-2 / retention-eligible deletion enabled? | **NO** — `RETENTION_ELIGIBLE_CATEGORIES = []`, `DELETION_EXECUTION_ENABLED = false` | `features/employees/deletion-control-policy.ts` |
-| Does the owner's request constitute the required policy decision? | **NO** — it cannot replace Legal/DPO/HR/Payroll sign-off | approval checklist Part D; policy §4.1 |
+| Is there an approved scope to delete payroll rows? | **YES — at owner level** (2026-10-21); Legal/DPO/HR-Payroll sign-off still pending | owner scope approval record; matrix §6a/§3 |
+| Which payroll rows are deleted? | The employee's `employee_payroll_components`, `payroll_items` (+ cascaded `payroll_item_components`), `payslips`, `payslip_documents`, `payslip_document_versions` | `features/employees/queries.ts` delete plan; revised `0022` |
+| What happens to payroll/payslip rows on a permanent delete? | **DELETED explicitly, children first**; `employee_id` stays NOT NULL + `ON DELETE RESTRICT` as the backstop; `payslips.employee_number_snapshot`/`birth_date_snapshot` (PDF password contract, 0013/0014) unchanged | `0022_employee_retention_detach.sql` (revised, `3750812f…0b5`) |
+| What is retained? | `payroll_periods`, `payroll_runs`, `payroll_components`, `payroll_events` (organization-level; no employee reference) and every OTHER employee's rows | delete plan + rehearsal |
+| Is tier-2 / retention-eligible deletion enabled? | **NO** — `RETENTION_ELIGIBLE_CATEGORIES = []`, `DELETION_EXECUTION_ENABLED = false` (unchanged) | `features/employees/deletion-control-policy.ts` |
+| Does the owner approval constitute the multi-role policy decision? | **NO** — it resolves the data-owner scope only; §4.1 sign-off rows remain pending | approval matrix §3 |
 
-**Reconciled payroll scope (the only one supported by evidence):**
+**Reconciled payroll scope (implemented and proven):**
 
-| Payroll object | Table(s) | On employee delete | Rows deleted |
+| Payroll object | Table(s) | On employee delete | Rows deleted (rehearsal, 3 synthetic employees) |
 | --- | --- | --- | ---: |
-| Employee payroll components | `employee_payroll_components` | detach + snapshot | **0** |
-| Payroll items | `payroll_items` | detach; creation-time snapshots already `NOT NULL` | **0** |
-| Payslips | `payslips` | detach; number + birth-date snapshots preserved; PDF password reconstructs | **0** |
-| Payslip documents | `payslip_documents` | detach | **0** |
-| Payslip document versions | `payslip_document_versions` | detach | **0** |
-| Payroll item components | `payroll_item_components` | untouched (parent retained) | **0** |
+| Employee payroll components | `employee_payroll_components` | **deleted** (explicit) | 1 |
+| Payroll items | `payroll_items` | **deleted** (explicit; creation-time snapshots on the row are irrelevant once deleted) | 1 |
+| Payslips | `payslips` | **deleted** (explicit) | 1 |
+| Payslip documents | `payslip_documents` | **deleted** (explicit) | 1 |
+| Payslip document versions | `payslip_document_versions` | **deleted** (explicit) | 1 |
+| Payroll item components | `payroll_item_components` | **deleted via the pre-existing item CASCADE** (employee's own rows only) | 1 |
+| Payroll periods / runs / components | `payroll_periods` / `payroll_runs` / `payroll_components` | **retained** (organization-level) | 0 |
 
-Fresh evidence (2026-10-21T04:00:23Z, disposable DB
-`hris_force_delete_rehearsal_20261021T040023Z`):
+Fresh evidence (2026-10-21T06:15:29Z, disposable DB
+`hris_force_delete_rehearsal_20261021T061529Z`, `HARNESS_RESULT=PASS`):
 
 ```
-employee_payroll_components: pre=3 post=3 deleted=0
-payroll_items:               pre=3 post=3 deleted=0
-payslips:                    pre=3 post=3 deleted=0
-payslip_documents:           pre=3 post=3 deleted=0
-payslip_document_versions:   pre=3 post=3 deleted=0
-
-payroll rows deleted = 0
-RESULT: MATCH — implemented scope retains payroll
+payslip_document_versions:  pre=3 post=2 deleted=1 (detached=0)
+payslip_documents:          pre=3 post=2 deleted=1 (detached=0)
+payslips:                   pre=3 post=2 deleted=1 (detached=0)
+payroll_items:              pre=3 post=2 deleted=1 (detached=0)
+payroll_item_components:    pre=3 post=2 deleted=1 (via item CASCADE)
+employee_payroll_components: pre=3 post=2 deleted=1 (detached=0)
+retained (detached + snapshotted): attendance x2, leave x2, permission,
+  employment history — exactly 1 row of A's each, identity snapshots set
+control employees B/C: every row intact; org-level period/run/component intact
+rollback (employee C): the entire payroll chain restored
 ```
 
-(`/tmp/opencode/payroll-scope-20261021-20261021T040023Z/07-payroll-rows-deleted.txt`,
-SHA-256 `cf4cb73873cae9ca3722ae352b86731a8dd2002715176ae837eb5efd7b4a597e`.)
+(`04-harness.out` SHA-256 `4600920619687103d4648d45011718c17dd02e0e395033ea00a08c980ae8f510`,
+`05-post-payroll-scope.txt` `eb9691d33fb72ec2667cefd137d317a48711be400acff655ec9c6edefcc0c1f3`;
+full detail in `docs/employee-deletion-payroll-scope-decision-record.md` §7.)
 
-**Conclusion:** "permanently delete payroll history" is **not** part of the
-reconciled or approved deletion scope. Reconciling the requirement with the
-test result is therefore a *policy* action, not a code defect: the test result
-is correct for the approved design. See
-`docs/employee-deletion-payroll-scope-decision-record.md`.
+**Conclusion:** "permanently delete payroll history" **is** part of the
+implemented, owner-approved deletion scope, proven at the database level.
+Production application remains blocked on the third-party approvals and
+gates in `docs/employee-deletion-approval-matrix.md`.
 
+### 4.1 History — the state before the owner approval (superseded)
+
+Before the owner scope approval (2026-10-21 morning), the reconciled answer was
+"**NONE approved — payroll is retained**", with `payroll rows deleted = 0`
+proven on `hris_force_delete_rehearsal_20261021T040023Z` (evidence
+`07-payroll-rows-deleted.txt`, SHA-256 `cf4cb738…`). That state was correct at
+the time and is preserved here for audit; its disposable databases were
+dropped. The revision history of
+`docs/employee-deletion-payroll-scope-decision-record.md` records the same
+transition.
 ---
 
 ## 5. Environment classification (read-only observations, 2026-10-21)
@@ -236,18 +261,28 @@ session) → `B-02`, `B-03`, `B-05` remain **OPEN**.
 
 ### 5.1 Isolated confirmation of the full chain
 
-Disposable DB `hris_control_fk_20261021T035639Z` (restored from the staging
-dump, **not production**):
+**Revised pair, fresh run 2026-10-21T06:01:18Z** — disposable DB
+`hris_control_fk_20261021T060118Z` (restored from the staging dump, **not
+production**):
 
-- `0021` apply → exit 0; `0022` apply → exit 0.
+- `0021` apply → exit 0; revised `0022` apply → exit 0.
 - Re-apply `0021` and `0022` → both exit 0 (idempotent).
 - FKs referencing `employees`: 24 → **26**.
-- 0 `CASCADE`; 15 `SET NULL`; 11 `RESTRICT`; 11 retained-identity CHECKs;
-  2 live-control CHECKs; 3 control tables; **0 anonymous retained rows**.
+- 0 `CASCADE`; **10 `SET NULL`** (6 retained + 2 manager + 2 control-plane);
+  **16 `RESTRICT`** (11 deletable + 5 payroll); **6 retained-identity CHECKs**;
+  2 live-control CHECKs; 3 control tables; **0 anonymous retained rows**;
+  payroll `employee_id` NOT NULL on 5/5 tables; retention-only payroll
+  snapshot columns remaining: 0.
 - `scripts/verify-employee-deletion-control-fks.sql` →
   **`CONTROL_FK_REGRESSION_PASS`**.
 
-Evidence: `/tmp/opencode/migreg-20261021-20261021T035639Z/`
+Evidence: `/tmp/opencode/migreg-payroll-scope-20261021T060118Z/`
+(`06-invariants.out`, `07-control-fk-regression.out`).
+
+**Superseded run (retention-era `0022`), kept for history:**
+`hris_control_fk_20261021T035639Z` — 15 `SET NULL`, 11 `RESTRICT`, 11
+retained-identity CHECKs; evidence
+`/tmp/opencode/migreg-20261021-20261021T035639Z/`
 (index SHA-256 `a0660b249aeaae9429c50ef6931ae17aea548b1d55d7898ae88f274c3199f6ab`).
 
 ---

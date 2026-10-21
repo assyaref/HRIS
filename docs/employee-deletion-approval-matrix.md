@@ -2,8 +2,11 @@
 
 **Document type:** CONSOLIDATED STATUS MATRIX. It records what has and has not
 been approved. It **is not** an approval and cannot be used as one.
-**Generated:** 2026-10-21 (UTC) · **Repository:** `/opt/hris` (local `main`,
-HEAD `831027b`, not pushed)
+**Generated:** 2026-10-21 (UTC) · **Last updated:** 2026-10-21 (UTC) — owner
+scope approval recorded (§6a), revised `0022` checksum
+`3750812f76be5cef1f3356eaf7872208494a31b26b4a2d5ef7433c1ae69160b5` pending DBA
+review · **Repository:** `/opt/hris` (local `main`, work on top of `00e4655`,
+not pushed)
 **Overall release status:** **RELEASE BLOCKED**
 
 > **No signature in this document is fabricated.** Every approval row below is
@@ -14,7 +17,9 @@ HEAD `831027b`, not pushed)
 >
 > **No role may sign another role's row.** The requesting owner's approval does
 > **not** substitute for any DBA, Legal/Compliance, DPO, HR/Payroll, Security or
-> Application Lead signature.
+> Application Lead signature. The owner's 2026-10-21 scope approval
+> (`docs/employee-deletion-owner-scope-approval-20261021.md`) is recorded at
+> **owner level only** in §6a and changes nothing in §1–§5.
 
 **Sources (read-only, 2026-10-21):**
 
@@ -62,7 +67,7 @@ Record approver name, decision, UTC timestamp and evidence link for each row.
 | A3 | Change record opened (ID, window, rollback owner, incident commander) | DBA + Application Lead | change record | *(blank)* | *(blank)* | **BLOCKED — no change record** |
 | A4 | Staging isolation verified (separate cluster/roles/secrets/storage; no production route) | DBA + Application Lead | §5.2 / master §C isolation matrix | *(blank)* | *(blank)* | **BLOCKED — isolation unproven (`B-01`)** |
 | A5 | Pre-apply backup captured **and** restore-rehearsed into a disposable DB | DBA | §5.3 dump label + SHA-256 + restore output | *(blank)* | *(blank)* | **BLOCKED — staging backup not evidenced (`B-06`)** |
-| A6 | Reviewed artifact checksum re-verified against `724db82d…65c` (and `0021` = `585dd2d7…c452`) | DBA | §5.4 output | *(blank)* | *(blank)* | **BLOCKED — in-rehearsal DBA re-verification not recorded (`B-14`)** |
+| A6 | Reviewed artifact checksum re-verified against `3750812f…0b5` (revised `0022`, payroll-deletion scope) and `0021` = `585dd2d7…c452` | DBA | §5.4 output | *(blank)* | *(blank)* | **BLOCKED — in-rehearsal DBA re-verification not recorded (`B-14`); revised `0022` not yet DBA-reviewed** |
 | A7 | Migration lineage assessment accepted (0019–0022 status known; plan recorded) | DBA + Application Lead | lineage reconciliation plan §3 evidence | *(blank)* | *(blank)* | **BLOCKED — `B-02`/`B-03`/`B-05` open** |
 | A8 | Compatible application build identified, pinned, deployment order fixed (migration first) | Application Lead | §3 order + build ID | *(blank)* | *(blank)* | **BLOCKED — build not pinned (`B-07`)** |
 | A9 | Transaction rollback rehearsal defined (disposable clone; §5.7 Test A/B/C) | DBA | §5.7 plan | *(blank)* | *(blank)* | **BLOCKED — `B-10` open** |
@@ -130,8 +135,14 @@ release.
 **§4 result: 0 / 6 recorded.** Consequences while this holds:
 `RETENTION_ELIGIBLE_CATEGORIES` stays `[]`, `DELETION_EXECUTION_ENABLED` stays
 `false`, every protected category resolves to tier 3 (absolute refusal), and
-**permanent payroll-history deletion is not approved** (see
-`docs/employee-deletion-payroll-scope-decision-record.md`).
+**the multi-role sign-off for the retention/deletion policy remains absent**.
+The project owner has separately approved the payroll-deletion *scope* at
+owner level
+(`docs/employee-deletion-owner-scope-approval-20261021.md`): payroll history
+is implemented as a deletable category and verified in isolated databases
+(`docs/employee-deletion-payroll-scope-decision-record.md`). That owner
+approval **does not** satisfy, waive or replace any §4.1 row above, and no
+production apply/deploy/delete is authorized while this section is 0/6.
 
 ---
 
@@ -197,12 +208,21 @@ Received-artifact log: empty. Formal approval record (§8.2): all boxes `☐`.
 | DBA signed authorization / attestation for `0019`–`0022` | DBA | **BLOCKED — none present** | `docs/employee-permanent-delete-dba-handoff.md` §7.1 (unsigned) |
 | Staging rehearsal authorization (`§5` execution) | DBA + Application Lead | **BLOCKED — Part A 0/14** | approval checklist Part A |
 | Revised `0021` SQL review acceptance | DBA + Security | **BLOCKED — package ready, unsigned** | `docs/employee-deletion-0021-dba-review-package.md` §9 |
+| Revised `0022` SQL review acceptance (payroll-deletion scope, checksum `3750812f…0b5`) | DBA + Security | **BLOCKED — not yet reviewed** | `docs/employee-deletion-payroll-scope-decision-record.md` §5; DBA re-review required before any application |
 | Lineage reconciliation decision (R2) + execution (R4/R5) | DBA | **BLOCKED — decision not recorded** | `docs/employee-permanent-delete-0022-lineage-reconciliation-plan.md` |
 | Drizzle journal/snapshot repair authorization | DBA | **BLOCKED — never granted** | explicit non-action in plan §11 |
 | Production write-freeze / window approval | DBA + App Lead + Payroll/HR | **BLOCKED** | master §G.1 |
 | Push of the release candidate to `origin/main` | Application Lead | **BLOCKED — not pushed** | `origin/main` = `e735f47` |
 | Production deployment | Deployment owner | **BLOCKED — deploy not started** | production report §6.3 |
-| Owner-level approval (release request) | Requesting owner | **RECORDED** — release request / production report §1.1 | **Insufficient**: does not satisfy, waive or replace any row in §1–§4 or §6 |
+| Owner-level approval (release request) | Requesting owner | **RECORDED** — release request / production report §1.1 | **Insufficient**: does not satisfy, waive or replace any row in §1–§5 or §6 |
+
+### 6a. Owner scope approvals (OWNER LEVEL ONLY — recorded 2026-10-21)
+
+| Owner-approved item | Level | Record | What it does NOT do |
+| --- | --- | --- | --- |
+| Proceeding with the Superadmin Force Delete release (implementation + verification) | Owner | `docs/employee-deletion-owner-scope-approval-20261021.md` §1 | Not a staging/production authorization |
+| Permanent employee deletion scope (employee row + deletable related records; time/employment history retained via detach) | Owner | same §1 item 2 | Not a Legal/DPO/HR retention sign-off (§4 stays 0/6) |
+| **Payroll history included in the deletion scope** (payroll components, payroll items + cascaded item components, payslips, payslip documents/versions deleted with the employee) | Owner | same §1 item 3; implemented scope in `docs/employee-deletion-payroll-scope-decision-record.md` §3 | Not a DBA review of revised `0022`; not a production authorization; does not close any Part A/Part B/§4 row |
 
 ---
 
@@ -212,7 +232,10 @@ Received-artifact log: empty. Formal approval record (§8.2): all boxes `☐`.
    (`docs/employee-permanent-delete-dba-evidence-request.md`) → closes
    `B-01`–`B-06`.
 2. **DBA + Security** sign the revised `0021` review package
-   (`docs/employee-deletion-0021-dba-review-package.md` §9) → unblocks `A6`/`B1`.
+   (`docs/employee-deletion-0021-dba-review-package.md` §9) **and review the
+   revised `0022`** (payroll-deletion scope, checksum `3750812f…0b5`;
+   `docs/employee-deletion-payroll-scope-decision-record.md` §5) → unblocks
+   `A6`/`B1`.
 3. **Application Lead** pins the build and fixes migration-first order →
    `B-07`.
 4. **Operator + DBA** record staging guard + synthetic-data attestations →
