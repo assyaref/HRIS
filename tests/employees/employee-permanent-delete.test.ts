@@ -1768,10 +1768,10 @@ describe("UI: the Super Administrator dialog", () => {
     );
     assert.equal(
       normalize(dialogSource).includes(
-        "const canSubmitDelete = confirmationMatches && acknowledged && reasonValid && dependencyCheck.status === \"ready\";"
+        "const canSubmitDelete = confirmationMatches && acknowledged && reasonValid && dependencyCheck.status === \"ready\" && !legalHoldActive && blockingDeletionRequestCount === 0;"
       ),
       true,
-      "both confirmation layers, a valid audit-policy reason and an arrived report are required — protected records no longer disable the button"
+      "both confirmation layers, a valid audit-policy reason, an arrived report and no live control-plane block are required — protected records no longer disable the button"
     );
     assert.equal(
       dialogSource.includes("disabled={isPending || !canSubmitDelete}"),
@@ -2099,9 +2099,11 @@ describe("backend: the pre-flight is read-only and fails closed", () => {
     // the destructive flow available for the Super Administrator. Only the
     // failure paths above fail closed with blocked=true.
     assert.equal(
-      preflight.includes("blocked: false"),
+      preflight.includes(
+        "blocked: legalHoldActive || blockingDeletionRequestCount > 0"
+      ),
       true,
-      "the success path no longer reports protected records as blocking"
+      "only live control-plane state blocks the success path; protected records do not"
     );
     assert.equal(
       preflight.includes("blocked: hasProtectedEmployeeDependencies(dependencies)"),

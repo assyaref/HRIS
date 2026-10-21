@@ -36,6 +36,8 @@ import {
   type EmployeeDeleteDependency,
 } from "./permanent-delete-policy";
 import {
+  DELETION_ACTIVE_REQUEST_MESSAGE,
+  DELETION_LEGAL_HOLD_MESSAGE,
   DELETION_REASON_MAX_LENGTH,
   DELETION_REASON_MIN_LENGTH,
   isValidDeletionReason,
@@ -80,6 +82,8 @@ type DependencyCheckState =
       deletableDependencies: EmployeeDeleteDependency[];
       totalRelatedRecords: number;
       directReportCount: number;
+      legalHoldActive: boolean;
+      blockingDeletionRequestCount: number;
       message?: string;
     };
 
@@ -154,6 +158,8 @@ export function EmployeePermanentDeleteDialog({
         deletableDependencies: report.deletableDependencies,
         totalRelatedRecords: report.totalRelatedRecords,
         directReportCount: report.directReportCount,
+        legalHoldActive: report.legalHoldActive,
+        blockingDeletionRequestCount: report.blockingDeletionRequestCount,
         message:
           report.status === "success"
             ? undefined
@@ -167,6 +173,8 @@ export function EmployeePermanentDeleteDialog({
         deletableDependencies: [],
         totalRelatedRecords: 0,
         directReportCount: 0,
+        legalHoldActive: false,
+        blockingDeletionRequestCount: 0,
         message: EMPLOYEE_PERMANENT_DELETE_FAILED_MESSAGE,
       });
     }
@@ -220,6 +228,12 @@ export function EmployeePermanentDeleteDialog({
       : totalEmployeeDeleteDependencyCount(reportedDependencies);
   const directReportCount =
     dependencyCheck.status === "ready" ? dependencyCheck.directReportCount : 0;
+  const legalHoldActive =
+    dependencyCheck.status === "ready" && dependencyCheck.legalHoldActive;
+  const blockingDeletionRequestCount =
+    dependencyCheck.status === "ready"
+      ? dependencyCheck.blockingDeletionRequestCount
+      : 0;
   // Fail closed: the destructive button is enabled only when the pre-flight
   // report ARRIVED, the number matches exactly, the irreversibility
   // checkbox is ticked, AND a valid audit-policy reason is supplied. A
@@ -230,7 +244,9 @@ export function EmployeePermanentDeleteDialog({
     confirmationMatches &&
     acknowledged &&
     reasonValid &&
-    dependencyCheck.status === "ready";
+    dependencyCheck.status === "ready" &&
+    !legalHoldActive &&
+    blockingDeletionRequestCount === 0;
   const displayName = `${employee.firstName} ${employee.lastName}`;
   const role = [employee.department, employee.position]
     .filter((value): value is string => Boolean(value))
@@ -434,6 +450,18 @@ export function EmployeePermanentDeleteDialog({
                     reports and payroll history stay complete.
                   </p>
                 </div>
+              ) : null}
+
+              {legalHoldActive ? (
+                <p className="text-sm text-destructive">
+                  {DELETION_LEGAL_HOLD_MESSAGE} Delete is disabled.
+                </p>
+              ) : null}
+
+              {blockingDeletionRequestCount > 0 ? (
+                <p className="text-sm text-destructive">
+                  {DELETION_ACTIVE_REQUEST_MESSAGE} Delete is disabled.
+                </p>
               ) : null}
 
               {dependencyCheck.status === "error" ? (

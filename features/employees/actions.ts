@@ -51,6 +51,8 @@ import {
   type EmployeeDeleteDependency,
 } from "./permanent-delete-policy";
 import {
+  DELETION_ACTIVE_REQUEST_MESSAGE,
+  DELETION_LEGAL_HOLD_MESSAGE,
   DELETION_REASON_REQUIRED_MESSAGE,
   isValidDeletionReason,
 } from "./deletion-control-policy";
@@ -58,10 +60,12 @@ import {
   countEmployeeDirectReports,
   deleteEmployeeDeletableRecords,
   getEmployeeById,
+  getEmployeeDeletionControlState,
   getEmployeeInOrganization,
   listEmployeeDeletionDependencies,
   listLinkableUsers,
   snapshotEmployeeRetainedRecords,
+  type EmployeeDeletionControlState,
 } from "./queries";
 import {
   createEmployeeSchema,
@@ -128,6 +132,7 @@ export interface EmployeeActionState {
 
 const DB_UNIQUE_VIOLATION = "23505";
 const DB_FOREIGN_KEY_VIOLATION = "23503";
+const DB_CHECK_VIOLATION = "23514";
 
 function toFieldErrors(error: z.ZodError): Record<string, string> {
   const fieldErrors: Record<string, string> = {};
@@ -164,6 +169,25 @@ function isForeignKeyViolation(error: unknown): boolean {
     "code" in error &&
     (error as { code?: unknown }).code === DB_FOREIGN_KEY_VIOLATION
   );
+}
+
+/** PostgreSQL `check_violation`: a control-plane invariant refused the statement. */
+function isCheckViolation(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === DB_CHECK_VIOLATION
+  );
+}
+
+/** Constraint name from a PostgreSQL error, when the driver exposes it. */
+function constraintNameOf(error: unknown): string | null {
+  if (typeof error !== "object" || error === null || !("constraint" in error)) {
+    return null;
+  }
+  const constraint = (error as { constraint?: unknown }).constraint;
+  return typeof constraint === "string" ? constraint : null;
 }
 
 function field(formData: FormData, name: string): string {
@@ -823,6 +847,8 @@ export interface EmployeePermanentDeleteState {
     | "PROTECTED_RECORDS"
     | "DEPENDENCIES"
     | "SELF_LINKED"
+    | "LEGAL_HOLD"
+    | "ACTIVE_DELETION_REQUEST"
     | "FAILED";
   /** Non-zero dependency counts, for the structured summary in the dialog. */
   dependencies?: EmployeeDeleteDependency[];
@@ -955,10 +981,12 @@ async function readEmployeeDeletionDependencies(
 ): Promise<{
   dependencies: EmployeeDeleteDependency[];
   directReportCount: number;
+  controlState: EmployeeDeletionControlState;
 }> {
   return db.transaction(async (tx) => ({
     dependencies: await listEmployeeDeletionDependencies(tx, employeeId, organizationId),
     directReportCount: await countEmployeeDirectReports(tx, employeeId, organizationId),
+    controlState: await getEmployeeDeletionControlState(tx, employeeId, organizationId),
   }));
 }
 
@@ -1171,11 +1199,18 @@ export async function permanentlyDeleteEmployeeAction(
     | { code: "NOT_FOUND" | "CONFIRMATION_MISMATCH" }
     | {
         code: "DENIED";
-        stateCode: "PROTECTED_RECORDS" | "SELF_LINKED" | "DEPENDENCIES";
+        stateCode:
+          | "PROTECTED_RECORDS"
+          | "SELF_LINKED"
+          | "DEPENDENCIES"
+          | "LEGAL_HOLD"
+          | "ACTIVE_DELETION_REQUEST";
         reason:
           | "SELF_LINKED"
           | "PROTECTED_HISTORICAL_RECORDS"
-          | "RELATED_RECORDS_EXIST";
+          | "RELATED_RECORDS_EXIST"
+          | "LEGAL_HOLD"
+          | "ACTIVE_DELETION_REQUEST";
         message: string;
         dependencies: EmployeeDeleteDependency[];
         deletableDependencies: EmployeeDeleteDependency[];
@@ -1209,6 +1244,38 @@ export async function permanentlyDeleteEmployeeAction(
         !matchesEmployeeNumberConfirmation(current.employeeNumber, confirmation)
       ) {
         return { code: "CONFIRMATION_MISMATCH" } as const;
+      }
+
+      // Control-plane integration (migration 0021). This is checked inside the
+      // same transaction and after the employee row is locked, so it cannot be
+      // raced by a hold/release or request decision that commits first.
+      // An ACTIVE hold and a PENDING/APPROVED deletion request are absolute
+      // refusals. RELEASED holds and terminal requests do NOT block: their
+      // employee reference is detached by SET NULL with the identity snapshot.
+      const controlState = await getEmployeeDeletionControlState(
+        tx,
+        current.id,
+        scopedOrganizationId
+      );
+      if (controlState.activeLegalHoldCount > 0) {
+        return {
+          code: "DENIED",
+          stateCode: "LEGAL_HOLD",
+          reason: "LEGAL_HOLD",
+          message: `${DELETION_LEGAL_HOLD_MESSAGE}\n\nCannot delete employee ${current.employeeNumber}.`,
+          dependencies: [],
+          deletableDependencies: [],
+        } as const;
+      }
+      if (controlState.blockingDeletionRequestCount > 0) {
+        return {
+          code: "DENIED",
+          stateCode: "ACTIVE_DELETION_REQUEST",
+          reason: "ACTIVE_DELETION_REQUEST",
+          message: `${DELETION_ACTIVE_REQUEST_MESSAGE}\n\nCannot delete employee ${current.employeeNumber}.`,
+          dependencies: [],
+          deletableDependencies: [],
+        } as const;
       }
 
       const dependencies = await listEmployeeDeletionDependencies(
@@ -1307,6 +1374,33 @@ export async function permanentlyDeleteEmployeeAction(
     });
   } catch (error) {
     // Any throw above rolls the transaction back — nothing was committed.
+    // A concurrent hold/request that appeared after the pre-flight is stopped
+    // by the database CHECK once SET NULL clears the employee reference. Map
+    // that race to the same precise refusal instead of a generic failure.
+    if (isCheckViolation(error)) {
+      const constraint = constraintNameOf(error);
+      if (constraint === "employee_legal_holds_active_requires_employee") {
+        await auditPermanentEmployeeDelete({
+          ...deletionContext,
+          result: "DENIED",
+          reason: "LEGAL_HOLD",
+        });
+        return toPermanentDeleteError("LEGAL_HOLD", DELETION_LEGAL_HOLD_MESSAGE);
+      }
+      if (
+        constraint === "employee_deletion_requests_active_requires_employee"
+      ) {
+        await auditPermanentEmployeeDelete({
+          ...deletionContext,
+          result: "DENIED",
+          reason: "ACTIVE_DELETION_REQUEST",
+        });
+        return toPermanentDeleteError(
+          "ACTIVE_DELETION_REQUEST",
+          DELETION_ACTIVE_REQUEST_MESSAGE
+        );
+      }
+    }
     if (isForeignKeyViolation(error)) {
       // The database refused to complete the deletion. This is the
       // compatibility fallback for a database where migration 0022 has NOT
@@ -1460,11 +1554,15 @@ export interface EmployeePermanentDeleteDependencyReport {
    * those describe rows the operation removes, and a direct report is not one.
    */
   directReportCount: number;
+  /** An active legal hold applies: absolute refusal (migration 0021). */
+  legalHoldActive: boolean;
+  /** Pending/approved deletion requests: the live path must not bypass them. */
+  blockingDeletionRequestCount: number;
   /**
-   * True when the pre-flight itself REFUSED (authorization failure, missing
-   * scope, unreadable counts): a destructive request must never proceed on
-   * a report that could not be produced. FALSE on the success path — under
-   * the approved detach schema (migration 0022) PROTECTED records are
+   * True when a destructive request must not proceed: the pre-flight itself
+   * failed (authorization, scope, unreadable counts) OR a live control-plane
+   * block exists (active hold / in-flight request). FALSE for PROTECTED
+   * historical records under the detach schema (migration 0022): they are
    * retained and detached, not blockers.
    */
   blocked: boolean;
@@ -1482,6 +1580,8 @@ function deniedDependencyReport(
     deletableDependencies: [],
     totalRelatedRecords: 0,
     directReportCount: 0,
+    legalHoldActive: false,
+    blockingDeletionRequestCount: 0,
     blocked: true,
   };
 }
@@ -1546,10 +1646,11 @@ export async function checkEmployeeDeletionDependenciesAction(
   }
 
   try {
-    const { dependencies, directReportCount } = await readEmployeeDeletionDependencies(
-      employee.id,
-      scope.organizationId
-    );
+    const { dependencies, directReportCount, controlState } =
+      await readEmployeeDeletionDependencies(employee.id, scope.organizationId);
+    const legalHoldActive = controlState.activeLegalHoldCount > 0;
+    const blockingDeletionRequestCount =
+      controlState.blockingDeletionRequestCount;
     return {
       status: "success",
       dependencies,
@@ -1563,11 +1664,14 @@ export async function checkEmployeeDeletionDependenciesAction(
       ),
       totalRelatedRecords: totalEmployeeDeleteDependencyCount(dependencies),
       directReportCount,
+      legalHoldActive,
+      blockingDeletionRequestCount,
       // Under the approved detach schema (migration 0022) PROTECTED records
       // no longer block the completion: they are retained and detached with
-      // their identity snapshots. `blocked` therefore stays FALSE on the
-      // success path — only the failure paths above fail closed with TRUE.
-      blocked: false,
+      // their identity snapshots. `blocked` is therefore FALSE for those, but
+      // TRUE for a live control-plane block (active hold / in-flight request)
+      // and for the failure paths above.
+      blocked: legalHoldActive || blockingDeletionRequestCount > 0,
     };
   } catch (error) {
     // Fail closed: an unreadable dependency report must never enable a delete.

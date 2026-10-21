@@ -2,7 +2,10 @@
 
 Status: **PROPOSED — control plane implemented, destructive execution DISABLED.
 Live path revised (2026-10-13): Super Administrator application-level override
-implemented; completion still gated by the database and the §4 sign-off.**
+implemented; completion still gated by the database and the §4 sign-off.
+Revision 2026-10-21: 0021/0022 control-plane integration designed and rehearsed
+on an isolated database; neither migration is applied to production and no
+approval has been recorded.**
 
 This document is the Tahap 1–5 deliverable for the Super Administrator Permanent
 Employee Deletion policy. The control plane (legal hold, retention tiers,
@@ -39,10 +42,19 @@ retention policy in §4 is signed off.
 
 ### 1.2 Data categories and foreign keys
 
-Every employee-scoped FK was reconciled by migration `0017` to
-`ON DELETE RESTRICT` (two self-referencing `manager_id` FKs are `SET NULL`;
+Baseline FK hardening is migration `0017` (`ON DELETE RESTRICT` for
+employee-scoped history; two self-referencing `manager_id` FKs are `SET NULL`;
 `face_enrollment_templates` carries a CASCADE to its own enrollment, so the
 delete plan deletes the template row explicitly first).
+
+Migration `0022_employee_retention_detach.sql` (unapplied, pre-release) revises
+the **11 payroll/time-history tables** to nullable `employee_id` +
+`ON DELETE SET NULL`, with employee-number/name snapshots, so retained history
+survives without a live reference. Migration `0021` gives the control-plane
+tables the same treatment for **terminal history only**: released legal holds
+and rejected/cancelled/executed requests detach; active holds and
+pending/approved requests are still enforced by database CHECK constraints.
+`employee_deletion_approvals.request_id` remains `RESTRICT`.
 
 | Category | Tables (source of truth: `queries.ts`) | Classification | Retention |
 | --- | --- | --- | --- |
@@ -57,14 +69,20 @@ delete plan deletes the template row explicitly first).
 | Projects | `employee_project_assignments` | DELETABLE | assignment |
 | Other | addresses, insurances, bank accounts, dependents, educations, custom field values, announcement recipients | DELETABLE | person-owned |
 
-The database — not a Super Administrator — is the final authority: a remaining
-`RESTRICT` row makes the `DELETE` fail and the transaction roll back.
+The database — not a Super Administrator — is the final authority. On the
+current production schema a remaining `RESTRICT` row makes the `DELETE` fail
+and the transaction roll back. After `0022`, retained rows detach with
+snapshots instead; their rows are never deleted. An active legal hold or a
+pending/approved deletion request still blocks the `DELETE` through 0021's
+CHECK constraints.
 
 ### 1.3 Gaps found during the audit
 
-1. **No legal-hold model.** Nothing in the schema or code records an active
-   legal hold. `docs/face-verification.md` still says retention is
-   "TO BE DEFINED BY COMPANY POLICY".
+1. **Legal-hold model (resolved in unapplied 0021).** Baseline had no
+   legal-hold record. Migration/code now model an active hold and block the
+   live delete path; released holds detach as history. The migration is
+   **not applied** and the executor remains disabled. `docs/face-verification.md`
+   still says retention is "TO BE DEFINED BY COMPANY POLICY".
 2. **No retention-tier with special approval.** Today a protected record is an
    absolute block and a deletable record is removed with no second signature.
    There is no "retention-eligible but requires approval" middle tier.
@@ -137,10 +155,11 @@ Implemented in `deletion-control.actions.ts` (all server-side, all additive):
   `employee.deletion.requested`, `employee.deletion.approved`,
   `employee.deletion.rejected`, `employee.deletion.execution_blocked` — actor
   identity, organization, reason, decision, timestamp and result.
-- **Transactional** writes with `RESTRICT` FKs preserved. The hold release
-  runs in one transaction with `SELECT … FOR UPDATE`; the deletion request and
-  the dual-control decision each run in exactly one transaction, so a failed
-  statement rolls the whole operation back.
+- **Transactional** writes. The hold release runs in one transaction with
+  `SELECT … FOR UPDATE`; the deletion request and the dual-control decision
+  each run in exactly one transaction, so a failed statement rolls the whole
+  operation back. `employee_deletion_approvals.request_id` stays `RESTRICT`:
+  approvals are never deleted or detached.
 - **Single active hold**: the partial unique index
   `employee_legal_holds_active_hold_unique (organization_id, employee_id)
   WHERE active` makes a concurrent second placement fail with `23505`, which
@@ -154,8 +173,13 @@ Implemented in `deletion-control.actions.ts` (all server-side, all additive):
   `NOT_APPROVED`, `EXECUTION_DISABLED`) or `FAILED` (`UNEXPECTED_ERROR`).
   The actor identity is resolved BEFORE the allow/deny decision, so even a
   non-Super-Admin attempt is auditable.
-- **No legal-hold bypass**: legal-hold FKs are `RESTRICT`, so a hold physically
-  blocks *any* employee `DELETE` (including the live path) at the database.
+- **No legal-hold bypass**: `employee_legal_holds_active_requires_employee`
+  rejects an `employee_id = NULL` row while `active`, and
+  `employee_deletion_requests_active_requires_employee` rejects a detached row
+  while status is pending/approved. Both constraints fire on the employee
+  `DELETE` (23514) and roll back the live path. They are mapped to
+  `LEGAL_HOLD` / `ACTIVE_DELETION_REQUEST` as a race backstop; the live action
+  also pre-checks inside the locked deletion transaction.
 - **Server-side refusal**: every new action returns `FORBIDDEN` for a
   non-Super-Admin, no matter what a crafted request submits.
 - **Executor disabled**: `executeApprovedEmployeeDeletionAction` verifies the
@@ -214,8 +238,10 @@ and a dated config change is reviewed.
 - Single active hold (partial unique index + `HOLD_EXISTS` fail-closed).
 - Audit vocabulary: SUCCESS / DENIED / FAILED with machine-readable reasons.
 - Executor disabled: source contains no `DELETE` and returns `EXECUTION_DISABLED`.
-- FK integrity: migration `0021` uses `RESTRICT` for employee references and is
-  not journaled.
+- FK integrity: migration `0021` uses `ON DELETE SET NULL` for released holds
+  and terminal requests, keeps approvals `RESTRICT`, and is not journaled.
+  `scripts/verify-employee-deletion-control-fks.sql` proves all four live
+  control scenarios against a disposable database.
 - URL/API manipulation: no role/organization read from form data.
 
 Fixtures are synthetic; no production employee data is used.
@@ -257,7 +283,7 @@ Fixtures are synthetic; no production employee data is used.
 | Risk | Severity | Mitigation |
 | --- | --- | --- |
 | Migration lineage is already inconsistent (files `0019`/`0020` exist but are unjournaled; snapshots stop at `0014`) | High | `0021` is hand-written and **not journaled**, matching the existing out-of-band pattern. Apply only via an approved DBA change after lineage reconciliation. Do not run `drizzle-kit generate`/`migrate` from this worktree. |
-| New `RESTRICT` FKs on `employee_legal_holds`/`employee_deletion_requests` add new blocks to the live delete path once applied | Medium | Intended for legal holds. Documented; the live action fails safe (rolls back) if such a row exists. |
+| Revised 0021 CHECKs/FKs add live control to the delete path once applied | Medium | Active holds and pending/approved requests block by CHECK (23514) and are mapped to state codes; released/terminal rows detach. Rehearsed on an isolated database. DBA must re-review the new checksum before application. |
 | Tier 2 could be enabled prematurely | High | `RETENTION_ELIGIBLE_CATEGORIES` empty; executor asserts a disabled constant; test pins it. |
 | Filesystem (documents) deletion is outside the transaction | Low | Pre-existing design; unchanged. |
 | Re-running RBAC seed needed for new permission codes | Low | Seed is idempotent; required after deploy. |
@@ -266,9 +292,13 @@ Fixtures are synthetic; no production employee data is used.
 
 `db/migrations/0021_employee_deletion_controls.sql` creates three additive
 tables (`employee_legal_holds`, `employee_deletion_requests`,
-`employee_deletion_approvals`) with `RESTRICT` employee FKs. It is **not
-applied**, **not journaled**, and contains no `DROP`/`ALTER` of existing
-objects. Apply only after §4 sign-off, on staging first, with a verified backup.
+`employee_deletion_approvals`). Employee references on holds/requests are
+nullable `ON DELETE SET NULL` so terminal history detaches; active rows are
+protected by CHECK constraints. `employee_deletion_approvals.request_id`
+remains `RESTRICT`. The migration is **not applied**, **not journaled**, and
+contains no `DROP`/`ALTER` of existing objects. Apply only after §4 sign-off,
+on staging first, with a verified backup. Revised checksum:
+`585dd2d79a5e1147a57127bc1cb569985cdb76224714b9754498e8f6b028c452`.
 
 ### 6.6 Deployment steps (after sign-off)
 
@@ -316,15 +346,14 @@ those that will be retained.
 - **The control plane (§2/§3) and its executor remain unchanged and
   DISABLED.**
 
-### 7.3 Why the attempt still cannot complete while protected records exist
+### 7.3 Why the attempt still cannot complete on the current production schema
 
-Removing the application-level blocker does not remove the database
-restriction. Every employee-scoped foreign key is `ON DELETE RESTRICT`
-(migration `0017`, applied in production) and the protected tables' `employee_id`
-columns are `NOT NULL`, so while a retained record references the employee,
-PostgreSQL raises `23503` on the `DELETE` of the employee row, the whole
-transaction rolls back (deletable-record removals included), and the server
-returns the retained-completion error:
+Production still has migration `0017` FK hardening with `NOT NULL` employee
+references on the retained tables. Removing the application-level blocker does
+not remove the database restriction: while a retained record references the
+employee, PostgreSQL raises `23503` on the `DELETE` of the employee row, the
+whole transaction rolls back (deletable-record removals included), and the
+server returns the retained-completion error:
 
 > Permanent deletion cannot be completed because protected historical records must be retained.
 > … Retained records: … Nothing was deleted. …
@@ -332,6 +361,16 @@ returns the retained-completion error:
 The attempt is audited as `DENIED` with reason `PROTECTED_RECORDS_RETAINED`
 and the per-category `retainedRecords` summary. The database — not a role and
 not this policy — keeps the final word on referential integrity.
+
+### 7.3.1 After migration `0022` (designed, rehearsed, NOT applied)
+
+`0022_employee_retention_detach.sql` changes the 11 retained tables to nullable
+`employee_id` + `ON DELETE SET NULL` with employee-number/name (and payslip
+identity/password) snapshots. The delete plan therefore **detaches** retained
+rows and deletes **zero** payroll/time-history rows.
+`employee_deletion_approvals.request_id` remains `RESTRICT`. Payroll *history deletion* is not
+implemented or approved; it would require a separate design, migration, tests,
+rehearsal and §4 Legal/DPO/HR approval.
 
 ### 7.4 Per-table disposition under the revised policy
 
@@ -341,15 +380,17 @@ not this policy — keeps the final word on referential integrity.
 | Face ID | `face_enrollment_templates`, `employee_face_enrollments` | **Deleted** (child first) |
 | Projects | `employee_project_assignments` | **Deleted** |
 | Other related records | `employee_addresses`, `employee_insurances`, `employee_bank_accounts`, `employee_dependents`, `employee_educations`, `employee_custom_field_values`, `announcement_recipients` | **Deleted** |
-| Attendance | `attendance_records`, `attendance_events` | **Retained** (RESTRICT, NOT NULL) |
-| Leave | `leave_balances`, `leave_requests` | **Retained** |
-| Permission | `permission_requests` | **Retained** |
-| Payroll | `employee_payroll_components`, `payroll_items` | **Retained** |
-| Payslip | `payslips`, `payslip_documents`, `payslip_document_versions` | **Retained** |
-| Employment history | `employee_employment_history` | **Retained** |
+| Attendance | `attendance_records`, `attendance_events` | **Retained**: row preserved, `employee_id` detached, identity snapshotted |
+| Leave | `leave_balances`, `leave_requests` | **Retained**: detach + snapshot |
+| Permission | `permission_requests` | **Retained**: detach + snapshot |
+| Payroll | `employee_payroll_components`, `payroll_items` | **Retained**: detach + snapshot; zero rows deleted |
+| Payslip | `payslips`, `payslip_documents`, `payslip_document_versions` | **Retained**: detach + snapshot; PDF password reconstructs from snapshot |
+| Employment history | `employee_employment_history` | **Retained**: detach + snapshot |
 | Direct reports | `employees.manager_id` self-FK | **Retained**; manager link cleared (`SET NULL`) |
 | Linked login account | `employees.user_id → users` | **Retained** (link removed with the row) |
 | Audit trail | `audit_logs` | **Retained** (no FK; survives the employee) |
+| Legal holds / requests | `employee_legal_holds`, `employee_deletion_requests` | **Active/pending/approved block**; released/terminal history **detached** with snapshots |
+| Approvals | `employee_deletion_approvals` | **Retained** (`RESTRICT`); never deleted or detached |
 
 ### 7.5 Remaining prerequisites (blocking, deliberately not implemented here)
 
@@ -360,11 +401,12 @@ Completing a permanent deletion while protected records exist requires ONE of:
    reviewed executor-enable change that actually deletes the retained records.
    The §4 sign-off table is still pending; `RETENTION_ELIGIBLE_CATEGORIES`
    stays empty and `DELETION_EXECUTION_ENABLED` stays `false`.
-2. **An approved database change** to detach or anonymize the retained records
-   (e.g. nullable `employee_id` plus employee-number/name snapshot columns, or
-   an anonymized-history design), reviewed by DBA/Legal/DPO. No such migration
-   has been written; the Drizzle migration lineage must not be modified
-   speculatively (see `docs/employee-deletion-0021-staging-runbook.md`).
+2. **An approved database change** to detach the retained records. `0022` now
+   implements the nullable-`employee_id` + identity-snapshot design and `0021`
+   integrates the live control plane. Both are **unapplied, unjournaled and
+   unapproved**; the DBA must re-review the revised 0021 checksum and the
+   migration lineage must not be modified speculatively (see
+   `docs/employee-deletion-0021-staging-runbook.md`).
 
 Until one of these is satisfied, the Super Administrator override lets the
 attempt proceed to the database, which refuses it safely: nothing is deleted,
@@ -384,3 +426,23 @@ with the actor identity. Authorization, organization scope, the confirmation
 layers, the transaction and the fail-closed database behavior of §7.2–§7.3 are
 unchanged; the control plane (§2/§3) remains disabled
 (`DELETION_EXECUTION_ENABLED = false`, `RETENTION_ELIGIBLE_CATEGORIES = []`).
+
+### 7.7 Revision 2026-10-21 — control-plane integration and payroll retention reconciliation
+
+- 0021 was rewritten before first application to make released holds and
+  terminal requests detachable (`ON DELETE SET NULL`) while active control stays
+  mandatory via CHECK constraints. This changes the migration checksum:
+  `585dd2d79a5e1147a57127bc1cb569985cdb76224714b9754498e8f6b028c452`.
+- The live action now pre-checks control state after locking the employee row
+  and inside the deletion transaction, refuses with `LEGAL_HOLD` /
+  `ACTIVE_DELETION_REQUEST`, and maps constraint `23514` violations by name as
+  the race backstop. The preflight report and dialog expose the same state.
+- Payroll is retained, not deleted: `0022` preserves all 11 protected tables
+  through detach + snapshots. The isolated rehearsal reports zero payroll rows
+  deleted and confirms each detached row retains identity.
+- A disposable-database regression script
+  (`scripts/verify-employee-deletion-control-fks.sql`) covers active-hold block,
+  pending/approved-request block, and released/terminal detach with snapshots.
+- This revision is implementation evidence only. It does **not** constitute
+  DBA, Legal, DPO, HR or Data Owner approval; all §4 entries remain pending and
+  production has not applied 0021/0022.

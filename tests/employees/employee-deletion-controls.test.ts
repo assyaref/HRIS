@@ -64,6 +64,12 @@ const migrationSource = readRepoFile(
 const schemaSource = stripComments(
   readRepoFile("db/schema/employee_deletion_controls.ts")
 );
+const queriesSource = stripComments(
+  readRepoFile("features/employees/queries.ts")
+);
+const actionsSource = stripComments(
+  readRepoFile("features/employees/actions.ts")
+);
 const journalSource = readRepoFile("db/migrations/meta/_journal.json");
 
 /**
@@ -457,7 +463,7 @@ describe("migration and schema integrity", () => {
     assert.equal(/ALTER\s+TABLE/i.test(migrationSource), false);
   });
 
-  it("creates the three control tables with RESTRICT employee references", () => {
+  it("detaches released/terminal control rows but keeps live control state blocking", () => {
     for (const table of [
       "employee_legal_holds",
       "employee_deletion_requests",
@@ -466,7 +472,101 @@ describe("migration and schema integrity", () => {
       assert.equal(migrationSource.includes(table), true, `${table} in migration`);
       assert.equal(schemaSource.includes(table), true, `${table} in schema`);
     }
-    assert.match(migrationSource, /employee_id uuid NOT NULL REFERENCES employees\(id\) ON DELETE RESTRICT/);
+    // Released holds and terminal requests must survive the employee row as
+    // history, so their employee references detach instead of RESTRICTing.
+    assert.equal(
+      (migrationSource.match(
+        /employee_id uuid REFERENCES employees\(id\) ON DELETE SET NULL/g
+      ) ?? []).length,
+      2,
+      "legal holds and deletion requests detach their employee reference"
+    );
+    assert.equal(
+      /employee_id uuid NOT NULL REFERENCES employees\(id\) ON DELETE RESTRICT/.test(
+        migrationSource
+      ),
+      false,
+      "no control-plane employee reference may pin a terminal row forever"
+    );
+    // The database still refuses to detach LIVE control state.
+    assert.equal(
+      migrationSource.includes(
+        "employee_legal_holds_active_requires_employee"
+      ),
+      true
+    );
+    assert.match(
+      migrationSource,
+      /CHECK \(NOT active OR employee_id IS NOT NULL\)/
+    );
+    assert.equal(
+      migrationSource.includes(
+        "employee_deletion_requests_active_requires_employee"
+      ),
+      true
+    );
+    assert.match(
+      migrationSource,
+      /OR status IN \('rejected', 'cancelled', 'executed'\)/
+    );
+    // Identity survives detachment.
+    assert.equal(
+      migrationSource.includes("employee_number_snapshot text NOT NULL"),
+      true
+    );
+    assert.equal(
+      migrationSource.includes("employee_name_snapshot text NOT NULL"),
+      true
+    );
+  });
+
+  it("wires the live delete path to the control plane with precise refusals", () => {
+    assert.equal(
+      queriesSource.includes("getEmployeeDeletionControlState"),
+      true
+    );
+    assert.equal(
+      queriesSource.includes("employeeLegalHolds"),
+      true
+    );
+    assert.equal(
+      queriesSource.includes("employeeDeletionRequests"),
+      true
+    );
+    assert.match(
+      queriesSource,
+      /inArray\(employeeDeletionRequests\.status, \["pending", "approved"\]\)/
+    );
+    assert.equal(
+      actionsSource.includes("getEmployeeDeletionControlState"),
+      true
+    );
+    assert.equal(actionsSource.includes('stateCode: "LEGAL_HOLD"'), true);
+    assert.equal(
+      actionsSource.includes('stateCode: "ACTIVE_DELETION_REQUEST"'),
+      true
+    );
+    assert.equal(
+      actionsSource.includes("employee_legal_holds_active_requires_employee"),
+      true
+    );
+    assert.equal(
+      actionsSource.includes(
+        "employee_deletion_requests_active_requires_employee"
+      ),
+      true
+    );
+    // The control pre-flight must run inside the deletion transaction BEFORE
+    // snapshots/removals.
+    const controlCheck = actionsSource.indexOf(
+      "getEmployeeDeletionControlState(\n        tx,"
+    );
+    const snapshotStep = actionsSource.indexOf(
+      "snapshotEmployeeRetainedRecords(\n        tx,"
+    );
+    assert.notEqual(controlCheck, -1);
+    assert.notEqual(snapshotStep, -1);
+    assert.equal(controlCheck < snapshotStep, true);
   });
 
   it("is NOT journaled (lineage repair is a separate approved change)", () => {

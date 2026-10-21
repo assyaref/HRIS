@@ -1,10 +1,12 @@
 # 0022 — Retention-compatible employee deletion (detach + identity snapshots)
 
-Status: **IMPLEMENTED (code + migration authored, migration NOT applied).**
+Status: **IMPLEMENTED (code + migration authored; NOT applied to production).**
 DBA/Legal/DPO review of the migration remains a **blocking prerequisite** for
-applying `0022` to any database, including the staging rehearsal. The SQL has
-been **statically reviewed only**; no staging rehearsal and no runtime
-execution has occurred. See §6, §6.2 and §7.
+applying `0022` to staging or production. Runtime evidence now exists only on an
+isolated database restored from the pre-0022 staging dump (2026-10-21):
+0021+0022 applied and re-ran cleanly, the force-delete harness passed, and the
+control-plane FK regression passed. No approved staging/production rehearsal has
+occurred. See §6, §6.2 and §7.
 
 This document records the complete dependency audit, the selected database
 strategy, its trade-offs, and the migration/rollback plan required by
@@ -89,9 +91,12 @@ it), `employee_project_assignments`, `employee_addresses`,
 
 - Migration `0021` control-plane tables (`employee_legal_holds`,
   `employee_deletion_requests`, `employee_deletion_approvals`) are **not
-  applied** and their employee FKs are deliberately `RESTRICT` so an active
-  legal hold will physically block any deletion once applied. `0022` must not
-  weaken that; it does not touch them.
+  applied** to production. Revised 0021 makes released-hold and terminal-request
+  employee references `ON DELETE SET NULL` so history can detach with identity
+  snapshots, while CHECK constraints still block while a hold is active or a
+  request is pending/approved. `employee_deletion_approvals.request_id` remains
+  `RESTRICT`. `0022` does not touch these tables; the integration is in 0021 and
+  the live action.
 - Triggers: none exist on any employee-scoped table.
 - Snapshot columns that exist today: `payroll_items.employee_number_snapshot`,
   `payroll_items.employee_name_snapshot`, `payslips.employee_number_snapshot`,
@@ -202,8 +207,11 @@ balance row and is refused safely without special-casing.
 
 ### 4.3 What this deliberately does NOT change
 
-- The control plane (§2/§3 of the policy), `RETENTION_ELIGIBLE_CATEGORIES`
-  and `DELETION_EXECUTION_ENABLED = false` are untouched.
+- `RETENTION_ELIGIBLE_CATEGORIES` and `DELETION_EXECUTION_ENABLED = false` are
+  untouched; the executor still performs no delete.
+- The live action now performs a 0021 control-state pre-check inside the locked
+  deletion transaction (`LEGAL_HOLD` / `ACTIVE_DELETION_REQUEST`) and maps
+  constraint `23514` violations by name. This is separate from `0022`.
 - Authorization (SUPERADMIN + system-only `employees.permanent_delete`,
   server-verified), organization-scope resolution, typed confirmation and the
   acknowledgement are untouched.
@@ -233,21 +241,20 @@ balance row and is refused safely without special-casing.
   and the closing verification checks invariants that hold **before and after**
   the first permanent deletion. A re-run after a partial failure — or at any
   later point in the lifecycle — is safe. See §6.2 for the lifecycle and the
-  evidence standard; **runtime idempotency is UNPROVEN** until the staging
-  rehearsal records it (`employee-permanent-delete-0022-staging-runbook.md`
-  §2/§5.6).
+  evidence standard. Isolated apply + repeat passed on 2026-10-21; the approved
+  staging rehearsal (`employee-permanent-delete-0022-staging-runbook.md`
+  §2/§5.6) is still required.
 - **No data is deleted and no row's meaning changes**: snapshots are filled,
   nullability widened, FK actions changed, checks added. Existing production
   data is preserved bit-for-bit apart from the added snapshot values.
 - **NOT journaled**, following the established out-of-band pattern for
   `0019`/`0020`/`0021` (documented lineage breakage; see the staging runbook).
   Journaling happens in the approved lineage-reconciliation change.
-- **Not applied automatically, and not applied at all** by this work: the
-  migration has only been **statically reviewed** (`node --test`, `tsc`, lint,
-  and read-only catalog inspection). No rehearsal database was created or used
-  to execute `0022`; the prior "rehearsing it twice" wording was unsupported and
-  has been corrected. Actual execution evidence is pending the approved staging
-  rehearsal.
+- **Not applied to production.** Execution evidence is limited to a disposable
+  database restored from the pre-0022 staging dump: 0021+0022 applied, a second
+  application passed, the force-delete harness passed, and the control-FK
+  regression passed. This is not an approved staging rehearsal and does not
+  substitute for DBA/Legal/DPO sign-off.
 
 ### 6.1 Rollback / recovery
 
@@ -282,8 +289,8 @@ options in increasing severity:
 
 ### 6.2 Migration lifecycle and re-run contract
 
-`0022` is designed and verified (statically) to be **repeatable across the whole
-lifecycle**. The distinction the previous revision got wrong:
+`0022` is designed to be **repeatable across the whole lifecycle** and has
+passed an isolated apply + repeat rehearsal (not an approved staging run). The distinction the previous revision got wrong:
 
 | Lifecycle point | Re-run of `0022` |
 | --- | --- |

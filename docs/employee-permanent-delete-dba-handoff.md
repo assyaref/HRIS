@@ -48,6 +48,8 @@ staging rehearsal, or production apply is scheduled.
 
 ### 1.1 Repository anchors to compare against (REPOSITORY FACT, not live proof)
 
+Revision 2026-10-21: `0021` was rewritten before first application to integrate the live control plane (active hold / pending-or-approved request block; released/terminal history detaches). The previous checksum `0e234c6e…7764` is superseded. The DBA must re-review this artifact.
+
 Drizzle records a ledger `hash` equal to `sha256(<raw .sql file bytes>)`. These
 are the values a cleanly applied entry would show.
 
@@ -55,7 +57,7 @@ are the values a cleanly applied entry would show.
 | --- | --- | --- |
 | 0019 | `db/migrations/0019_face_template_key_version.sql` | `21752cce27b490807854a5c27387d8525738d1a9fe718b9dada1e89b63042d27` |
 | 0020 | `db/migrations/0020_user_password_lifecycle.sql` | `baf1887559aa0d8cb7905a17d5a71c8a8b506431624d9445747ca88d0f3a4eaa` |
-| 0021 | `db/migrations/0021_employee_deletion_controls.sql` | `0e234c6ee9d2551686b28e93949f0d1c2573df8240bf0ded7a3eb92b52407764` |
+| 0021 | `db/migrations/0021_employee_deletion_controls.sql` | `585dd2d79a5e1147a57127bc1cb569985cdb76224714b9754498e8f6b028c452` |
 | 0022 | `db/migrations/0022_employee_retention_detach.sql` | `724db82db69769763ead7009be9378b9863a900539a6a1254e446e0dd72c765c` |
 
 ---

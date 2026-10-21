@@ -96,7 +96,7 @@ journaled-then-applied entry would record in `drizzle.__drizzle_migrations`.
 | --- | --- | --- | ---: |
 | 0019 | `0019_face_template_key_version.sql` | `21752cce27b490807854a5c27387d8525738d1a9fe718b9dada1e89b63042d27` | 61 |
 | 0020 | `0020_user_password_lifecycle.sql` | `baf1887559aa0d8cb7905a17d5a71c8a8b506431624d9445747ca88d0f3a4eaa` | 52 |
-| 0021 | `0021_employee_deletion_controls.sql` | `0e234c6ee9d2551686b28e93949f0d1c2573df8240bf0ded7a3eb92b52407764` | 112 |
+| 0021 | `0021_employee_deletion_controls.sql` | `585dd2d79a5e1147a57127bc1cb569985cdb76224714b9754498e8f6b028c452` | 141 |
 | 0022 | `0022_employee_retention_detach.sql` | `724db82db69769763ead7009be9378b9863a900539a6a1254e446e0dd72c765c` | 570 |
 
 **0022 comparison:** the freshly computed checksum is
@@ -161,7 +161,7 @@ runbook observation, not re-verified here.
 | --- | --- | --- | --- | --- | --- |
 | 0019 | `0019_face_template_key_version.sql` | `21752cce…2d27` | **ABSENT** | **none** (no `0019_snapshot.json`) | Production: recorded lead **NOT APPLIED** (2026-10-01) → **DBA-confirm**. Staging: unknown → **DBA-confirm**. |
 | 0020 | `0020_user_password_lifecycle.sql` | `baf18875…4eaa` | **ABSENT** | **none** | Production: **UNVERIFIED** since 2026-10-10 (`7488053`); app may already read `users.must_change_password` → **DBA-confirm, urgent**. Staging: unknown → **DBA-confirm**. |
-| 0021 | `0021_employee_deletion_controls.sql` | `0e234c6e…7764` | **ABSENT** | **none** | Production: recorded lead not applied → **DBA-confirm**. Staging: unknown → **DBA-confirm**. |
+| 0021 | `0021_employee_deletion_controls.sql` | `585dd2d7…c452` | **ABSENT** | **none** | Production: recorded lead not applied → **DBA-confirm**. Staging: unknown → **DBA-confirm**. |
 | 0022 | `0022_employee_retention_detach.sql` | `724db82d…65c` | **ABSENT** | **none** | Production: recorded lead not applied → **DBA-confirm**. Staging: recorded lead not applied → **DBA-confirm**. |
 
 ### 2.2 Lineage context — earlier journal entries, idx 12–19 (not re-hashed by this audit)

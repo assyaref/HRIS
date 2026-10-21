@@ -294,17 +294,31 @@ describe("migration 0022: structure and safety", () => {
     );
   });
 
-  it("is NOT journaled and does not touch the pending control plane (0021)", () => {
+  it("is NOT journaled and integrates the control plane without weakening it (0021)", () => {
     assert.equal(journalSource.includes("0022"), false);
     assert.equal(journalSource.includes("0019"), false);
     assert.equal(journalSource.includes("0020"), false);
     assert.equal(journalSource.includes("0021"), false);
-    // 0021 keeps its RESTRICT FKs so a legal hold physically blocks deletion.
+    // 0021 detaches released/terminal control history, but a LIVE hold/request
+    // still blocks the DELETE through a database CHECK after SET NULL.
     assert.equal(
-      (migration0021Source.match(/ON DELETE RESTRICT/g) ?? []).length >= 6,
+      migration0021Source.includes(
+        "employee_legal_holds_active_requires_employee"
+      ),
       true
     );
-    assert.equal(migration0021Source.includes("ON DELETE SET NULL"), true);
+    assert.equal(
+      migration0021Source.includes(
+        "employee_deletion_requests_active_requires_employee"
+      ),
+      true
+    );
+    assert.equal(
+      migration0021Source.includes(
+        "employee_id uuid REFERENCES employees(id) ON DELETE SET NULL"
+      ),
+      true
+    );
   });
 
   it("documents the blocking sign-off and forbids automatic production application", () => {
@@ -870,10 +884,10 @@ describe("UI: the operator sees exactly what the transaction will do", () => {
     const copy = dialogSource.replace(/\s+/g, " ");
     assert.equal(
       copy.includes(
-        "const canSubmitDelete = confirmationMatches && acknowledged && reasonValid && dependencyCheck.status === \"ready\";"
+        "const canSubmitDelete = confirmationMatches && acknowledged && reasonValid && dependencyCheck.status === \"ready\" && !legalHoldActive && blockingDeletionRequestCount === 0;"
       ),
       true,
-      "only the typed number, the acknowledgement, a valid deletion reason and an arrived report gate the button"
+      "the typed number, acknowledgement, valid reason, arrived report and no live control-plane block gate the button"
     );
     assert.equal(
       copy.includes("hasRetainedRecords &&"),

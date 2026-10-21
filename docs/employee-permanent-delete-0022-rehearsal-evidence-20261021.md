@@ -154,3 +154,30 @@ sudo -n -u postgres env -u DATABASE_URL HOME=/tmp \
   DATABASE_URL="postgresql:///hris_force_delete_staging_20261021?host=/var/run/postgresql" \
   node --import "$D/register.mjs" "$D/force-delete-rehearsal.ts"
 ```
+
+---
+
+## Addendum 2026-10-21 — revised 0021 control-plane integration
+
+After the run above, `0021` was rewritten before any application so the live
+delete path integrates with the control plane. This addendum records the
+replacement disposable rehearsal; the 0021 checksum in the header above is
+superseded for the current candidate.
+
+- Revised `0021` SHA-256:
+  `585dd2d79a5e1147a57127bc1cb569985cdb76224714b9754498e8f6b028c452`.
+- Disposable DB `hris_force_delete_rehearsal_20261021T024301Z`, restored from
+  `staging-db-20261021T005459Z-pre-0022.dump` (not production).
+- Revised 0021 + 0022 applied and re-applied: both exit 0.
+- Destructive harness: `HARNESS_RESULT=PASS` (316 ms); A deleted, B and C
+  intact, 11 protected tables retained/detached with snapshots, zero payroll
+  rows deleted.
+- Control-plane DB regression
+  (`scripts/verify-employee-deletion-control-fks.sql`):
+  `CONTROL_FK_REGRESSION_PASS` — active hold blocks, pending and approved
+  requests block, released/terminal history detaches with snapshots.
+- Catalog after migration: 26 employee FKs = 15 `SET NULL` + 11 `RESTRICT`,
+  0 `CASCADE`, 11 retained-identity CHECKs, 0 anonymous retained rows.
+
+This remains **EVIDENCE ONLY, NOT A GATE PASS**. No approved staging or
+production application occurred.

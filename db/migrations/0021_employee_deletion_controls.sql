@@ -8,7 +8,8 @@
 --   (features/employees/deletion-control-policy.ts).
 --
 -- !!! DO NOT APPLY WITHOUT SIGN-OFF !!!
---   This migration adds RESTRICT foreign keys that BLOCK employee deletion.
+--   This migration adds control-plane constraints that BLOCK employee deletion
+--   while a hold is active or a request is pending/approved.
 --   It must not be applied as part of a destructive release until the retention
 --   policy in docs/employee-permanent-delete-policy.md §4 is approved by
 --   HR/Payroll, DBA, Security and Legal/Compliance.
@@ -24,8 +25,16 @@
 -- SAFETY
 --   - Additive only: CREATE TABLE IF NOT EXISTS + indexes. No DROP, no ALTER,
 --     no data migration.
---   - Every employee/request reference is ON DELETE RESTRICT, consistent with
---     migration 0017, so a legal hold physically blocks ANY employee DELETE.
+--   - An ACTIVE legal hold and a PENDING/APPROVED deletion request still block
+--     ANY employee DELETE. They do so through a NOT NULL-style CHECK after the
+--     employee reference is cleared (SET NULL), so the block is enforced by the
+--     database, not only by application code:
+--       * employee_legal_holds_active_requires_employee
+--       * employee_deletion_requests_active_requires_employee
+--   - RELEASED holds and TERMINAL requests (rejected/cancelled/executed) are
+--     control-plane HISTORY. Their employee reference is ON DELETE SET NULL so
+--     they no longer block a later, legitimate deletion; the identity snapshot
+--     columns preserve who the record was about.
 --   - Operator references are ON DELETE SET NULL and cannot unblock a hold.
 --   - Safe to run inside a transaction (BEGIN/COMMIT).
 -- ============================================================================
@@ -38,7 +47,12 @@ BEGIN;
 CREATE TABLE IF NOT EXISTS employee_legal_holds (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id uuid NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT,
-  employee_id uuid NOT NULL REFERENCES employees(id) ON DELETE RESTRICT,
+  -- Nullable ONLY for released holds whose employee row has been deleted.
+  employee_id uuid REFERENCES employees(id) ON DELETE SET NULL,
+  -- Immutable identity captured when the hold is placed, so released hold
+  -- history remains attributable after the employee row is gone.
+  employee_number_snapshot text NOT NULL,
+  employee_name_snapshot text NOT NULL,
   reason text NOT NULL,
   authority text,
   reference text,
@@ -51,7 +65,12 @@ CREATE TABLE IF NOT EXISTS employee_legal_holds (
   release_reason text,
   active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  -- An ACTIVE hold can never lose its employee reference. Deleting the
+  -- employee fires SET NULL, this CHECK rejects it and the whole transaction
+  -- rolls back: the database still enforces "an active hold blocks deletion".
+  CONSTRAINT employee_legal_holds_active_requires_employee
+    CHECK (NOT active OR employee_id IS NOT NULL)
 );
 
 CREATE INDEX IF NOT EXISTS employee_legal_holds_employee_idx
@@ -69,7 +88,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS employee_legal_holds_active_hold_unique
 CREATE TABLE IF NOT EXISTS employee_deletion_requests (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id uuid NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT,
-  employee_id uuid NOT NULL REFERENCES employees(id) ON DELETE RESTRICT,
+  -- Nullable ONLY for terminal requests whose employee row has been deleted.
+  employee_id uuid REFERENCES employees(id) ON DELETE SET NULL,
   employee_number text NOT NULL,
   employee_name text NOT NULL,
   requester_user_id uuid REFERENCES users(id) ON DELETE SET NULL,
@@ -82,7 +102,16 @@ CREATE TABLE IF NOT EXISTS employee_deletion_requests (
   decided_at timestamptz,
   decision_reason text,
   created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  -- Pending/approved requests are live control-plane state and must keep the
+  -- employee reference (they block deletion). Rejected/cancelled/executed
+  -- requests are terminal history and may be detached when the employee row is
+  -- later deleted. Unknown statuses fail closed (they require the reference).
+  CONSTRAINT employee_deletion_requests_active_requires_employee
+    CHECK (
+      employee_id IS NOT NULL
+      OR status IN ('rejected', 'cancelled', 'executed')
+    )
 );
 
 CREATE INDEX IF NOT EXISTS employee_deletion_requests_org_employee_idx

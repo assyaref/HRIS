@@ -1,5 +1,6 @@
 import {
   boolean,
+  check,
   index,
   integer,
   pgTable,
@@ -24,11 +25,19 @@ import { users } from "./users";
  * outlive, and must be able to block, the destructive operation itself.
  *
  * Referential integrity:
- * - Every `employee_id` / `request_id` reference is `RESTRICT`, matching the
- *   reconciliation in migration 0017. A legal hold therefore physically blocks
- *   ANY employee `DELETE` — including the existing
- *   `permanentlyDeleteEmployeeAction` — at the database level, not only in
- *   application code. A hold can only be removed by an explicit release.
+ * - `employee_legal_holds.employee_id` and
+ *   `employee_deletion_requests.employee_id` are `ON DELETE SET NULL`, so
+ *   RELEASED holds and TERMINAL requests (rejected/cancelled/executed) survive
+ *   the employee row as history with their identity snapshots.
+ * - An ACTIVE hold and a PENDING/APPROVED request can never lose their employee
+ *   reference: the database CHECK constraints
+ *   `employee_legal_holds_active_requires_employee` and
+ *   `employee_deletion_requests_active_requires_employee` reject the SET NULL,
+ *   rolling back ANY employee `DELETE` at the database level. Application code
+ *   refuses first with a precise reason; PostgreSQL remains the backstop.
+ * - `employee_deletion_approvals.request_id` stays `RESTRICT`: control-plane
+ *   approvals are never deleted, and a request row is never removed by the
+ *   employee-deletion path (only detached).
  * - `placed_by_user_id` / `approver_user_id` are `SET NULL`, so deleting an
  *   operator account never destroys the control record (and never unblocks a
  *   hold): the identity is additionally snapshotted as text columns.
@@ -53,9 +62,13 @@ export const employeeLegalHolds = pgTable(
     organizationId: uuid("organization_id")
       .notNull()
       .references(() => organizations.id, { onDelete: "restrict" }),
-    employeeId: uuid("employee_id")
-      .notNull()
-      .references(() => employees.id, { onDelete: "restrict" }),
+    /** Nullable only for RELEASED holds after the employee row is deleted. */
+    employeeId: uuid("employee_id").references(() => employees.id, {
+      onDelete: "set null",
+    }),
+    /** Immutable identity captured when the hold is placed. */
+    employeeNumberSnapshot: text("employee_number_snapshot").notNull(),
+    employeeNameSnapshot: text("employee_name_snapshot").notNull(),
     /** Why the hold exists (required). */
     reason: text("reason").notNull(),
     /** Requesting authority / case owner (e.g. Legal, regulator). */
@@ -96,6 +109,14 @@ export const employeeLegalHolds = pgTable(
     uniqueIndex("employee_legal_holds_active_hold_unique")
       .on(table.organizationId, table.employeeId)
       .where(sql`active`),
+    /**
+     * An active hold may never be detached. Deleting the employee fires the
+     * SET NULL FK, this CHECK rejects it and the transaction rolls back.
+     */
+    check(
+      "employee_legal_holds_active_requires_employee",
+      sql`NOT ${table.active} OR ${table.employeeId} IS NOT NULL`
+    ),
   ]
 );
 
@@ -106,9 +127,10 @@ export const employeeDeletionRequests = pgTable(
     organizationId: uuid("organization_id")
       .notNull()
       .references(() => organizations.id, { onDelete: "restrict" }),
-    employeeId: uuid("employee_id")
-      .notNull()
-      .references(() => employees.id, { onDelete: "restrict" }),
+    /** Nullable only for TERMINAL requests after the employee row is deleted. */
+    employeeId: uuid("employee_id").references(() => employees.id, {
+      onDelete: "set null",
+    }),
     /** Snapshot of the employee identity at request time. */
     employeeNumber: text("employee_number").notNull(),
     employeeName: text("employee_name").notNull(),
@@ -140,6 +162,15 @@ export const employeeDeletionRequests = pgTable(
     index("employee_deletion_requests_status_idx").on(
       table.organizationId,
       table.status
+    ),
+    /**
+     * Pending/approved requests are live control state and must keep the
+     * employee reference (they block deletion). Terminal requests may be
+     * detached. Unknown statuses fail closed.
+     */
+    check(
+      "employee_deletion_requests_active_requires_employee",
+      sql`${table.employeeId} IS NOT NULL OR ${table.status} IN ('rejected', 'cancelled', 'executed')`
     ),
   ]
 );

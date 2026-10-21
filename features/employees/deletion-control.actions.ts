@@ -319,6 +319,8 @@ export async function placeEmployeeLegalHoldAction(
       .values({
         organizationId: scope.organizationId,
         employeeId: employee.id,
+        employeeNumberSnapshot: employee.employeeNumber,
+        employeeNameSnapshot: `${employee.firstName} ${employee.lastName}`,
         reason: reason.trim(),
         authority: optionalField(formData, "authority") ?? null,
         reference: optionalField(formData, "reference") ?? null,
@@ -395,7 +397,7 @@ type ReleaseOutcome =
       code: "RELEASED";
       holdId: string;
       organizationId: string;
-      employeeId: string;
+      employeeId: string | null;
     };
 
 /** Release an active legal hold. Requires reason. Never deletes anything. */
@@ -869,7 +871,7 @@ type DecisionOutcome =
       code: "DECIDED";
       decision: "approved" | "rejected" | "pending";
       organizationId: string;
-      employeeId: string;
+      employeeId: string | null;
       employeeNumber: string;
       comment?: string;
     };
@@ -1187,7 +1189,7 @@ export async function executeApprovedEmployeeDeletionAction(
 
   let request: {
     organizationId: string;
-    employeeId: string;
+    employeeId: string | null;
     employeeNumber: string;
     status: string;
   } | null;

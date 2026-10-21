@@ -6,6 +6,7 @@ import {
   eq,
   getTableName,
   ilike,
+  inArray,
   isNotNull,
   ne,
   or,
@@ -24,11 +25,13 @@ import {
   employeeBankAccounts,
   employeeCustomFieldValues,
   employeeDependents,
+  employeeDeletionRequests,
   employeeDocuments,
   employeeEducations,
   employeeEmploymentHistory,
   employeeFaceEnrollments,
   employeeInsurances,
+  employeeLegalHolds,
   employeePayrollComponents,
   employeeProjectAssignments,
   employees,
@@ -1020,6 +1023,59 @@ export async function listEmployeeDeletionDependencies(
   // `employees.user_id` points at `users`, so the account survives; the decision
   // layer only blocks the self-linked case.)
   return counts;
+}
+
+/**
+ * Live control-plane state for one employee.
+ *
+ * This is deliberately separate from the operator-facing dependency categories:
+ * a legal hold or a deletion request is not a record the delete plan may remove,
+ * and folding either into "related records" would misdescribe the effect.
+ *
+ * - `activeLegalHoldCount > 0` → absolute refusal.
+ * - `blockingDeletionRequestCount > 0` (pending/approved) → refusal: the live
+ *   path must never race or bypass an in-flight dual-control request.
+ * - RELEASED holds and TERMINAL requests do not block. Their `employee_id`
+ *   reference is cleared by the migration-0021 `ON DELETE SET NULL` foreign
+ *   keys, while the immutable identity snapshots preserve the history.
+ */
+export interface EmployeeDeletionControlState {
+  activeLegalHoldCount: number;
+  blockingDeletionRequestCount: number;
+}
+
+export async function getEmployeeDeletionControlState(
+  tx: HrisTransaction,
+  employeeId: string,
+  organizationId: string
+): Promise<EmployeeDeletionControlState> {
+  // Sequential queries: a Drizzle transaction is bound to one pg client, so
+  // issuing concurrent queries on it is unsupported and can interleave.
+  const holds = await tx
+    .select({ count: sql<number>`count(*)::int` })
+    .from(employeeLegalHolds)
+    .where(
+      and(
+        eq(employeeLegalHolds.organizationId, organizationId),
+        eq(employeeLegalHolds.employeeId, employeeId),
+        eq(employeeLegalHolds.active, true)
+      )
+    );
+  const requests = await tx
+    .select({ count: sql<number>`count(*)::int` })
+    .from(employeeDeletionRequests)
+    .where(
+      and(
+        eq(employeeDeletionRequests.organizationId, organizationId),
+        eq(employeeDeletionRequests.employeeId, employeeId),
+        inArray(employeeDeletionRequests.status, ["pending", "approved"])
+      )
+    );
+
+  return {
+    activeLegalHoldCount: holds[0]?.count ?? 0,
+    blockingDeletionRequestCount: requests[0]?.count ?? 0,
+  };
 }
 
 /**

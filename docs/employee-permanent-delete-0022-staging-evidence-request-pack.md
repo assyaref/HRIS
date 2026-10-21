@@ -62,6 +62,8 @@ close staging gates `G1-S`–`G5-S` and Part A prerequisites `A1`–`A14`.
 | Snapshots | 15 files, stop at `0014_snapshot.json` | repo fact only |
 | Control plane | `DELETION_EXECUTION_ENABLED = false`, `RETENTION_ELIGIBLE_CATEGORIES = []` | repo fact only |
 
+Revision 2026-10-21: `0021` was rewritten before first application. Its current SHA-256 is `585dd2d79a5e1147a57127bc1cb569985cdb76224714b9754498e8f6b028c452` (the earlier `0e234c6e…7764` is superseded); the DBA must re-review the revised artifact.
+
 > **Rule restated for the DBA (evidence request §3):** a missing journal entry
 > does **not** prove a migration was never applied, and a journal entry does
 > **not** prove it was applied. Only the staging database's own

@@ -42,6 +42,9 @@ export const DELETION_LEGAL_HOLD_MESSAGE =
 export const DELETION_RETENTION_BOUND_MESSAGE =
   "Employee cannot be permanently deleted because protected records are still subject to a retention obligation that has not been approved for deletion.";
 
+export const DELETION_ACTIVE_REQUEST_MESSAGE =
+  "Employee cannot be permanently deleted because a pending or approved deletion request exists. Resolve or cancel that request first.";
+
 export const DELETION_REASON_REQUIRED_MESSAGE =
   "A deletion reason is required (at least 10 characters).";
 

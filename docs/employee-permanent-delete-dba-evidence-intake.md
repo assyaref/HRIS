@@ -106,7 +106,9 @@ breakdown as the artifact and summarize the result in the row.
 ## 2. Production evidence register
 
 Environment: **production**. Artifact anchor for 0019–0022 SHA-256:
-`21752cce…2d27`, `baf18875…4eaa`, `0e234c6e…7764`, `724db82d…65c`.
+`21752cce…2d27`, `baf18875…4eaa`, `585dd2d7…c452`, `724db82d…65c`.
+
+Revision 2026-10-21: the `0021` anchor is now `585dd2d79a5e1147a57127bc1cb569985cdb76224714b9754498e8f6b028c452` (previous `0e234c6e…7764` superseded); the DBA must re-review the revised artifact.
 
 | ID | Required artifact | Evidence ref | Env | Captured (UTC) | TZ | Collector | Reviewer | Checksum | Result | Discrepancy | Follow-up |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |

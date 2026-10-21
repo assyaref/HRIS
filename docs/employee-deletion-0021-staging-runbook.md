@@ -1,7 +1,9 @@
 # Employee Deletion Controls — 0021 Lineage Reconciliation Plan & Staging Runbook
 
 Status: **PROPOSED — planning artifact only. Migration `0021` is NOT applied to
-any database. The deletion executor remains hard-disabled.**
+production or approved staging. It was applied only to a disposable database
+restored from the pre-0022 staging dump on 2026-10-21. The deletion executor
+remains hard-disabled.**
 
 Companion documents:
 
@@ -89,9 +91,9 @@ Column-by-column comparison of `0021_employee_deletion_controls.sql` against
 
 | Check | Result |
 | --- | --- |
-| Tables | 3/3 match: `employee_legal_holds` (16 cols), `employee_deletion_requests` (16 cols), `employee_deletion_approvals` (8 cols) |
+| Tables | 3/3 match: `employee_legal_holds` (18 cols incl. 2 identity snapshots), `employee_deletion_requests` (16 cols), `employee_deletion_approvals` (8 cols) |
 | Column names/types/nullability/defaults | Match (incl. `gen_random_uuid()` PKs via `uuidId()`, `timestamptz` `now()` defaults via `createdAt()/updatedAt()`, `status DEFAULT 'pending'`, `required_approvals DEFAULT 1`, `active DEFAULT true`) |
-| Employee/request FKs | All `ON DELETE RESTRICT` in both — a legal hold or pending request physically blocks ANY employee `DELETE`, including the live action |
+| Employee/request FKs | `employee_legal_holds.employee_id` and `employee_deletion_requests.employee_id` are nullable `ON DELETE SET NULL`; `employee_deletion_approvals.request_id` stays `ON DELETE RESTRICT`. CHECKs `*_active_requires_employee` block an active hold / pending-or-approved request at the database. |
 | Operator FKs (`placed_by`, `released_by`, `requester`, `approver`) | `ON DELETE SET NULL` in both, identity snapshotted as text |
 | Partial unique index | `employee_legal_holds_active_hold_unique (organization_id, employee_id) WHERE active` in both |
 | Other indexes | `employee_legal_holds_employee_idx`, `employee_deletion_requests_org_employee_idx`, `employee_deletion_requests_status_idx`, `employee_deletion_approvals_request_approver_unique`, `employee_deletion_approvals_request_idx` — all present in both |
@@ -112,12 +114,11 @@ Minor observations (not blockers):
 - `updated_at` has no DB trigger; it is maintained by Drizzle's `$onUpdate`
   (consistent with the rest of the codebase).
 
-### 1.4 Verification already performed (this worktree, no database touched)
+### 1.4 Verification already performed (repo checks + disposable database only)
 
 - `npx tsc --noEmit` — clean.
-- `npm test` — 1876 tests pass, including the 44 new deletion-control tests
-  (verified: `node --test tests/employees/employee-deletion-controls.test.ts`
-  → 44/44).
+- `npm test` — 1941 tests pass (397 suites), including the expanded
+  deletion-control/retention suites.
 - `npm run lint` — 0 errors; 15 warnings, all pre-existing patterns (the two
   new `_prevState`/`_formData` warnings on the disabled executor mirror the
   established `useActionState` signature convention used by e.g.
@@ -125,11 +126,15 @@ Minor observations (not blockers):
 - `npm run build` — success.
 - `git diff --check` — clean.
 
-**NOT performed (do not claim otherwise):** application of `0021` to any
-database; runtime invocation of the control actions against a live schema; any
-UI testing. The tables do not exist in any environment, so until staging apply
-happens, the control actions fail closed at the DB and return `FAILED` — this is
-by design.
+**Performed only on a disposable database (2026-10-21):** 0021+0022 applied and
+re-ran; force-delete harness PASS; `scripts/verify-employee-deletion-control-fks.sql`
+PASS (active hold blocks, pending/approved request blocks, released/terminal
+history detaches with snapshots).
+
+**NOT performed (do not claim otherwise):** application of `0021` to production
+or approved staging; runtime invocation of the control actions through the HTTP
+session layer; any UI testing. On environments without 0021 the control actions
+fail closed at the DB and return `FAILED` — this is by design.
 
 ---
 
@@ -198,8 +203,9 @@ reconstruction, invariant verification, disposition).
 - Run the data-invariant checks (§E.5/E.6) plus the deletion-control additions:
   every FK delete rule on `employee_legal_holds`,
   `employee_deletion_requests`, `employee_deletion_approvals` is
-  RESTRICT/SET NULL exactly as declared; the partial unique index predicate is
-  `WHERE active`; no unexpected object exists.
+  SET NULL/RESTRICT exactly as declared; both live-control CHECKs exist; the
+  partial unique index predicate is `WHERE active`; no unexpected object
+  exists.
 
 ### R4 — Approve and execute (production, separate window)
 
@@ -250,9 +256,9 @@ control-plane rehearsal only — the executor stays disabled.
 - [ ] Confirm `_journal.json` is byte-identical to the reviewed version
   (checksum) — no `0019`/`0020`/`0021` entries.
 - [ ] Confirm `DELETION_EXECUTION_ENABLED = false` and
-  `RETENTION_ELIGIBLE_CATEGORIES = []` in the build (pinned by the 44-test
-  suite; re-run it as part of evidence).
-- [ ] Confirm the 44-test suite and the full `npm test`, `npx tsc --noEmit`,
+  `RETENTION_ELIGIBLE_CATEGORIES = []` in the build (pinned by the deletion
+  control test suite; re-run it as part of evidence).
+- [ ] Confirm the deletion-control test suite and the full `npm test`, `npx tsc --noEmit`,
   `npm run lint`, `npm run build` outputs are attached (already green at the
   reviewed commit — see §1.4).
 
@@ -302,14 +308,14 @@ FROM information_schema.columns
 WHERE table_schema = 'public'
   AND table_name IN ('employee_legal_holds', 'employee_deletion_requests', 'employee_deletion_approvals')
 GROUP BY table_name ORDER BY table_name;
--- Expected: employee_deletion_approvals=8, employee_deletion_requests=16, employee_legal_holds=16.
+-- Expected: employee_deletion_approvals=8, employee_deletion_requests=16, employee_legal_holds=18.
 -- 2. Every FK delete rule matches the schema contract.
 SELECT conrelid::regclass AS table_name, conname, pg_get_constraintdef(oid) AS definition
 FROM pg_constraint
 WHERE contype = 'f'
   AND conrelid::regclass::text IN ('employee_legal_holds', 'employee_deletion_requests', 'employee_deletion_approvals')
 ORDER BY 1, 2;
--- Expected: 10 FKs; employee/request/org refs ON DELETE RESTRICT; user refs ON DELETE SET NULL.
+-- Expected: 10 FKs; hold/request employee FKs ON DELETE SET NULL; approval request FK RESTRICT; org refs RESTRICT; user refs SET NULL.
 -- 3. The partial unique index exists with the WHERE active predicate.
 SELECT indexdef FROM pg_indexes
 WHERE indexname = 'employee_legal_holds_active_hold_unique';
@@ -351,10 +357,12 @@ the database level now, and what must wait for the UI (§4).
   confirm health check and synthetic SuperAdmin login.
 - [ ] **DB-level hold enforcement (the critical proof):** with a synthetic
   employee, insert one active `employee_legal_holds` row, then attempt the
-  employee `DELETE` (as the live action would, inside a transaction) and verify
-  it fails with the RESTRICT FK violation and rolls back; remove the hold
-  row and verify the same transaction now proceeds only as far as the other
-  RESTRICT dependencies allow. Evidence: exact SQL + errors captured.
+  employee `DELETE` and verify it fails with CHECK `23514`
+  (`employee_legal_holds_active_requires_employee`) and rolls back; release the
+  hold and verify the row detaches (`employee_id IS NULL`) with its identity
+  snapshot intact. Repeat with a PENDING/APPROVED deletion request and then a
+  rejected/cancelled/executed terminal request. Evidence: exact SQL + errors
+  captured; `scripts/verify-employee-deletion-control-fks.sql` automates this.
 - [ ] **Single-active-hold invariant:** attempt a second active hold insert;
   verify `23505` from the partial unique index.
 - [ ] **Existing path regression:** run the live permanent-delete dependency
@@ -362,7 +370,8 @@ the database level now, and what must wait for the UI (§4).
   still classifies PROTECTED/DELETABLE exactly as before (no behavior change
   from `0021`).
 - [ ] **Executor disabled (static, already pinned by tests):** the executor
-  performs no write; re-affirm the 44-test suite result in the evidence pack.
+  performs no write; re-affirm the current deletion-control suite result in the
+  evidence pack.
 - [ ] Record that action-level flows (place/release/request/decide/execute
   refusal) are **not yet exercised end-to-end** — deferred to the UI phase
   (§4). Do not claim them as tested.
@@ -419,8 +428,8 @@ Verified: nothing imports `deletion-control.actions.ts` — the control plane ha
    states; the release action is never automatic.
 2. **Hold indicator** in `delete-employee-dialog.tsx` and the employee page:
    an active hold must visibly block tier-1 permanent deletion and explain why
-   (the live action will fail on the RESTRICT FK; the UI should pre-empt with
-   the policy message).
+   (the live action pre-checks control state and the DB CHECK is the backstop;
+   the UI should pre-empt with the policy message).
 3. **Deletion-request flow**: request form with mandatory reason + typed
    employee-number confirmation; show the resolved tier preview
    (direct/special_approval/retained with the per-category breakdown) from the
@@ -465,7 +474,7 @@ enable execution. UI rollout follows the same staging-first rule.
 | --- | --- | --- |
 | Broken lineage (missing idx 15–19 snapshots, broken `0011`/`0012` chain, unjournaled `0019`/`0020`) invites a bad `generate`/`push` | High | Rule 3 forbids generate/migrate from worktrees; R2 repair is mandatory; CI guard recommended |
 | App code (7488053) reads `users.must_change_password` while `0020` may not be applied | High | R1 verification is urgent; deployment controller does NOT run migrations, so the columns do not appear automatically |
-| New RESTRICT FKs block the live permanent-delete path once applied | Medium | Intended (a hold must block ANY delete). Live action fails safe (rollback); UI pre-empts (§4.2) |
+| New control CHECKs/FKs block or detach the live permanent-delete path once applied | Medium | Intended: active/pending/approved rows block with 23514; released/terminal rows detach with snapshots. Live action pre-checks and fails safe; UI pre-empts (§4.2). DBA must re-review the revised checksum. |
 | Tier 2 enabled prematurely | High | `RETENTION_ELIGIBLE_CATEGORIES = []`, executor `false`, both test-pinned; enabling requires a distinct reviewed PR + §4 record |
 | Operator/user `SET NULL` could orphan control records' actor identity | Low | Email snapshots stored alongside; audit trail independent |
 | Backup/PITR re-instates "permanently deleted" data | Medium | Explicit §4 DBA sign-off row; deletion expectations must be documented against backup retention before enabling execution |
