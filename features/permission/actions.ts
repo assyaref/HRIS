@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { forbidden } from "next/navigation";
 
 import { db } from "@/db";
@@ -62,9 +62,14 @@ async function resolveEmployeeContext(user: CurrentUser): Promise<{
 
 interface PermissionRequestForAction {
   id: string;
-  employeeId: string;
+  /**
+   * NULL once the employee row was permanently deleted (the request is
+   * retained, detached — migration 0022).
+   */
+  employeeId: string | null;
   employeeUserId: string | null;
-  employeeNumber: string;
+  /** Live number, falling back to the retained identity snapshot. */
+  employeeNumber: string | null;
   status: string;
 }
 
@@ -77,11 +82,14 @@ async function loadPermissionRequestForAction(
       id: permissionRequests.id,
       employeeId: permissionRequests.employeeId,
       employeeUserId: employees.userId,
-      employeeNumber: employees.employeeNumber,
+      employeeNumber: sql<string | null>`coalesce(
+        ${employees.employeeNumber},
+        ${permissionRequests.employeeNumberSnapshot}
+      )`,
       status: permissionRequests.status,
     })
     .from(permissionRequests)
-    .innerJoin(employees, eq(employees.id, permissionRequests.employeeId))
+    .leftJoin(employees, eq(employees.id, permissionRequests.employeeId))
     .where(
       and(
         eq(permissionRequests.id, requestId),
@@ -104,7 +112,8 @@ async function auditPermission(
       | "permission.approved"
       | "permission.rejected";
     entityId?: string | null;
-    employeeNumber: string;
+    /** Null when the employee row was permanently deleted (retained history). */
+    employeeNumber: string | null;
     eventType: string;
     metadata?: Record<string, unknown> | null;
   }

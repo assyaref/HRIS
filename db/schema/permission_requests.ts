@@ -1,4 +1,7 @@
+import { sql } from "drizzle-orm";
+
 import {
+  check,
   index,
   jsonb,
   pgTable,
@@ -17,6 +20,10 @@ import { users } from "./users";
  *
  * Status contract: pending | approved | rejected | cancelled. Times are
  * timestamptz (server-authoritative).
+ *
+ * RETENTION DETACH (migration 0022): `employee_id` is nullable with the FK
+ * `ON DELETE SET NULL`; a permanently deleted employee's request history is
+ * retained, detached, and carries its identity snapshots.
  */
 
 export const permissionRequests = pgTable(
@@ -26,9 +33,13 @@ export const permissionRequests = pgTable(
     organizationId: uuid("organization_id")
       .notNull()
       .references(() => organizations.id),
-    employeeId: uuid("employee_id")
-      .notNull()
-      .references(() => employees.id, { onDelete: "cascade" }),
+    employeeId: uuid("employee_id").references(() => employees.id, {
+      onDelete: "set null",
+    }),
+    /** Immutable identity snapshot — filled at deletion time, never rewritten. */
+    employeeNumberSnapshot: text("employee_number_snapshot"),
+    /** Immutable display-name snapshot — filled at deletion time, never rewritten. */
+    employeeNameSnapshot: text("employee_name_snapshot"),
     permissionType: text("permission_type").notNull(),
     startAt: timestamp("start_at", { withTimezone: true, mode: "date" })
       .notNull(),
@@ -56,6 +67,10 @@ export const permissionRequests = pgTable(
     index("permission_requests_org_status_idx").on(
       table.organizationId,
       table.status
+    ),
+    check(
+      "permission_requests_retained_identity_check",
+      sql`${table.employeeId} is not null or ${table.employeeNumberSnapshot} is not null`
     ),
   ]
 );

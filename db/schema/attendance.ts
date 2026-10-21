@@ -1,4 +1,7 @@
+import { sql } from "drizzle-orm";
+
 import {
+  check,
   customType,
   date,
   index,
@@ -34,6 +37,15 @@ import { workLocations } from "./locations";
  * Attendance records — one row per employee per attendance day (enforced by a
  * unique (employee_id, attendance_date) index).
  *
+ * RETENTION DETACH (migration 0022): `employee_id` is nullable and the FK is
+ * `ON DELETE SET NULL`. When a Super Administrator permanently deletes the
+ * employee, this time record is RETAINED and atomically detached; the
+ * immutable identity snapshots (`employee_number_snapshot` /
+ * `employee_name_snapshot`, captured at deletion time — creation-time
+ * snapshots are never overwritten) keep the row reportable. The
+ * `_retained_identity_check` CHECK guarantees a detached row always carries
+ * its historical identity.
+ *
  * Status contract (application level): present | completed | incomplete |
  * rejected. A fresh check-in creates the row with `present`; a successful
  * check-out moves it to `completed`. `rejected`/`incomplete` are reserved for
@@ -50,9 +62,13 @@ export const attendanceRecords = pgTable(
     organizationId: uuid("organization_id")
       .notNull()
       .references(() => organizations.id),
-    employeeId: uuid("employee_id")
-      .notNull()
-      .references(() => employees.id, { onDelete: "cascade" }),
+    employeeId: uuid("employee_id").references(() => employees.id, {
+      onDelete: "set null",
+    }),
+    /** Immutable identity snapshot — filled at deletion time, never rewritten. */
+    employeeNumberSnapshot: text("employee_number_snapshot"),
+    /** Immutable display-name snapshot — filled at deletion time, never rewritten. */
+    employeeNameSnapshot: text("employee_name_snapshot"),
     projectId: uuid("project_id").references(() => projects.id, {
       onDelete: "set null",
     }),
@@ -139,6 +155,10 @@ export const attendanceRecords = pgTable(
       table.workLocationId
     ),
     index("attendance_records_status_idx").on(table.status),
+    check(
+      "attendance_records_retained_identity_check",
+      sql`${table.employeeId} is not null or ${table.employeeNumberSnapshot} is not null`
+    ),
   ]
 );
 
@@ -148,6 +168,9 @@ export const attendanceRecords = pgTable(
  * Append-only by design: the application never UPDATEs or DELETEs rows here.
  * Rejected attempts have no `attendance_records` row, so `attendance_id` is
  * nullable for those events.
+ *
+ * RETENTION DETACH (migration 0022): same nullable + SET NULL + snapshot
+ * contract as `attendance_records` — the event trail outlives the employee.
  */
 export const attendanceEvents = pgTable(
   "attendance_events",
@@ -160,9 +183,13 @@ export const attendanceEvents = pgTable(
       () => attendanceRecords.id,
       { onDelete: "set null" }
     ),
-    employeeId: uuid("employee_id")
-      .notNull()
-      .references(() => employees.id, { onDelete: "restrict" }),
+    employeeId: uuid("employee_id").references(() => employees.id, {
+      onDelete: "set null",
+    }),
+    /** Immutable identity snapshot — filled at deletion time, never rewritten. */
+    employeeNumberSnapshot: text("employee_number_snapshot"),
+    /** Immutable display-name snapshot — filled at deletion time, never rewritten. */
+    employeeNameSnapshot: text("employee_name_snapshot"),
     eventType: text("event_type").notNull(),
     eventAt: timestamp("event_at", { withTimezone: true, mode: "date" })
       .notNull()
@@ -199,6 +226,10 @@ export const attendanceEvents = pgTable(
     index("attendance_events_org_event_at_idx").on(
       table.organizationId,
       table.eventAt
+    ),
+    check(
+      "attendance_events_retained_identity_check",
+      sql`${table.employeeId} is not null or ${table.employeeNumberSnapshot} is not null`
     ),
   ]
 );

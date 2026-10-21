@@ -15,17 +15,21 @@
  * RELATED RECORDS ARE CLASSIFIED, NOT DELETED BLINDLY
  * ---------------------------------------------------
  * Every employee-scoped foreign key in production is `RESTRICT`/`SET NULL`,
- * never `CASCADE` (migration 0017 — `employee_delete_safety_reconciliation`).
- * That constraint is what makes this classification enforceable rather than
- * advisory: a category marked PROTECTED still physically blocks the `DELETE`,
- * so PostgreSQL — not this module and not a Super Administrator — has the final
- * word on referential integrity.
+ * never `CASCADE` (migration 0017; migration 0022 later moved the PROTECTED
+ * tables to `SET NULL` so their rows are retained, never removed). That is
+ * what makes this classification enforceable rather than advisory: a category
+ * marked PROTECTED is never issued a DELETE by this flow, and a category
+ * marked DELETABLE is removed only through the explicit, table-by-table plan
+ * — PostgreSQL, not this module and not a Super Administrator, keeps the
+ * final word on referential integrity.
  *
  * - PROTECTED: historical/compliance records. Attendance, leave and permission
  *   absences are the employer's time record; payroll and payslips are the
  *   financial record; employment history is the legal employment timeline.
- *   These are retention-bound, so their presence BLOCKS permanent deletion
- *   with `409` and is never removed — not even by a Super Administrator.
+ *   These are retention-bound, so they are never removed by this flow — not
+ *   even by a Super Administrator. Under the approved detach schema they are
+ *   RETAINED with immutable identity snapshots and their employee reference
+ *   is atomically cleared when the employee row is deleted (migration 0022).
  * - DELETABLE: profile data that belongs to the person and has no meaning once
  *   the person is gone. Documents, face-ID enrollments/templates, project
  *   assignments, and the master-data rows (addresses, insurance, bank
@@ -33,6 +37,35 @@
  *   announcement delivery rows. These are deleted explicitly, one statement
  *   per table, inside the same transaction as the employee row — never through
  *   a blanket `ON DELETE CASCADE`.
+ *
+ * REVISED POLICY (Super Administrator override + retention-compatible schema):
+ * -----------------------------------------------------------------------
+ * `evaluatePermanentEmployeeDeletion` accepts `superAdminOverride`, set ONLY by
+ * the server action from the database-backed RBAC gate
+ * (`canPermanentlyDeleteEmployees`: the system-level SUPERADMIN role AND the
+ * system-only `employees.permanent_delete` code). With the override, protected
+ * records no longer fail the APPLICATION-level eligibility decision: the
+ * decision is `allowed` and carries the retained categories so the dialog and
+ * the audit can describe them. Without the override the protected-record
+ * refusal is unchanged.
+ *
+ * COMPLETING the deletion while protected records exist is the job of the
+ * approved retention-detach schema (migration 0022,
+ * docs/employee-permanent-delete-0022-detach-design.md): the deletion
+ * transaction first freezes the employee's identity onto every retained row
+ * (filling NULL snapshots only — creation-time snapshots such as the payslip
+ * PDF password contract are never overwritten), then removes the employee
+ * row, at which point the protected tables' `ON DELETE SET NULL` foreign keys
+ * atomically detach the retained rows. A `<table>_retained_identity_check`
+ * CHECK guarantees a detached row always carries its identity, so the DELETE
+ * fails closed rather than detaching an anonymous row.
+ *
+ * The override never deletes protected records. Where migration 0022 has NOT
+ * been applied the same attempt fails closed: the pre-0022 `RESTRICT`
+ * foreign keys reject the employee `DELETE` (23503), the transaction rolls
+ * back, and the server reports the retained-completion error. PostgreSQL —
+ * not this module and not a Super Administrator — keeps the final word on
+ * referential integrity in BOTH states.
  *
  * A linked login account is deliberately *not* a dependency: the link lives on
  * `employees.user_id`, so it is removed with the row and only the account's own
@@ -60,6 +93,15 @@ export const EMPLOYEE_PERMANENT_DELETE_ACKNOWLEDGEMENT_MESSAGE =
 
 export const EMPLOYEE_PERMANENT_DELETE_PROTECTED_MESSAGE =
   "Employee cannot be permanently deleted because protected historical records exist.";
+
+export const EMPLOYEE_PERMANENT_DELETE_RETAINED_COMPLETION_MESSAGE =
+  "Permanent deletion cannot be completed because protected historical records must be retained.";
+
+export const EMPLOYEE_PERMANENT_DELETE_RETAINED_COMPLETION_EXPLANATION =
+  "The Super Administrator override removed the application-level block, but the database still enforces the retention of these records (ON DELETE RESTRICT, NOT NULL employee references). Nothing was deleted.";
+
+export const EMPLOYEE_PERMANENT_DELETE_RETAINED_PREREQUISITES =
+  "To complete this deletion, obtain the retention-policy approval and the required database change for the retained categories, or deactivate/archive this employee instead.";
 
 export const EMPLOYEE_PERMANENT_DELETE_DEPENDENCY_MESSAGE =
   "Employee cannot be permanently deleted because related records still exist.";
@@ -256,6 +298,51 @@ export function buildPermanentDeleteProtectedMessage(
 }
 
 /**
+ * Human-readable refusal returned when a Super Administrator's override
+ * attempt cannot SAFELY COMPLETE because protected records are retained and
+ * the database refused to remove the employee row. This is the COMPATIBILITY
+ * FALLBACK for databases where the retention-detach schema (migration 0022)
+ * has not been applied; where it has, the deletion completes and the retained
+ * records are reported on the success path instead:
+ *
+ *   Permanent deletion cannot be completed because protected historical records must be retained.
+ *
+ *   Cannot delete employee 03233 while its protected records are retained.
+ *
+ *   Retained records:
+ *   Employment history: 3
+ *
+ *   The Super Administrator override removed the application-level block, but
+ *   the database still enforces the retention of these records (ON DELETE RESTRICT, NOT NULL employee references). Nothing was deleted.
+ *
+ *   To complete this deletion, obtain the retention-policy approval ...
+ */
+export function buildPermanentDeleteRetainedCompletionMessage(
+  employeeNumber: string,
+  dependencies: readonly EmployeeDeleteDependency[]
+): string {
+  const retained = presentEmployeeDependenciesByDisposition(
+    dependencies,
+    "protected"
+  );
+  const lines = retained.map(
+    (dependency) => `${dependency.label}: ${dependency.count}`
+  );
+  return [
+    EMPLOYEE_PERMANENT_DELETE_RETAINED_COMPLETION_MESSAGE,
+    "",
+    `Cannot delete employee ${employeeNumber} while its protected records are retained.`,
+    "",
+    "Retained records:",
+    ...(lines.length > 0 ? lines : ["Other related records: 0"]),
+    "",
+    EMPLOYEE_PERMANENT_DELETE_RETAINED_COMPLETION_EXPLANATION,
+    "",
+    EMPLOYEE_PERMANENT_DELETE_RETAINED_PREREQUISITES,
+  ].join("\n");
+}
+
+/**
  * Human-readable rejection for an employee that still holds dependents of any
  * classification. Retained as the generic/fallback formatter so an unexpected
  * shape still produces the operator guidance in the runbook.
@@ -402,6 +489,13 @@ export type PermanentEmployeeDeleteDecision =
       allowed: true;
       /** Deletable categories with a non-zero count, in delete-plan order. */
       willDelete: EmployeeDeleteDependency[];
+      /**
+       * Protected categories with a non-zero count. Present only under the
+       * Super Administrator override: they are RETAINED (never deleted), and
+       * the database's `RESTRICT` foreign keys keep refusing to remove the
+       * employee row while they exist.
+       */
+      retained: EmployeeDeleteDependency[];
     }
   | {
       allowed: false;
@@ -424,6 +518,16 @@ export interface PermanentEmployeeDeleteInput {
   linkedUserId: string | null;
   /** Dependents counted inside the deletion transaction. */
   dependencies: readonly EmployeeDeleteDependency[];
+  /**
+   * Whether the actor may override the protected-record blocker at the
+   * APPLICATION level (revised HRIS deletion policy).
+   *
+   * Set ONLY by the server action from the database-backed RBAC gate
+   * (`canPermanentlyDeleteEmployees`), never from the browser. Optional and
+   * FAIL-CLOSED: without it the protected-record refusal is unchanged, so
+   * every other caller keeps the historical behavior.
+   */
+  superAdminOverride?: boolean;
 }
 
 /**
@@ -433,6 +537,11 @@ export interface PermanentEmployeeDeleteInput {
  * same snapshot the DELETE acts on. The database `RESTRICT` foreign keys stay
  * the final authority: a racing insert that appears after the counts are taken
  * makes the DELETE fail and the transaction roll back.
+ *
+ * Revised policy: with `superAdminOverride` the protected-record blocker is
+ * removed from this eligibility decision — the attempt proceeds and the
+ * retained categories are reported so the UI and the audit can explain them.
+ * The self-linked guard always wins, for every actor.
  */
 export function evaluatePermanentEmployeeDeletion(
   input: PermanentEmployeeDeleteInput
@@ -445,7 +554,12 @@ export function evaluatePermanentEmployeeDeletion(
     };
   }
 
-  if (hasProtectedEmployeeDependencies(input.dependencies)) {
+  const protectedPresent = presentEmployeeDependenciesByDisposition(
+    input.dependencies,
+    "protected"
+  );
+
+  if (protectedPresent.length > 0 && !input.superAdminOverride) {
     return {
       allowed: false,
       code: "PROTECTED_RECORDS",
@@ -453,10 +567,7 @@ export function evaluatePermanentEmployeeDeletion(
         input.employeeNumber,
         input.dependencies
       ),
-      dependencies: presentEmployeeDependenciesByDisposition(
-        input.dependencies,
-        "protected"
-      ),
+      dependencies: protectedPresent,
     };
   }
 
@@ -466,5 +577,6 @@ export function evaluatePermanentEmployeeDeletion(
       input.dependencies,
       "deletable"
     ),
+    retained: protectedPresent,
   };
 }

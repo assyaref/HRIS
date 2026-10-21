@@ -66,6 +66,8 @@ export const PERMISSIONS = {
   EMPLOYEES_UPDATE: "employees.update",
   EMPLOYEES_DELETE: "employees.delete",
   EMPLOYEES_PERMANENT_DELETE: "employees.permanent_delete",
+  EMPLOYEES_LEGAL_HOLD: "employees.legal_hold",
+  EMPLOYEES_DELETION_APPROVE: "employees.deletion_approve",
   EMPLOYEES_TEST_DATA_PURGE: "employees.test_data_purge",
   EMPLOYEES_IMPORT: "employees.import",
   EMPLOYEES_EXPORT: "employees.export",
@@ -253,6 +255,18 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     module: PERMISSION_MODULES.EMPLOYEES,
     description:
       "Permanently delete an employee record and its deletable related records (Super Administrator only).",
+  },
+  {
+    code: PERMISSIONS.EMPLOYEES_LEGAL_HOLD,
+    module: PERMISSION_MODULES.EMPLOYEES,
+    description:
+      "Place or release a legal hold on an employee record (Super Administrator only).",
+  },
+  {
+    code: PERMISSIONS.EMPLOYEES_DELETION_APPROVE,
+    module: PERMISSION_MODULES.EMPLOYEES,
+    description:
+      "Approve or reject a permanent-deletion request (Super Administrator only, never the requester).",
   },
   {
     code: PERMISSIONS.EMPLOYEES_TEST_DATA_PURGE,
@@ -656,6 +670,8 @@ export const ALL_PERMISSION_CODES: readonly Permission[] =
  */
 export const SYSTEM_ONLY_PERMISSION_CODES: readonly Permission[] = [
   PERMISSIONS.EMPLOYEES_PERMANENT_DELETE,
+  PERMISSIONS.EMPLOYEES_LEGAL_HOLD,
+  PERMISSIONS.EMPLOYEES_DELETION_APPROVE,
   PERMISSIONS.EMPLOYEES_TEST_DATA_PURGE,
 ];
 

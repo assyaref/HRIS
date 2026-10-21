@@ -18,7 +18,11 @@ import type { PermissionManagementFilterInput } from "./schemas";
 
 export interface PermissionRequestRow {
   id: string;
-  employeeId: string;
+  /**
+   * NULL once the employee row was permanently deleted: the request is
+   * retained (detached, migration 0022) and described by its snapshots.
+   */
+  employeeId: string | null;
   employeeName: string;
   employeeNumber: string;
   permissionType: string;
@@ -52,11 +56,24 @@ export interface Paginated<T> {
   totalPages: number;
 }
 
+/**
+ * Shared select columns for joined permission request rows.
+ *
+ * Snapshot-first identity (migration 0022): a request whose employee row was
+ * permanently deleted is retained, detached (`employee_id` NULL) and
+ * resolves its display identity from the immutable snapshots.
+ */
 const viewColumns = {
   id: permissionRequests.id,
-  employeeId: employees.id,
-  employeeName: sql<string>`${employees.firstName} || ' ' || ${employees.lastName}`,
-  employeeNumber: employees.employeeNumber,
+  employeeId: permissionRequests.employeeId,
+  employeeName: sql<string>`coalesce(
+    ${employees.firstName} || ' ' || ${employees.lastName},
+    ${permissionRequests.employeeNameSnapshot}
+  )`,
+  employeeNumber: sql<string>`coalesce(
+    ${employees.employeeNumber},
+    ${permissionRequests.employeeNumberSnapshot}
+  )`,
   permissionType: permissionRequests.permissionType,
   startAt: permissionRequests.startAt,
   endAt: permissionRequests.endAt,
@@ -69,9 +86,9 @@ const viewColumns = {
 
 interface PermissionRequestView {
   id: string;
-  employeeId: string;
-  employeeName: string;
-  employeeNumber: string;
+  employeeId: string | null;
+  employeeName: string | null;
+  employeeNumber: string | null;
   permissionType: string;
   startAt: Date;
   endAt: Date;
@@ -87,8 +104,10 @@ function toRow(row: unknown): PermissionRequestRow {
   return {
     id: view.id,
     employeeId: view.employeeId,
-    employeeName: view.employeeName,
-    employeeNumber: view.employeeNumber,
+    // A retained row always carries identity (retained-identity CHECK); the
+    // fallbacks keep the type honest for rows predating the snapshots.
+    employeeName: view.employeeName ?? "(retained record)",
+    employeeNumber: view.employeeNumber ?? "—",
     permissionType: view.permissionType,
     startAt: view.startAt,
     endAt: view.endAt,
@@ -140,10 +159,14 @@ export async function listOrganizationPermissionRequests(
   const search = filters.q?.trim();
   if (search) {
     const pattern = `%${search}%`;
+    // Search covers retained (detached) rows too: the snapshots are the only
+    // identity a permanently deleted employee's history still carries.
     const searchClause = or(
       ilike(employees.employeeNumber, pattern),
       ilike(employees.firstName, pattern),
-      ilike(employees.lastName, pattern)
+      ilike(employees.lastName, pattern),
+      ilike(permissionRequests.employeeNumberSnapshot, pattern),
+      ilike(permissionRequests.employeeNameSnapshot, pattern)
     );
     if (searchClause) conditions.push(searchClause);
   }
@@ -152,7 +175,7 @@ export async function listOrganizationPermissionRequests(
     db
       .select(viewColumns)
       .from(permissionRequests)
-      .innerJoin(employees, eq(employees.id, permissionRequests.employeeId))
+      .leftJoin(employees, eq(employees.id, permissionRequests.employeeId))
       .where(and(...conditions))
       .orderBy(desc(permissionRequests.submittedAt))
       .limit(pageSize)
@@ -160,7 +183,7 @@ export async function listOrganizationPermissionRequests(
     db
       .select({ count: sql<number>`count(*)::int` })
       .from(permissionRequests)
-      .innerJoin(employees, eq(employees.id, permissionRequests.employeeId))
+      .leftJoin(employees, eq(employees.id, permissionRequests.employeeId))
       .where(and(...conditions)),
   ]);
 
@@ -182,7 +205,7 @@ export async function getPermissionRequestDetail(
   const rows = await db
     .select(viewColumns)
     .from(permissionRequests)
-    .innerJoin(employees, eq(employees.id, permissionRequests.employeeId))
+    .leftJoin(employees, eq(employees.id, permissionRequests.employeeId))
     .where(
       and(
         eq(permissionRequests.id, requestId),

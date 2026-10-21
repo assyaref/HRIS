@@ -7,6 +7,7 @@
 export * from "./organizations";
 export * from "./users";
 export * from "./employees";
+export * from "./employee_deletion_controls";
 export * from "./employee_details";
 export * from "./employee_custom_fields";
 export * from "./employee_custom_tabs";

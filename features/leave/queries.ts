@@ -44,7 +44,11 @@ export interface LeaveBalanceRow {
 
 export interface LeaveRequestRow {
   id: string;
-  employeeId: string;
+  /**
+   * NULL once the employee row was permanently deleted: the request is
+   * retained (detached, migration 0022) and described by its snapshots.
+   */
+  employeeId: string | null;
   employeeName: string;
   employeeNumber: string;
   leaveTypeId: string;
@@ -205,12 +209,25 @@ export async function listLeaveBalances(
   }));
 }
 
-/** Shared select columns for joined leave request rows. */
+/**
+ * Shared select columns for joined leave request rows.
+ *
+ * Snapshot-first identity (migration 0022): a request whose employee row was
+ * permanently deleted is retained, detached (`employee_id` NULL) and
+ * resolves its display identity from the immutable snapshots. The live
+ * employee row is the fallback, never the requirement.
+ */
 const requestViewColumns = {
   id: leaveRequests.id,
-  employeeId: employees.id,
-  employeeName: sql<string>`${employees.firstName} || ' ' || ${employees.lastName}`,
-  employeeNumber: employees.employeeNumber,
+  employeeId: leaveRequests.employeeId,
+  employeeName: sql<string>`coalesce(
+    ${employees.firstName} || ' ' || ${employees.lastName},
+    ${leaveRequests.employeeNameSnapshot}
+  )`,
+  employeeNumber: sql<string>`coalesce(
+    ${employees.employeeNumber},
+    ${leaveRequests.employeeNumberSnapshot}
+  )`,
   leaveTypeId: leaveTypes.id,
   leaveTypeName: leaveTypes.name,
   leaveTypeCode: leaveTypes.code,
@@ -227,9 +244,9 @@ const requestViewColumns = {
 /** Joined leave request row shape produced by `requestViewColumns`. */
 interface LeaveRequestView {
   id: string;
-  employeeId: string;
-  employeeName: string;
-  employeeNumber: string;
+  employeeId: string | null;
+  employeeName: string | null;
+  employeeNumber: string | null;
   leaveTypeId: string;
   leaveTypeName: string;
   leaveTypeCode: string;
@@ -247,9 +264,12 @@ function toLeaveRequestRow(row: unknown): LeaveRequestRow {
   const view = row as LeaveRequestView;
   return {
     id: view.id,
+    // A retained row always carries identity (retained-identity CHECK), so
+    // the snapshots cover the detached case; the fallback keeps the type
+    // honest for legacy rows that predate the snapshot columns.
+    employeeName: view.employeeName ?? "(retained record)",
+    employeeNumber: view.employeeNumber ?? "—",
     employeeId: view.employeeId,
-    employeeName: view.employeeName,
-    employeeNumber: view.employeeNumber,
     leaveTypeId: view.leaveTypeId,
     leaveTypeName: view.leaveTypeName,
     leaveTypeCode: view.leaveTypeCode,
@@ -303,10 +323,14 @@ export async function listOrganizationLeaveRequests(
   const search = filters.q?.trim();
   if (search) {
     const pattern = `%${search}%`;
+    // Search covers retained (detached) rows too: the snapshots are the only
+    // identity a permanently deleted employee's history still carries.
     const searchClause = or(
       ilike(employees.employeeNumber, pattern),
       ilike(employees.firstName, pattern),
-      ilike(employees.lastName, pattern)
+      ilike(employees.lastName, pattern),
+      ilike(leaveRequests.employeeNumberSnapshot, pattern),
+      ilike(leaveRequests.employeeNameSnapshot, pattern)
     );
     if (searchClause) conditions.push(searchClause);
   }
@@ -315,7 +339,7 @@ export async function listOrganizationLeaveRequests(
     db
       .select(requestViewColumns)
       .from(leaveRequests)
-      .innerJoin(employees, eq(employees.id, leaveRequests.employeeId))
+      .leftJoin(employees, eq(employees.id, leaveRequests.employeeId))
       .innerJoin(leaveTypes, eq(leaveTypes.id, leaveRequests.leaveTypeId))
       .where(and(...conditions))
       .orderBy(desc(leaveRequests.submittedAt))
@@ -324,7 +348,7 @@ export async function listOrganizationLeaveRequests(
     db
       .select({ count: sql<number>`count(*)::int` })
       .from(leaveRequests)
-      .innerJoin(employees, eq(employees.id, leaveRequests.employeeId))
+      .leftJoin(employees, eq(employees.id, leaveRequests.employeeId))
       .where(and(...conditions)),
   ]);
 
@@ -349,7 +373,7 @@ export async function getLeaveRequestDetail(
   const rows = await db
     .select(requestViewColumns)
     .from(leaveRequests)
-    .innerJoin(employees, eq(employees.id, leaveRequests.employeeId))
+    .leftJoin(employees, eq(employees.id, leaveRequests.employeeId))
     .innerJoin(leaveTypes, eq(leaveTypes.id, leaveRequests.leaveTypeId))
     .where(
       and(

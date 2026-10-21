@@ -1591,8 +1591,15 @@ export async function generatePayslipsAction(
        * Historical birth-date snapshot (Phase 11). The birth date is captured
        * from the employee record at payslip-creation time so a later birth-date
        * change can never alter this payslip's PDF password.
+       *
+       * A payroll item whose employee row was permanently deleted (retained,
+       * detached — migration 0022) has no birth date to capture: the snapshot
+       * stays NULL and PDF generation is skipped for that payslip, matching
+       * the existing no-birth-date contract.
        */
-      const itemEmployeeIds = itemRows.map((item) => item.employeeId);
+      const itemEmployeeIds = itemRows
+        .map((item) => item.employeeId)
+        .filter((id): id is string => id !== null);
       const birthDateRows = await tx
         .select({
           id: employees.id,
@@ -1616,7 +1623,9 @@ export async function generatePayslipsAction(
           payrollPeriodId: period.periodId,
           employeeId: item.employeeId,
           employeeNumberSnapshot: item.employeeNumberSnapshot,
-          birthDateSnapshot: birthDateByEmployee.get(item.employeeId) ?? null,
+          birthDateSnapshot: item.employeeId
+            ? (birthDateByEmployee.get(item.employeeId) ?? null)
+            : null,
           payslipNumber: `PS-${period.periodCode}-${String(index + 1).padStart(4, "0")}`,
           status: "generated",
         }))
@@ -1754,6 +1763,7 @@ export async function generatePayslipPdfsAction(
           issuedAt: payslips.issuedAt,
           status: payslips.status,
           payslipEmployeeNumberSnapshot: payslips.employeeNumberSnapshot,
+          payslipEmployeeNameSnapshot: payslips.employeeNameSnapshot,
           payslipBirthDateSnapshot: payslips.birthDateSnapshot,
           employeeName: payrollItems.employeeNameSnapshot,
           employeeNumber: payrollItems.employeeNumberSnapshot,
@@ -1789,7 +1799,12 @@ export async function generatePayslipPdfsAction(
         payslipIdsHaveDocuments.map((row) => row.payslipId)
       );
 
-      const employeeIds = payslipRows.map((row) => row.employeeId);
+      // Live identity is best-effort: a payslip whose employee row was
+      // permanently deleted (retained, detached — migration 0022) resolves
+      // its PDF password from the immutable snapshots instead.
+      const employeeIds = payslipRows
+        .map((row) => row.employeeId)
+        .filter((id): id is string => id !== null);
       const identityRows =
         employeeIds.length > 0
           ? await tx
@@ -1851,10 +1866,14 @@ export async function generatePayslipPdfsAction(
           employeeNumber:
             row.payslipEmployeeNumberSnapshot ??
             row.employeeNumber ??
-            identityByEmployee.get(row.employeeId)?.employeeNumber,
+            (row.employeeId
+              ? identityByEmployee.get(row.employeeId)?.employeeNumber
+              : undefined),
           birthDate:
             row.payslipBirthDateSnapshot ??
-            identityByEmployee.get(row.employeeId)?.birthDate,
+            (row.employeeId
+              ? identityByEmployee.get(row.employeeId)?.birthDate
+              : undefined),
           existingDocument: documentPayslipIds.has(row.id),
         }))
       );
@@ -1863,7 +1882,14 @@ export async function generatePayslipPdfsAction(
 
       const prepared: {
         payslipId: string;
-        employeeId: string;
+        /**
+         * NULL when the payslip's employee row was permanently deleted: the
+         * generated document is retained (detached) and carries its identity
+         * snapshots instead.
+         */
+        employeeId: string | null;
+        employeeNumberSnapshot: string | null;
+        employeeNameSnapshot: string | null;
         employeeNumber: string;
         nik: string | null;
         birthDate: Date;
@@ -1874,10 +1900,12 @@ export async function generatePayslipPdfsAction(
       for (const candidate of included) {
         const row = payslipById.get(candidate.payslipId);
         const identity = row
-          ? identityByEmployee.get(row.employeeId)
+          ? row.employeeId
+            ? identityByEmployee.get(row.employeeId)
+            : undefined
           : undefined;
 
-        if (!row || !identity || !row.payrollItemId) {
+        if (!row || !row.payrollItemId) {
           // Unreachable for `included` entries by the guard's contract; fail
           // loudly rather than silently skip a payslip the guard admitted.
           throw new Error("Payslip PDF eligibility invariant violated.");
@@ -1894,8 +1922,8 @@ export async function generatePayslipPdfsAction(
             row.payslipEmployeeNumberSnapshot,
           payslipBirthDateSnapshot: row.payslipBirthDateSnapshot,
           itemEmployeeNumberSnapshot: row.employeeNumber,
-          liveEmployeeNumber: identity.employeeNumber,
-          liveBirthDate: identity.birthDate,
+          liveEmployeeNumber: identity?.employeeNumber,
+          liveBirthDate: identity?.birthDate,
         });
 
         const effectiveEmployeeNumber = passwordIdentity.employeeNumber;
@@ -1905,11 +1933,21 @@ export async function generatePayslipPdfsAction(
           throw new Error("Payslip PDF eligibility invariant violated.");
         }
 
+        // Identity snapshots for the retained document rows: creation-time
+        // payslip/item snapshots first, so a detached document stays
+        // self-describing even when the employee row is gone.
+        const employeeNumberSnapshot =
+          row.payslipEmployeeNumberSnapshot ?? row.employeeNumber ?? null;
+        const employeeNameSnapshot =
+          row.payslipEmployeeNameSnapshot ?? row.employeeName ?? null;
+
         prepared.push({
           payslipId: row.id,
           employeeId: row.employeeId,
+          employeeNumberSnapshot,
+          employeeNameSnapshot,
           employeeNumber: effectiveEmployeeNumber,
-          nik: identity.nik,
+          nik: identity?.nik ?? null,
           birthDate: effectiveBirthDate,
           payslipNumber: row.payslipNumber,
           postScript: buildPayslipPostScript({
@@ -1971,7 +2009,9 @@ export async function generatePayslipPdfsAction(
     // On any failure, every file stored so far is removed again.
     const stored: {
       payslipId: string;
-      employeeId: string;
+      employeeId: string | null;
+      employeeNumberSnapshot: string | null;
+      employeeNameSnapshot: string | null;
       payslipNumber: string;
       storageKey: string;
       originalFilename: string;
@@ -2005,6 +2045,8 @@ export async function generatePayslipPdfsAction(
         stored.push({
           payslipId: entry.payslipId,
           employeeId: entry.employeeId,
+          employeeNumberSnapshot: entry.employeeNumberSnapshot,
+          employeeNameSnapshot: entry.employeeNameSnapshot,
           payslipNumber: entry.payslipNumber,
           storageKey: metadata.storageKey,
           originalFilename: sanitizePayslipOriginalFilename(
@@ -2067,6 +2109,8 @@ export async function generatePayslipPdfsAction(
               organizationId,
               payslipId: entry.payslipId,
               employeeId: entry.employeeId,
+              employeeNumberSnapshot: entry.employeeNumberSnapshot,
+              employeeNameSnapshot: entry.employeeNameSnapshot,
               storageKey: entry.storageKey,
               originalFilename: entry.originalFilename,
               mimeType: "application/pdf",
@@ -2090,6 +2134,8 @@ export async function generatePayslipPdfsAction(
             payslipDocumentId: documentId,
             payslipId: entry.payslipId,
             employeeId: entry.employeeId,
+            employeeNumberSnapshot: entry.employeeNumberSnapshot,
+            employeeNameSnapshot: entry.employeeNameSnapshot,
             version: 1,
             storageKey: entry.storageKey,
             originalFilename: entry.originalFilename,

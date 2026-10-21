@@ -15,8 +15,13 @@
  *   both required, and every other role is refused (403);
  * - confirmation matching (exact employee number, server-side comparison) and
  *   the second, explicit irreversibility acknowledgement;
- * - the dependency classification: PROTECTED historical records block the
- *   deletion (409) while DELETABLE profile records are removed with it;
+ * - the dependency classification: PROTECTED historical records are RETAINED
+ *   (never deleted) while DELETABLE profile records are removed with the
+ *   employee row. Under the revised policy a Super Administrator PASSES the
+ *   protected-record eligibility check (`superAdminOverride`) — the database's
+ *   `RESTRICT` foreign keys, not the application, then refuse to complete the
+ *   deletion while retained records exist (rollback + retained-completion
+ *   error); without the override the protected-record refusal is unchanged;
  * - `EMP-TEST-*` records are NOT special-cased: they travel the exact same
  *   generic path as any other employee number;
  * - server-side enforcement — organization scope taken from the session (never
@@ -51,10 +56,14 @@ import {
   EMPLOYEE_PERMANENT_DELETE_NOT_FOUND_MESSAGE,
   EMPLOYEE_PERMANENT_DELETE_PERMISSION,
   EMPLOYEE_PERMANENT_DELETE_PROTECTED_MESSAGE,
+  EMPLOYEE_PERMANENT_DELETE_RETAINED_COMPLETION_EXPLANATION,
+  EMPLOYEE_PERMANENT_DELETE_RETAINED_COMPLETION_MESSAGE,
+  EMPLOYEE_PERMANENT_DELETE_RETAINED_PREREQUISITES,
   EMPLOYEE_DELETABLE_DEPENDENCY_LABELS,
   EMPLOYEE_PROTECTED_DEPENDENCY_LABELS,
   buildPermanentDeleteDependencyMessage,
   buildPermanentDeleteProtectedMessage,
+  buildPermanentDeleteRetainedCompletionMessage,
   canPermanentlyDeleteEmployees,
   employeeDeleteDependencyDisposition,
   evaluatePermanentEmployeeDeletion,
@@ -439,6 +448,28 @@ describe("server action: authorization is enforced server-side", () => {
       true
     );
   });
+
+  it("passes the Super Administrator override from the server-side gate, never the form", () => {
+    // Revised policy: the protected-record blocker is removed from the Super
+    // Administrator's APPLICATION-level eligibility. The override flag is the
+    // SAME server-side gate (SUPERADMIN + employees.permanent_delete) that
+    // admitted the request — the browser can neither grant nor revoke it.
+    assert.equal(
+      permanentDelete.includes("superAdminOverride: canPermanentlyDelete"),
+      true,
+      "the override must be derived from the DB-backed RBAC decision"
+    );
+    assert.equal(
+      /field\(formData, "superAdminOverride"\)/.test(permanentDelete),
+      false,
+      "the override must never be read from the form"
+    );
+    assert.equal(
+      /formData\.get\(\s*["']superAdminOverride["']/.test(permanentDelete),
+      false,
+      "the override must never be read from the form"
+    );
+  });
 });
 
 describe("operator-facing message contract", () => {
@@ -466,6 +497,10 @@ describe("operator-facing message contract", () => {
     assert.equal(
       EMPLOYEE_PERMANENT_DELETE_DEPENDENCY_MESSAGE,
       "Employee cannot be permanently deleted because related records still exist."
+    );
+    assert.equal(
+      EMPLOYEE_PERMANENT_DELETE_RETAINED_COMPLETION_MESSAGE,
+      "Permanent deletion cannot be completed because protected historical records must be retained."
     );
     assert.equal(
       EMPLOYEE_PERMANENT_DELETE_FAILED_MESSAGE,
@@ -655,7 +690,7 @@ describe("deletion decision", () => {
     }
   });
 
-  it("blocks a deletion with any PROTECTED record", () => {
+  it("blocks a deletion with any PROTECTED record when no override is granted", () => {
     for (const label of EMPLOYEE_PROTECTED_DEPENDENCY_LABELS) {
       const decision = evaluatePermanentEmployeeDeletion({
         ...baseInput,
@@ -677,7 +712,7 @@ describe("deletion decision", () => {
     }
   });
 
-  it("a single protected record blocks even with deletable ones present", () => {
+  it("a single protected record blocks even with deletable ones present (no override)", () => {
     const decision = evaluatePermanentEmployeeDeletion({
       ...baseInput,
       dependencies: dependencies({
@@ -717,6 +752,146 @@ describe("deletion decision", () => {
       linkedUserId: "someone-else",
     });
     assert.equal(decision.allowed, true);
+  });
+});
+
+describe("Super Administrator protected-record override (revised policy)", () => {
+  it("passes the protected-record eligibility check for every protected category", () => {
+    // The revised HRIS deletion policy: a Super Administrator may attempt the
+    // permanent deletion even when protected-record blockers are detected.
+    for (const label of EMPLOYEE_PROTECTED_DEPENDENCY_LABELS) {
+      const decision = evaluatePermanentEmployeeDeletion({
+        ...baseInput,
+        dependencies: dependencies({ [label]: 3 }),
+        superAdminOverride: true,
+      });
+      assert.equal(
+        decision.allowed,
+        true,
+        `${label} must not fail the Super Administrator's eligibility decision`
+      );
+    }
+  });
+
+  it("reports the protected records as RETAINED on the allowed decision", () => {
+    const decision = evaluatePermanentEmployeeDeletion({
+      ...baseInput,
+      employeeNumber: "03233",
+      dependencies: dependencies({
+        "Employment history": 3,
+        Payroll: 2,
+        Documents: 5,
+      }),
+      superAdminOverride: true,
+    });
+    assert.equal(decision.allowed, true);
+    assert.deepEqual(
+      decision.retained.map((d) => [d.label, d.count]),
+      [
+        ["Payroll", 2],
+        ["Employment history", 3],
+      ],
+      "the retained categories are reported in canonical order"
+    );
+    assert.deepEqual(
+      decision.willDelete.map((d) => [d.label, d.count]),
+      [["Documents", 5]],
+      "the deletable categories are still scheduled for removal"
+    );
+  });
+
+  it("an override without protected records retains nothing", () => {
+    const decision = evaluatePermanentEmployeeDeletion({
+      ...baseInput,
+      superAdminOverride: true,
+    });
+    assert.equal(decision.allowed, true);
+    assert.deepEqual(decision.retained, []);
+    assert.deepEqual(decision.willDelete, []);
+  });
+
+  it("the self-linked guard still wins under the override", () => {
+    const decision = evaluatePermanentEmployeeDeletion({
+      ...baseInput,
+      linkedUserId: "actor-1",
+      dependencies: dependencies({ "Employment history": 3 }),
+      superAdminOverride: true,
+    });
+    assert.equal(decision.allowed, false);
+    assert.equal("code" in decision && decision.code, "SELF_LINKED");
+  });
+
+  it("without the override the protected-record refusal is unchanged (fail closed)", () => {
+    const decision = evaluatePermanentEmployeeDeletion({
+      ...baseInput,
+      dependencies: dependencies({ "Employment history": 3 }),
+    });
+    assert.equal(decision.allowed, false);
+    assert.equal("code" in decision && decision.code, "PROTECTED_RECORDS");
+  });
+
+  it("no employee number is special-cased by the override", () => {
+    const decision = evaluatePermanentEmployeeDeletion({
+      ...baseInput,
+      employeeNumber: "EMP-TEST-001",
+      dependencies: dependencies({ "Employment history": 2 }),
+      superAdminOverride: true,
+    });
+    assert.equal(decision.allowed, true);
+    assert.deepEqual(
+      decision.retained.map((d) => d.label),
+      ["Employment history"]
+    );
+  });
+});
+
+describe("retained-completion message (database refuses the override attempt)", () => {
+  it("pins the revised-policy wording", () => {
+    assert.equal(
+      EMPLOYEE_PERMANENT_DELETE_RETAINED_COMPLETION_MESSAGE,
+      "Permanent deletion cannot be completed because protected historical records must be retained."
+    );
+    assert.equal(
+      EMPLOYEE_PERMANENT_DELETE_RETAINED_COMPLETION_EXPLANATION.includes(
+        "Nothing was deleted."
+      ),
+      true
+    );
+    assert.equal(
+      EMPLOYEE_PERMANENT_DELETE_RETAINED_PREREQUISITES.includes(
+        "retention-policy approval"
+      ),
+      true
+    );
+  });
+
+  it("lists the retained categories and keeps deletable ones out", () => {
+    const message = buildPermanentDeleteRetainedCompletionMessage(
+      "03233",
+      dependencies({ "Employment history": 3, Payroll: 1, Documents: 4 })
+    );
+    const lines = message.split("\n");
+    assert.equal(lines[0], EMPLOYEE_PERMANENT_DELETE_RETAINED_COMPLETION_MESSAGE);
+    assert.equal(
+      message.includes("Cannot delete employee 03233 while its protected records are retained."),
+      true
+    );
+    assert.equal(message.includes("Retained records:"), true);
+    assert.equal(message.includes("Employment history: 3"), true);
+    assert.equal(message.includes("Payroll: 1"), true);
+    assert.equal(
+      message.includes("Documents: 4"),
+      false,
+      "a deletable category is not presented as retained"
+    );
+    assert.equal(
+      message.includes(EMPLOYEE_PERMANENT_DELETE_RETAINED_COMPLETION_EXPLANATION),
+      true
+    );
+    assert.equal(
+      message.includes(EMPLOYEE_PERMANENT_DELETE_RETAINED_PREREQUISITES),
+      true
+    );
   });
 });
 
@@ -934,6 +1109,125 @@ describe("server action: layered confirmation", () => {
   });
 });
 
+describe("server action: mandatory audit-policy deletion reason", () => {
+  it("reads the reason from the form and validates it with the shared control-plane validator", () => {
+    assert.equal(
+      permanentDelete.includes('field(formData, "deletionReason")'),
+      true
+    );
+    assert.equal(
+      permanentDelete.includes("isValidDeletionReason(deletionReason)"),
+      true,
+      "the same validator as the tier-2 control plane decides (10–2000 chars)"
+    );
+  });
+
+  it("refuses a missing or too-short reason BEFORE the transaction starts", () => {
+    assert.equal(
+      permanentDelete.indexOf("isValidDeletionReason(") <
+        permanentDelete.indexOf("db.transaction"),
+      true,
+      "an invalid reason must be refused before any write"
+    );
+  });
+
+  it("audits the refusal as DENIED with a machine-readable REASON_REQUIRED", () => {
+    const refusalBlock = permanentDelete.slice(
+      permanentDelete.indexOf("isValidDeletionReason(deletionReason)"),
+      permanentDelete.indexOf("db.transaction")
+    );
+    assert.equal(
+      refusalBlock.includes('reason: "REASON_REQUIRED"'),
+      true,
+      "the reason-missing refusal carries its own audit code"
+    );
+    assert.equal(
+      refusalBlock.includes('result: "DENIED"'),
+      true,
+      "the attempt is auditable even though it was refused"
+    );
+  });
+
+  it("returns a distinct REASON_REQUIRED state so the dialog can render it", () => {
+    assert.equal(
+      actionsSource.includes('| "REASON_REQUIRED"'),
+      true,
+      "the state union carries the new 400-class code"
+    );
+    assert.equal(
+      permanentDelete.includes("DELETION_REASON_REQUIRED_MESSAGE"),
+      true,
+      "the operator-facing message is the shared control-plane wording"
+    );
+  });
+
+  it("records the operator-supplied reason on every post-confirmation audit row", () => {
+    assert.equal(
+      permanentDelete.includes("const deletionContext = { ...employeeContext, deletionReason: operatorReason };"),
+      true,
+      "the validated reason is threaded into the audit context"
+    );
+    assert.equal(
+      actionsSource.includes("...(input.deletionReason"),
+      true,
+      "the audit helper persists the operator reason into the metadata"
+    );
+    // Every audit that can follow a valid reason must use the enriched context.
+    const successBlock = permanentDelete.slice(
+      permanentDelete.indexOf('outcome.code === "SUCCESS"')
+    );
+    assert.equal(
+      successBlock.includes("...deletionContext"),
+      true,
+      "the SUCCESS audit row carries the operator reason"
+    );
+    const deniedBlock = permanentDelete.slice(
+      permanentDelete.indexOf('outcome.code === "DENIED"')
+    );
+    assert.equal(
+      deniedBlock.includes("...deletionContext"),
+      true,
+      "the in-transaction DENIED audit row carries the operator reason"
+    );
+  });
+
+  it("never accepts the reason as an authorization or scope input", () => {
+    assert.equal(
+      /superAdminOverride[^;]*formData/.test(permanentDelete),
+      false
+    );
+    assert.equal(
+      /field\(formData, "(?!deletionReason|confirmEmployeeNumber)[^"]*"\)/.test(
+        permanentDelete
+      ),
+      false,
+      "only the confirmation, the acknowledgement and the reason are read from the form"
+    );
+  });
+
+  it("the dialog renders a mandatory reason field and gates the submit on it", () => {
+    assert.equal(
+      dialogSource.includes('data-testid="permanent-delete-reason"'),
+      true,
+      "a visible, labeled reason textarea is part of the confirmation UI"
+    );
+    assert.equal(
+      dialogSource.includes("Reason for deletion (required)"),
+      true
+    );
+    assert.equal(
+      dialogSource.includes("isValidDeletionReason(reason)"),
+      true,
+      "the client mirrors the server-side gate (UX only — the server decides)"
+    );
+    assert.equal(
+      dialogSource.includes('formData.set("deletionReason", reason)'),
+      true,
+      "the reason is sent with the request"
+    );
+  });
+});
+
 describe("server action: transaction and explicit deletion", () => {
   it("runs the whole operation inside ONE transaction", () => {
     assert.equal(permanentDelete.includes("db.transaction(async (tx) =>"), true);
@@ -1014,9 +1308,27 @@ describe("server action: transaction and explicit deletion", () => {
       true
     );
     assert.equal(
-      permanentDelete.includes("buildPermanentDeleteProtectedMessage("),
+      permanentDelete.includes("buildPermanentDeleteRetainedCompletionMessage("),
       true,
-      "a foreign-key rejection on protected data reports the protected summary"
+      "a foreign-key rejection under the Super Administrator override reports the retained-completion message"
+    );
+  });
+
+  it("the retained-completion refusal carries the retained summary in the state", () => {
+    assert.equal(
+      permanentDelete.includes("retainedDependencies"),
+      true,
+      "the dialog must be able to show which records were retained"
+    );
+    assert.equal(
+      permanentDelete.includes('"PROTECTED_RECORDS"'),
+      true,
+      "the database refusal is still typed as PROTECTED_RECORDS"
+    );
+    assert.equal(
+      permanentDelete.includes("reason: protectedPresent"),
+      true,
+      "the audit reason distinguishes retained protected records from a plain dependency race"
     );
   });
 
@@ -1249,6 +1561,7 @@ describe("server action: audit trail", () => {
       "CONFIRMATION_MISMATCH",
       "ACKNOWLEDGEMENT_MISSING",
       "RELATED_RECORDS_EXIST",
+      "PROTECTED_RECORDS_RETAINED",
       "PROTECTED_HISTORICAL_RECORDS",
       "SELF_LINKED",
       "NO_ORGANIZATION",
@@ -1260,6 +1573,19 @@ describe("server action: audit trail", () => {
         `denied path ${reason} must be audited`
       );
     }
+  });
+
+  it("records which records the database retained on the refused override attempt", () => {
+    assert.equal(
+      permanentDelete.includes("retainedRecords:"),
+      true,
+      "the foreign-key refusal audit names the retained categories"
+    );
+    assert.equal(
+      auditBlock.includes("retainedRecords: input.retainedRecords"),
+      true,
+      "the audit helper forwards the retained summary into the metadata"
+    );
   });
 
   it("never stores secrets or master-data payloads in the audit metadata", () => {
@@ -1289,7 +1615,6 @@ describe("UI: the Super Administrator dialog", () => {
   it("uses the single server action and the shared policy helpers", () => {
     assert.equal(dialogSource.includes("permanentlyDeleteEmployeeAction"), true);
     assert.equal(dialogSource.includes("matchesEmployeeNumberConfirmation"), true);
-    assert.equal(dialogSource.includes("hasProtectedEmployeeDependencies"), true);
   });
 
   it("uses the project's Dialog component, never a browser confirm()", () => {
@@ -1340,42 +1665,89 @@ describe("UI: the Super Administrator dialog", () => {
     assert.equal(copy.includes("dependencyCheck.deletableDependencies"), true);
   });
 
-  it("explains a protected-record block instead of saying Delete is disabled", () => {
+  it("summarizes the records that will be deleted and those that will be retained", () => {
     const copy = normalize(dialogSource);
+    // Deleted with the employee:
+    assert.equal(copy.includes("(will be deleted)"), true);
+    // Retained (protected history):
+    assert.equal(copy.includes("Retained records (never deleted)"), true);
+    assert.equal(copy.includes("(retained for legal and audit purposes)"), true);
     assert.equal(
-      copy.includes(
-        "Permanent deletion is blocked because this employee has protected historical records."
-      ),
+      copy.includes("retainedSummary.map((dependency) => ("),
       true
     );
-    assert.equal(copy.includes("Protected records"), true);
+    // Retained (direct reports):
+    assert.equal(copy.includes("Direct reports"), true);
     assert.equal(
-      copy.includes(
-        "These records are retained for legal and audit purposes and cannot be deleted, not even by a Super Administrator."
-      ),
+      copy.includes("(retained — their manager link will be cleared)"),
       true
     );
-    assert.equal(copy.includes("Delete is disabled"), false);
   });
 
-  it("never labels the button 'Delete blocked by related records'", () => {
+  it("no longer blocks the dialog when protected records exist (retention detach, 0022)", () => {
+    const copy = normalize(dialogSource);
     assert.equal(
-      dialogSource.includes("Delete blocked by related records"),
+      copy.includes("Permanent deletion is blocked"),
       false,
-      "related records are no longer treated as a blanket block"
+      "the blocked-by-protected-records banner is gone"
     );
     assert.equal(
-      normalize(dialogSource).includes(
-        'blockedByProtectedRecords ? "Delete blocked by protected records" : "Delete Permanently"'
+      dialogSource.includes("Delete blocked by protected records"),
+      false
+    );
+    assert.equal(
+      copy.includes(
+        "the database will refuse to complete the permanent deletion and nothing will be deleted."
       ),
+      false,
+      "the retained section no longer claims the database refuses the completion"
+    );
+    assert.equal(
+      copy.includes(
+        "The transaction stores their historical identity (employee number and name) on each retained row and removes only the link to the employee record, so reports and payroll history stay complete."
+      ),
+      true,
+      "the retained section explains the retention-detach mechanism"
+    );
+    assert.equal(
+      dialogSource.includes("hasRetainedRecords"),
+      true,
+      "retained records are informational, rendered from the retained summary"
+    );
+  });
+
+  it("shows the final result of the transaction after the server responds", () => {
+    const copy = normalize(dialogSource);
+    assert.equal(
+      copy.includes("Final result of the transaction"),
+      true,
+      "the success panel reports the transaction outcome"
+    );
+    assert.equal(
+      dialogSource.includes('data-testid="permanent-delete-final-result"'),
       true
+    );
+    assert.equal(
+      copy.includes("(deleted)"),
+      true,
+      "removed records are listed per category"
+    );
+    assert.equal(
+      copy.includes("(retained with its historical identity)"),
+      true,
+      "retained records are listed per category"
+    );
+    assert.equal(
+      copy.includes("closeFinalResult"),
+      true,
+      "the final-result Close button performs the redirect"
     );
   });
 
   it("renders the destructive action and both footer buttons", () => {
     assert.equal(dialogSource.includes('variant="destructive"'), true);
     assert.equal(dialogSource.includes("text-destructive"), true);
-    assert.equal(dialogSource.includes("Delete Permanently"), true);
+    assert.equal(dialogSource.includes("Permanently Delete Employee"), true);
     assert.equal(dialogSource.includes("Cancel"), true);
   });
 
@@ -1396,10 +1768,10 @@ describe("UI: the Super Administrator dialog", () => {
     );
     assert.equal(
       normalize(dialogSource).includes(
-        "const canSubmitDelete = confirmationMatches && acknowledged && dependencyCheck.status === \"ready\" && !blockedByProtectedRecords;"
+        "const canSubmitDelete = confirmationMatches && acknowledged && reasonValid && dependencyCheck.status === \"ready\";"
       ),
       true,
-      "both confirmation layers and a clean report are required"
+      "both confirmation layers, a valid audit-policy reason and an arrived report are required — protected records no longer disable the button"
     );
     assert.equal(
       dialogSource.includes("disabled={isPending || !canSubmitDelete}"),
@@ -1431,7 +1803,7 @@ describe("UI: the Super Administrator dialog", () => {
     );
   });
 
-  it("sends only the confirmations, never an organization or an id", () => {
+  it("sends only the confirmations and the reason, never an organization or an id", () => {
     assert.equal(
       dialogSource.includes('formData.set("confirmEmployeeNumber", confirmation)'),
       true
@@ -1439,6 +1811,11 @@ describe("UI: the Super Administrator dialog", () => {
     assert.equal(
       dialogSource.includes('formData.set("acknowledgedPermanentDelete", "true")'),
       true
+    );
+    assert.equal(
+      dialogSource.includes('formData.set("deletionReason", reason)'),
+      true,
+      "the audit-policy reason travels with the request"
     );
     assert.equal(dialogSource.includes('formData.set("organizationId"'), false);
     assert.equal(dialogSource.includes('formData.set("employeeId"'), false);
@@ -1583,28 +1960,29 @@ describe("feature: delete and deactivate stay separate capabilities", () => {
 
 describe("confirm-button gate model", () => {
   /**
-   * Model of the dialog's gate: the button is enabled only when the typed
-   * employee number matches exactly AND the acknowledgement is ticked AND the
-   * pre-flight report ARRIVED AND it reported no PROTECTED record.
+   * Model of the dialog's gate under the REVISED policy: the button is
+   * enabled when the typed employee number matches exactly AND the
+   * acknowledgement is ticked AND the pre-flight report ARRIVED. Protected
+   * records no longer disable the button — the Super Administrator may
+   * attempt the deletion and the server (backed by the database) decides.
    */
   const gate = ({
     matches,
     acknowledged,
     reportReady,
-    protectedBlocked,
-  }: Record<string, boolean>) =>
-    matches && acknowledged && reportReady && !protectedBlocked;
+  }: Record<string, boolean>) => matches && acknowledged && reportReady;
 
-  it("protected history => the delete button is disabled", () => {
+  it("protected history no longer disables the delete button (Super Administrator override)", () => {
     assert.equal(
-      gate({ matches: true, acknowledged: true, reportReady: true, protectedBlocked: true }),
-      false
+      gate({ matches: true, acknowledged: true, reportReady: true }),
+      true,
+      "an authorized Super Administrator must be able to submit while protected records exist"
     );
   });
 
-  it("correct confirmation + acknowledgement + clean report => enabled", () => {
+  it("correct confirmation + acknowledgement + arrived report => enabled", () => {
     assert.equal(
-      gate({ matches: true, acknowledged: true, reportReady: true, protectedBlocked: false }),
+      gate({ matches: true, acknowledged: true, reportReady: true }),
       true
     );
   });
@@ -1616,7 +1994,7 @@ describe("confirm-button gate model", () => {
         false
       );
       assert.equal(
-        gate({ matches: false, acknowledged: true, reportReady: true, protectedBlocked: false }),
+        gate({ matches: false, acknowledged: true, reportReady: true }),
         false
       );
     }
@@ -1624,7 +2002,7 @@ describe("confirm-button gate model", () => {
 
   it("missing acknowledgement => disabled even with a correct number", () => {
     assert.equal(
-      gate({ matches: true, acknowledged: false, reportReady: true, protectedBlocked: false }),
+      gate({ matches: true, acknowledged: false, reportReady: true }),
       false,
       "the second confirmation layer is mandatory"
     );
@@ -1632,7 +2010,7 @@ describe("confirm-button gate model", () => {
 
   it("a pending or failed pre-flight fails closed", () => {
     assert.equal(
-      gate({ matches: true, acknowledged: true, reportReady: false, protectedBlocked: false }),
+      gate({ matches: true, acknowledged: true, reportReady: false }),
       false,
       "no DELETE request may be sent before the report arrives"
     );
@@ -1715,10 +2093,20 @@ describe("backend: the pre-flight is read-only and fails closed", () => {
     }
   });
 
-  it("the pre-flight blocks only on PROTECTED records", () => {
+  it("the pre-flight stays unblocked while PROTECTED records exist (retention detach)", () => {
+    // Under the approved detach schema (migration 0022) protected records are
+    // retained and detached, not blockers: the success-path report must keep
+    // the destructive flow available for the Super Administrator. Only the
+    // failure paths above fail closed with blocked=true.
+    assert.equal(
+      preflight.includes("blocked: false"),
+      true,
+      "the success path no longer reports protected records as blocking"
+    );
     assert.equal(
       preflight.includes("blocked: hasProtectedEmployeeDependencies(dependencies)"),
-      true
+      false,
+      "protected records must not disable the flow under the detach schema"
     );
     assert.equal(
       preflight.includes("protectedDependencies:"),

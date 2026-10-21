@@ -189,8 +189,12 @@ export function sanitizePayslipHeaderFilename(value: string): string {
 export interface PayslipDocumentAccessContext {
   /** The linked employee of the authenticated actor, or null when none. */
   linkedEmployeeId: string | null;
-  /** The employee the published payslip belongs to. */
-  payslipEmployeeId: string;
+  /**
+   * The employee the published payslip belongs to. NULL once the employee
+   * row was permanently deleted (the payslip is retained, detached): nobody
+   * can own it through self-service any more, management access still works.
+   */
+  payslipEmployeeId: string | null;
   /** Explicit payroll/payslip management or view access. */
   managementAllowed: boolean;
 }

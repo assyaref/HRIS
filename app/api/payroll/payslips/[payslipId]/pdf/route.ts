@@ -1,11 +1,7 @@
 import { and, eq } from "drizzle-orm";
 
 import { db } from "@/db";
-import {
-  employees,
-  payslips,
-  payslipDocuments,
-} from "@/db/schema";
+import { payslips, payslipDocuments } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth/auth";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { hasAnyPermission } from "@/lib/auth/rbac";
@@ -137,20 +133,6 @@ export async function GET(
         ),
         eq(
           payslipDocuments.organizationId,
-          organizationId
-        ),
-        eq(
-          payslipDocuments.employeeId,
-          payslips.employeeId
-        )
-      )
-    )
-    .innerJoin(
-      employees,
-      and(
-        eq(employees.id, payslips.employeeId),
-        eq(
-          employees.organizationId,
           organizationId
         )
       )

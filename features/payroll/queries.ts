@@ -73,7 +73,11 @@ export interface PayrollItemRow {
   id: string;
   organizationId: string;
   payrollRunId: string;
-  employeeId: string;
+  /**
+   * NULL once the employee row was permanently deleted: the payroll result is
+   * retained (detached) and fully described by its creation-time snapshots.
+   */
+  employeeId: string | null;
   employeeNumberSnapshot: string;
   employeeNameSnapshot: string;
   grossAmount: number;
@@ -110,7 +114,11 @@ export interface PayslipRow {
   organizationId: string;
   payrollItemId: string | null;
   payrollPeriodId: string | null;
-  employeeId: string;
+  /**
+   * NULL once the employee row was permanently deleted: the issued payslip is
+   * retained (detached) and keeps its creation-time number snapshot.
+   */
+  employeeId: string | null;
   /** Historical employee number snapshot used for the PDF password contract. */
   employeeNumberSnapshot: string | null;
   payslipNumber: string;
@@ -206,7 +214,8 @@ function toPayrollItemRow(row: {
   id: string;
   organizationId: string;
   payrollRunId: string;
-  employeeId: string;
+  /** NULL once the employee row was permanently deleted (retained, detached). */
+  employeeId: string | null;
   employeeNumberSnapshot: string;
   employeeNameSnapshot: string;
   grossAmount: number;
@@ -235,7 +244,8 @@ function toPayslipRow(row: {
   organizationId: string;
   payrollItemId: string | null;
   payrollPeriodId: string | null;
-  employeeId: string;
+  /** NULL once the employee row was permanently deleted (retained, detached). */
+  employeeId: string | null;
   employeeNumberSnapshot: string | null;
   payslipNumber: string;
   issuedAt: Date;
@@ -648,7 +658,11 @@ export interface PayslipOverviewRow {
   kind: PayslipKind;
   status: PayslipStatus;
   issuedAt: Date;
-  employeeId: string;
+  /**
+   * NULL once the employee row was permanently deleted: the retained payslip
+   * is detached and described by its snapshots below.
+   */
+  employeeId: string | null;
   employeeNumber: string;
   employeeName: string;
   payrollPeriodId: string | null;
@@ -662,15 +676,20 @@ export const RECENT_PAYSLIPS_LIMIT = 100;
  * Recent payslips across every period (Mode A calculated + Mode B
  * distribution), newest first, organization-scoped. Bounded to
  * `RECENT_PAYSLIPS_LIMIT` rows for the management overview page.
+ *
+ * Snapshot-first (migration 0022): a payslip whose employee row was
+ * permanently deleted is RETAINED and still listed, resolved from its
+ * immutable snapshots; the live employee row is only the fallback.
  */
 export async function listRecentPayslips(
   organizationId: string
 ): Promise<PayslipOverviewRow[]> {
-  const employeeName = sql<string>`coalesce(
+  const employeeName = sql<string | null>`coalesce(
     ${payrollItems.employeeNameSnapshot},
+    ${payslips.employeeNameSnapshot},
     ${employees.firstName} || ' ' || ${employees.lastName}
   )`;
-  const employeeNumber = sql<string>`coalesce(
+  const employeeNumber = sql<string | null>`coalesce(
     ${payslips.employeeNumberSnapshot},
     ${payrollItems.employeeNumberSnapshot},
     ${employees.employeeNumber}
@@ -704,24 +723,29 @@ export async function listRecentPayslips(
         eq(payrollPeriods.id, payslips.payrollPeriodId)
       )
     )
-    .innerJoin(employees, eq(employees.id, payslips.employeeId))
+    .leftJoin(employees, eq(employees.id, payslips.employeeId))
     .where(eq(payslips.organizationId, organizationId))
     .orderBy(desc(payslips.issuedAt))
     .limit(RECENT_PAYSLIPS_LIMIT);
 
-  return rows.map((row) => ({
-    id: row.id,
-    payslipNumber: row.payslipNumber,
-    kind: row.payrollItemId ? "calculated" : "distribution",
-    status: row.status as PayslipStatus,
-    issuedAt: row.issuedAt,
-    employeeId: row.employeeId,
-    employeeNumber: row.employeeNumber,
-    employeeName: row.employeeName,
-    payrollPeriodId: row.payrollPeriodId ?? null,
-    periodCode: row.periodCode,
-    periodName: row.periodName,
-  }));
+  return rows
+    .filter(
+      (row): row is typeof row & { employeeNumber: string; employeeName: string } =>
+        Boolean(row.employeeNumber) && Boolean(row.employeeName)
+    )
+    .map((row) => ({
+      id: row.id,
+      payslipNumber: row.payslipNumber,
+      kind: row.payrollItemId ? "calculated" : "distribution",
+      status: row.status as PayslipStatus,
+      issuedAt: row.issuedAt,
+      employeeId: row.employeeId,
+      employeeNumber: row.employeeNumber,
+      employeeName: row.employeeName,
+      payrollPeriodId: row.payrollPeriodId ?? null,
+      periodCode: row.periodCode,
+      periodName: row.periodName,
+    }));
 }
 
 export interface PayslipDocumentSummary {
@@ -1006,11 +1030,14 @@ export async function getPublishedPayslipDetail(
   organizationId: string,
   payslipId: string
 ): Promise<PayslipDetailRow | null> {
-  const employeeName = sql<string>`coalesce(
+  // Snapshot-first resolution: a payslip whose employee row was permanently
+  // deleted (retained, detached) still resolves fully from its snapshots.
+  const employeeName = sql<string | null>`coalesce(
     ${payrollItems.employeeNameSnapshot},
+    ${payslips.employeeNameSnapshot},
     ${employees.firstName} || ' ' || ${employees.lastName}
   )`;
-  const employeeNumber = sql<string>`coalesce(
+  const employeeNumber = sql<string | null>`coalesce(
     ${payslips.employeeNumberSnapshot},
     ${payrollItems.employeeNumberSnapshot},
     ${employees.employeeNumber}
@@ -1050,7 +1077,7 @@ export async function getPublishedPayslipDetail(
         eq(payrollPeriods.id, payslips.payrollPeriodId)
       )
     )
-    .innerJoin(
+    .leftJoin(
       employees,
       and(
         eq(employees.id, payslips.employeeId),
@@ -1077,7 +1104,11 @@ export async function getPublishedPayslipDetail(
     !row.periodName ||
     !row.periodStart ||
     !row.periodEnd ||
-    !row.paymentDate
+    !row.paymentDate ||
+    // Identity must resolve for a published payslip: either from a live
+    // employee row or from the immutable snapshots of a detached one.
+    !row.employeeNumber ||
+    !row.employeeName
   ) {
     return null;
   }

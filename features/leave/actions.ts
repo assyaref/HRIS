@@ -77,7 +77,8 @@ async function auditLeave(
       | "leave.approved"
       | "leave.rejected";
     entityId?: string | null;
-    employeeNumber: string;
+    /** Null when the employee row was permanently deleted (retained history). */
+    employeeNumber: string | null;
     eventType: string;
     metadata?: Record<string, unknown> | null;
   }
@@ -301,9 +302,14 @@ export async function createLeaveRequestAction(
 interface LeaveRequestForAction {
   id: string;
   organizationId: string;
-  employeeId: string;
+  /**
+   * NULL once the employee row was permanently deleted (the request is
+   * retained, detached — migration 0022).
+   */
+  employeeId: string | null;
   employeeUserId: string | null;
-  employeeNumber: string;
+  /** Live number, falling back to the retained identity snapshot. */
+  employeeNumber: string | null;
   leaveTypeId: string;
   startDate: Date;
   totalDays: number;
@@ -320,14 +326,17 @@ async function loadLeaveRequestForAction(
       organizationId: leaveRequests.organizationId,
       employeeId: leaveRequests.employeeId,
       employeeUserId: employees.userId,
-      employeeNumber: employees.employeeNumber,
+      employeeNumber: sql<string | null>`coalesce(
+        ${employees.employeeNumber},
+        ${leaveRequests.employeeNumberSnapshot}
+      )`,
       leaveTypeId: leaveRequests.leaveTypeId,
       startDate: leaveRequests.startDate,
       totalDays: leaveRequests.totalDays,
       status: leaveRequests.status,
     })
     .from(leaveRequests)
-    .innerJoin(employees, eq(employees.id, leaveRequests.employeeId))
+    .leftJoin(employees, eq(employees.id, leaveRequests.employeeId))
     .where(
       and(
         eq(leaveRequests.id, requestId),
@@ -402,6 +411,16 @@ export async function reviewLeaveRequestAction(
         return {
           kind: "error",
           message: "This request has already been reviewed or cancelled.",
+        };
+      }
+      if (!locked.employeeId) {
+        // Retained request of a permanently deleted employee: it stays
+        // visible as history, but its balance rows are detached too and the
+        // request can no longer be decided.
+        return {
+          kind: "error",
+          message:
+            "This request belongs to a permanently deleted employee and can no longer be reviewed.",
         };
       }
 

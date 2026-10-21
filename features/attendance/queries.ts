@@ -48,7 +48,11 @@ export interface AttendanceRow {
   id: string;
   attendanceDate: Date;
   status: AttendanceStatus;
-  employeeId: string;
+  /**
+   * NULL once the employee row was permanently deleted: the time record is
+   * retained (detached, migration 0022) and described by its snapshots.
+   */
+  employeeId: string | null;
   employeeName: string;
   employeeNumber: string;
   projectId: string | null;
@@ -159,14 +163,26 @@ export async function listEligibleAttendanceOptions(
   return rows;
 }
 
-/** Shared select columns for joined attendance rows. */
+/**
+ * Shared select columns for joined attendance rows.
+ *
+ * Snapshot-first identity (migration 0022): a time record whose employee row
+ * was permanently deleted is retained, detached (`employee_id` NULL) and
+ * resolves its display identity from the immutable snapshots.
+ */
 const attendanceViewColumns = {
   id: attendanceRecords.id,
   attendanceDate: attendanceRecords.attendanceDate,
   status: attendanceRecords.status,
-  employeeId: employees.id,
-  employeeName: sql<string>`${employees.firstName} || ' ' || ${employees.lastName}`,
-  employeeNumber: employees.employeeNumber,
+  employeeId: attendanceRecords.employeeId,
+  employeeName: sql<string>`coalesce(
+    ${employees.firstName} || ' ' || ${employees.lastName},
+    ${attendanceRecords.employeeNameSnapshot}
+  )`,
+  employeeNumber: sql<string>`coalesce(
+    ${employees.employeeNumber},
+    ${attendanceRecords.employeeNumberSnapshot}
+  )`,
   employeeUserId: employees.userId,
   projectId: projects.id,
   projectName: projects.name,
@@ -190,9 +206,9 @@ export interface AttendanceViewRow {
   id: string;
   attendanceDate: Date;
   status: string;
-  employeeId: string;
-  employeeName: string;
-  employeeNumber: string;
+  employeeId: string | null;
+  employeeName: string | null;
+  employeeNumber: string | null;
   employeeUserId: string | null;
   projectId: string | null;
   projectName: string | null;
@@ -217,8 +233,10 @@ export function toAttendanceRow(row: AttendanceViewRow): AttendanceRow {
     attendanceDate: row.attendanceDate,
     status: row.status as AttendanceStatus,
     employeeId: row.employeeId,
-    employeeName: row.employeeName,
-    employeeNumber: row.employeeNumber,
+    // A retained row always carries identity (retained-identity CHECK); the
+    // fallbacks keep the type honest for rows predating the snapshots.
+    employeeName: row.employeeName ?? "(retained record)",
+    employeeNumber: row.employeeNumber ?? "—",
     projectId: row.projectId,
     projectName: row.projectName,
     workLocationId: row.workLocationId,
@@ -382,11 +400,15 @@ export async function listOrganizationAttendance(
   const search = filters.q?.trim();
   if (search) {
     const pattern = `%${search}%`;
+    // Search covers retained (detached) rows too: the snapshots are the only
+    // identity a permanently deleted employee's history still carries.
     const searchClause = or(
       ilike(employees.employeeNumber, pattern),
       ilike(employees.firstName, pattern),
       ilike(employees.lastName, pattern),
-      ilike(employees.email, pattern)
+      ilike(employees.email, pattern),
+      ilike(attendanceRecords.employeeNumberSnapshot, pattern),
+      ilike(attendanceRecords.employeeNameSnapshot, pattern)
     );
     if (searchClause) conditions.push(searchClause);
   }
@@ -395,7 +417,7 @@ export async function listOrganizationAttendance(
     db
       .select(attendanceViewColumns)
       .from(attendanceRecords)
-      .innerJoin(employees, eq(employees.id, attendanceRecords.employeeId))
+      .leftJoin(employees, eq(employees.id, attendanceRecords.employeeId))
       .leftJoin(projects, eq(projects.id, attendanceRecords.projectId))
       .leftJoin(
         workLocations,
@@ -411,7 +433,7 @@ export async function listOrganizationAttendance(
     db
       .select({ count: sql<number>`count(*)::int` })
       .from(attendanceRecords)
-      .innerJoin(employees, eq(employees.id, attendanceRecords.employeeId))
+      .leftJoin(employees, eq(employees.id, attendanceRecords.employeeId))
       .where(and(...conditions)),
   ]);
 
@@ -439,7 +461,7 @@ export async function getAttendanceDetail(
   const recordRows = await db
     .select(attendanceViewColumns)
     .from(attendanceRecords)
-    .innerJoin(employees, eq(employees.id, attendanceRecords.employeeId))
+    .leftJoin(employees, eq(employees.id, attendanceRecords.employeeId))
     .leftJoin(projects, eq(projects.id, attendanceRecords.projectId))
     .leftJoin(
       workLocations,

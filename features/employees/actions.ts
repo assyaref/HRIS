@@ -35,7 +35,7 @@ import { evaluateEmployeeDeletion } from "./delete-policy";
 import {
   buildPermanentDeleteDependencyMessage,
   canPermanentlyDeleteEmployees,
-  buildPermanentDeleteProtectedMessage,
+  buildPermanentDeleteRetainedCompletionMessage,
   EMPLOYEE_PERMANENT_DELETE_ACKNOWLEDGEMENT_MESSAGE,
   EMPLOYEE_PERMANENT_DELETE_CONFIRMATION_MESSAGE,
   EMPLOYEE_PERMANENT_DELETE_FAILED_MESSAGE,
@@ -51,12 +51,17 @@ import {
   type EmployeeDeleteDependency,
 } from "./permanent-delete-policy";
 import {
+  DELETION_REASON_REQUIRED_MESSAGE,
+  isValidDeletionReason,
+} from "./deletion-control-policy";
+import {
   countEmployeeDirectReports,
   deleteEmployeeDeletableRecords,
   getEmployeeById,
   getEmployeeInOrganization,
   listEmployeeDeletionDependencies,
   listLinkableUsers,
+  snapshotEmployeeRetainedRecords,
 } from "./queries";
 import {
   createEmployeeSchema,
@@ -85,9 +90,16 @@ import {
  *      for the system-level SUPERADMIN role — see the RBAC note below.
  * - Permanent deletion never removes PROTECTED historical records. Attendance,
  *   leave, permission, payroll, payslip and employment-history rows are
- *   retention-bound: their presence blocks the deletion with `409`, and their
- *   `RESTRICT` foreign keys back that up at the database level, so no role —
- *   not even SUPERADMIN — can override it.
+ *   retention-bound: they are RETAINED, and — under the approved detach
+ *   schema (migration 0022, see
+ *   docs/employee-permanent-delete-0022-detach-design.md) — their employee
+ *   reference is atomically cleared (`ON DELETE SET NULL`) while their
+ *   immutable identity snapshots keep them reportable. Where migration 0022
+ *   has NOT been applied, the pre-0022 `RESTRICT` foreign keys still refuse
+ *   the DELETE (`23503`), the transaction rolls back and the retained-
+ *   completion error is returned: the feature fails closed until both the
+ *   migration and this code are deployed, so no role — not even SUPERADMIN —
+ *   can delete retained history.
  * - An employee linked to the actor's own user account cannot be removed
  *   through employee management.
  *
@@ -807,6 +819,7 @@ export interface EmployeePermanentDeleteState {
     | "FORBIDDEN"
     | "NOT_FOUND"
     | "CONFIRMATION_MISMATCH"
+    | "REASON_REQUIRED"
     | "PROTECTED_RECORDS"
     | "DEPENDENCIES"
     | "SELF_LINKED"
@@ -818,6 +831,15 @@ export interface EmployeePermanentDeleteState {
    * project assignments, master data). Empty when nothing is removed.
    */
   deletableDependencies?: EmployeeDeleteDependency[];
+  /**
+   * PROTECTED dependents that are retained by policy (never deleted). Under
+   * the Super Administrator override and the approved detach schema
+   * (migration 0022) the deletion COMPLETES while they exist: they are
+   * detached (`employee_id` cleared by the SET NULL foreign keys) with their
+   * immutable identity snapshots frozen. Present on the success state and on
+   * the compatibility error returned when the schema change is not applied.
+   */
+  retainedDependencies?: EmployeeDeleteDependency[];
   /** Rows removed per category, present on success for the audit summary. */
   removedSummary?: Record<string, number>;
 }
@@ -849,7 +871,26 @@ async function auditPermanentEmployeeDelete(input: {
   employeeName: string | null;
   result: PermanentDeleteAuditResult;
   reason?: string;
+  /**
+   * The operator-supplied justification for the deletion attempt (audit
+   * policy): mandatory, validated by `isValidDeletionReason`, and recorded
+   * alongside the machine-readable `reason` on every attempt that got past
+   * the confirmation layers.
+   */
+  deletionReason?: string | null;
   deletedRelatedRecords?: Record<string, number>;
+  /**
+   * PROTECTED records the deletion RETAINED, per category. On SUCCESS these
+   * are the rows that were detached with their identity snapshots
+   * (migration 0022); on a foreign-key refusal they are the rows whose
+   * pre-0022 RESTRICT constraint blocked the completion.
+   */
+  retainedRecords?: Record<string, number>;
+  /**
+   * Retained rows whose immutable identity snapshot was frozen by this
+   * deletion, per table (migration 0022). Present on SUCCESS only.
+   */
+  snapshottedRetainedRecords?: Record<string, number>;
 }): Promise<void> {
   try {
     await writeAuditLog({
@@ -868,7 +909,16 @@ async function auditPermanentEmployeeDelete(input: {
         employeeName: input.employeeName,
         result: input.result,
         deletedRelatedRecords: input.deletedRelatedRecords ?? {},
+        ...(input.retainedRecords
+          ? { retainedRecords: input.retainedRecords }
+          : {}),
+        ...(input.snapshottedRetainedRecords
+          ? { snapshottedRetainedRecords: input.snapshottedRetainedRecords }
+          : {}),
         ...(input.reason ? { reason: input.reason } : {}),
+        ...(input.deletionReason
+          ? { deletionReason: input.deletionReason }
+          : {}),
       },
     });
   } catch (error) {
@@ -879,9 +929,10 @@ async function auditPermanentEmployeeDelete(input: {
 function toPermanentDeleteError(
   code: EmployeePermanentDeleteState["code"],
   message: string,
-  dependencies?: EmployeeDeleteDependency[]
+  dependencies?: EmployeeDeleteDependency[],
+  retainedDependencies?: EmployeeDeleteDependency[]
 ): EmployeePermanentDeleteState {
-  return { status: "error", code, message, dependencies };
+  return { status: "error", code, message, dependencies, retainedDependencies };
 }
 
 /**
@@ -934,22 +985,39 @@ async function readEmployeeDeletionDependencies(
  *    like an unknown id, so existence never leaks → 404.
  * 4. Employee-number confirmation, compared against the number loaded from
  *    the database — the browser value is only the typed confirmation → 400.
+ *    The irreversibility acknowledgement and the audit-policy deletion REASON
+ *    (`deletionReason`, shared `isValidDeletionReason` validator, 10–2000
+ *    characters) are re-validated server-side the same way → 400. The
+ *    operator-supplied reason is recorded on every subsequent audit row.
  * 5. PROTECTED historical records (attendance, leave, permission, payroll,
- *    payslip, employment history) → 409, nothing deleted.
+ *    payslip, employment history) are RETAINED, never deleted. Under the
+ *    revised policy they no longer fail the Super Administrator's
+ *    APPLICATION-level eligibility (`superAdminOverride`). With the approved
+ *    detach schema (migration 0022) the deletion then COMPLETES: the
+ *    retained rows' identity snapshots are frozen and their employee
+ *    references are atomically cleared by the tables' ON DELETE SET NULL
+ *    foreign keys — inside the same transaction. Against a pre-0022 schema
+ *    the same attempt fails closed: the old RESTRICT foreign keys refuse the
+ *    employee DELETE (23503), the transaction rolls back and the
+ *    retained-completion error is returned.
  * 6. ONE transaction: lock the row, re-check the confirmation, re-scan and
- *    re-decide on the locked snapshot, delete the DELETABLE related records
- *    table by table, then delete the employee row.
+ *    re-decide on the locked snapshot, freeze the retained-identity
+ *    snapshots, delete the DELETABLE related records table by table, then
+ *    delete the employee row (which detaches the retained rows).
  *
  * ATOMICITY: every statement above runs inside a single `db.transaction`. Any
  * throw — a failed dependent delete, a racing insert that trips a `RESTRICT`
- * foreign key, a lock timeout — rolls the whole operation back, so there is no
+ * foreign key on a DELETABLE table, a lock timeout, a schema that does not
+ * have the snapshot columns — rolls the whole operation back, so there is no
  * state in which the employee row is gone while history survives, or vice
  * versa. On rollback nothing is reported as deleted.
  *
- * The database remains the final authority: every employee-scoped foreign key
- * is `RESTRICT`/`SET NULL` (never `CASCADE`, migration 0017), so the explicit
- * delete plan is bounded by the same integrity rules as before — protected
- * rows cannot be reached by any role, including SUPERADMIN.
+ * The database remains the final authority: no employee-scoped foreign key is
+ * ever `CASCADE`. DELETABLE tables keep the migration-0017 `RESTRICT`
+ * backstop, and the PROTECTED tables' `SET NULL` action preserves their rows
+ * while the `<table>_retained_identity_check` CHECK constraints guarantee a
+ * detached row always carries its historical identity — nothing is reachable
+ * by any role, including SUPERADMIN, that the policy does not allow.
  */
 export async function permanentlyDeleteEmployeeAction(
   employeeId: string,
@@ -1068,8 +1136,38 @@ export async function permanentlyDeleteEmployeeAction(
     );
   }
 
+  // Third confirmation layer — the audit-policy reason. The operator must
+  // justify the irreversible deletion; the same shared validator as the
+  // control plane decides (non-empty, 10–2000 characters). Re-validated
+  // server-side so a hand-rolled request cannot skip it, and recorded on
+  // every subsequent audit row for this attempt.
+  const deletionReason = field(formData, "deletionReason");
+  if (!isValidDeletionReason(deletionReason)) {
+    await auditPermanentEmployeeDelete({
+      ...employeeContext,
+      result: "DENIED",
+      reason: "REASON_REQUIRED",
+    });
+    return toPermanentDeleteError(
+      "REASON_REQUIRED",
+      DELETION_REASON_REQUIRED_MESSAGE
+    );
+  }
+  const operatorReason = deletionReason.trim();
+  const deletionContext = { ...employeeContext, deletionReason: operatorReason };
+
   type DeletionOutcome =
-    | { code: "SUCCESS"; removedSummary: Record<string, number> }
+    | {
+        code: "SUCCESS";
+        removedSummary: Record<string, number>;
+        /**
+         * PROTECTED categories retained by this deletion, with their
+         * pre-deletion counts — reported to the operator and audited.
+         */
+        retainedDependencies: EmployeeDeleteDependency[];
+        /** Retained rows whose identity snapshot was frozen, per table. */
+        snapshottedRecords: Record<string, number>;
+      }
     | { code: "NOT_FOUND" | "CONFIRMATION_MISMATCH" }
     | {
         code: "DENIED";
@@ -1118,11 +1216,17 @@ export async function permanentlyDeleteEmployeeAction(
         current.id,
         scopedOrganizationId
       );
+      // Revised deletion policy: the Super Administrator's application-level
+      // eligibility no longer fails on protected records. `canPermanentlyDelete`
+      // is the SAME server-side gate that admitted the request (SUPERADMIN role
+      // + system-only permission, from the session's database-backed RBAC), so
+      // the override is never taken from the browser.
       const decision = evaluatePermanentEmployeeDeletion({
         actorUserId: user.id,
         employeeNumber: current.employeeNumber,
         linkedUserId: current.userId,
         dependencies,
+        superAdminOverride: canPermanentlyDelete,
       });
       if (!decision.allowed) {
         const stateCode =
@@ -1152,16 +1256,36 @@ export async function permanentlyDeleteEmployeeAction(
         } as const;
       }
 
-      // Explicit, table-by-table removal of the DELETABLE related records,
-      // immediately before the employee row so the two stay atomic. No
-      // CASCADE is relied upon, and every statement is org-scoped.
+      // STEP 1 — freeze the employee's identity onto every retained
+      // (PROTECTED) row, filling NULL snapshots only. Runs on the same
+      // transaction handle, org-scoped, BEFORE the employee row is removed:
+      // the subsequent DELETE then fires the protected tables' ON DELETE
+      // SET NULL foreign keys and detaches the retained rows atomically.
+      // Creation-time snapshots (payslip PDF password contract, payroll
+      // items) are never overwritten — the plan fills NULLs with COALESCE.
+      // Where migration 0022 is NOT applied the columns do not exist and
+      // this statement fails, rolling the whole transaction back: the
+      // feature cannot complete against a pre-0022 schema.
+      const snapshottedRecords = await snapshotEmployeeRetainedRecords(
+        tx,
+        current.id,
+        scopedOrganizationId,
+        { employeeNumber: current.employeeNumber, employeeName }
+      );
+
+      // STEP 2 — explicit, table-by-table removal of the DELETABLE related
+      // records, immediately before the employee row so the two stay atomic.
+      // No CASCADE is relied upon, and every statement is org-scoped.
       const removedSummary = await deleteEmployeeDeletableRecords(
         tx,
         current.id,
         scopedOrganizationId
       );
 
-      // Scoped delete of exactly this one employee row.
+      // STEP 3 — scoped delete of exactly this one employee row. The
+      // protected tables' SET NULL foreign keys detach their retained rows
+      // inside this same statement; the DELETABLE tables keep their RESTRICT
+      // backstop for racing inserts.
       const removed = await tx
         .delete(employees)
         .where(
@@ -1174,13 +1298,23 @@ export async function permanentlyDeleteEmployeeAction(
       if (removed.length === 0) {
         return { code: "NOT_FOUND" } as const;
       }
-      return { code: "SUCCESS", removedSummary } as const;
+      return {
+        code: "SUCCESS",
+        removedSummary,
+        retainedDependencies: decision.retained,
+        snapshottedRecords,
+      } as const;
     });
   } catch (error) {
     // Any throw above rolls the transaction back — nothing was committed.
     if (isForeignKeyViolation(error)) {
-      // A dependent row appeared after the scan; report it like any other
-      // related-record rejection instead of a generic failure.
+      // The database refused to complete the deletion. This is the
+      // compatibility fallback for a database where migration 0022 has NOT
+      // been applied: protected records are retained (never deleted), their
+      // pre-0022 `RESTRICT` foreign keys reject the employee `DELETE`, and
+      // the whole transaction — snapshots, deletable-record removals and
+      // all — rolls back. A dependent row that appeared after the scan
+      // fails through the same path. Nothing was deleted.
       const dependencies = await readEmployeeDeletionDependencies(
         employeeId,
         scopedOrganizationId
@@ -1194,17 +1328,30 @@ export async function permanentlyDeleteEmployeeAction(
         );
         return { dependencies: [], directReportCount: 0 };
       }).then((summary) => summary.dependencies);
+      const protectedPresent = hasProtectedEmployeeDependencies(dependencies);
+      const retainedDependencies = presentEmployeeDependenciesByDisposition(
+        dependencies,
+        "protected"
+      );
       await auditPermanentEmployeeDelete({
-        ...employeeContext,
+        ...deletionContext,
         result: "DENIED",
-        reason: "RELATED_RECORDS_EXIST",
+        reason: protectedPresent
+          ? "PROTECTED_RECORDS_RETAINED"
+          : "RELATED_RECORDS_EXIST",
+        // What the database kept, per category — the audit must show the
+        // operator exactly which retained records refused the completion.
+        retainedRecords: Object.fromEntries(
+          retainedDependencies.map((dependency) => [
+            dependency.label,
+            dependency.count,
+          ])
+        ),
       });
       return toPermanentDeleteError(
-        hasProtectedEmployeeDependencies(dependencies)
-          ? "PROTECTED_RECORDS"
-          : "DEPENDENCIES",
-        hasProtectedEmployeeDependencies(dependencies)
-          ? buildPermanentDeleteProtectedMessage(
+        protectedPresent ? "PROTECTED_RECORDS" : "DEPENDENCIES",
+        protectedPresent
+          ? buildPermanentDeleteRetainedCompletionMessage(
               employee.employeeNumber,
               dependencies
             )
@@ -1212,13 +1359,14 @@ export async function permanentlyDeleteEmployeeAction(
               employee.employeeNumber,
               dependencies
             ),
-        presentEmployeeDeleteDependencies(dependencies)
+        presentEmployeeDeleteDependencies(dependencies),
+        retainedDependencies
       );
     }
 
     console.error("[employees] permanent delete failed", error);
     await auditPermanentEmployeeDelete({
-      ...employeeContext,
+      ...deletionContext,
       result: "FAILED",
       // Machine-readable reason only: the driver message can name columns or
       // values, and audit rows are readable by admins. Detail stays in the log
@@ -1233,9 +1381,19 @@ export async function permanentlyDeleteEmployeeAction(
 
   if (outcome.code === "SUCCESS") {
     await auditPermanentEmployeeDelete({
-      ...employeeContext,
+      ...deletionContext,
       result: "SUCCESS",
       deletedRelatedRecords: outcome.removedSummary,
+      // What the deletion RETAINED (per category) and how many retained
+      // rows had their identity frozen (per table): the audit trail must
+      // describe the full transaction outcome, not just the removals.
+      retainedRecords: Object.fromEntries(
+        outcome.retainedDependencies.map((dependency) => [
+          dependency.label,
+          dependency.count,
+        ])
+      ),
+      snapshottedRetainedRecords: outcome.snapshottedRecords,
     });
     // The employee's private document folder is the only artifact outside the
     // transaction. Remove it after the commit so a rolled-back delete can never
@@ -1248,12 +1406,13 @@ export async function permanentlyDeleteEmployeeAction(
       status: "success",
       message: "Employee permanently deleted successfully.",
       removedSummary: outcome.removedSummary,
+      retainedDependencies: outcome.retainedDependencies,
     };
   }
 
   if (outcome.code === "DENIED") {
     await auditPermanentEmployeeDelete({
-      ...employeeContext,
+      ...deletionContext,
       result: "DENIED",
       reason: outcome.reason,
     });
@@ -1267,7 +1426,7 @@ export async function permanentlyDeleteEmployeeAction(
   }
 
   await auditPermanentEmployeeDelete({
-    ...employeeContext,
+    ...deletionContext,
     result: "DENIED",
     reason: outcome.code,
   });
@@ -1285,7 +1444,10 @@ export interface EmployeePermanentDeleteDependencyReport {
   message?: string;
   /** Non-zero dependency categories, display order preserved. */
   dependencies: EmployeeDeleteDependency[];
-  /** Non-zero PROTECTED categories — their presence blocks the deletion. */
+  /**
+   * Non-zero PROTECTED categories — retained (never deleted) by the
+   * operation, detached with identity snapshots under migration 0022.
+   */
   protectedDependencies: EmployeeDeleteDependency[];
   /** Non-zero DELETABLE categories — these will be removed by the operation. */
   deletableDependencies: EmployeeDeleteDependency[];
@@ -1298,7 +1460,13 @@ export interface EmployeePermanentDeleteDependencyReport {
    * those describe rows the operation removes, and a direct report is not one.
    */
   directReportCount: number;
-  /** True when a PROTECTED record blocks the deletion (409). */
+  /**
+   * True when the pre-flight itself REFUSED (authorization failure, missing
+   * scope, unreadable counts): a destructive request must never proceed on
+   * a report that could not be produced. FALSE on the success path — under
+   * the approved detach schema (migration 0022) PROTECTED records are
+   * retained and detached, not blockers.
+   */
   blocked: boolean;
 }
 
@@ -1326,12 +1494,16 @@ function deniedDependencyReport(
  * dependency counts without being entitled to the operation.
  *
  * It performs NO write, NO audit row and NO delete: it only counts and
- * classifies dependents so the dialog can show the real figures and keep its
- * confirm button disabled when a PROTECTED record exists. The server-side
- * enforcement inside `permanentlyDeleteEmployeeAction` (permission,
- * organization scope, confirmation, dependency scan inside the transaction,
- * foreign-key backstop) is unchanged and remains authoritative — this report is
- * a UX affordance, never the guard.
+ * classifies dependents so the dialog can show the real figures — the
+ * deletable categories that would be removed and the PROTECTED categories
+ * that are retained. Under the approved detach schema (migration 0022) the
+ * retained categories are detached with identity snapshots, so they neither
+ * disable the confirm button nor block completion; `blocked` is reserved for
+ * the pre-flight's own failure paths. The server-side enforcement inside
+ * `permanentlyDeleteEmployeeAction` (permission, organization scope,
+ * confirmation, dependency scan inside the transaction, foreign-key
+ * backstop) is unchanged and remains authoritative — this report is a UX
+ * affordance, never the guard.
  *
  * Scoped exactly like the delete itself: the employee's OWNING organization is
  * read from the database (SUPERADMIN may therefore pre-flight another tenant's
@@ -1391,9 +1563,11 @@ export async function checkEmployeeDeletionDependenciesAction(
       ),
       totalRelatedRecords: totalEmployeeDeleteDependencyCount(dependencies),
       directReportCount,
-      // Only PROTECTED records block: deletable records are removed by the
-      // operation itself, which is exactly what the operator is confirming.
-      blocked: hasProtectedEmployeeDependencies(dependencies),
+      // Under the approved detach schema (migration 0022) PROTECTED records
+      // no longer block the completion: they are retained and detached with
+      // their identity snapshots. `blocked` therefore stays FALSE on the
+      // success path — only the failure paths above fail closed with TRUE.
+      blocked: false,
     };
   } catch (error) {
     // Fail closed: an unreadable dependency report must never enable a delete.

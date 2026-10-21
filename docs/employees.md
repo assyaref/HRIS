@@ -134,11 +134,14 @@ only a convenience — the action re-checks both conditions.
 
 Flow: authenticate → authorize → resolve org from session → org-scoped load (else
 `not found`) → compare the typed employee number with the stored `employee_number`
-→ require the server-side acknowledgement → in **one transaction**: lock the row,
-re-check the confirmation, scan and classify employee-scoped dependencies, delete
-the deletable related records, then `DELETE` the employee row scoped to
-`(id, organization_id)` → audit → remove private document storage → revalidate
-roster + profile. Direct reports are retained; only their `manager_id` is nulled.
+→ require the server-side acknowledgement → require an audit-policy deletion
+**reason** (`deletionReason`, shared `isValidDeletionReason` validator, 10–2000
+characters, refused as `REASON_REQUIRED` and recorded on the audit trail) → in
+**one transaction**: lock the row, re-check the confirmation, scan and classify
+employee-scoped dependencies, delete the deletable related records, then
+`DELETE` the employee row scoped to `(id, organization_id)` → audit → remove
+private document storage → revalidate roster + profile. Direct reports are
+retained; only their `manager_id` is nulled.
 
 The scan lives in `listEmployeeDeletionDependencies` (`queries.ts`) and is always
 filtered by both `employee_id` and `organization_id`; it never uses a
@@ -147,7 +150,7 @@ uniformly** (`permanent-delete-policy.ts`):
 
 | Disposition | Categories | Effect |
 | --- | --- | --- |
-| `protected` | Attendance, Leave, Permission, Payroll, Payslip, Employment history | Retention-bound. A non-zero count **blocks** the deletion with `409`; the rows are never removed, not even by a Super Administrator. |
+| `protected` | Attendance, Leave, Permission, Payroll, Payslip, Employment history | Retention-bound. The rows are **never removed**, not even by a Super Administrator. Under the revised policy they no longer fail the Super Administrator's application-level eligibility (`superAdminOverride`); the database's `RESTRICT` foreign keys then refuse to complete the deletion while they exist — the transaction rolls back and the retained-completion error is returned with the retained summary. |
 | `deletable` | Documents, Face ID, Projects, Other related records | Removed explicitly, one statement per table, inside the same transaction. |
 
 An unclassified label fails closed as `protected`, so a newly added category can
@@ -183,8 +186,11 @@ Written through `lib/auth/audit.ts` (append-only, best-effort after commit):
 - `employee.permanently_deleted` for a permanent delete (metadata: `operation:
   "EMPLOYEE_PERMANENT_DELETE"`, employee id + number + name, actor id/email/role,
   organization, `result` of `SUCCESS`/`DENIED`/`FAILED`, a machine-readable
-  `reason`, and the `deletedRelatedRecords` summary). The employee number and name
-  are audit context, not credentials.
+  `reason`, the operator-supplied `deletionReason` (mandatory, 10–2000
+  characters, validated by `isValidDeletionReason`), the `deletedRelatedRecords`
+  summary, and — when the database refused a Super Administrator override
+  attempt — the `retainedRecords` summary). The employee number and name are
+  audit context, not credentials.
 - `employee.deleted` for a deactivation (metadata: `operation: "EMPLOYEE_DELETE"`,
   employee id + number + name, `result`, `reason`).
 
@@ -214,12 +220,18 @@ organization (enforced in the module).
 - Permanent deletion is reserved for the system-level `SUPERADMIN` role and
   requires both `employees.permanent_delete` and that role; no tenant role can
   hold or be granted it.
-- Permanent deletion is blocked by any **protected** record: attendance, leave,
-  permission requests, payroll, payslips, or employment history. These are
-  retention-bound and are never removed, not even by a Super Administrator. Only
-  the deletable categories (documents, face ID, project assignments, and other
-  master data) are removed, explicitly and inside the same transaction. There is
-  no cascade and no forced purge (see §7).
+- Protected records (attendance, leave, permission requests, payroll, payslips,
+  employment history) are **retained**, never deleted. Under the revised
+  policy a Super Administrator may still ATTEMPT the deletion while they
+  exist — the dialog stays enabled and reports the retained records — but the
+  database's `RESTRICT` foreign keys refuse to remove the employee row, so
+  the attempt rolls back with the retained-completion error and nothing is
+  deleted. Completing such a deletion requires the retention-policy approval
+  and an approved database change for the retained categories (see
+  `docs/employee-permanent-delete-policy.md` §7); both remain outstanding
+  prerequisites. Only the deletable categories (documents, face ID, project
+  assignments, and other master data) are removed, explicitly and inside the
+  same transaction. There is no cascade and no forced purge (see §7).
 - Direct reports are retained: deleting a manager only nulls their
   `manager_id`. The dialog reports that count separately so it is never presented
   as a deletion.
@@ -236,6 +248,15 @@ organization (enforced in the module).
 - HR deactivation matrix change requires re-running the RBAC seed.
 - Self-service profile ("my employee record") belongs to a later profile
   module (`profile.view`), not `employees.view`.
+- Legal holds, retention-tier classification and dual-control approval are
+  specified in **`docs/employee-permanent-delete-policy.md`**. The control plane
+  (`features/employees/deletion-control-policy.ts`,
+  `features/employees/deletion-control.actions.ts`,
+  `db/migrations/0021_employee_deletion_controls.sql`) is additive; execution of
+  an approved deletion remains **DISABLED** until the retention policy is signed
+  off. The live `permanentlyDeleteEmployeeAction` implements the revised
+  Super Administrator override at the application level (see §7); the
+  database's `RESTRICT` foreign keys remain the final authority on completion.
 
 ## 11. Database validation status
 

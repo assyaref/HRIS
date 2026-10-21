@@ -4,6 +4,7 @@ import {
   and,
   asc,
   eq,
+  getTableName,
   ilike,
   isNotNull,
   ne,
@@ -1086,4 +1087,209 @@ export async function deleteEmployeeDeletableRecords(
   }
 
   return removedPerCategory;
+}
+
+/* ------------------------------------------------------------------ */
+/* Retained-record identity snapshots (migration 0022)                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * One PROTECTED table whose retained rows must carry the employee's identity
+ * before the employee row is detached (`ON DELETE SET NULL`, migration 0022).
+ */
+interface EmployeeRetainedSnapshotSource {
+  table: AnyPgTable;
+  employeeIdColumn: AnyPgColumn;
+  organizationIdColumn: AnyPgColumn;
+  employeeNumberSnapshotColumn: AnyPgColumn;
+  employeeNameSnapshotColumn: AnyPgColumn;
+}
+
+/**
+ * The retained-identity snapshot plan: every PROTECTED table that carries
+ * nullable snapshot columns. `payroll_items` is deliberately absent — its
+ * creation-time snapshots are NOT NULL, so there is nothing to fill — and
+ * that exclusion is asserted below so a newly protected table can never be
+ * forgotten.
+ *
+ * The plan is derived from the SAME `EMPLOYEE_DELETE_DEPENDENCY_SOURCES` list
+ * that drives counting and deletion, so classification can never drift: a
+ * table is in this plan if and only if its category is PROTECTED and it is
+ * not `payroll_items`.
+ */
+const EMPLOYEE_RETAINED_SNAPSHOT_PLAN: readonly EmployeeRetainedSnapshotSource[] =
+  [
+    {
+      table: attendanceRecords,
+      employeeIdColumn: attendanceRecords.employeeId,
+      organizationIdColumn: attendanceRecords.organizationId,
+      employeeNumberSnapshotColumn: attendanceRecords.employeeNumberSnapshot,
+      employeeNameSnapshotColumn: attendanceRecords.employeeNameSnapshot,
+    },
+    {
+      table: attendanceEvents,
+      employeeIdColumn: attendanceEvents.employeeId,
+      organizationIdColumn: attendanceEvents.organizationId,
+      employeeNumberSnapshotColumn: attendanceEvents.employeeNumberSnapshot,
+      employeeNameSnapshotColumn: attendanceEvents.employeeNameSnapshot,
+    },
+    {
+      table: leaveBalances,
+      employeeIdColumn: leaveBalances.employeeId,
+      organizationIdColumn: leaveBalances.organizationId,
+      employeeNumberSnapshotColumn: leaveBalances.employeeNumberSnapshot,
+      employeeNameSnapshotColumn: leaveBalances.employeeNameSnapshot,
+    },
+    {
+      table: leaveRequests,
+      employeeIdColumn: leaveRequests.employeeId,
+      organizationIdColumn: leaveRequests.organizationId,
+      employeeNumberSnapshotColumn: leaveRequests.employeeNumberSnapshot,
+      employeeNameSnapshotColumn: leaveRequests.employeeNameSnapshot,
+    },
+    {
+      table: permissionRequests,
+      employeeIdColumn: permissionRequests.employeeId,
+      organizationIdColumn: permissionRequests.organizationId,
+      employeeNumberSnapshotColumn: permissionRequests.employeeNumberSnapshot,
+      employeeNameSnapshotColumn: permissionRequests.employeeNameSnapshot,
+    },
+    {
+      table: employeePayrollComponents,
+      employeeIdColumn: employeePayrollComponents.employeeId,
+      organizationIdColumn: employeePayrollComponents.organizationId,
+      employeeNumberSnapshotColumn:
+        employeePayrollComponents.employeeNumberSnapshot,
+      employeeNameSnapshotColumn: employeePayrollComponents.employeeNameSnapshot,
+    },
+    {
+      table: payslips,
+      employeeIdColumn: payslips.employeeId,
+      organizationIdColumn: payslips.organizationId,
+      employeeNumberSnapshotColumn: payslips.employeeNumberSnapshot,
+      employeeNameSnapshotColumn: payslips.employeeNameSnapshot,
+    },
+    {
+      table: payslipDocuments,
+      employeeIdColumn: payslipDocuments.employeeId,
+      organizationIdColumn: payslipDocuments.organizationId,
+      employeeNumberSnapshotColumn: payslipDocuments.employeeNumberSnapshot,
+      employeeNameSnapshotColumn: payslipDocuments.employeeNameSnapshot,
+    },
+    {
+      table: payslipDocumentVersions,
+      employeeIdColumn: payslipDocumentVersions.employeeId,
+      organizationIdColumn: payslipDocumentVersions.organizationId,
+      employeeNumberSnapshotColumn:
+        payslipDocumentVersions.employeeNumberSnapshot,
+      employeeNameSnapshotColumn: payslipDocumentVersions.employeeNameSnapshot,
+    },
+    {
+      table: employeeEmploymentHistory,
+      employeeIdColumn: employeeEmploymentHistory.employeeId,
+      organizationIdColumn: employeeEmploymentHistory.organizationId,
+      employeeNumberSnapshotColumn:
+        employeeEmploymentHistory.employeeNumberSnapshot,
+      employeeNameSnapshotColumn: employeeEmploymentHistory.employeeNameSnapshot,
+    },
+  ];
+
+/**
+ * Fail fast when the snapshot plan and the policy classification disagree.
+ *
+ * Runs at module load, mirroring `assertEmployeeDeletePlanMatchesPolicy`:
+ * - every PROTECTED table except `payroll_items` must appear (a newly
+ *   protected table without snapshots would detach anonymously and violate
+ *   the database's retained-identity CHECK at deletion time);
+ * - no DELETABLE table may appear (its rows are removed, never detached);
+ * - `payroll_items` itself must never appear.
+ */
+function assertEmployeeSnapshotPlanMatchesPolicy(): void {
+  const protectedTables = EMPLOYEE_DELETE_DEPENDENCY_SOURCES.filter(
+    (group) => employeeDeleteDependencyDisposition(group.label) === "protected"
+  ).flatMap((group) => group.tables.map((source) => source.table));
+  const deletableTables = EMPLOYEE_DELETE_DEPENDENCY_SOURCES.filter(
+    (group) => employeeDeleteDependencyDisposition(group.label) === "deletable"
+  ).flatMap((group) => group.tables.map((source) => source.table));
+  const plannedTables = EMPLOYEE_RETAINED_SNAPSHOT_PLAN.map(
+    (source) => source.table
+  );
+
+  const expectedProtectedTables = protectedTables.filter(
+    (table) => table !== payrollItems
+  );
+  for (const table of expectedProtectedTables) {
+    if (!plannedTables.includes(table)) {
+      throw new Error(
+        "Employee permanent delete snapshot plan is missing a protected table with nullable identity snapshots."
+      );
+    }
+  }
+  for (const table of deletableTables) {
+    if (plannedTables.includes(table)) {
+      throw new Error(
+        "Employee permanent delete snapshot plan must not include a deletable table."
+      );
+    }
+  }
+  if (plannedTables.includes(payrollItems)) {
+    throw new Error(
+      "payroll_items carries NOT NULL creation-time snapshots and must not be in the retained snapshot plan."
+    );
+  }
+}
+
+assertEmployeeSnapshotPlanMatchesPolicy();
+
+/**
+ * Freeze the employee's identity onto every retained (PROTECTED) row of one
+ * employee, inside the deletion transaction, immediately before the employee
+ * row is deleted.
+ *
+ * This is the application half of migration 0022 (see
+ * docs/employee-permanent-delete-0022-detach-design.md §4.1):
+ * 1. this function fills `employee_number_snapshot` / `employee_name_snapshot`
+ *    where they are still NULL (creation-time snapshots are never
+ *    overwritten — the payslip PDF password contract depends on that);
+ * 2. the subsequent `DELETE FROM employees` fires the protected tables'
+ *    `ON DELETE SET NULL` foreign keys, which atomically detaches the retained
+ *    rows in the same statement.
+ *
+ * Every statement is scoped by BOTH `employee_id` and `organization_id`, so a
+ * row that belongs to another tenant can never be touched. The
+ * `<table>_retained_identity_check` CHECK constraints guarantee a detached
+ * row always carries its identity, so the DELETE fails closed if this step
+ * were ever skipped against the post-0022 schema.
+ *
+ * Returns the number of retained rows whose identity was frozen, per table,
+ * for the audit summary.
+ */
+export async function snapshotEmployeeRetainedRecords(
+  tx: HrisTransaction,
+  employeeId: string,
+  organizationId: string,
+  identity: { employeeNumber: string; employeeName: string }
+): Promise<Record<string, number>> {
+  const snapshottedPerTable: Record<string, number> = {};
+
+  for (const source of EMPLOYEE_RETAINED_SNAPSHOT_PLAN) {
+    const filled = await tx
+      .update(source.table)
+      .set({
+        employeeNumberSnapshot: sql`coalesce(${source.employeeNumberSnapshotColumn}, ${identity.employeeNumber})`,
+        employeeNameSnapshot: sql`coalesce(${source.employeeNameSnapshotColumn}, ${identity.employeeName})`,
+      })
+      .where(
+        and(
+          eq(source.employeeIdColumn, employeeId),
+          eq(source.organizationIdColumn, organizationId)
+        )
+      )
+      .returning({ id: sql<string>`gen_random_uuid()::text` });
+    if (filled.length > 0) {
+      snapshottedPerTable[getTableName(source.table)] = filled.length;
+    }
+  }
+
+  return snapshottedPerTable;
 }

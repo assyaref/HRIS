@@ -31,11 +31,15 @@ import { EmployeeStatusBadge } from "./employee-status-badge";
 import type { EmployeeStatus } from "./constants";
 import {
   EMPLOYEE_PERMANENT_DELETE_FAILED_MESSAGE,
-  hasProtectedEmployeeDependencies,
   matchesEmployeeNumberConfirmation,
   totalEmployeeDeleteDependencyCount,
   type EmployeeDeleteDependency,
 } from "./permanent-delete-policy";
+import {
+  DELETION_REASON_MAX_LENGTH,
+  DELETION_REASON_MIN_LENGTH,
+  isValidDeletionReason,
+} from "./deletion-control-policy";
 
 const initialState: EmployeePermanentDeleteState = { status: "idle" };
 
@@ -86,7 +90,7 @@ const idleDependencyCheck: DependencyCheckState = { status: "idle" };
  * employee detail page.
  *
  * Rendered ONLY for callers entitled to `employees.permanent_delete` (the
- * system-level Super Administrator). That is a UX affordance only: the
+ * system-level SUPER Administrator). That is a UX affordance only: the
  * authorization, the organization scope, both confirmation layers, the
  * protected-record classification and the transaction all live in
  * `permanentlyDeleteEmployeeAction`, so a direct call from any other role is
@@ -94,19 +98,25 @@ const idleDependencyCheck: DependencyCheckState = { status: "idle" };
  * tenant's employee (listed under that tenant); the action re-derives the
  * record's owning organization from the database.
  *
- * Layered confirmation (all three must hold before the request is sent):
+ * RETENTION-COMPATIBLE COMPLETION (approved detach schema, migration 0022):
+ * PROTECTED historical records (attendance, leave, permission, payroll,
+ * payslip, employment history) are RETAINED — never deleted — and no longer
+ * block the deletion: the transaction freezes their identity snapshots and
+ * the database detaches their employee reference when the employee row is
+ * removed. The dialog still requires, before the request is sent:
  * 1. the typed Employee Number matches exactly, character for character;
- * 2. the read-only pre-flight has arrived and reports no PROTECTED record;
- * 3. "I understand that this action cannot be undone." is ticked.
+ * 2. the read-only pre-flight has arrived (a pending or failed report keeps
+ *    the button disabled — fail closed);
+ * 3. "I understand that this action cannot be undone." is ticked;
+ * 4. a deletion reason of at least 10 characters is supplied — re-validated
+ *    server-side and recorded on the permanent-delete audit trail.
  *
- * States:
- * - "Delete Permanently" stays disabled until all three hold, so a matching
- *   number alone never arms a destructive request.
- * - A PROTECTED record (payroll, attendance, leave, payslip, employment
- *   history, permission) keeps the button disabled and explains why, with the
- *   per-category counts. Deactivate/archive remains the correct action there.
- * - DELETABLE records are NOT a blocker: the dialog states plainly that they
- *   will be removed with the employee in the same transaction.
+ * The dialog shows the records that WILL be deleted (deletable categories),
+ * those that will be RETAINED (protected categories, direct reports) and,
+ * after the server responds, the FINAL RESULT of the transaction (removed
+ * and retained records, or the exact refusal). If the deployed schema does
+ * not yet include the detach change, the server's retained-completion error
+ * explains that nothing was deleted.
  */
 export function EmployeePermanentDeleteDialog({
   employee,
@@ -118,6 +128,7 @@ export function EmployeePermanentDeleteDialog({
   const [open, setOpen] = useState(false);
   const [confirmation, setConfirmation] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
+  const [reason, setReason] = useState("");
   const handledSuccess = useRef(false);
   const [dependencyCheck, setDependencyCheck] =
     useState<DependencyCheckState>(idleDependencyCheck);
@@ -168,6 +179,7 @@ export function EmployeePermanentDeleteDialog({
   function openDialog() {
     setConfirmation("");
     setAcknowledged(false);
+    setReason("");
     setDependencyCheck(idleDependencyCheck);
     setOpen(true);
     void runDependencyCheck();
@@ -177,8 +189,9 @@ export function EmployeePermanentDeleteDialog({
     employee.employeeNumber,
     confirmation
   );
-  // A PROTECTED record reported by the pre-flight OR by the last delete attempt
-  // blocks the button, so an already-rejected request is never repeated.
+  // The pre-flight report is preferred; the last rejection's counts are the
+  // fallback so the summary is never rendered empty while the action is
+  // refused.
   const reportedDependencies: readonly EmployeeDeleteDependency[] =
     dependencyCheck.status === "ready" || dependencyCheck.status === "error"
       ? dependencyCheck.dependencies
@@ -187,17 +200,15 @@ export function EmployeePermanentDeleteDialog({
     dependencyCheck.status === "ready" || dependencyCheck.status === "error"
       ? dependencyCheck.protectedDependencies
       : [];
-  const blockedByProtectedRecords =
-    hasProtectedEmployeeDependencies(reportedProtected) ||
-    (state.status === "error" &&
-      state.code === "PROTECTED_RECORDS" &&
-      hasProtectedEmployeeDependencies(state.dependencies ?? []));
-  // The pre-flight report is preferred; the last rejection's counts are the
-  // fallback so the summary is never rendered empty while the action is blocked.
-  const protectedSummary: readonly EmployeeDeleteDependency[] =
+  // RETAINED records: protected history that is never deleted. Under the
+  // revised policy their presence does NOT disable the button — the Super
+  // Administrator may attempt the deletion, and the server (backed by the
+  // database's RESTRICT foreign keys) decides whether it can complete.
+  const retainedSummary: readonly EmployeeDeleteDependency[] =
     reportedProtected.length > 0
       ? reportedProtected
-      : (state.dependencies ?? []);
+      : (state.retainedDependencies ?? []);
+  const hasRetainedRecords = retainedSummary.length > 0;
   const deletableSummary: readonly EmployeeDeleteDependency[] =
     dependencyCheck.status === "ready"
       ? dependencyCheck.deletableDependencies
@@ -210,41 +221,51 @@ export function EmployeePermanentDeleteDialog({
   const directReportCount =
     dependencyCheck.status === "ready" ? dependencyCheck.directReportCount : 0;
   // Fail closed: the destructive button is enabled only when the pre-flight
-  // report ARRIVED, reported no PROTECTED record, the number matches exactly,
-  // AND the irreversibility checkbox is ticked. A pending or failed report is
-  // never "ready", so it keeps the button disabled.
+  // report ARRIVED, the number matches exactly, the irreversibility
+  // checkbox is ticked, AND a valid audit-policy reason is supplied. A
+  // pending or failed report is never "ready", so it keeps the button
+  // disabled. Protected records do not disable it.
+  const reasonValid = isValidDeletionReason(reason);
   const canSubmitDelete =
     confirmationMatches &&
     acknowledged &&
-    dependencyCheck.status === "ready" &&
-    !blockedByProtectedRecords;
+    reasonValid &&
+    dependencyCheck.status === "ready";
   const displayName = `${employee.firstName} ${employee.lastName}`;
   const role = [employee.department, employee.position]
     .filter((value): value is string => Boolean(value))
     .join(" — ");
-  // A committed deletion invalidates this view, so the panel closes itself.
-  const dialogOpen = open && state.status !== "success";
+  // A committed deletion invalidates this view; the dialog stays open on
+  // success to show the FINAL RESULT of the transaction (removed + retained
+  // records), and the Close button performs the redirect.
+  const dialogOpen = open;
 
   function reset() {
     setConfirmation("");
     setAcknowledged(false);
+    setReason("");
     setOpen(false);
     // Clearing the report here (an event handler) keeps a stale one from
     // re-disabling or re-enabling the next open.
     setDependencyCheck(idleDependencyCheck);
   }
 
-  // A committed deletion also invalidates the route: the detail page no longer
-  // resolves, and the list must drop the deleted row.
+  // A committed deletion also invalidates the route: refresh the data behind
+  // the dialog immediately, and land on the redirect target once the operator
+  // has read the final result.
   useEffect(() => {
     if (state.status !== "success" || handledSuccess.current) return;
     handledSuccess.current = true;
     notifier.success(
       state.message ?? "Employee permanently deleted successfully."
     );
-    router.replace(redirectTo);
     router.refresh();
-  }, [state, redirectTo, router]);
+  }, [state, router]);
+
+  function closeFinalResult() {
+    router.replace(redirectTo);
+    reset();
+  }
 
   return (
     <>
@@ -265,6 +286,12 @@ export function EmployeePermanentDeleteDialog({
           if (isPending) return;
           if (nextOpen) {
             openDialog();
+            return;
+          }
+          // Closing after a committed deletion (ESC/overlay) takes the same
+          // path as the final-result Close button so the redirect happens.
+          if (state.status === "success") {
+            closeFinalResult();
             return;
           }
           reset();
@@ -375,34 +402,36 @@ export function EmployeePermanentDeleteDialog({
                 </p>
               ) : null}
 
-              {blockedByProtectedRecords ? (
-                <div className="space-y-2">
-                  <p className="text-sm text-destructive">
-                    Permanent deletion is blocked because this employee has
-                    protected historical records.
-                  </p>
+              {hasRetainedRecords ? (
+                <div className="space-y-2" data-testid="permanent-delete-retained-summary">
                   <p className="text-xs font-medium text-muted-foreground">
-                    Protected records
+                    Retained records (never deleted)
                   </p>
-                  {protectedSummary.length > 0 ? (
-                    <ul className="space-y-1">
-                      {protectedSummary.map((dependency) => (
-                        <li
-                          key={dependency.label}
-                          className="flex items-center justify-between gap-3 text-sm"
-                        >
-                          <span>{dependency.label}</span>
-                          <span className="font-mono font-medium">
-                            {dependency.count}
+                  <ul className="space-y-1">
+                    {retainedSummary.map((dependency) => (
+                      <li
+                        key={dependency.label}
+                        className="flex items-center justify-between gap-3 text-sm"
+                      >
+                        <span>
+                          {dependency.label}{" "}
+                          <span className="text-xs text-muted-foreground">
+                            (retained for legal and audit purposes)
                           </span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
+                        </span>
+                        <span className="font-mono font-medium">
+                          {dependency.count}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
                   <p className="text-xs text-muted-foreground">
-                    These records are retained for legal and audit purposes and
-                    cannot be deleted, not even by a Super Administrator.
-                    Deactivate or archive this employee instead.
+                    Protected historical records are retained for legal and
+                    audit purposes and are never deleted, not even by a Super
+                    Administrator. The transaction stores their historical
+                    identity (employee number and name) on each retained row
+                    and removes only the link to the employee record, so
+                    reports and payroll history stay complete.
                   </p>
                 </div>
               ) : null}
@@ -461,6 +490,34 @@ export function EmployeePermanentDeleteDialog({
               </p>
             </div>
 
+            <div className="space-y-2">
+              <label
+                htmlFor={`delete-employee-reason-${employee.id}`}
+                className="text-xs text-muted-foreground"
+              >
+                Reason for deletion (required)
+              </label>
+              <textarea
+                id={`delete-employee-reason-${employee.id}`}
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                rows={3}
+                maxLength={DELETION_REASON_MAX_LENGTH}
+                placeholder="Why is this employee being permanently deleted?"
+                disabled={isPending}
+                data-testid="permanent-delete-reason"
+                aria-describedby={`delete-employee-reason-help-${employee.id}`}
+                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              />
+              <p
+                id={`delete-employee-reason-help-${employee.id}`}
+                className="text-xs text-muted-foreground"
+              >
+                Recorded on the permanent-delete audit trail. At least{" "}
+                {DELETION_REASON_MIN_LENGTH} characters.
+              </p>
+            </div>
+
             <label className="flex items-start gap-2 text-sm">
               <input
                 type="checkbox"
@@ -484,38 +541,113 @@ export function EmployeePermanentDeleteDialog({
                 {state.message}
               </div>
             ) : null}
+
+            {state.status === "success" ? (
+              <div
+                className="space-y-2 rounded-md border border-emerald-600/40 bg-emerald-500/5 px-3 py-2 text-sm"
+                data-testid="permanent-delete-final-result"
+              >
+                <p className="font-medium text-emerald-700">
+                  {displayName} ({employee.employeeNumber}) was permanently
+                  deleted.
+                </p>
+                <p className="text-xs font-medium text-muted-foreground">
+                  Final result of the transaction
+                </p>
+                {state.removedSummary &&
+                Object.keys(state.removedSummary).length > 0 ? (
+                  <ul className="space-y-1">
+                    {Object.entries(state.removedSummary).map(
+                      ([label, count]) => (
+                        <li
+                          key={label}
+                          className="flex items-center justify-between gap-3"
+                        >
+                          <span>
+                            {label}{" "}
+                            <span className="text-xs text-muted-foreground">
+                              (deleted)
+                            </span>
+                          </span>
+                          <span className="font-mono font-medium">{count}</span>
+                        </li>
+                      )
+                    )}
+                  </ul>
+                ) : (
+                  <p className="text-muted-foreground">
+                    No related records had to be removed.
+                  </p>
+                )}
+                {state.retainedDependencies &&
+                state.retainedDependencies.length > 0 ? (
+                  <ul className="space-y-1">
+                    {state.retainedDependencies.map((dependency) => (
+                      <li
+                        key={dependency.label}
+                        className="flex items-center justify-between gap-3"
+                      >
+                        <span>
+                          {dependency.label}{" "}
+                          <span className="text-xs text-muted-foreground">
+                            (retained with its historical identity)
+                          </span>
+                        </span>
+                        <span className="font-mono font-medium">
+                          {dependency.count}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-muted-foreground">
+                    No historical records had to be retained.
+                  </p>
+                )}
+              </div>
+            ) : null}
           </div>
 
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isPending}
-              onClick={reset}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              disabled={isPending || !canSubmitDelete}
-              aria-disabled={isPending || !canSubmitDelete}
-              onClick={() => {
-                // Belt and braces: never fire a request the UI already knows
-                // must be refused. The server enforces the same three rules.
-                if (!canSubmitDelete) return;
-                const formData = new FormData();
-                formData.set("confirmEmployeeNumber", confirmation);
-                formData.set("acknowledgedPermanentDelete", "true");
-                formAction(formData);
-              }}
-            >
-              {isPending
-                ? "Deleting…"
-                : blockedByProtectedRecords
-                  ? "Delete blocked by protected records"
-                  : "Delete Permanently"}
-            </Button>
+            {state.status === "success" ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeFinalResult}
+                data-testid="permanent-delete-final-result-close"
+              >
+                Close
+              </Button>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isPending}
+                  onClick={reset}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={isPending || !canSubmitDelete}
+                  aria-disabled={isPending || !canSubmitDelete}
+                  onClick={() => {
+                    // Belt and braces: never fire a request the UI already knows
+                    // must be refused. The server enforces the same rules.
+                    if (!canSubmitDelete) return;
+                    const formData = new FormData();
+                    formData.set("confirmEmployeeNumber", confirmation);
+                    formData.set("acknowledgedPermanentDelete", "true");
+                    formData.set("deletionReason", reason);
+                    formAction(formData);
+                  }}
+                >
+                  {isPending ? "Deleting…" : "Permanently Delete Employee"}
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

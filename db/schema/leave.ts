@@ -10,6 +10,9 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+
+import { check } from "drizzle-orm/pg-core";
 import { createdAt, updatedAt, uuidId } from "./common";
 import { employees } from "./employees";
 import { organizations } from "./organizations";
@@ -60,6 +63,10 @@ export const leaveTypes = pgTable(
  * Leave balances — one row per employee/type/year (unique triple).
  * Entitlement is granted by HR; `used` grows on approval, `pending` tracks
  * outstanding requests. Employees never edit balances directly.
+ *
+ * RETENTION DETACH (migration 0022): `employee_id` is nullable with the FK
+ * `ON DELETE SET NULL`; a permanently deleted employee's balance history is
+ * retained, detached, and carries its identity snapshots.
  */
 export const leaveBalances = pgTable(
   "leave_balances",
@@ -68,9 +75,13 @@ export const leaveBalances = pgTable(
     organizationId: uuid("organization_id")
       .notNull()
       .references(() => organizations.id),
-    employeeId: uuid("employee_id")
-      .notNull()
-      .references(() => employees.id, { onDelete: "cascade" }),
+    employeeId: uuid("employee_id").references(() => employees.id, {
+      onDelete: "set null",
+    }),
+    /** Immutable identity snapshot — filled at deletion time, never rewritten. */
+    employeeNumberSnapshot: text("employee_number_snapshot"),
+    /** Immutable display-name snapshot — filled at deletion time, never rewritten. */
+    employeeNameSnapshot: text("employee_name_snapshot"),
     leaveTypeId: uuid("leave_type_id")
       .notNull()
       .references(() => leaveTypes.id, { onDelete: "cascade" }),
@@ -105,12 +116,20 @@ export const leaveBalances = pgTable(
     index("leave_balances_org_idx").on(table.organizationId),
     index("leave_balances_employee_idx").on(table.employeeId),
     index("leave_balances_type_idx").on(table.leaveTypeId),
+    check(
+      "leave_balances_retained_identity_check",
+      sql`${table.employeeId} is not null or ${table.employeeNumberSnapshot} is not null`
+    ),
   ]
 );
 
 /**
  * Leave requests — employee submissions reviewed by HR/management.
  * reviewed_by/reviewed_at are set by the decision action only.
+ *
+ * RETENTION DETACH (migration 0022): same nullable + SET NULL + snapshot
+ * contract as `leave_balances` — the leave history outlives the employee and
+ * stays reviewable/reportable via its identity snapshots.
  */
 export const leaveRequests = pgTable(
   "leave_requests",
@@ -119,9 +138,13 @@ export const leaveRequests = pgTable(
     organizationId: uuid("organization_id")
       .notNull()
       .references(() => organizations.id),
-    employeeId: uuid("employee_id")
-      .notNull()
-      .references(() => employees.id, { onDelete: "cascade" }),
+    employeeId: uuid("employee_id").references(() => employees.id, {
+      onDelete: "set null",
+    }),
+    /** Immutable identity snapshot — filled at deletion time, never rewritten. */
+    employeeNumberSnapshot: text("employee_number_snapshot"),
+    /** Immutable display-name snapshot — filled at deletion time, never rewritten. */
+    employeeNameSnapshot: text("employee_name_snapshot"),
     leaveTypeId: uuid("leave_type_id")
       .notNull()
       .references(() => leaveTypes.id),
@@ -156,6 +179,10 @@ export const leaveRequests = pgTable(
     index("leave_requests_org_status_idx").on(
       table.organizationId,
       table.status
+    ),
+    check(
+      "leave_requests_retained_identity_check",
+      sql`${table.employeeId} is not null or ${table.employeeNumberSnapshot} is not null`
     ),
   ]
 );

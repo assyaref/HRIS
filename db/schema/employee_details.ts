@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   date,
   index,
   integer,
@@ -257,6 +258,11 @@ export const employeeDocuments = pgTable(
  * type or employment status changes (via the Employment tab), a new history
  * row is written and the employee row is updated. Toggling employment status
  * also snapshots the change here so termination/activation history survives.
+ *
+ * RETENTION DETACH (migration 0022): `employee_id` is nullable with the FK
+ * `ON DELETE SET NULL`. This legal timeline outlives the employee row: a
+ * permanently deleted employee keeps their employment history, detached,
+ * with identity snapshots; `manager_id` remains `SET NULL` as before.
  */
 export const employeeEmploymentHistory = pgTable(
   "employee_employment_history",
@@ -265,9 +271,13 @@ export const employeeEmploymentHistory = pgTable(
     organizationId: uuid("organization_id")
       .notNull()
       .references(() => organizations.id),
-    employeeId: uuid("employee_id")
-      .notNull()
-      .references(() => employees.id, { onDelete: "cascade" }),
+    employeeId: uuid("employee_id").references(() => employees.id, {
+      onDelete: "set null",
+    }),
+    /** Immutable identity snapshot — filled at deletion time, never rewritten. */
+    employeeNumberSnapshot: text("employee_number_snapshot"),
+    /** Immutable display-name snapshot — filled at deletion time, never rewritten. */
+    employeeNameSnapshot: text("employee_name_snapshot"),
     position: text("position"),
     department: text("department"),
     division: text("division"),
@@ -298,6 +308,10 @@ export const employeeEmploymentHistory = pgTable(
     index("employee_employment_history_effective_idx").on(
       table.employeeId,
       table.effectiveFrom
+    ),
+    check(
+      "employee_employment_history_retained_identity_check",
+      sql`${table.employeeId} is not null or ${table.employeeNumberSnapshot} is not null`
     ),
   ]
 );
