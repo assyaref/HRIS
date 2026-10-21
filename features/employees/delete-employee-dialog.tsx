@@ -446,8 +446,10 @@ export function EmployeePermanentDeleteDialog({
                     audit purposes and are never deleted, not even by a Super
                     Administrator. The transaction stores their historical
                     identity (employee number and name) on each retained row
-                    and removes only the link to the employee record, so
-                    reports and payroll history stay complete.
+                    and removes only the link to the employee record, so time
+                    and employment-history reports stay complete. Payroll
+                    history is not retained: it is deleted with the employee
+                    under the approved deletion scope.
                   </p>
                 </div>
               ) : null}

@@ -1763,7 +1763,6 @@ export async function generatePayslipPdfsAction(
           issuedAt: payslips.issuedAt,
           status: payslips.status,
           payslipEmployeeNumberSnapshot: payslips.employeeNumberSnapshot,
-          payslipEmployeeNameSnapshot: payslips.employeeNameSnapshot,
           payslipBirthDateSnapshot: payslips.birthDateSnapshot,
           employeeName: payrollItems.employeeNameSnapshot,
           employeeNumber: payrollItems.employeeNumberSnapshot,
@@ -1799,12 +1798,9 @@ export async function generatePayslipPdfsAction(
         payslipIdsHaveDocuments.map((row) => row.payslipId)
       );
 
-      // Live identity is best-effort: a payslip whose employee row was
-      // permanently deleted (retained, detached — migration 0022) resolves
-      // its PDF password from the immutable snapshots instead.
-      const employeeIds = payslipRows
-        .map((row) => row.employeeId)
-        .filter((id): id is string => id !== null);
+      // Live identity is used only as a legacy fallback; the PDF password
+      // always resolves from the immutable payslip/item snapshots first.
+      const employeeIds = payslipRows.map((row) => row.employeeId);
       const identityRows =
         employeeIds.length > 0
           ? await tx
@@ -1882,14 +1878,7 @@ export async function generatePayslipPdfsAction(
 
       const prepared: {
         payslipId: string;
-        /**
-         * NULL when the payslip's employee row was permanently deleted: the
-         * generated document is retained (detached) and carries its identity
-         * snapshots instead.
-         */
-        employeeId: string | null;
-        employeeNumberSnapshot: string | null;
-        employeeNameSnapshot: string | null;
+        employeeId: string;
         employeeNumber: string;
         nik: string | null;
         birthDate: Date;
@@ -1933,19 +1922,9 @@ export async function generatePayslipPdfsAction(
           throw new Error("Payslip PDF eligibility invariant violated.");
         }
 
-        // Identity snapshots for the retained document rows: creation-time
-        // payslip/item snapshots first, so a detached document stays
-        // self-describing even when the employee row is gone.
-        const employeeNumberSnapshot =
-          row.payslipEmployeeNumberSnapshot ?? row.employeeNumber ?? null;
-        const employeeNameSnapshot =
-          row.payslipEmployeeNameSnapshot ?? row.employeeName ?? null;
-
         prepared.push({
           payslipId: row.id,
           employeeId: row.employeeId,
-          employeeNumberSnapshot,
-          employeeNameSnapshot,
           employeeNumber: effectiveEmployeeNumber,
           nik: identity?.nik ?? null,
           birthDate: effectiveBirthDate,
@@ -2009,9 +1988,7 @@ export async function generatePayslipPdfsAction(
     // On any failure, every file stored so far is removed again.
     const stored: {
       payslipId: string;
-      employeeId: string | null;
-      employeeNumberSnapshot: string | null;
-      employeeNameSnapshot: string | null;
+      employeeId: string;
       payslipNumber: string;
       storageKey: string;
       originalFilename: string;
@@ -2045,8 +2022,6 @@ export async function generatePayslipPdfsAction(
         stored.push({
           payslipId: entry.payslipId,
           employeeId: entry.employeeId,
-          employeeNumberSnapshot: entry.employeeNumberSnapshot,
-          employeeNameSnapshot: entry.employeeNameSnapshot,
           payslipNumber: entry.payslipNumber,
           storageKey: metadata.storageKey,
           originalFilename: sanitizePayslipOriginalFilename(
@@ -2109,8 +2084,6 @@ export async function generatePayslipPdfsAction(
               organizationId,
               payslipId: entry.payslipId,
               employeeId: entry.employeeId,
-              employeeNumberSnapshot: entry.employeeNumberSnapshot,
-              employeeNameSnapshot: entry.employeeNameSnapshot,
               storageKey: entry.storageKey,
               originalFilename: entry.originalFilename,
               mimeType: "application/pdf",
@@ -2134,8 +2107,6 @@ export async function generatePayslipPdfsAction(
             payslipDocumentId: documentId,
             payslipId: entry.payslipId,
             employeeId: entry.employeeId,
-            employeeNumberSnapshot: entry.employeeNumberSnapshot,
-            employeeNameSnapshot: entry.employeeNameSnapshot,
             version: 1,
             storageKey: entry.storageKey,
             originalFilename: entry.originalFilename,

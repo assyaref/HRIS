@@ -178,11 +178,11 @@ export const payrollComponents = pgTable(
  *
  * Historical configurations remain stored through effective_from/effective_to.
  *
- * RETENTION DETACH (migration 0022): `employee_id` is nullable with the FK
- * `ON DELETE SET NULL`; a permanently deleted employee's configuration history
- * is retained, detached, and carries its identity snapshots. Detached rows are
- * inert: every payroll calculation drives from `employees`, so they can never
- * enter a new run.
+ * PERMANENT-DELETE SCOPE (owner-approved): payroll history is DELETED with the
+ * employee. `employee_id` stays NOT NULL with `ON DELETE RESTRICT`; the
+ * permanent-delete plan removes these rows explicitly BEFORE the employee row.
+ * The RESTRICT foreign key is the backstop that rolls the transaction back if
+ * the plan ever misses a row.
  *
  * Integrity contracts (PM-03):
  * - At most ONE active assignment per (organization, employee, component),
@@ -202,14 +202,9 @@ export const employeePayrollComponents = pgTable(
       .notNull()
       .references(() => organizations.id),
 
-    employeeId: uuid("employee_id").references(() => employees.id, {
-      onDelete: "set null",
-    }),
-
-    /** Immutable identity snapshot — filled at deletion time, never rewritten. */
-    employeeNumberSnapshot: text("employee_number_snapshot"),
-    /** Immutable display-name snapshot — filled at deletion time, never rewritten. */
-    employeeNameSnapshot: text("employee_name_snapshot"),
+    employeeId: uuid("employee_id")
+      .notNull()
+      .references(() => employees.id, { onDelete: "restrict" }),
 
     componentId: uuid("component_id")
       .notNull()
@@ -267,11 +262,6 @@ export const employeePayrollComponents = pgTable(
       "employee_payroll_components_date_range_check",
       sql`${table.effectiveTo} IS NULL OR ${table.effectiveTo} > ${table.effectiveFrom}`
     ),
-
-    check(
-      "employee_payroll_components_retained_identity_check",
-      sql`${table.employeeId} is not null or ${table.employeeNumberSnapshot} is not null`
-    ),
   ]
 );
 
@@ -279,9 +269,11 @@ export const employeePayrollComponents = pgTable(
  * Payroll items — one employee result per run (unique run+employee).
  * Names/numbers are snapshotted for historical payslips.
  *
- * RETENTION DETACH (migration 0022): `employee_id` is nullable with the FK
- * `ON DELETE SET NULL`. The creation-time snapshots (NOT NULL) already make
- * every row self-describing, so a detached payroll result is fully reportable.
+ * PERMANENT-DELETE SCOPE (owner-approved): payroll results are DELETED with
+ * the employee. `employee_id` stays NOT NULL with `ON DELETE RESTRICT`; the
+ * permanent-delete plan removes these rows explicitly (which cascades to
+ * `payroll_item_components`). Deleting a row does NOT delete the payroll run
+ * or period, which are organization-level records.
  */
 export const payrollItems = pgTable(
   "payroll_items",
@@ -293,9 +285,9 @@ export const payrollItems = pgTable(
     payrollRunId: uuid("payroll_run_id")
       .notNull()
       .references(() => payrollRuns.id, { onDelete: "cascade" }),
-    employeeId: uuid("employee_id").references(() => employees.id, {
-      onDelete: "set null",
-    }),
+    employeeId: uuid("employee_id")
+      .notNull()
+      .references(() => employees.id, { onDelete: "restrict" }),
     employeeNumberSnapshot: text("employee_number_snapshot").notNull(),
     employeeNameSnapshot: text("employee_name_snapshot").notNull(),
     grossAmount: integer("gross_amount").notNull().default(0),
@@ -314,10 +306,6 @@ export const payrollItems = pgTable(
     index("payroll_items_org_idx").on(table.organizationId),
     index("payroll_items_run_idx").on(table.payrollRunId),
     index("payroll_items_employee_idx").on(table.employeeId),
-    check(
-      "payroll_items_retained_identity_check",
-      sql`${table.employeeId} is not null or ${table.employeeNumberSnapshot} is not null`
-    ),
   ]
 );
 
@@ -365,11 +353,12 @@ export const payrollItemComponents = pgTable(
  * payslip must carry `payroll_item_id`, a distribution payslip must carry
  * `payroll_period_id`.
  *
- * RETENTION DETACH (migration 0022): `employee_id` is nullable with the FK
- * `ON DELETE SET NULL`; issued payslips are retained, detached, and carry
- * their identity snapshots. The PDF password contract is unaffected: the
- * password is built from the CREATION-TIME snapshots below, which are never
- * overwritten.
+ * PERMANENT-DELETE SCOPE (owner-approved): issued payslips are DELETED with
+ * the employee. `employee_id` stays NOT NULL with `ON DELETE RESTRICT`; the
+ * permanent-delete plan removes payslip document versions, documents and
+ * payslips explicitly, children first. The payroll period/run rows survive.
+ * The PDF password contract is unaffected for live records: the password is
+ * built from the CREATION-TIME snapshots below, which are never overwritten.
  */
 export const payslips = pgTable(
   "payslips",
@@ -386,9 +375,9 @@ export const payslips = pgTable(
       () => payrollPeriods.id,
       { onDelete: "restrict" }
     ),
-    employeeId: uuid("employee_id").references(() => employees.id, {
-      onDelete: "set null",
-    }),
+    employeeId: uuid("employee_id")
+      .notNull()
+      .references(() => employees.id, { onDelete: "restrict" }),
     /**
      * Historical employee number snapshot.
      *
@@ -418,12 +407,6 @@ export const payslips = pgTable(
      * weak/blank password).
      */
     birthDateSnapshot: date("birth_date_snapshot", { mode: "date" }),
-    /**
-     * Immutable display-name snapshot (migration 0022) — filled at deletion
-     * time for legacy rows, captured for reporting once the employee row is
-     * detached. Never overwritten after it is set.
-     */
-    employeeNameSnapshot: text("employee_name_snapshot"),
     payslipNumber: text("payslip_number").notNull(),
     issuedAt: timestamp("issued_at", { withTimezone: true, mode: "date" })
       .notNull()
@@ -444,10 +427,6 @@ export const payslips = pgTable(
     index("payslips_employee_idx").on(table.employeeId),
     index("payslips_item_idx").on(table.payrollItemId),
     index("payslips_period_idx").on(table.payrollPeriodId),
-    check(
-      "payslips_retained_identity_check",
-      sql`${table.employeeId} is not null or ${table.employeeNumberSnapshot} is not null`
-    ),
   ]
 );
 
@@ -461,10 +440,11 @@ export const payslips = pgTable(
  *   original filename.
  * - One document belongs to exactly one organization/payslip/employee.
  *
- * RETENTION DETACH (migration 0022): `employee_id` is nullable with the FK
- * `ON DELETE SET NULL`; document delivery records are retained, detached, and
- * carry their identity snapshots. The stored PDF files are untouched — they
- * belong to the retained payslip.
+ * PERMANENT-DELETE SCOPE (owner-approved): document delivery rows are DELETED
+ * with the employee, children first (versions → documents → payslips).
+ * `employee_id` stays NOT NULL with `ON DELETE RESTRICT`. The stored PDF files
+ * are a separate storage concern and are NOT removed by the database
+ * transaction; see the payroll deletion decision record for the purge step.
  */
 export const payslipDocuments = pgTable(
   "payslip_documents",
@@ -476,13 +456,9 @@ export const payslipDocuments = pgTable(
     payslipId: uuid("payslip_id")
       .notNull()
       .references(() => payslips.id, { onDelete: "restrict" }),
-    employeeId: uuid("employee_id").references(() => employees.id, {
-      onDelete: "set null",
-    }),
-    /** Immutable identity snapshot — filled at deletion time, never rewritten. */
-    employeeNumberSnapshot: text("employee_number_snapshot"),
-    /** Immutable display-name snapshot — filled at deletion time, never rewritten. */
-    employeeNameSnapshot: text("employee_name_snapshot"),
+    employeeId: uuid("employee_id")
+      .notNull()
+      .references(() => employees.id, { onDelete: "restrict" }),
     storageKey: text("storage_key").notNull(),
     originalFilename: text("original_filename").notNull(),
     mimeType: text("mime_type").notNull().default("application/pdf"),
@@ -499,10 +475,6 @@ export const payslipDocuments = pgTable(
     index("payslip_documents_org_idx").on(table.organizationId),
     index("payslip_documents_employee_idx").on(table.employeeId),
     index("payslip_documents_payslip_idx").on(table.payslipId),
-    check(
-      "payslip_documents_retained_identity_check",
-      sql`${table.employeeId} is not null or ${table.employeeNumberSnapshot} is not null`
-    ),
   ]
 );
 
@@ -521,9 +493,9 @@ export const payslipDocuments = pgTable(
  * - `(organizationId, payslipDocumentId, version)` is unique so concurrent
  *   replacements can never collide on a version number.
  *
- * RETENTION DETACH (migration 0022): `employee_id` is nullable with the FK
- * `ON DELETE SET NULL`; the append-only version chain is retained, detached,
- * and carries its identity snapshots.
+ * PERMANENT-DELETE SCOPE (owner-approved): the version chain is DELETED with
+ * the employee, before its document and payslip parents. `employee_id` stays
+ * NOT NULL with `ON DELETE RESTRICT`.
  */
 export const payslipDocumentVersions = pgTable(
   "payslip_document_versions",
@@ -538,13 +510,9 @@ export const payslipDocumentVersions = pgTable(
     payslipId: uuid("payslip_id")
       .notNull()
       .references(() => payslips.id, { onDelete: "restrict" }),
-    employeeId: uuid("employee_id").references(() => employees.id, {
-      onDelete: "set null",
-    }),
-    /** Immutable identity snapshot — filled at deletion time, never rewritten. */
-    employeeNumberSnapshot: text("employee_number_snapshot"),
-    /** Immutable display-name snapshot — filled at deletion time, never rewritten. */
-    employeeNameSnapshot: text("employee_name_snapshot"),
+    employeeId: uuid("employee_id")
+      .notNull()
+      .references(() => employees.id, { onDelete: "restrict" }),
     version: integer("version").notNull(),
     storageKey: text("storage_key").notNull(),
     originalFilename: text("original_filename").notNull(),
@@ -576,10 +544,6 @@ export const payslipDocumentVersions = pgTable(
     check(
       "payslip_document_versions_source_valid",
       sql`${table.source} in ('generated', 'uploaded', 'legacy')`
-    ),
-    check(
-      "payslip_document_versions_retained_identity_check",
-      sql`${table.employeeId} is not null or ${table.employeeNumberSnapshot} is not null`
     ),
   ]
 );

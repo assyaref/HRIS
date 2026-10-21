@@ -544,7 +544,6 @@ export async function replacePayslipPdfAction(
         payrollItemId: payslips.payrollItemId,
         payrollPeriodId: payslips.payrollPeriodId,
         payslipEmployeeNumberSnapshot: payslips.employeeNumberSnapshot,
-        payslipEmployeeNameSnapshot: payslips.employeeNameSnapshot,
         payslipBirthDateSnapshot: payslips.birthDateSnapshot,
       })
       .from(payslips)
@@ -653,31 +652,28 @@ export async function replacePayslipPdfAction(
       };
     }
 
-    // Live identity is best-effort for replacement: a payslip whose employee
-    // row was permanently deleted (retained, detached — migration 0022)
-    // resolves its password from the historical snapshots alone.
-    const employeeRows = payslip.employeeId
-      ? await db
-          .select({
-            id: employees.id,
-            organizationId: employees.organizationId,
-            employeeNumber: employees.employeeNumber,
-            nik: employees.nik,
-            birthDate: employees.birthDate,
-          })
-          .from(employees)
-          .where(
-            and(
-              eq(employees.id, payslip.employeeId),
-              eq(employees.organizationId, organizationId)
-            )
-          )
-          .limit(1)
-      : [];
+    // Live identity is a legacy fallback; the password resolves from the
+    // historical payslip/item snapshots first.
+    const employeeRows = await db
+      .select({
+        id: employees.id,
+        organizationId: employees.organizationId,
+        employeeNumber: employees.employeeNumber,
+        nik: employees.nik,
+        birthDate: employees.birthDate,
+      })
+      .from(employees)
+      .where(
+        and(
+          eq(employees.id, payslip.employeeId),
+          eq(employees.organizationId, organizationId)
+        )
+      )
+      .limit(1);
 
     const employee = employeeRows[0];
 
-    if (payslip.employeeId && !employee) {
+    if (!employee) {
       forbidden();
     }
 
@@ -793,13 +789,7 @@ export async function replacePayslipPdfAction(
           organizationId,
           payslipDocumentId: lockedDocument.id,
           payslipId: payslip.id,
-          // NULL once the employee row was permanently deleted (retained,
-          // detached — migration 0022); the identity snapshots carry the row.
-          employeeId: employee?.id ?? payslip.employeeId ?? null,
-          employeeNumberSnapshot:
-            payslip.payslipEmployeeNumberSnapshot ??
-            itemEmployeeNumberSnapshot,
-          employeeNameSnapshot: payslip.payslipEmployeeNameSnapshot ?? null,
+          employeeId: employee.id,
           version,
           storageKey: stored.storageKey,
           originalFilename,
@@ -1190,10 +1180,6 @@ export async function uploadDistributionPayslipPdfAction(
             payrollPeriodId: period.id,
             employeeId: employee.id,
             employeeNumberSnapshot: employee.employeeNumber,
-            // Display-name snapshot (migration 0022): captured at creation so
-            // the retained payslip stays reportable even after a permanent
-            // employee deletion detaches the live reference.
-            employeeNameSnapshot: `${employee.firstName} ${employee.lastName}`,
             birthDateSnapshot: employee.birthDate,
             payslipNumber,
             issuedAt: new Date(),
@@ -1881,10 +1867,6 @@ export async function bulkUploadDistributionPayslipsAction(
               payrollPeriodId: period.id,
               employeeId: employee.id,
               employeeNumberSnapshot: snapshotEmployeeNumber,
-              // Display-name snapshot (migration 0022): captured at creation
-              // so the retained payslip stays reportable after a permanent
-              // employee deletion detaches the live reference.
-              employeeNameSnapshot: `${employee.firstName} ${employee.lastName}`,
               birthDateSnapshot: employee.birthDate,
               payslipNumber,
               issuedAt: new Date(),

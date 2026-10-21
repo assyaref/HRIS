@@ -888,37 +888,68 @@ const EMPLOYEE_DELETE_DEPENDENCY_SOURCES: readonly {
 ];
 
 /**
- * The explicit delete plan: DELETABLE categories only, each expanded into the
- * concrete tables to clear.
+ * Execution order of the DELETABLE categories. This is deliberately NOT the
+ * display order: it is the order that satisfies the payroll foreign-key graph.
  *
- * Deletion order matters and is fixed here, not derived at call time:
- * `face_enrollment_templates` is deleted BEFORE `employee_face_enrollments`
- * because the template row carries its own `ON DELETE CASCADE` to the
- * enrollment. Emitting the child statement explicitly means the cascade is
- * never relied upon — if the plan is ever edited, the parent delete fails
- * loudly instead of quietly removing extra rows.
+ * `payslip_document_versions` → `payslip_documents` → `payslips` must be
+ * removed children-first, and the Payslip category must complete BEFORE
+ * Payroll, because `payslips.payroll_item_id` is `ON DELETE RESTRICT`.
+ * Deleting `payroll_items` then cascades to `payroll_item_components` (its own
+ * child table, which carries no `employee_id` of its own).
+ *
+ * `announcement_recipients` is intentionally last so the remaining profile
+ * rows disappear after the payroll chain.
+ */
+const EMPLOYEE_DELETE_PLAN_CATEGORY_ORDER = [
+  "Payslip",
+  "Payroll",
+  "Documents",
+  "Face ID",
+  "Projects",
+  "Other related records",
+] as const satisfies readonly EmployeeDeleteDependencyLabel[];
+
+/**
+ * Categories whose child table is listed first in
+ * `EMPLOYEE_DELETE_DEPENDENCY_SOURCES` and therefore must be reversed before
+ * being executed:
+ * - Face ID: enrollment rows before their template (the template carries an
+ *   `ON DELETE CASCADE` to the enrollment, so it is emitted explicitly first).
+ * - Payslip: versions → documents → payslips (all `RESTRICT`).
+ */
+const EMPLOYEE_DELETE_PLAN_CHILD_FIRST_CATEGORIES: ReadonlySet<EmployeeDeleteDependencyLabel> =
+  new Set(["Face ID", "Payslip"]);
+
+/**
+ * The explicit delete plan: DELETABLE categories only, each expanded into the
+ * concrete tables to clear, in the fixed execution order above.
  *
  * Every table here is employee-scoped and organization-scoped, and none of them
  * is retention-bound. A category that is PROTECTED must never appear in this
  * list; the guard in `assertEmployeeDeletePlanMatchesPolicy` enforces that.
+ * No `CASCADE` is relied upon for the explicitly-listed tables: each statement
+ * names its table so a plan edit fails loudly instead of silently removing
+ * extra rows.
  */
 const EMPLOYEE_DELETABLE_DELETE_PLAN: readonly {
   label: EmployeeDeleteDependencyLabel;
   tables: readonly EmployeeDeleteDependencySource[];
-}[] = EMPLOYEE_DELETE_DEPENDENCY_SOURCES.filter(
-  (group) =>
-    employeeDeleteDependencyDisposition(group.label) === "deletable"
-).map((group) => ({
-  label: group.label,
-  tables:
-    group.label === "Face ID"
-      ? // Child first: see the order note above.
-        [group.tables[1], group.tables[0]].filter(
-          (source): source is EmployeeDeleteDependencySource =>
-            source !== undefined
-        )
+}[] = EMPLOYEE_DELETE_PLAN_CATEGORY_ORDER.map((label) => {
+  const group = EMPLOYEE_DELETE_DEPENDENCY_SOURCES.find(
+    (source) => source.label === label
+  );
+  if (!group) {
+    throw new Error(
+      `Employee permanent delete plan names unknown category "${label}".`
+    );
+  }
+  return {
+    label,
+    tables: EMPLOYEE_DELETE_PLAN_CHILD_FIRST_CATEGORIES.has(label)
+      ? [...group.tables].reverse()
       : group.tables,
-}));
+  };
+});
 
 /**
  * Fail fast when the delete plan and the policy classification disagree.
@@ -951,6 +982,21 @@ function assertEmployeeDeletePlanMatchesPolicy(): void {
         `Employee permanent delete plan has no tables for "${entry.label}".`
       );
     }
+  }
+  if (planned.size !== EMPLOYEE_DELETABLE_DEPENDENCY_LABELS.length) {
+    throw new Error(
+      "Employee permanent delete plan contains a category that the policy does not classify as deletable."
+    );
+  }
+  const planLabels = EMPLOYEE_DELETABLE_DELETE_PLAN.map((entry) => entry.label);
+  if (
+    planLabels.indexOf("Payslip") === -1 ||
+    planLabels.indexOf("Payroll") === -1 ||
+    planLabels.indexOf("Payslip") > planLabels.indexOf("Payroll")
+  ) {
+    throw new Error(
+      "Employee permanent delete plan must remove Payslip before Payroll (payslips reference payroll_items with ON DELETE RESTRICT)."
+    );
   }
 }
 
@@ -1163,15 +1209,16 @@ interface EmployeeRetainedSnapshotSource {
 
 /**
  * The retained-identity snapshot plan: every PROTECTED table that carries
- * nullable snapshot columns. `payroll_items` is deliberately absent — its
- * creation-time snapshots are NOT NULL, so there is nothing to fill — and
- * that exclusion is asserted below so a newly protected table can never be
- * forgotten.
+ * nullable snapshot columns.
  *
- * The plan is derived from the SAME `EMPLOYEE_DELETE_DEPENDENCY_SOURCES` list
+ * PAYROLL and PAYSLIP tables are deliberately absent: they are DELETABLE under
+ * the owner-approved scope, so their rows are removed (not detached) and they
+ * must never be listed here. The guard below fails closed if a deletable table
+ * ever appears in the plan.
+ *
+ * The plan is aligned with the SAME `EMPLOYEE_DELETE_DEPENDENCY_SOURCES` list
  * that drives counting and deletion, so classification can never drift: a
- * table is in this plan if and only if its category is PROTECTED and it is
- * not `payroll_items`.
+ * table is in this plan if and only if its category is PROTECTED.
  */
 const EMPLOYEE_RETAINED_SNAPSHOT_PLAN: readonly EmployeeRetainedSnapshotSource[] =
   [
@@ -1211,36 +1258,6 @@ const EMPLOYEE_RETAINED_SNAPSHOT_PLAN: readonly EmployeeRetainedSnapshotSource[]
       employeeNameSnapshotColumn: permissionRequests.employeeNameSnapshot,
     },
     {
-      table: employeePayrollComponents,
-      employeeIdColumn: employeePayrollComponents.employeeId,
-      organizationIdColumn: employeePayrollComponents.organizationId,
-      employeeNumberSnapshotColumn:
-        employeePayrollComponents.employeeNumberSnapshot,
-      employeeNameSnapshotColumn: employeePayrollComponents.employeeNameSnapshot,
-    },
-    {
-      table: payslips,
-      employeeIdColumn: payslips.employeeId,
-      organizationIdColumn: payslips.organizationId,
-      employeeNumberSnapshotColumn: payslips.employeeNumberSnapshot,
-      employeeNameSnapshotColumn: payslips.employeeNameSnapshot,
-    },
-    {
-      table: payslipDocuments,
-      employeeIdColumn: payslipDocuments.employeeId,
-      organizationIdColumn: payslipDocuments.organizationId,
-      employeeNumberSnapshotColumn: payslipDocuments.employeeNumberSnapshot,
-      employeeNameSnapshotColumn: payslipDocuments.employeeNameSnapshot,
-    },
-    {
-      table: payslipDocumentVersions,
-      employeeIdColumn: payslipDocumentVersions.employeeId,
-      organizationIdColumn: payslipDocumentVersions.organizationId,
-      employeeNumberSnapshotColumn:
-        payslipDocumentVersions.employeeNumberSnapshot,
-      employeeNameSnapshotColumn: payslipDocumentVersions.employeeNameSnapshot,
-    },
-    {
       table: employeeEmploymentHistory,
       employeeIdColumn: employeeEmploymentHistory.employeeId,
       organizationIdColumn: employeeEmploymentHistory.organizationId,
@@ -1254,11 +1271,11 @@ const EMPLOYEE_RETAINED_SNAPSHOT_PLAN: readonly EmployeeRetainedSnapshotSource[]
  * Fail fast when the snapshot plan and the policy classification disagree.
  *
  * Runs at module load, mirroring `assertEmployeeDeletePlanMatchesPolicy`:
- * - every PROTECTED table except `payroll_items` must appear (a newly
- *   protected table without snapshots would detach anonymously and violate
- *   the database's retained-identity CHECK at deletion time);
- * - no DELETABLE table may appear (its rows are removed, never detached);
- * - `payroll_items` itself must never appear.
+ * - every PROTECTED table must appear (a newly protected table without
+ *   snapshots would detach anonymously and violate the database's
+ *   retained-identity CHECK at deletion time);
+ * - no DELETABLE table may appear (its rows are removed, never detached —
+ *   this includes every payroll/payslip table).
  */
 function assertEmployeeSnapshotPlanMatchesPolicy(): void {
   const protectedTables = EMPLOYEE_DELETE_DEPENDENCY_SOURCES.filter(
@@ -1271,10 +1288,7 @@ function assertEmployeeSnapshotPlanMatchesPolicy(): void {
     (source) => source.table
   );
 
-  const expectedProtectedTables = protectedTables.filter(
-    (table) => table !== payrollItems
-  );
-  for (const table of expectedProtectedTables) {
+  for (const table of protectedTables) {
     if (!plannedTables.includes(table)) {
       throw new Error(
         "Employee permanent delete snapshot plan is missing a protected table with nullable identity snapshots."
@@ -1288,9 +1302,9 @@ function assertEmployeeSnapshotPlanMatchesPolicy(): void {
       );
     }
   }
-  if (plannedTables.includes(payrollItems)) {
+  if (plannedTables.length !== protectedTables.length) {
     throw new Error(
-      "payroll_items carries NOT NULL creation-time snapshots and must not be in the retained snapshot plan."
+      "Employee permanent delete snapshot plan contains a table that the policy does not classify as protected."
     );
   }
 }

@@ -15,28 +15,30 @@
  * RELATED RECORDS ARE CLASSIFIED, NOT DELETED BLINDLY
  * ---------------------------------------------------
  * Every employee-scoped foreign key in production is `RESTRICT`/`SET NULL`,
- * never `CASCADE` (migration 0017; migration 0022 later moved the PROTECTED
- * tables to `SET NULL` so their rows are retained, never removed). That is
- * what makes this classification enforceable rather than advisory: a category
- * marked PROTECTED is never issued a DELETE by this flow, and a category
- * marked DELETABLE is removed only through the explicit, table-by-table plan
- * — PostgreSQL, not this module and not a Super Administrator, keeps the
- * final word on referential integrity.
+ * never `CASCADE` (migration 0017; migration 0022 later moved the six
+ * time/employment-history PROTECTED tables to `SET NULL` so their rows are
+ * retained, never removed). That is what makes this classification
+ * enforceable rather than advisory: a category marked PROTECTED is never
+ * issued a DELETE by this flow, and a category marked DELETABLE is removed
+ * only through the explicit, table-by-table plan — PostgreSQL, not this
+ * module and not a Super Administrator, keeps the final word on referential
+ * integrity.
  *
- * - PROTECTED: historical/compliance records. Attendance, leave and permission
- *   absences are the employer's time record; payroll and payslips are the
- *   financial record; employment history is the legal employment timeline.
- *   These are retention-bound, so they are never removed by this flow — not
- *   even by a Super Administrator. Under the approved detach schema they are
- *   RETAINED with immutable identity snapshots and their employee reference
- *   is atomically cleared when the employee row is deleted (migration 0022).
- * - DELETABLE: profile data that belongs to the person and has no meaning once
- *   the person is gone. Documents, face-ID enrollments/templates, project
- *   assignments, and the master-data rows (addresses, insurance, bank
- *   accounts, family/dependents, education, custom field values) plus
- *   announcement delivery rows. These are deleted explicitly, one statement
- *   per table, inside the same transaction as the employee row — never through
- *   a blanket `ON DELETE CASCADE`.
+ * - PROTECTED: the employer's time record and legal employment timeline.
+ *   Attendance, leave and permission absences plus employment history are
+ *   retention-bound, so they are never removed by this flow — not even by a
+ *   Super Administrator. Under the approved detach schema they are RETAINED
+ *   with immutable identity snapshots and their employee reference is
+ *   atomically cleared when the employee row is deleted (migration 0022).
+ * - DELETABLE: data that belongs to the person or describes their pay. Under
+ *   the owner-approved release scope this explicitly includes PAYROLL HISTORY:
+ *   payroll component assignments, payroll items/results, payslips and the
+ *   payslip document/version chain. Profile data (documents, face-ID
+ *   enrollments/templates, project assignments, master-data rows, announcement
+ *   delivery rows) is also deletable. These are deleted explicitly, one
+ *   statement per table, inside the same transaction as the employee row —
+ *   never through a blanket `ON DELETE CASCADE` and never without the explicit
+ *   plan (the payroll tables keep `ON DELETE RESTRICT` as the backstop).
  *
  * REVISED POLICY (Super Administrator override + retention-compatible schema):
  * -----------------------------------------------------------------------
@@ -142,16 +144,22 @@ export const EMPLOYEE_PROTECTED_DEPENDENCY_LABELS = [
   "Attendance",
   "Leave",
   "Permission",
-  "Payroll",
-  "Payslip",
   "Employment history",
 ] as const satisfies readonly EmployeeDeleteDependencyLabel[];
 
 /**
  * Categories that are removed explicitly, in the same transaction as the
  * employee row.
+ *
+ * PAYROLL and PAYSLIP are deliberately deletable under the owner-approved
+ * permanent-deletion scope: payroll history belongs to the person being
+ * erased. They are still removed table-by-table (never by cascade), and the
+ * payroll tables keep `ON DELETE RESTRICT` so a missed row makes the employee
+ * DELETE fail and the whole transaction roll back.
  */
 export const EMPLOYEE_DELETABLE_DEPENDENCY_LABELS = [
+  "Payroll",
+  "Payslip",
   "Documents",
   "Face ID",
   "Projects",
@@ -269,8 +277,8 @@ function formatDependencyLines(
  *   Cannot delete employee 03233.
  *
  *   Protected records:
- *   Payroll: 3
  *   Attendance: 10
+ *   Employment history: 3
  *
  *   Please deactivate/archive this employee instead.
  */

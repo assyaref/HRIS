@@ -1,23 +1,23 @@
 /**
- * Employee retention-detach (migration 0022) — node:test suite.
+ * Employee deletion scope (migration 0022) — node:test suite.
  *
- * Pins the retention-compatible permanent-deletion design documented in
- * docs/employee-permanent-delete-0022-detach-design.md, in the repository
+ * Pins the OWNER-APPROVED permanent-deletion scope documented in
+ * docs/employee-deletion-payroll-scope-decision-record.md, in the repository
  * convention (pure decision logic + source invariants; no live database):
  *
- * - The migration file: nullable employee references + ON DELETE SET NULL on
- *   every PROTECTED table, immutable identity snapshots with a backfill, a
- *   retained-identity CHECK per table, RESTRICT preserved on DELETABLE
- *   tables, no CASCADE anywhere, transactional, idempotent, NOT journaled,
- *   and the control plane (0021) untouched.
+ * - RETAINED tables (six): attendance, leave, permission and employment
+ *   history become nullable + ON DELETE SET NULL with an identity snapshot
+ *   backfill and a retained-identity CHECK per table.
+ * - DELETED tables (five payroll/payslip tables): restored to NOT NULL +
+ *   ON DELETE RESTRICT, with the retention-only snapshot columns and CHECKs
+ *   dropped. The permanent-delete plan removes them explicitly, children
+ *   first, so the RESTRICT foreign keys are the backstop.
+ * - No CASCADE anywhere, transactional, idempotent, NOT journaled, and the
+ *   control plane (0021) untouched.
  * - The deletion transaction: the snapshot step runs INSIDE the single
  *   transaction, before the deletable-record removal and the employee DELETE,
- *   is org+employee scoped, never reads the form, and fills NULLs only
- *   (creation-time snapshots — the payslip PDF password contract — are never
- *   overwritten).
- * - The audit trail: SUCCESS records what was removed, what was retained and
- *   which retained rows had their identity frozen.
- * - Historical reporting: management queries keep detached rows visible via
+ *   is org+employee scoped, never reads the form, and fills NULLs only.
+ * - Historical reporting: retained time/history rows stay visible via
  *   LEFT JOIN + snapshot COALESCE, and search matches the snapshots.
  * - Fail-closed compatibility: against a pre-0022 schema the foreign-key
  *   rejection still reports the retained-completion error, and the executor
@@ -128,27 +128,32 @@ const permanentDelete = actionBlock(
 );
 
 /**
- * The eleven retention-bound tables of the dependency graph (audit-verified
- * against the live PostgreSQL catalog; see the design document §2.1).
+ * The six RETAINED (time/employment-history) tables: nullable employee
+ * references + ON DELETE SET NULL + identity snapshots + retained CHECK.
  */
-const PROTECTED_TABLES = [
+const RETAINED_TABLES = [
   "attendance_records",
   "attendance_events",
   "leave_balances",
   "leave_requests",
   "permission_requests",
+  "employee_employment_history",
+] as const;
+
+/**
+ * The five payroll/payslip tables DELETED with the employee: restored to
+ * NOT NULL + ON DELETE RESTRICT, retention snapshots/CHECKs dropped.
+ */
+const DELETED_PAYROLL_TABLES = [
   "employee_payroll_components",
   "payroll_items",
   "payslips",
   "payslip_documents",
   "payslip_document_versions",
-  "employee_employment_history",
 ] as const;
 
-/** PROTECTED tables whose `employee_id` reference must become detachable. */
-const DETACHED_TABLES = PROTECTED_TABLES.filter(
-  (table) => table !== "payroll_items"
-);
+/** Every table whose `employee_id` reference becomes detachable. */
+const DETACHED_TABLES = RETAINED_TABLES;
 
 const DELETABLE_TABLES = [
   "employee_documents",
@@ -174,10 +179,8 @@ describe("migration 0022: structure and safety", () => {
     assert.equal(migrationSource.includes("COMMIT;"), true);
     assert.equal((migrationSource.match(/^BEGIN;$/gm) ?? []).length, 1);
     assert.equal((migrationSource.match(/^COMMIT;$/gm) ?? []).length, 1);
-    // Idempotency guards on every schema change. payslips only gains the
-    // name snapshot (the number snapshot already exists); payroll_items
-    // gains nothing.
-    for (const table of DETACHED_TABLES.filter((t) => t !== "payslips")) {
+    // Idempotency guards on every retained table's schema change.
+    for (const table of DETACHED_TABLES) {
       assert.equal(
         migrationSource.includes(`ALTER TABLE ${table}\n  ADD COLUMN IF NOT EXISTS employee_number_snapshot`),
         true,
@@ -185,30 +188,55 @@ describe("migration 0022: structure and safety", () => {
       );
     }
     assert.equal(
-      (migrationSource.match(/DROP CONSTRAINT IF EXISTS/g) ?? []).length,
-      PROTECTED_TABLES.length,
-      "every FK swap is preceded by an idempotent drop"
+      (migrationSource.match(/DROP CONSTRAINT IF EXISTS/g) ?? []).length >=
+        RETAINED_TABLES.length + DELETED_PAYROLL_TABLES.length,
+      true,
+      "every FK swap/drop is idempotent"
     );
     const migrationWithoutCommentsOrDoBlocks = migrationSource
       .replace(/--[^\n]*/g, "")
       .replace(/DO \$\$[\s\S]*?\$\$;/g, "");
-    assert.equal(
-      migrationWithoutCommentsOrDoBlocks.includes("retained_identity_check"),
-      false,
-      "CHECK constraints are created idempotently via DO blocks"
-    );
+    // Retained CHECK *creations* happen inside guarded DO blocks. Outside DO
+    // blocks, "retained_identity_check" may only appear in an idempotent
+    // `DROP CONSTRAINT IF EXISTS` (removing the retention CHECK from the
+    // five payroll tables that are now deleted with the employee).
+    const bareCheckStatements = migrationWithoutCommentsOrDoBlocks
+      .split(";")
+      .filter((statement) => statement.includes("retained_identity_check"))
+      .map((statement) => statement.trim());
+    for (const statement of bareCheckStatements) {
+      assert.equal(
+        statement.startsWith("ALTER TABLE") &&
+          statement.includes("DROP CONSTRAINT IF EXISTS"),
+        true,
+        `retained_identity_check outside a DO block must be an idempotent drop, saw: ${statement}`
+      );
+    }
     assert.equal(
       (migrationSource.match(/IF NOT EXISTS \(\s*SELECT 1 FROM pg_constraint/g) ??
         []).length,
-      PROTECTED_TABLES.length,
-      "every CHECK creation is guarded"
+      RETAINED_TABLES.length,
+      "every retained-table CHECK creation is guarded"
     );
   });
 
-  it("never deletes or overwrites data, and backfills snapshots from NULLs only", () => {
+  it("never deletes rows or overwrites live data; backfills snapshots from NULLs only", () => {
     assert.equal(migrationSource.match(/^\s*DELETE FROM/gm), null);
     assert.equal(migrationSource.match(/^\s*TRUNCATE/gim), null);
-    assert.equal(migrationSource.match(/^\s*DROP COLUMN/gm), null);
+    // The only DROP COLUMNs are the retention-only columns removed from the
+    // five payroll tables (which never existed in production). No live column
+    // is dropped.
+    const droppedColumns = (
+      migrationSource.match(/DROP COLUMN IF EXISTS (\w+)/g) ?? []
+    ).map((statement) => statement.replace("DROP COLUMN IF EXISTS ", ""));
+    for (const column of droppedColumns) {
+      assert.equal(
+        column === "employee_number_snapshot" ||
+          column === "employee_name_snapshot",
+        true,
+        `only retention-only snapshot columns may be dropped, saw ${column}`
+      );
+    }
     // Backfills fill NULLs only; creation-time snapshots are preserved.
     for (const table of DETACHED_TABLES) {
       const update = migrationSource.slice(
@@ -225,8 +253,8 @@ describe("migration 0022: structure and safety", () => {
     }
   });
 
-  it("makes the PROTECTED employee references nullable with ON DELETE SET NULL", () => {
-    for (const table of PROTECTED_TABLES) {
+  it("makes the RETAINED employee references nullable with ON DELETE SET NULL", () => {
+    for (const table of RETAINED_TABLES) {
       assert.equal(
         migrationSource.includes(`ALTER TABLE ${table}\n  ALTER COLUMN employee_id DROP NOT NULL;`),
         true,
@@ -238,6 +266,23 @@ describe("migration 0022: structure and safety", () => {
         ),
         true,
         `${table}'s employee FK must become SET NULL (detach, never delete)`
+      );
+    }
+  });
+
+  it("restores NOT NULL + ON DELETE RESTRICT on the DELETED payroll tables", () => {
+    for (const table of DELETED_PAYROLL_TABLES) {
+      assert.equal(
+        migrationSource.includes(`ALTER TABLE ${table}\n  ALTER COLUMN employee_id SET NOT NULL;`),
+        true,
+        `${table}.employee_id must be NOT NULL (deleted explicitly)`
+      );
+      assert.equal(
+        migrationSource.includes(
+          `ADD CONSTRAINT ${table}_employee_id_employees_id_fk\n  FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE RESTRICT;`
+        ),
+        true,
+        `${table}'s employee FK must be RESTRICT (deletion backstop)`
       );
     }
   });
@@ -259,8 +304,8 @@ describe("migration 0022: structure and safety", () => {
     assert.equal(migrationSource.match(/DISABLE TRIGGER/gi), null);
   });
 
-  it("guarantees a detached row always carries its identity (retained-identity CHECK)", () => {
-    for (const table of PROTECTED_TABLES) {
+  it("guarantees a retained row always carries its identity (retained-identity CHECK)", () => {
+    for (const table of RETAINED_TABLES) {
       assert.equal(
         migrationSource.includes(
           `ADD CONSTRAINT ${table}_retained_identity_check\n      CHECK (employee_id IS NOT NULL OR employee_number_snapshot IS NOT NULL)`
@@ -271,15 +316,20 @@ describe("migration 0022: structure and safety", () => {
     }
   });
 
-  it("leaves the payslip PDF password snapshots (payslips) and payroll item snapshots intact", () => {
-    // payslips already carries employee_number_snapshot: 0022 must only ADD
-    // the name snapshot and never redefine the number/birth-date columns.
-    assert.equal(
-      migrationSource.includes(
-        "ALTER TABLE payslips\n  ADD COLUMN IF NOT EXISTS employee_name_snapshot text;"
-      ),
-      true
-    );
+  it("drops retention-only payroll snapshots but keeps creation-time snapshots intact", () => {
+    // The five payroll tables are DELETED, so the retention-only columns are
+    // dropped and no retained-identity CHECK is added.
+    for (const table of DELETED_PAYROLL_TABLES) {
+      assert.equal(
+        migrationSource.includes(
+          `ADD CONSTRAINT ${table}_retained_identity_check`
+        ),
+        false,
+        `${table} is deleted; it must not gain a retention CHECK`
+      );
+    }
+    // Creation-time snapshots used by payslip reporting / PDF password stay:
+    // 0022 must never redefine payslips.employee_number_snapshot.
     assert.equal(
       migrationSource.includes(
         "ALTER TABLE payslips\n  ADD COLUMN IF NOT EXISTS employee_number_snapshot"
@@ -291,6 +341,13 @@ describe("migration 0022: structure and safety", () => {
       migrationSource.includes("ALTER TABLE payroll_items\n  ADD COLUMN"),
       false,
       "payroll_items carries NOT NULL creation-time snapshots; nothing to add"
+    );
+    // payslips.employee_name_snapshot is a retention-only column: it is dropped.
+    assert.equal(
+      migrationSource.includes(
+        "ALTER TABLE payslips\n  DROP COLUMN IF EXISTS employee_name_snapshot;"
+      ),
+      true
     );
   });
 
@@ -333,30 +390,48 @@ describe("migration 0022: structure and safety", () => {
 /* ------------------------------------------------------------------ */
 
 describe("drizzle schema: the detach design is expressed in code", () => {
-  it("declares the snapshot columns on every detached table", () => {
+  it("declares the snapshot columns on every retained table", () => {
     for (const column of [
       "employee_number_snapshot",
       "employee_name_snapshot",
     ]) {
       assert.equal(schemaSource.includes(`text("${column}")`), true);
     }
-    // 11 protected tables minus payroll_items carry both snapshot columns as
-    // nullable text; payslips gains only the name snapshot (number exists).
+    // Six retained tables carry both snapshot columns as nullable text.
     const snapshotColumns = (schemaSource.match(
       /employee_number_snapshot"\)|employee_name_snapshot"\)/g
     ) ?? []).length;
     assert.equal(
-      snapshotColumns >= DETACHED_TABLES.length * 2 + 1,
+      snapshotColumns >= RETAINED_TABLES.length * 2,
       true,
-      "every detached table must declare both snapshot columns (payslips: name only, number pre-existing)"
+      "every retained table must declare both snapshot columns"
     );
   });
 
-  it("declares SET NULL on the protected employee references and keeps RESTRICT elsewhere", () => {
+  it("declares SET NULL on the retained references and RESTRICT on the deleted payroll references", () => {
     const setNullRefs = (schemaSource.match(
-      /uuid\("employee_id"\)\.references\(\(\) => employees\.id,\s*\{\s*onDelete: "set null",\s*\}\)/g
+      /uuid\("employee_id"\)[.\s\S]*?\.references\(\(\) => employees\.id,\s*\{\s*onDelete: "set null",\s*\}\)/g
     ) ?? []).length;
-    assert.equal(setNullRefs, PROTECTED_TABLES.length);
+    assert.equal(setNullRefs >= RETAINED_TABLES.length, true);
+
+    // The five payroll tables keep NOT NULL + RESTRICT in the Drizzle schema.
+    for (const table of [
+      "employee_payroll_components",
+      "payroll_items",
+      "payslips",
+      "payslip_documents",
+      "payslip_document_versions",
+    ]) {
+      const tableIndex = schemaPayrollSource.indexOf(`"${table}"`);
+      assert.notEqual(tableIndex, -1, `${table} must be in the payroll schema`);
+      const slice = schemaPayrollSource.slice(tableIndex, tableIndex + 2500);
+      assert.equal(
+        slice.includes('onDelete: "restrict"') &&
+          slice.includes('uuid("employee_id")'),
+        true,
+        `${table} must keep a NOT NULL RESTRICT employee reference`
+      );
+    }
     // Deletable tables keep their references (RESTRICT in the production DB).
     for (const table of [
       "employeeDocuments",
@@ -379,13 +454,19 @@ describe("drizzle schema: the detach design is expressed in code", () => {
     }
   });
 
-  it("declares the retained-identity CHECK on every protected table", () => {
-    for (const table of PROTECTED_TABLES) {
-      const snake = table.replace(/_/g, "_");
+  it("declares the retained-identity CHECK on every retained table only", () => {
+    for (const table of RETAINED_TABLES) {
       assert.equal(
-        schemaSource.includes(`"${snake}_retained_identity_check"`),
+        schemaSource.includes(`${table}_retained_identity_check`),
         true,
         `${table} must declare its retained-identity check`
+      );
+    }
+    for (const table of DELETED_PAYROLL_TABLES) {
+      assert.equal(
+        schemaPayrollSource.includes(`${table}_retained_identity_check`),
+        false,
+        `${table} is deleted and must not declare a retained-identity check`
       );
     }
   });
@@ -432,7 +513,7 @@ describe("deletion transaction: snapshot, then delete — atomically", () => {
     );
   });
 
-  it("the snapshot plan is derived from the protected classification and asserted", () => {
+  it("the snapshot plan is derived from the retained classification and asserted", () => {
     const plan = queriesSource.slice(
       queriesSource.indexOf("EMPLOYEE_RETAINED_SNAPSHOT_PLAN")
     );
@@ -452,10 +533,6 @@ describe("deletion transaction: snapshot, then delete — atomically", () => {
       "leaveBalances",
       "leaveRequests",
       "permissionRequests",
-      "employeePayrollComponents",
-      "payslips",
-      "payslipDocuments",
-      "payslipDocumentVersions",
       "employeeEmploymentHistory",
     ]) {
       assert.equal(
@@ -464,11 +541,21 @@ describe("deletion transaction: snapshot, then delete — atomically", () => {
         `${table} must be in the snapshot plan`
       );
     }
-    assert.equal(
-      plan.includes("table: payrollItems,"),
-      false,
-      "payroll_items has NOT NULL creation-time snapshots and is excluded"
-    );
+    // Payroll history is DELETED with the employee: no payroll table may be
+    // snapshotted (their rows are removed, never detached).
+    for (const table of [
+      "employeePayrollComponents",
+      "payrollItems",
+      "payslips",
+      "payslipDocuments",
+      "payslipDocumentVersions",
+    ]) {
+      assert.equal(
+        plan.includes(`table: ${table},`),
+        false,
+        `${table} is deleted with the employee and must not be in the snapshot plan`
+      );
+    }
   });
 
   it("every snapshot statement is scoped by BOTH employee and organization", () => {
@@ -548,7 +635,7 @@ describe("policy model: the override completes with retained records", () => {
     }
   });
 
-  it("deletion with EVERY protected category succeeds and reports all of them retained", () => {
+  it("deletion with EVERY retained category succeeds and reports all of them retained", () => {
     const decision = evaluatePermanentEmployeeDeletion({
       ...actorInput,
       dependencies: dependencies({
@@ -564,18 +651,17 @@ describe("policy model: the override completes with retained records", () => {
     if (decision.allowed) {
       assert.deepEqual(
         decision.retained.map((dependency) => dependency.label),
-        [
-          "Attendance",
-          "Leave",
-          "Permission",
-          "Payroll",
-          "Payslip",
-          "Employment history",
-        ]
+        ["Attendance", "Leave", "Permission", "Employment history"]
       );
       assert.deepEqual(
         decision.retained.map((dependency) => dependency.count),
-        [12, 3, 2, 4, 5, 30]
+        [12, 3, 2, 30]
+      );
+      // Payroll history is owner-approved deletable: it is reported as
+      // removed, not retained.
+      assert.deepEqual(
+        decision.willDelete.map((dependency) => dependency.label),
+        ["Payroll", "Payslip"]
       );
     }
   });
@@ -594,11 +680,11 @@ describe("policy model: the override completes with retained records", () => {
     if (decision.allowed) {
       assert.deepEqual(
         decision.willDelete.map((dependency) => dependency.label),
-        ["Documents", "Face ID"]
+        ["Payslip", "Documents", "Face ID"]
       );
       assert.deepEqual(
         decision.retained.map((dependency) => dependency.label),
-        ["Attendance", "Payslip"]
+        ["Attendance"]
       );
     }
   });
@@ -633,9 +719,17 @@ describe("policy model: the override completes with retained records", () => {
       "Attendance",
       "Leave",
       "Permission",
+      "Employment history",
+    ]);
+    // Payroll history is now a deletable category under the owner-approved
+    // scope, together with the profile categories.
+    assert.deepEqual([...EMPLOYEE_DELETABLE_DEPENDENCY_LABELS], [
       "Payroll",
       "Payslip",
-      "Employment history",
+      "Documents",
+      "Face ID",
+      "Projects",
+      "Other related records",
     ]);
   });
 
@@ -743,15 +837,20 @@ describe("historical reporting: detached rows stay visible via snapshots", () =>
     );
   });
 
-  it("payroll overview/detail are snapshot-first and detached payslips remain reachable", () => {
-    assert.equal(
-      payrollQueriesSource.includes(".leftJoin(employees, eq(employees.id, payslips.employeeId))"),
-      true
-    );
+  it("payroll overview/detail resolve identity without retention snapshots (payslips are deleted, not detached)", () => {
+    // Under the owner-approved scope a permanently deleted employee's
+    // payslips are GONE, so there is no detached-payslip fallback: the
+    // payroll queries resolve names from the payroll-item creation snapshot
+    // and the live employee row only.
     assert.equal(
       payrollQueriesSource.includes("${payslips.employeeNameSnapshot}"),
+      false,
+      "the retention-only payslip name snapshot must not be referenced"
+    );
+    assert.equal(
+      payrollQueriesSource.includes("${payrollItems.employeeNameSnapshot}"),
       true,
-      "the payslip name snapshot participates in the COALESCE chain"
+      "the payroll-item creation snapshot still stabilizes live payslip names"
     );
     // Self-service stays INNER-joined: a deleted employee has no session.
     assert.equal(
@@ -760,14 +859,14 @@ describe("historical reporting: detached rows stay visible via snapshots", () =>
     );
   });
 
-  it("the published-payslip PDF route no longer requires a live employee row", () => {
+  it("the published-payslip PDF route still resolves the password from creation-time snapshots", () => {
     const pdfRouteSource = stripComments(
       readRepoFile("app/api/payroll/payslips/[payslipId]/pdf/route.ts")
     );
     assert.equal(
       pdfRouteSource.includes("innerJoin(\n      employees"),
       false,
-      "management must still be able to download a retained payslip PDF"
+      "management must still be able to download a payslip PDF without a hard employee dependency"
     );
   });
 });
@@ -972,24 +1071,60 @@ describe("migration 0022: lifecycle-independent verification and repeatability",
     );
   });
 
-  it("applies the verification to all eleven protected tables", () => {
+  it("applies the verification to all six retained tables and all five deleted payroll tables", () => {
     const arrayStart = verificationBlock.indexOf(
-      "protected_tables text[] := ARRAY["
+      "retained_tables text[] := ARRAY["
     );
     assert.notEqual(arrayStart, -1);
     const arrayBlock = verificationBlock.slice(
       arrayStart,
       verificationBlock.indexOf("];", arrayStart)
     );
-    for (const table of PROTECTED_TABLES) {
+    for (const table of RETAINED_TABLES) {
       assert.equal(
         arrayBlock.includes(`'${table}'`),
         true,
-        `${table} must be covered by the lifecycle-independent verification`
+        `${table} must be covered by the retained-table verification`
       );
     }
     assert.equal(
-      verificationBlock.includes("FOREACH tbl IN ARRAY protected_tables LOOP"),
+      verificationBlock.includes("FOREACH tbl IN ARRAY retained_tables LOOP"),
+      true
+    );
+
+    const deletedArrayStart = verificationBlock.indexOf(
+      "deleted_tables text[] := ARRAY["
+    );
+    assert.notEqual(deletedArrayStart, -1);
+    const deletedArrayBlock = verificationBlock.slice(
+      deletedArrayStart,
+      verificationBlock.indexOf("];", deletedArrayStart)
+    );
+    for (const table of DELETED_PAYROLL_TABLES) {
+      assert.equal(
+        deletedArrayBlock.includes(`'${table}'`),
+        true,
+        `${table} must be covered by the deleted-payroll-table verification`
+      );
+    }
+    assert.equal(
+      verificationBlock.includes("FOREACH tbl IN ARRAY deleted_tables LOOP"),
+      true
+    );
+    // The deleted payroll tables are verified as the deletion backstop:
+    // NOT NULL + ON DELETE RESTRICT, with no retention CHECK.
+    assert.equal(
+      verificationBlock.includes("employee_id must be NOT NULL"),
+      true
+    );
+    assert.equal(
+      verificationBlock.includes("employee FK is not ON DELETE RESTRICT"),
+      true
+    );
+    assert.equal(
+      verificationBlock.includes(
+        "retention-only retained_identity_check must not exist"
+      ),
       true
     );
     assert.equal(verificationBlock.includes("RAISE EXCEPTION"), true);

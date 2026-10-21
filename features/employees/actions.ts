@@ -93,10 +93,9 @@ import {
  *      related records classified as DELETABLE, in ONE transaction. Reserved
  *      for the system-level SUPERADMIN role — see the RBAC note below.
  * - Permanent deletion never removes PROTECTED historical records. Attendance,
- *   leave, permission, payroll, payslip and employment-history rows are
- *   retention-bound: they are RETAINED, and — under the approved detach
- *   schema (migration 0022, see
- *   docs/employee-permanent-delete-0022-detach-design.md) — their employee
+ *   leave, permission and employment-history rows are retention-bound: they
+ *   are RETAINED, and — under the approved detach schema (migration 0022, see
+ *   docs/employee-deletion-payroll-scope-decision-record.md) — their employee
  *   reference is atomically cleared (`ON DELETE SET NULL`) while their
  *   immutable identity snapshots keep them reportable. Where migration 0022
  *   has NOT been applied, the pre-0022 `RESTRICT` foreign keys still refuse
@@ -1017,16 +1016,18 @@ async function readEmployeeDeletionDependencies(
  *    (`deletionReason`, shared `isValidDeletionReason` validator, 10–2000
  *    characters) are re-validated server-side the same way → 400. The
  *    operator-supplied reason is recorded on every subsequent audit row.
- * 5. PROTECTED historical records (attendance, leave, permission, payroll,
- *    payslip, employment history) are RETAINED, never deleted. Under the
- *    revised policy they no longer fail the Super Administrator's
- *    APPLICATION-level eligibility (`superAdminOverride`). With the approved
- *    detach schema (migration 0022) the deletion then COMPLETES: the
- *    retained rows' identity snapshots are frozen and their employee
- *    references are atomically cleared by the tables' ON DELETE SET NULL
- *    foreign keys — inside the same transaction. Against a pre-0022 schema
- *    the same attempt fails closed: the old RESTRICT foreign keys refuse the
- *    employee DELETE (23503), the transaction rolls back and the
+ * 5. PROTECTED historical records (attendance, leave, permission, employment
+ *    history) are RETAINED, never deleted. Under the revised policy they no
+ *    longer fail the Super Administrator's APPLICATION-level eligibility
+ *    (`superAdminOverride`). With the approved detach schema (migration 0022)
+ *    the deletion then COMPLETES: the retained rows' identity snapshots are
+ *    frozen and their employee references are atomically cleared by the
+ *    tables' ON DELETE SET NULL foreign keys — inside the same transaction.
+ *    Payroll history (payroll components, payroll items, payslips and the
+ *    payslip document chain) is owner-approved DELETABLE and is removed
+ *    explicitly, children first, before the employee row. Against a pre-0022
+ *    schema the same attempt fails closed: the old RESTRICT foreign keys
+ *    refuse the employee DELETE (23503), the transaction rolls back and the
  *    retained-completion error is returned.
  * 6. ONE transaction: lock the row, re-check the confirmation, re-scan and
  *    re-decide on the locked snapshot, freeze the retained-identity
@@ -1328,11 +1329,12 @@ export async function permanentlyDeleteEmployeeAction(
       // transaction handle, org-scoped, BEFORE the employee row is removed:
       // the subsequent DELETE then fires the protected tables' ON DELETE
       // SET NULL foreign keys and detaches the retained rows atomically.
-      // Creation-time snapshots (payslip PDF password contract, payroll
-      // items) are never overwritten — the plan fills NULLs with COALESCE.
-      // Where migration 0022 is NOT applied the columns do not exist and
-      // this statement fails, rolling the whole transaction back: the
-      // feature cannot complete against a pre-0022 schema.
+      // The retained plan covers attendance, leave, permission and
+      // employment history only — payroll history is DELETED (STEP 2), so
+      // no payroll table is snapshotted. Where migration 0022 is NOT
+      // applied the snapshot columns do not exist and this statement fails,
+      // rolling the whole transaction back: the feature cannot complete
+      // against a pre-0022 schema.
       const snapshottedRecords = await snapshotEmployeeRetainedRecords(
         tx,
         current.id,

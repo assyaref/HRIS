@@ -588,14 +588,14 @@ describe("related records are classified, not treated uniformly", () => {
       "Attendance",
       "Leave",
       "Permission",
-      "Payroll",
-      "Payslip",
       "Employment history",
     ]);
   });
 
-  it("profile categories are deletable", () => {
+  it("profile and payroll-history categories are deletable", () => {
     assert.deepEqual([...EMPLOYEE_DELETABLE_DEPENDENCY_LABELS], [
+      "Payroll",
+      "Payslip",
       "Documents",
       "Face ID",
       "Projects",
@@ -787,16 +787,16 @@ describe("Super Administrator protected-record override (revised policy)", () =>
     assert.equal(decision.allowed, true);
     assert.deepEqual(
       decision.retained.map((d) => [d.label, d.count]),
-      [
-        ["Payroll", 2],
-        ["Employment history", 3],
-      ],
+      [["Employment history", 3]],
       "the retained categories are reported in canonical order"
     );
     assert.deepEqual(
       decision.willDelete.map((d) => [d.label, d.count]),
-      [["Documents", 5]],
-      "the deletable categories are still scheduled for removal"
+      [
+        ["Payroll", 2],
+        ["Documents", 5],
+      ],
+      "the deletable categories (payroll history included) are scheduled for removal"
     );
   });
 
@@ -868,7 +868,12 @@ describe("retained-completion message (database refuses the override attempt)", 
   it("lists the retained categories and keeps deletable ones out", () => {
     const message = buildPermanentDeleteRetainedCompletionMessage(
       "03233",
-      dependencies({ "Employment history": 3, Payroll: 1, Documents: 4 })
+      dependencies({
+        "Employment history": 3,
+        Attendance: 1,
+        Payroll: 1,
+        Documents: 4,
+      })
     );
     const lines = message.split("\n");
     assert.equal(lines[0], EMPLOYEE_PERMANENT_DELETE_RETAINED_COMPLETION_MESSAGE);
@@ -877,8 +882,13 @@ describe("retained-completion message (database refuses the override attempt)", 
       true
     );
     assert.equal(message.includes("Retained records:"), true);
+    assert.equal(message.includes("Attendance: 1"), true);
     assert.equal(message.includes("Employment history: 3"), true);
-    assert.equal(message.includes("Payroll: 1"), true);
+    assert.equal(
+      message.includes("Payroll: 1"),
+      false,
+      "payroll history is deletable and is not presented as retained"
+    );
     assert.equal(
       message.includes("Documents: 4"),
       false,
@@ -899,13 +909,27 @@ describe("protected rejection message names the retained modules", () => {
   it("lists the protected categories in canonical order", () => {
     const message = buildPermanentDeleteProtectedMessage(
       "03233",
-      dependencies({ Payroll: 3, Attendance: 10, Documents: 2 })
+      dependencies({
+        "Employment history": 3,
+        Attendance: 10,
+        Payroll: 3,
+        Documents: 2,
+      })
     );
     const lines = message.split("\n");
     assert.equal(lines[0], EMPLOYEE_PERMANENT_DELETE_PROTECTED_MESSAGE);
     assert.equal(message.includes("Cannot delete employee 03233."), true);
     assert.equal(message.includes("Protected records:"), true);
-    assert.equal(lines.indexOf("Attendance: 10") < lines.indexOf("Payroll: 3"), true);
+    assert.equal(
+      lines.indexOf("Attendance: 10") <
+        lines.indexOf("Employment history: 3"),
+      true
+    );
+    assert.equal(
+      message.includes("Payroll: 3"),
+      false,
+      "payroll history is deletable and is not presented as a blocker"
+    );
     assert.equal(
       message.includes("Documents: 2"),
       false,
@@ -1384,15 +1408,25 @@ describe("server action: transaction and explicit deletion", () => {
 
 describe("queries: the explicit delete plan matches the policy", () => {
   const planBlock = queriesSource.slice(
-    queriesSource.indexOf("const EMPLOYEE_DELETABLE_DELETE_PLAN"),
+    queriesSource.indexOf("const EMPLOYEE_DELETE_PLAN_CATEGORY_ORDER"),
     queriesSource.indexOf("assertEmployeeDeletePlanMatchesPolicy();")
   );
 
   it("is derived from the deletable categories only", () => {
     assert.equal(
-      planBlock.includes('employeeDeleteDependencyDisposition(group.label) === "deletable"'),
+      queriesSource.includes('employeeDeleteDependencyDisposition(group.label) === "deletable"'),
       true,
-      "the plan must be derived from the policy classification, not hand-listed"
+      "the plan guard must still classify every category through the policy"
+    );
+    assert.equal(
+      queriesSource.includes("const EMPLOYEE_DELETE_PLAN_CATEGORY_ORDER"),
+      true,
+      "the fixed execution order must be explicit (payroll FK graph)"
+    );
+    assert.equal(
+      planBlock.includes('"Payslip"'),
+      true,
+      "Payslip must be executed before Payroll (payslips reference payroll_items RESTRICT)"
     );
   });
 
@@ -1429,11 +1463,21 @@ describe("queries: the explicit delete plan matches the policy", () => {
     );
   });
 
-  it("reverses the face-ID pair so no ON DELETE CASCADE is relied upon", () => {
+  it("reverses the child-first pairs so no ON DELETE CASCADE is relied upon", () => {
     assert.equal(
-      planBlock.includes("[group.tables[1], group.tables[0]]"),
+      planBlock.includes("EMPLOYEE_DELETE_PLAN_CHILD_FIRST_CATEGORIES"),
       true,
-      "face_enrollment_templates must be deleted before employee_face_enrollments"
+      "the child-first categories must be an explicit, guarded set"
+    );
+    assert.equal(
+      planBlock.includes('new Set(["Face ID", "Payslip"])'),
+      true,
+      "face_enrollment_templates and payslip versions/documents must be deleted before their parents"
+    );
+    assert.equal(
+      planBlock.includes("[...group.tables].reverse()"),
+      true,
+      "reversal is applied uniformly to the child-first categories"
     );
   });
 
@@ -1704,10 +1748,10 @@ describe("UI: the Super Administrator dialog", () => {
     );
     assert.equal(
       copy.includes(
-        "The transaction stores their historical identity (employee number and name) on each retained row and removes only the link to the employee record, so reports and payroll history stay complete."
+        "The transaction stores their historical identity (employee number and name) on each retained row and removes only the link to the employee record, so time and employment-history reports stay complete. Payroll history is not retained: it is deleted with the employee under the approved deletion scope."
       ),
       true,
-      "the retained section explains the retention-detach mechanism"
+      "the retained section explains the retention-detach mechanism and the payroll deletion scope"
     );
     assert.equal(
       dialogSource.includes("hasRetainedRecords"),

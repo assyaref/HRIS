@@ -1,15 +1,30 @@
 -- ============================================================================
--- 0022 — Employee retention-compatible deletion (DETACH + IDENTITY SNAPSHOTS)
+-- 0022 — Employee deletion scope: RETAIN time/employment history, DELETE payroll
 -- ============================================================================
 --
--- PURPOSE
---   Implements docs/employee-permanent-delete-0022-detach-design.md: allow the
---   authorized Super Administrator to permanently delete the `employees` row
---   while every PROTECTED historical record is RETAINED with its identity.
+-- REVISED SCOPE (owner-approved 2026-10-21)
+--   This migration previously implemented docs/employee-permanent-delete-0022-
+--   detach-design.md, which retained the eleven "protected" tables including
+--   payroll and payslips. The project owner has since explicitly approved a
+--   WIDER permanent-deletion scope: payroll history (payroll component
+--   assignments, payroll items, payslips and the payslip document/version
+--   chain) is DELETED with the employee.
 --
---   For the eleven retention-bound tables (attendance, leave, permission,
---   payroll components, payroll items, payslips, payslip documents + versions,
---   employment history):
+--   This rewrite keeps the retention detach for the SIX time/employment-history
+--   tables and moves the FIVE payroll/payslip tables back to
+--   `ON DELETE RESTRICT` + NOT NULL, removing the now-unused identity snapshot
+--   columns and their CHECK constraints. The application's permanent-delete
+--   plan removes payroll rows explicitly (children first), and the payroll
+--   RESTRICT foreign keys make a missed row fail loudly.
+--
+--   RETAINED + DETACHED (ON DELETE SET NULL + identity snapshots):
+--     attendance_records, attendance_events, leave_balances, leave_requests,
+--     permission_requests, employee_employment_history
+--   DELETED WITH THE EMPLOYEE (ON DELETE RESTRICT + NOT NULL):
+--     employee_payroll_components, payroll_items, payslips, payslip_documents,
+--     payslip_document_versions
+--
+--   For each RETAINED table:
 --     1. add immutable identity snapshots (employee number + display name),
 --        nullable, backfilled from the current employee record;
 --     2. widen employee_id to nullable;
@@ -20,55 +35,48 @@
 --        employee_id IS NOT NULL OR employee_number_snapshot IS NOT NULL
 --        — a retained row can never be anonymous by accident, and the design
 --        fails closed if an old application deletes an employee before this
---        change is deployed (post-migration rows without a snapshot violate
---        the CHECK and the DELETE rolls back).
+--        change is deployed.
 --
---   `payroll_items` already carries NOT NULL creation-time snapshots (no new
---   columns). `payslips` already carries employee_number_snapshot (PDF
---   password contract) — only employee_name_snapshot is added. Creation-time
---   snapshots are NEVER overwritten: every backfill fills NULLs only.
---
---   DELETABLE tables (documents, face ID, project assignments, master data,
---   announcement recipients) KEEP ON DELETE RESTRICT + NOT NULL — they are
---   removed explicitly by the delete plan, and the RESTRICT backstop keeps
---   refusing a racing insert (23503 -> rollback).
+--   Creation-time snapshots on DELETED payroll tables are NOT touched:
+--   `payroll_items.employee_number_snapshot` / `employee_name_snapshot` remain
+--   NOT NULL (historical payslip reporting data) and `payslips.
+--   employee_number_snapshot` / `birth_date_snapshot` remain (PDF password
+--   contract). Only the retention-only columns added by the earlier 0022 draft
+--   are removed here.
 --
 -- !!! DO NOT APPLY WITHOUT SIGN-OFF !!!
---   Requires DBA + Legal/Compliance + DPO review
---   (docs/employee-permanent-delete-0022-detach-design.md §7) and a verified
+--   Requires DBA + Legal/Compliance + DPO review of the WIDENED deletion scope
+--   (docs/employee-deletion-payroll-scope-decision-record.md) and a verified
 --   backup. Apply to the staging restore first, then the approved window.
 --
 -- DELIBERATELY NOT JOURNALED
 --   Follows the out-of-band pattern of 0019/0020/0021: the Drizzle lineage in
---   this repository is inconsistent (unjournaled files, snapshots stop at
---   0014) and must be repaired by the approved reconciliation change. Do not
---   run `drizzle-kit generate`/`migrate` from the worktree.
+--   this repository is inconsistent and must be repaired by the approved
+--   reconciliation change. Do not run `drizzle-kit generate`/`migrate`.
 --
 -- SAFETY
---   - One transaction. Additive columns are nullable; no column is dropped,
---     no row is deleted, no production value is overwritten.
---   - Idempotent and lifecycle-independent: every schema change is guarded
---     (IF EXISTS / IF NOT EXISTS / IS NULL), and the closing verification
---     validates schema + snapshot invariants that hold BEFORE and AFTER the
---     first permanent deletion. A legitimate detached row (employee_id IS NULL
---     with a populated identity snapshot) does not fail a re-run. Static SQL
---     review only — runtime idempotency is UNPROVEN until the staging
---     rehearsal records it (docs/employee-permanent-delete-0022-staging-runbook.md §2/§5.6).
---   - Rollback notes: docs/employee-permanent-delete-0022-detach-design.md §6.1.
+--   - One transaction. Additive columns are nullable; no row is deleted by the
+--     schema change itself, no production value is overwritten. The DROP
+--     statements only remove retention-only columns/CHECKs introduced by the
+--     (unapplied) earlier 0022 draft; on a fresh database they are no-ops.
+--   - Idempotent: every schema change is guarded (IF EXISTS / IF NOT EXISTS /
+--     IS NULL), and the closing verification validates schema invariants that
+--     hold before and after the first permanent deletion.
+--   - Rollback notes: docs/employee-deletion-payroll-scope-decision-record.md.
 --
 -- LOCKING (DBA note)
---   ALTER TABLE takes a short ACCESS EXCLUSIVE lock per table; adding the FK
---   validates existing rows (one scan per table). Run inside the approved
---   low-traffic window.
+--   ALTER TABLE takes a short ACCESS EXCLUSIVE lock per table; the FK change
+--   validates existing rows (one scan per retained table). Run inside the
+--   approved low-traffic window.
 -- ============================================================================
 
 BEGIN;
 
 -- ---------------------------------------------------------------------------
--- Shared block: snapshot columns + backfill + nullability + FK + CHECK
+-- RETAINED tables: snapshot columns + backfill + nullability + SET NULL + CHECK
 -- ---------------------------------------------------------------------------
--- The per-table sections below are written out explicitly (no dynamic SQL for
--- the schema changes) so the migration reads as exactly what it does.
+-- The per-table sections are written out explicitly (no dynamic SQL for the
+-- schema changes) so the migration reads as exactly what it does.
 
 -- ============================ attendance_records ===========================
 ALTER TABLE attendance_records
@@ -250,187 +258,6 @@ BEGIN
 END
 $$;
 
--- ============================ employee_payroll_components =================
-ALTER TABLE employee_payroll_components
-  ADD COLUMN IF NOT EXISTS employee_number_snapshot text;
-ALTER TABLE employee_payroll_components
-  ADD COLUMN IF NOT EXISTS employee_name_snapshot text;
-
-UPDATE employee_payroll_components t
-SET employee_number_snapshot = COALESCE(t.employee_number_snapshot, e.employee_number),
-    employee_name_snapshot   = COALESCE(t.employee_name_snapshot,   e.first_name || ' ' || e.last_name)
-FROM employees e
-WHERE t.employee_id = e.id
-  AND (t.employee_number_snapshot IS NULL OR t.employee_name_snapshot IS NULL);
-
-ALTER TABLE employee_payroll_components
-  ALTER COLUMN employee_id DROP NOT NULL;
-
-ALTER TABLE employee_payroll_components
-  DROP CONSTRAINT IF EXISTS employee_payroll_components_employee_id_employees_id_fk;
-ALTER TABLE employee_payroll_components
-  ADD CONSTRAINT employee_payroll_components_employee_id_employees_id_fk
-  FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE SET NULL;
-
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'employee_payroll_components_retained_identity_check'
-      AND conrelid = 'employee_payroll_components'::regclass
-  ) THEN
-    ALTER TABLE employee_payroll_components
-      ADD CONSTRAINT employee_payroll_components_retained_identity_check
-      CHECK (employee_id IS NOT NULL OR employee_number_snapshot IS NOT NULL);
-  END IF;
-END
-$$;
-
--- ============================ payroll_items ===============================
--- Creation-time snapshots already exist and are NOT NULL: no new columns,
--- the backfill only guards against unexpected NULLs, and the CHECK is
--- trivially satisfied. Only nullability + the FK action change.
-
-UPDATE payroll_items t
-SET employee_number_snapshot = COALESCE(t.employee_number_snapshot, e.employee_number),
-    employee_name_snapshot   = COALESCE(t.employee_name_snapshot,   e.first_name || ' ' || e.last_name)
-FROM employees e
-WHERE t.employee_id = e.id
-  AND (t.employee_number_snapshot IS NULL OR t.employee_name_snapshot IS NULL);
-
-ALTER TABLE payroll_items
-  ALTER COLUMN employee_id DROP NOT NULL;
-
-ALTER TABLE payroll_items
-  DROP CONSTRAINT IF EXISTS payroll_items_employee_id_employees_id_fk;
-ALTER TABLE payroll_items
-  ADD CONSTRAINT payroll_items_employee_id_employees_id_fk
-  FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE SET NULL;
-
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'payroll_items_retained_identity_check'
-      AND conrelid = 'payroll_items'::regclass
-  ) THEN
-    ALTER TABLE payroll_items
-      ADD CONSTRAINT payroll_items_retained_identity_check
-      CHECK (employee_id IS NOT NULL OR employee_number_snapshot IS NOT NULL);
-  END IF;
-END
-$$;
-
--- ============================ payslips ====================================
--- employee_number_snapshot (PDF password contract) and birth_date_snapshot
--- already exist; only the display-name snapshot is added. The existing
--- snapshots are never overwritten.
-
-ALTER TABLE payslips
-  ADD COLUMN IF NOT EXISTS employee_name_snapshot text;
-
-UPDATE payslips t
-SET employee_number_snapshot = COALESCE(t.employee_number_snapshot, e.employee_number),
-    employee_name_snapshot   = COALESCE(t.employee_name_snapshot,   e.first_name || ' ' || e.last_name)
-FROM employees e
-WHERE t.employee_id = e.id
-  AND (t.employee_number_snapshot IS NULL OR t.employee_name_snapshot IS NULL);
-
-ALTER TABLE payslips
-  ALTER COLUMN employee_id DROP NOT NULL;
-
-ALTER TABLE payslips
-  DROP CONSTRAINT IF EXISTS payslips_employee_id_employees_id_fk;
-ALTER TABLE payslips
-  ADD CONSTRAINT payslips_employee_id_employees_id_fk
-  FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE SET NULL;
-
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'payslips_retained_identity_check'
-      AND conrelid = 'payslips'::regclass
-  ) THEN
-    ALTER TABLE payslips
-      ADD CONSTRAINT payslips_retained_identity_check
-      CHECK (employee_id IS NOT NULL OR employee_number_snapshot IS NOT NULL);
-  END IF;
-END
-$$;
-
--- ============================ payslip_documents ==========================
-ALTER TABLE payslip_documents
-  ADD COLUMN IF NOT EXISTS employee_number_snapshot text;
-ALTER TABLE payslip_documents
-  ADD COLUMN IF NOT EXISTS employee_name_snapshot text;
-
-UPDATE payslip_documents t
-SET employee_number_snapshot = COALESCE(t.employee_number_snapshot, e.employee_number),
-    employee_name_snapshot   = COALESCE(t.employee_name_snapshot,   e.first_name || ' ' || e.last_name)
-FROM employees e
-WHERE t.employee_id = e.id
-  AND (t.employee_number_snapshot IS NULL OR t.employee_name_snapshot IS NULL);
-
-ALTER TABLE payslip_documents
-  ALTER COLUMN employee_id DROP NOT NULL;
-
-ALTER TABLE payslip_documents
-  DROP CONSTRAINT IF EXISTS payslip_documents_employee_id_employees_id_fk;
-ALTER TABLE payslip_documents
-  ADD CONSTRAINT payslip_documents_employee_id_employees_id_fk
-  FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE SET NULL;
-
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'payslip_documents_retained_identity_check'
-      AND conrelid = 'payslip_documents'::regclass
-  ) THEN
-    ALTER TABLE payslip_documents
-      ADD CONSTRAINT payslip_documents_retained_identity_check
-      CHECK (employee_id IS NOT NULL OR employee_number_snapshot IS NOT NULL);
-  END IF;
-END
-$$;
-
--- ============================ payslip_document_versions ===================
-ALTER TABLE payslip_document_versions
-  ADD COLUMN IF NOT EXISTS employee_number_snapshot text;
-ALTER TABLE payslip_document_versions
-  ADD COLUMN IF NOT EXISTS employee_name_snapshot text;
-
-UPDATE payslip_document_versions t
-SET employee_number_snapshot = COALESCE(t.employee_number_snapshot, e.employee_number),
-    employee_name_snapshot   = COALESCE(t.employee_name_snapshot,   e.first_name || ' ' || e.last_name)
-FROM employees e
-WHERE t.employee_id = e.id
-  AND (t.employee_number_snapshot IS NULL OR t.employee_name_snapshot IS NULL);
-
-ALTER TABLE payslip_document_versions
-  ALTER COLUMN employee_id DROP NOT NULL;
-
-ALTER TABLE payslip_document_versions
-  DROP CONSTRAINT IF EXISTS payslip_document_versions_employee_id_employees_id_fk;
-ALTER TABLE payslip_document_versions
-  ADD CONSTRAINT payslip_document_versions_employee_id_employees_id_fk
-  FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE SET NULL;
-
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'payslip_document_versions_retained_identity_check'
-      AND conrelid = 'payslip_document_versions'::regclass
-  ) THEN
-    ALTER TABLE payslip_document_versions
-      ADD CONSTRAINT payslip_document_versions_retained_identity_check
-      CHECK (employee_id IS NOT NULL OR employee_number_snapshot IS NOT NULL);
-  END IF;
-END
-$$;
-
 -- ============================ employee_employment_history =================
 ALTER TABLE employee_employment_history
   ADD COLUMN IF NOT EXISTS employee_number_snapshot text;
@@ -468,41 +295,114 @@ END
 $$;
 
 -- ---------------------------------------------------------------------------
+-- DELETED payroll/payslip tables: RESTORE RESTRICT + NOT NULL, drop retention
+-- ---------------------------------------------------------------------------
+-- These tables are removed explicitly by the permanent-delete plan. The
+-- RESTRICT foreign key is the backstop: if the plan misses a row the employee
+-- DELETE fails (23503) and the whole transaction rolls back.
+
+-- ============================ employee_payroll_components =================
+-- Retention-only columns/CHECK removed (introduced by the unapplied earlier draft).
+ALTER TABLE employee_payroll_components
+  DROP CONSTRAINT IF EXISTS employee_payroll_components_retained_identity_check;
+ALTER TABLE employee_payroll_components
+  DROP COLUMN IF EXISTS employee_number_snapshot;
+ALTER TABLE employee_payroll_components
+  DROP COLUMN IF EXISTS employee_name_snapshot;
+
+ALTER TABLE employee_payroll_components
+  DROP CONSTRAINT IF EXISTS employee_payroll_components_employee_id_employees_id_fk;
+ALTER TABLE employee_payroll_components
+  ADD CONSTRAINT employee_payroll_components_employee_id_employees_id_fk
+  FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE RESTRICT;
+ALTER TABLE employee_payroll_components
+  ALTER COLUMN employee_id SET NOT NULL;
+
+-- ============================ payroll_items ===============================
+-- Creation-time snapshots stay NOT NULL. Only the retention-only CHECK is
+-- removed and the FK action restored to RESTRICT.
+ALTER TABLE payroll_items
+  DROP CONSTRAINT IF EXISTS payroll_items_retained_identity_check;
+
+ALTER TABLE payroll_items
+  DROP CONSTRAINT IF EXISTS payroll_items_employee_id_employees_id_fk;
+ALTER TABLE payroll_items
+  ADD CONSTRAINT payroll_items_employee_id_employees_id_fk
+  FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE RESTRICT;
+ALTER TABLE payroll_items
+  ALTER COLUMN employee_id SET NOT NULL;
+
+-- ============================ payslips ====================================
+-- employee_number_snapshot + birth_date_snapshot (PDF password contract) stay.
+-- Only the retention-only name snapshot and CHECK are removed.
+ALTER TABLE payslips
+  DROP CONSTRAINT IF EXISTS payslips_retained_identity_check;
+ALTER TABLE payslips
+  DROP COLUMN IF EXISTS employee_name_snapshot;
+
+ALTER TABLE payslips
+  DROP CONSTRAINT IF EXISTS payslips_employee_id_employees_id_fk;
+ALTER TABLE payslips
+  ADD CONSTRAINT payslips_employee_id_employees_id_fk
+  FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE RESTRICT;
+ALTER TABLE payslips
+  ALTER COLUMN employee_id SET NOT NULL;
+
+-- ============================ payslip_documents ==========================
+ALTER TABLE payslip_documents
+  DROP CONSTRAINT IF EXISTS payslip_documents_retained_identity_check;
+ALTER TABLE payslip_documents
+  DROP COLUMN IF EXISTS employee_number_snapshot;
+ALTER TABLE payslip_documents
+  DROP COLUMN IF EXISTS employee_name_snapshot;
+
+ALTER TABLE payslip_documents
+  DROP CONSTRAINT IF EXISTS payslip_documents_employee_id_employees_id_fk;
+ALTER TABLE payslip_documents
+  ADD CONSTRAINT payslip_documents_employee_id_employees_id_fk
+  FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE RESTRICT;
+ALTER TABLE payslip_documents
+  ALTER COLUMN employee_id SET NOT NULL;
+
+-- ============================ payslip_document_versions ===================
+ALTER TABLE payslip_document_versions
+  DROP CONSTRAINT IF EXISTS payslip_document_versions_retained_identity_check;
+ALTER TABLE payslip_document_versions
+  DROP COLUMN IF EXISTS employee_number_snapshot;
+ALTER TABLE payslip_document_versions
+  DROP COLUMN IF EXISTS employee_name_snapshot;
+
+ALTER TABLE payslip_document_versions
+  DROP CONSTRAINT IF EXISTS payslip_document_versions_employee_id_employees_id_fk;
+ALTER TABLE payslip_document_versions
+  ADD CONSTRAINT payslip_document_versions_employee_id_employees_id_fk
+  FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE RESTRICT;
+ALTER TABLE payslip_document_versions
+  ALTER COLUMN employee_id SET NOT NULL;
+
+-- ---------------------------------------------------------------------------
 -- Verification (lifecycle-independent schema + snapshot invariants)
 -- ---------------------------------------------------------------------------
--- The whole migration is one transaction, so any statement that fails here (or
--- above) aborts and rolls back every change.
---
--- These checks deliberately NEVER depend on how many employees have been
--- permanently deleted. After the first deletion, retained rows legitimately
--- have `employee_id IS NULL` with a populated identity snapshot; a re-run used
--- to recover a partial/failed attempt (or a routine re-application) must still
--- succeed. The checked invariants are:
---   * a row still bound to a live employee MUST carry its number snapshot
---     (backfill completeness);
---   * a detached (retained) row MUST NOT be anonymous
---     (`employee_id IS NULL AND employee_number_snapshot IS NULL`) — this is
---     also enforced by every `<table>_retained_identity_check`;
---   * every PROTECTED `employee_id` is nullable, its employee FK is
---     `ON DELETE SET NULL` (confdeltype 'n', never 'c' CASCADE) and its
---     retained-identity CHECK exists.
--- The old `count(*) WHERE employee_id IS NULL = 0` assertion was removed: it
--- was only valid before any deletion and falsely made the migration one-time.
+-- One transaction: any statement that fails here (or above) aborts and rolls
+-- back every change. The retained invariants hold BEFORE and AFTER the first
+-- permanent deletion; the payroll invariants are the deletion backstop.
 -- ---------------------------------------------------------------------------
 DO $$
 DECLARE
-  protected_tables text[] := ARRAY[
+  retained_tables text[] := ARRAY[
     'attendance_records',
     'attendance_events',
     'leave_balances',
     'leave_requests',
     'permission_requests',
+    'employee_employment_history'
+  ];
+  deleted_tables text[] := ARRAY[
     'employee_payroll_components',
     'payroll_items',
     'payslips',
     'payslip_documents',
-    'payslip_document_versions',
-    'employee_employment_history'
+    'payslip_document_versions'
   ];
   tbl              text;
   live_unfilled    bigint;
@@ -511,8 +411,8 @@ DECLARE
   fk_action        text;
   check_present    bigint;
 BEGIN
-  FOREACH tbl IN ARRAY protected_tables LOOP
-    -- 1. Backfill completeness: a live reference must have an identity snapshot.
+  -- RETAINED tables: nullable + SET NULL + retained-identity CHECK.
+  FOREACH tbl IN ARRAY retained_tables LOOP
     EXECUTE format(
       'SELECT count(*) FROM %I WHERE employee_id IS NOT NULL AND employee_number_snapshot IS NULL',
       tbl
@@ -522,7 +422,6 @@ BEGIN
         tbl, live_unfilled;
     END IF;
 
-    -- 2. Snapshot integrity: a retained row must never be anonymous.
     EXECUTE format(
       'SELECT count(*) FROM %I WHERE employee_id IS NULL AND employee_number_snapshot IS NULL',
       tbl
@@ -532,7 +431,6 @@ BEGIN
         tbl, anonymous;
     END IF;
 
-    -- 3. Schema invariant: employee_id must be nullable.
     SELECT a.attnotnull INTO employee_notnull
     FROM pg_attribute a
     WHERE a.attrelid = tbl::regclass
@@ -543,7 +441,6 @@ BEGIN
       RAISE EXCEPTION '%: employee_id is still NOT NULL (or missing)', tbl;
     END IF;
 
-    -- 4. Schema invariant: the employee FK must be ON DELETE SET NULL ('n').
     SELECT c.confdeltype::text INTO fk_action
     FROM pg_constraint c
     WHERE c.conrelid = tbl::regclass
@@ -554,7 +451,6 @@ BEGIN
         tbl, COALESCE(fk_action, 'missing');
     END IF;
 
-    -- 5. Schema invariant: the retained-identity CHECK must exist.
     SELECT count(*) INTO check_present
     FROM pg_constraint
     WHERE conrelid = tbl::regclass
@@ -562,6 +458,38 @@ BEGIN
       AND contype = 'c';
     IF check_present = 0 THEN
       RAISE EXCEPTION '%: retained_identity_check constraint is missing', tbl;
+    END IF;
+  END LOOP;
+
+  -- DELETED payroll tables: NOT NULL + RESTRICT, and no retention CHECK.
+  FOREACH tbl IN ARRAY deleted_tables LOOP
+    SELECT a.attnotnull INTO employee_notnull
+    FROM pg_attribute a
+    WHERE a.attrelid = tbl::regclass
+      AND a.attname = 'employee_id'
+      AND a.attnum > 0
+      AND NOT a.attisdropped;
+    IF employee_notnull IS DISTINCT FROM true THEN
+      RAISE EXCEPTION '%: employee_id must be NOT NULL (or missing)', tbl;
+    END IF;
+
+    SELECT c.confdeltype::text INTO fk_action
+    FROM pg_constraint c
+    WHERE c.conrelid = tbl::regclass
+      AND c.conname = tbl || '_employee_id_employees_id_fk'
+      AND c.contype = 'f';
+    IF fk_action IS DISTINCT FROM 'r' THEN
+      RAISE EXCEPTION '%: employee FK is not ON DELETE RESTRICT (confdeltype=%)',
+        tbl, COALESCE(fk_action, 'missing');
+    END IF;
+
+    SELECT count(*) INTO check_present
+    FROM pg_constraint
+    WHERE conrelid = tbl::regclass
+      AND conname = tbl || '_retained_identity_check'
+      AND contype = 'c';
+    IF check_present > 0 THEN
+      RAISE EXCEPTION '%: retention-only retained_identity_check must not exist on a deleted table', tbl;
     END IF;
   END LOOP;
 END

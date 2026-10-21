@@ -677,16 +677,16 @@ export const RECENT_PAYSLIPS_LIMIT = 100;
  * distribution), newest first, organization-scoped. Bounded to
  * `RECENT_PAYSLIPS_LIMIT` rows for the management overview page.
  *
- * Snapshot-first (migration 0022): a payslip whose employee row was
- * permanently deleted is RETAINED and still listed, resolved from its
- * immutable snapshots; the live employee row is only the fallback.
+ * The name resolves from the payroll-item creation snapshot first (stable
+ * across employee renames), then the live employee row. Payslips are deleted
+ * with a permanently deleted employee under the owner-approved deletion scope,
+ * so there is no retained-payslip fallback.
  */
 export async function listRecentPayslips(
   organizationId: string
 ): Promise<PayslipOverviewRow[]> {
   const employeeName = sql<string | null>`coalesce(
     ${payrollItems.employeeNameSnapshot},
-    ${payslips.employeeNameSnapshot},
     ${employees.firstName} || ' ' || ${employees.lastName}
   )`;
   const employeeNumber = sql<string | null>`coalesce(
@@ -1030,11 +1030,11 @@ export async function getPublishedPayslipDetail(
   organizationId: string,
   payslipId: string
 ): Promise<PayslipDetailRow | null> {
-  // Snapshot-first resolution: a payslip whose employee row was permanently
-  // deleted (retained, detached) still resolves fully from its snapshots.
+  // Name resolution: payroll-item creation snapshot first, live employee
+  // second. Payslips are deleted with a permanently deleted employee under the
+  // owner-approved scope, so no retained-payslip snapshot fallback exists.
   const employeeName = sql<string | null>`coalesce(
     ${payrollItems.employeeNameSnapshot},
-    ${payslips.employeeNameSnapshot},
     ${employees.firstName} || ' ' || ${employees.lastName}
   )`;
   const employeeNumber = sql<string | null>`coalesce(

@@ -155,7 +155,7 @@ describe("deletion tier classification", () => {
     assert.equal(RETENTION_ELIGIBLE_CATEGORIES.length, 0);
     const eligibility = evaluateDeletionEligibility({
       legalHoldActive: false,
-      dependencies: dependencies({ Payroll: 3, Attendance: 10 }),
+      dependencies: dependencies({ Attendance: 10, "Employment history": 3 }),
       employeeNumber: "03233",
     });
     assert.equal(eligibility.tier, "retained");
@@ -183,8 +183,8 @@ describe("deletion tier classification", () => {
   it("a legal hold dominates a retention-eligible schedule", () => {
     const eligibility = evaluateDeletionEligibility({
       legalHoldActive: true,
-      dependencies: dependencies({ Payroll: 1 }),
-      retentionEligibleCategories: ["Payroll"],
+      dependencies: dependencies({ Attendance: 1 }),
+      retentionEligibleCategories: ["Attendance"],
     });
     assert.equal(eligibility.tier, "retained");
     if (isRetainedEligibility(eligibility)) {
@@ -195,15 +195,15 @@ describe("deletion tier classification", () => {
   it("retention-eligible protected records require special approval", () => {
     const eligibility = evaluateDeletionEligibility({
       legalHoldActive: false,
-      dependencies: dependencies({ Payroll: 2, Documents: 1 }),
-      retentionEligibleCategories: ["Payroll"],
+      dependencies: dependencies({ Attendance: 2, Documents: 1 }),
+      retentionEligibleCategories: ["Attendance"],
     });
     assert.equal(eligibility.tier, "special_approval");
     if (eligibility.tier === "special_approval") {
       assert.equal(eligibility.requiredApprovals, 2);
       assert.deepEqual(
         eligibility.approvalCategories.map((dependency) => dependency.label),
-        ["Payroll"]
+        ["Attendance"]
       );
       assert.deepEqual(
         eligibility.deletableDependencies.map((dependency) => dependency.label),
@@ -215,8 +215,8 @@ describe("deletion tier classification", () => {
   it("a non-eligible protected category dominates over an eligible one", () => {
     const eligibility = evaluateDeletionEligibility({
       legalHoldActive: false,
-      dependencies: dependencies({ Payroll: 2, "Employment history": 1 }),
-      retentionEligibleCategories: ["Payroll"],
+      dependencies: dependencies({ Attendance: 2, "Employment history": 1 }),
+      retentionEligibleCategories: ["Attendance"],
     });
     assert.equal(eligibility.tier, "retained");
     if (isRetainedEligibility(eligibility)) {
