@@ -242,6 +242,58 @@ describe("file purge: storage-layer safety", () => {
     );
   });
 
+  it("the employee folder removal can never target the private root itself", () => {
+    // `rm(path, { recursive: true })` on the private root would erase EVERY
+    // employee's documents, so the target must be strictly inside it and both
+    // path segments must be database UUIDs.
+    assert.equal(
+      documentStorageSource.includes("function resolveEmployeeDocumentFolder("),
+      true,
+      "the folder removal uses a dedicated strict resolver"
+    );
+    assert.equal(
+      documentStorageSource.includes("UUID_PATH_SEGMENT.test(organizationId)") &&
+        documentStorageSource.includes("UUID_PATH_SEGMENT.test(employeeId)"),
+      true,
+      "both path segments must be validated as database UUIDs"
+    );
+    assert.equal(
+      documentStorageSource.includes(
+        "if (!resolved.startsWith(`${PRIVATE_ROOT}${path.sep}`))"
+      ),
+      true,
+      "the target must resolve strictly inside the root, never the root itself"
+    );
+    assert.equal(
+      documentStorageSource.includes(
+        "await rm(resolveEmployeeDocumentFolder(organizationId, employeeId)"
+      ),
+      true,
+      "the removal uses the strict resolver"
+    );
+    assert.equal(
+      documentStorageSource.includes(
+        "resolveWithinRoot(PRIVATE_ROOT, `${organizationId}/${employeeId}`)"
+      ),
+      false,
+      "the folder removal no longer interpolates raw segments into a path"
+    );
+    assert.equal(
+      documentStorageSource.includes(
+        "resolveWithinRoot(\n    PRIVATE_ROOT,\n    `${input.organizationId}/${input.employeeId}`\n  )"
+      ),
+      false,
+      "the folder STORAGE uses the same strict resolver, so a stored document"
+    );
+    assert.equal(
+      documentStorageSource.includes(
+        "const folder = resolveEmployeeDocumentFolder("
+      ),
+      true,
+      "store and delete must resolve the employee folder identically"
+    );
+  });
+
   it("the document folder removal and the purge both happen after the commit", () => {
     const successAt = actionsSource.indexOf('result: "SUCCESS"');
     const folderAt = actionsSource.indexOf("deleteEmployeeDocumentStorage(");
@@ -369,6 +421,62 @@ describe("file purge: operator sweep script (scripts/purge-deleted-employee-pdfs
         sweepScriptSource.includes("verification"),
       true,
       "the script must re-scan and verify after purging"
+    );
+  });
+
+  it("the sweep's recursive deletes can never escape their private root", () => {
+    // The sweep deletes RECURSIVELY, so "the root itself" and "any path
+    // outside the root" must both be refused UNCONDITIONALLY.
+    assert.equal(
+      sweepScriptSource.includes(
+        "if (!resolved.startsWith(`${PAYSLIP_PRIVATE_ROOT}${path.sep}`))"
+      ),
+      true,
+      "a payslip path must resolve strictly inside the payslip root"
+    );
+    assert.equal(
+      sweepScriptSource.includes(
+        "if (!resolved.startsWith(`${EMPLOYEE_DOCUMENTS_ROOT}${path.sep}`))"
+      ),
+      true,
+      "a document folder must resolve strictly inside the documents root"
+    );
+    assert.equal(
+      sweepScriptSource.includes("UUID_PATH_SEGMENT.test(entry.organizationId)") &&
+        sweepScriptSource.includes("UUID_PATH_SEGMENT.test(entry.employeeId)"),
+      true,
+      "both document-folder path segments must be validated as database UUIDs"
+    );
+    assert.equal(
+      sweepScriptSource.includes(
+        "resolved !== PAYSLIP_PRIVATE_ROOT &&\n" +
+          "    !resolved.startsWith"
+      ),
+      false,
+      "the escape check must not allow the root itself through"
+    );
+    assert.equal(
+      sweepScriptSource.includes("const resolved = folder.absolutePath;"),
+      true,
+      "the validated absolute path is used, never re-resolved from a relative path"
+    );
+  });
+
+  it("the sweep reports each un-purged file exactly once", () => {
+    // A file that fails to be removed AND is still present after the sweep is
+    // detected twice; the operator must see the TRUE number of files left
+    // behind, not the number of detections.
+    assert.equal(
+      sweepScriptSource.includes("leftBehind = [...new Set(leftBehind)];"),
+      true,
+      "the left-behind list must be de-duplicated before it is reported"
+    );
+    assert.equal(
+      sweepScriptSource.includes(
+        "` left_behind=${leftBehind.length}`"
+      ),
+      true,
+      "the reported count must be the de-duplicated count"
     );
   });
 });

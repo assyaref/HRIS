@@ -99,14 +99,25 @@ function isPayslipStorageKey(value) {
   );
 }
 
+/**
+ * Shape of a path component that ORIGINATES from a database UUID
+ * (`audit_logs.entity_id`, `audit_logs.organization_id`).
+ *
+ * The DB guarantees UUIDs today, but this script performs RECURSIVE deletes,
+ * so it re-validates the shape instead of trusting the column type.
+ */
+const UUID_PATH_SEGMENT =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /** Resolve inside the payslip root; refuse anything else. */
 function resolvePayslipPath(storageKey) {
   const resolved = path.resolve(PAYSLIP_PRIVATE_ROOT, storageKey);
-  if (
-    resolved !== PAYSLIP_PRIVATE_ROOT &&
-    !resolved.startsWith(`${PAYSLIP_PRIVATE_ROOT}${path.sep}`)
-  ) {
-    throw new Error(`Refusing storage key outside the payslip root: ${storageKey}`);
+  // STRICTLY inside the root: `resolved === PAYSLIP_PRIVATE_ROOT` is refused
+  // too, because a recursive delete on the root would erase every payslip.
+  if (!resolved.startsWith(`${PAYSLIP_PRIVATE_ROOT}${path.sep}`)) {
+    throw new Error(
+      `Refusing storage key outside the payslip root: ${storageKey}`
+    );
   }
   return resolved;
 }
@@ -205,17 +216,25 @@ async function listOrphanDocumentFolders(deletedEmployees) {
   const folders = [];
   for (const entry of deletedEmployees) {
     if (!entry.organizationId || !entry.employeeId) continue;
-    const relative = `${entry.organizationId}/${entry.employeeId}`;
-    const resolved = path.resolve(EMPLOYEE_DOCUMENTS_ROOT, relative);
+    // Both segments must be UUIDs. This script deletes RECURSIVELY, so the
+    // path is re-validated here instead of trusting the audit column types.
     if (
-      resolved !== EMPLOYEE_DOCUMENTS_ROOT &&
-      !resolved.startsWith(`${EMPLOYEE_DOCUMENTS_ROOT}${path.sep}`) &&
-      !(await fileExists(resolved))
+      !UUID_PATH_SEGMENT.test(entry.organizationId) ||
+      !UUID_PATH_SEGMENT.test(entry.employeeId)
     ) {
       continue;
     }
+    const relative = `${entry.organizationId}/${entry.employeeId}`;
+    const resolved = path.resolve(EMPLOYEE_DOCUMENTS_ROOT, relative);
+    // STRICTLY inside the root. An escaping path — or the root itself, whose
+    // recursive delete would erase EVERY employee's documents — is skipped
+    // UNCONDITIONALLY, never conditionally on whether the path happens to
+    // exist.
+    if (!resolved.startsWith(`${EMPLOYEE_DOCUMENTS_ROOT}${path.sep}`)) {
+      continue;
+    }
     if (await fileExists(resolved)) {
-      folders.push({ relative, employeeId: entry.employeeId });
+      folders.push({ relative, absolutePath: resolved, employeeId: entry.employeeId });
     }
   }
   return folders;
@@ -298,10 +317,10 @@ try {
       }
     }
     for (const folder of orphanDocumentFolders) {
-      const resolved = path.resolve(
-        EMPLOYEE_DOCUMENTS_ROOT,
-        folder.relative
-      );
+      // The absolute path was validated and resolved by
+      // `listOrphanDocumentFolders`; it is NOT re-resolved from the relative
+      // path here, so no second interpretation of the path is possible.
+      const resolved = folder.absolutePath;
       try {
         await rm(resolved, { recursive: true, force: true });
         if (await fileExists(resolved)) {
@@ -328,6 +347,10 @@ try {
   }
 
   const finishedAt = new Date();
+  // A key that failed to be removed AND is still present after the sweep is
+  // reported ONCE. The operator must see the true number of files left
+  // behind, not the number of times the same file was detected.
+  leftBehind = [...new Set(leftBehind)];
   operational(
     `purged=${purgedCount}` +
       ` left_behind=${leftBehind.length}` +

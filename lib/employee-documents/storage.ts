@@ -29,6 +29,46 @@ function resolveWithinRoot(root: string, relativePath: string): string {
   return resolved;
 }
 
+/**
+ * Shape of a path component that ORIGINATES from a database UUID
+ * (`organizations.id`, `employees.id`). Both are `uuid` columns, so any
+ * component that is not a UUID is malformed by definition and is refused
+ * before it can reach the filesystem.
+ */
+const UUID_PATH_SEGMENT =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Resolve one employee's private document folder for removal.
+ *
+ * STRICTER than `resolveWithinRoot`, on purpose:
+ *  - both path segments must be UUIDs, so `..`, `.` and absolute paths can
+ *    never reach the filesystem;
+ *  - the result must resolve STRICTLY INSIDE the private root — never the
+ *    root itself. `rm(path, { recursive: true })` on the root would erase
+ *    EVERY employee's documents, so that target is refused outright instead
+ *    of being relied upon to never happen.
+ *
+ * A refusal is reported through the caller's outcome (`removed: false` with
+ * the error message), so it is visible in the audit trail rather than silent.
+ */
+function resolveEmployeeDocumentFolder(
+  organizationId: string,
+  employeeId: string
+): string {
+  if (
+    !UUID_PATH_SEGMENT.test(organizationId) ||
+    !UUID_PATH_SEGMENT.test(employeeId)
+  ) {
+    throw new Error("Refusing to remove a document folder outside the private root.");
+  }
+  const resolved = path.resolve(PRIVATE_ROOT, organizationId, employeeId);
+  if (!resolved.startsWith(`${PRIVATE_ROOT}${path.sep}`)) {
+    throw new Error("Resolved path escapes the private root.");
+  }
+  return resolved;
+}
+
 export interface StoredEmployeeDocument {
   storageKey: string;
   fileSize: number;
@@ -41,9 +81,9 @@ export async function storeEmployeeDocument(input: {
   bytes: Uint8Array;
   extension: string;
 }): Promise<StoredEmployeeDocument> {
-  const folder = resolveWithinRoot(
-    PRIVATE_ROOT,
-    `${input.organizationId}/${input.employeeId}`
+  const folder = resolveEmployeeDocumentFolder(
+    input.organizationId,
+    input.employeeId
   );
   await mkdir(folder, { recursive: true });
 
@@ -75,7 +115,14 @@ export async function deleteEmployeeDocumentFile(
 
 /** Outcome of a whole-folder removal, for the deletion audit trail. */
 export interface EmployeeDocumentStorageRemoval {
-  /** False when the folder was already absent (still a success). */
+  /**
+   * True when the removal completed WITHOUT ERROR.
+   *
+   * An already-absent folder also reports `true`: `rm(..., { force: true })`
+   * is a no-op then, and there is nothing left to remove. Only a genuine
+   * failure (an I/O error, or a refused path) reports `false` — and it
+   * always carries the reason in `error`.
+   */
   removed: boolean;
   /** Non-null only when the removal was attempted and threw. */
   error: string | null;
@@ -94,10 +141,10 @@ export async function deleteEmployeeDocumentStorage(
   employeeId: string
 ): Promise<EmployeeDocumentStorageRemoval> {
   try {
-    await rm(
-      resolveWithinRoot(PRIVATE_ROOT, `${organizationId}/${employeeId}`),
-      { recursive: true, force: true }
-    );
+    await rm(resolveEmployeeDocumentFolder(organizationId, employeeId), {
+      recursive: true,
+      force: true,
+    });
     return { removed: true, error: null };
   } catch (error) {
     return {
