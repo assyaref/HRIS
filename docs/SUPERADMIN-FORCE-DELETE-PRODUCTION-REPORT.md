@@ -5,15 +5,20 @@
 lineage record, staging checklist, payroll scope decision, re-verification),
 §11 (owner-approved payroll deletion scope: implemented, verified in
 isolation), §12 (finalization: auditable file purge, full re-verification,
-production data-state finding — still RELEASE BLOCKED) and **§13 (defect
+production data-state finding — still RELEASE BLOCKED), §13 (defect
 audit: three real file-delete path defects found and fixed in `8a32176`,
-full re-verification — still RELEASE BLOCKED)**.
+full re-verification — still RELEASE BLOCKED) and **§14 (final operator
+session: the one remaining recursive-delete defect found and fixed in
+`a1e584b`, the filesystem backup corrected to an ACL-preserving archive,
+the two orphan payslip PDFs attributed and left untouched, the production
+build disturbed by an in-place build and restored, and the release-backup
+integrity defect exposed — still RELEASE BLOCKED)**.
 **Repository:** `/opt/hris`
 **Requested release commit:** `4d41a5af`
 **Base release-candidate commit:** `4d415afbbd43d8e53951a5af13d6aca95f10409d` (`4d415af`)
 **Integration commit (local, unpushed):** `6e49e44fa8c8971e79d24793d4cb371fe595f6fe` (`6e49e44`)
-**Latest local commit (unpushed):** `8a32176` (`fix(employees): harden recursive file-delete path resolution`)
-**Branch:** `main` (local is ahead of `origin/main` = `e735f47`; 9 commits ahead)
+**Latest local commit (unpushed):** `a1e584b` (`fix(announcements): refuse the private root as a recursive-delete target`)
+**Branch:** `main` (local is ahead of `origin/main` = `e735f47`; 11 commits ahead)
 **Production target:** PostgreSQL database `hris` on `127.0.0.1:5432`; Next.js service `hris.service`
 **Final status:** **RELEASE BLOCKED**
 
@@ -66,20 +71,23 @@ read-only operation).
 | Base release candidate | `4d415afbbd43d8e53951a5af13d6aca95f10409d` |
 | Integration commit | `6e49e44fa8c8971e79d24793d4cb371fe595f6fe` (`6e49e44`) — 0021 control integration + docs/tests; unpushed |
 | Parent / `origin/main` | `e735f47d23e83da97cd1f97faead34221eaa18b5` |
-| Working tree | integration changes + this report committed locally; no secrets/unrelated files |
-| Local vs remote | `main` ahead of `origin/main`; no push made |
-| Deployed production build ID (restored/verified) | `kR0L8QnWCFjO3oU4Qb4w3` |
-| Verification build ID (not deployed, 2026-10-21 integration build) | `i5k_XIErv8U7XlgA058rF` |
+| Working tree | clean at `a1e584b`; no secrets/unrelated files |
+| Local vs remote | `main` **11 commits ahead** of `origin/main`; no push made |
+| Deployed production build ID | **`J5cpppAYMdIb8Q5QViGP9`** — the build actually in the live checkout and serving since 2026-10-19 14:16:39 WIB; deployed from commit `e735f47d23e8` (§14.6, §14.7 correct the build ID previously reported as `kR0L8QnWCFjO3oU4Qb4w3`) |
+| Release-candidate build ID (NOT deployed) | `2XVI_zWvnAHKK4HmkRCoQ` — built this session from `a1e584b`, preserved at `/opt/hris/.next.candidate-20261022T040211Z` |
 | Production service | `hris.service` — `active (running)`, HTTP `/` → `307` |
 | Production DB | `hris` @ `127.0.0.1:5432`, role `hris_app` (no credentials recorded here) |
 
 `npm run build` was executed in the repository as required by the verification
-suite. Because `/opt/hris` is also the live production checkout, the
-verification build temporarily replaced `.next`. It was moved aside to
-`.next.verification-<timestamp>` and the previously deployed build archive
-(`/opt/hris-backups/releases/20261019-141513-kR0L8QnWCFjO3oU4Qb4w3/.next`) was
-restored. The service was **not restarted**; health remained `307` and the
-restored `BUILD_ID` is `kR0L8QnWCFjO3oU4Qb4w3`.
+suite. Because `/opt/hris` is also the live production checkout, the build
+**replaced the live `.next` directory**. This session diagnosed the damage
+precisely and restored the live checkout to the genuinely deployed build
+(`J5cpppAYMdIb8Q5QViGP9`); the candidate build was moved aside rather than
+deployed. The service was **not restarted** (`NRestarts=0`, start timestamp
+unchanged), and every static asset the running server references now returns
+`200` — see **§14.6** for the full diagnosis, the repair and the verification.
+The previous release identifier `kR0L8QnWCFjO3oU4Qb4w3` referred to a
+**mislabeled backup snapshot**, not to the running build (§14.7).
 
 ---
 
@@ -944,3 +952,342 @@ Production is verified untouched (12/3/6/442, ledger 18, live build
 freshly backed up with a restore-checked database dump and a byte-verified
 filesystem archive. The release remains blocked on the external approvals in
 §13.4. No approval, attestation, gate or deployment was fabricated.
+
+---
+
+## 14. Addendum 2026-10-22 (final operator session) — REMAINING RECURSIVE-DELETE DEFECT FIXED, FILESYSTEM BACKUP CORRECTED, PRODUCTION BUILD RESTORED
+
+This addendum records the final operator session on top of `3c7fa5c`. **Nothing
+was pushed, migrated, deployed, or deleted from production.** The owner
+authorization of §12/§13 covers routine implementation, verification,
+documentation and release preparation; it does not supply the third-party
+sign-offs in §14.10, and none of them is fabricated or assumed here.
+
+Headline outcomes:
+
+1. **One more real recursive-delete defect was found and fixed** (`a1e584b`) —
+   the only remaining one in the codebase, in the announcement attachment
+   storage. It is proven, by runtime execution, to have been able to erase
+   every announcement attachment on the instance.
+2. **The filesystem backup method was wrong.** The incumbent archive restores
+   file *content* but not POSIX **ACLs**, so the restored tree is **not
+   usable by the application service account**. A corrected, ACL-preserving
+   archive was created and verified to be functionally recoverable.
+3. **The two orphan payslip PDFs were attributed** to specific revoked
+   payslips of soft-deleted test employees, confirmed to have zero live
+   references, and left byte-for-byte untouched.
+4. **The production build was disturbed by this session's in-place
+   `npm run build`** and was repaired. The repair exposed a **release-backup
+   integrity defect**: the release snapshot on disk did **not** contain the
+   build that production is actually running.
+5. Tests **1,986/1,986**, lint 0 errors, TypeScript clean, production build
+   successful. The release remains **RELEASE BLOCKED** on the same external
+   approvals as before, plus two newly-documented backup-integrity blockers.
+
+### 14.1 The remaining recursive-delete defect (found, fixed, proven)
+
+§13 audited the file-purge half of the force-delete flow. This session
+audited **every** `recursive: true` delete in the codebase. All of them use
+server-generated UUID temp directories (`lib/payroll/payslip-pdf.ts`,
+`lib/payroll/payslip-pdf-reencrypt-core.ts`, `scripts/purge-deleted-employee-pdfs.mjs`
+after `8a32176`) **except one**:
+
+| # | Location | Defect | Impact | Fix (commit `a1e584b`) |
+| --- | --- | --- | --- | --- |
+| 1 | `lib/announcements/attachment-storage.ts` — `deleteAnnouncementStorage` | The resolver allowed the resolved path to **equal** the private root (`resolved !== root && !startsWith(...)`, so a path equal to the root skipped the guard). The folder removal is a **recursive** delete, `rm(..., { recursive: true, force: true })`, so an empty / `"."` announcement id resolved **to the root itself** and would have erased **every announcement attachment on the instance**. | Loss of all announcement attachments for the whole instance | New dedicated `resolveAnnouncementFolder()`: the segment must be a database UUID (`announcements.id` is a `uuid` column) and the target must resolve **strictly inside** the root — the root is refused outright. The **store** now resolves the folder through the same function, so an attachment can only be written to a folder the removal is allowed to delete. The removal reports `{removed, error}` instead of swallowing a refusal |
+| 2 | `lib/employee-documents/storage.ts`, `lib/payroll/payslip-pdf.ts` | `resolveWithinRoot` / `resolveStoragePath` still made an exception for the root itself. Unreachable in the current call sites (the employee-document call sites use `unlink`/`readFile`, and the payslip key is UUID-pattern validated), but the exception is the exact pattern that produced defect #1. | Latent — the code's own invariant was not enforced | The root exception is removed everywhere; every private-root resolver in the codebase now refuses the root itself |
+
+**Runtime proof (not a source assertion).** The module under test is the
+**real, unmodified shipped file**; only its filesystem calls are redirected
+onto a sandbox directory by a loader hook, so production is never written to.
+
+| Scenario | Result |
+| --- | --- |
+| **Pre-fix module** (`git show HEAD:lib/announcements/attachment-storage.ts`) + `deleteAnnouncementStorage("")` | **`PREFIX_RESULT=VULNERABLE_ROOT_WIPED`** — the private root was recursively erased. The defect was real, not theoretical |
+| **Fixed module** + `deleteAnnouncementStorage("")` | **refused** — `removed=false`, `error` set, nothing removed |
+| Fixed module + `deleteAnnouncementStorage("")`/`"."`/`".."`/`"../.."`/`"/opt/hris-private/announcements"` | **all 5 refused with a reported reason**; the root and a sibling announcement's attachment survived |
+| Fixed module + a valid announcement id | the announcement's **own** folder is removed; a sibling announcement's folder and attachment survive |
+| Fixed module + `storeAnnouncementAttachment` with `..`/`../..`/`"."`/`""`/`"/etc"`/`"a/b"` | **all refused**; no folder written anywhere |
+| Production announcements root during and after the proof | `entries=0` before **and** after, same mtime, same mode — untouched |
+
+**Exploitability as shipped:** defect #1 was **not reachable in the production
+schema** — `announcements.id` is a `uuid` column, and both call sites pass an
+id read from the database. It was **latent**: the safety invariant ("a
+recursive delete can never target the root") was enforced by the column type,
+not by the code. The fix makes the code enforce it, and it is now the only
+remaining class of this defect anywhere in the repository.
+
+Regression coverage: `tests/announcements/announcement-attachment-storage.test.ts`
+(5 new tests) pins that the announcement removal uses a dedicated strict
+resolver, that the store and the removal agree, that refusals are reported
+rather than swallowed, and that **no** private-root resolver in
+`lib/announcements/`, `lib/employee-documents/` or `lib/payroll/` may make an
+exception for the root itself.
+
+### 14.2 The filesystem backup was not application-recoverable (defect + correction)
+
+The incumbent filesystem archive
+(`/tmp/opencode/release-verify-20261022T011700Z/hris-private-20261022T011700Z.tar.gz`,
+created in the previous session) is a **plain** `tar -czf`. The private tree
+`/opt/hris-private` is protected by **POSIX ACLs**, and the application service
+account (`hris`, uid 995 / gid 985) reaches the payslip PDFs through those ACL
+entries (`user:hris:--x` on the root, `user:hris:rwx` plus a default ACL on
+`payslips/`, `user:hris:r--` on the PDFs). A plain tar **does not carry
+ACLs**.
+
+Verification of the incumbent archive (restore into an isolated directory):
+
+| Check | Result |
+| --- | --- |
+| `gzip -t` / tar listing | OK, 26 members |
+| Restored **content** vs source | 10/10 files byte-identical |
+| Restored mode / uid / gid / size | identical |
+| Restored **ACLs** | **LOST** — the `user:hris:*` entries and the default ACL are absent from the restore |
+| Restored **mtime** | second-granularity only — sub-second precision truncated |
+| **Functional recovery as the `hris` service account** | **FAILED** — `hris` cannot list or read the restored payslip PDFs |
+
+**Corrected archive** (created this session, durably, outside the ephemeral
+operator workspace):
+
+| Item | Value |
+| --- | --- |
+| Path | `/opt/hris-backups/backups/hris-private-20261022T034129Z-pre-superadmin-force-delete.tar.gz` |
+| Owner / mode | `root:root`, `0600` |
+| Size | 2,964,811 bytes |
+| SHA-256 | `cee357e13c224b74c16903244a95b495198bef94b443f06b2a36086b83855e6f` (sidecar `…tar.gz.sha256`, `root:root`, `0600`) |
+| Creation command | `tar --acls --xattrs --numeric-owner -czf <archive> -C /opt hris-private` |
+| Restore command | `tar -xzf <archive> -C <dir> --same-owner --preserve-permissions --acls --xattrs` (as root) |
+
+Verification of the corrected archive:
+
+| Check | Result |
+| --- | --- |
+| `gzip -t`, tar listing | OK, 26 members; `sha256sum -c` sidecar **OK** |
+| Restored content vs source | **10/10 byte-identical** |
+| Restored file/dir mode, uid, gid, size, mtime | **identical** (including sub-second mtime) |
+| Restored ACLs | **identical** — access ACLs, default ACLs and the `user:hris:*` entries all preserved |
+| **Functional recovery as the `hris` service account** | **PASS** — `hris` lists the payslip directory and reads both restored PDFs; `hris` traverses `employee-documents` |
+| Sweep classification against the restored tree | **identical** to production (2 unattributed orphans, 0 attributable, 0 referenced) — the restored tree is a faithful operational copy |
+
+**Process findings for the runbook (§14.10 blocker 6):**
+
+- There is **no automated filesystem backup** on this host — no
+  rsnapshot/borg/restic/rclone/duplicity, no cron entry, no systemd timer.
+  Every filesystem archive so far lived in an ephemeral operator workspace
+  under `/tmp/opencode` and would be lost on reboot.
+- The backup procedure must switch to `--acls --xattrs --numeric-owner` and a
+  root-owned, root-restored destination, and the runbook has been updated
+  accordingly.
+
+### 14.3 The two orphan payslip PDFs — attributed, preserved, disposition still required
+
+Read-only investigation of the two files the sweep reports as
+`unattributed_orphan`. No production row was modified and neither file was
+moved, renamed, re-encrypted, decrypted in place or deleted; only sandbox
+copies were decrypted/rendered.
+
+| File | `6de46bf1-04b7-4b1e-b69d-1922842d3f24.pdf` | `aff343f2-0d95-4ea9-80e8-dc422fa4a4d8.pdf` |
+| --- | --- | --- |
+| Size / SHA-256 | 987,397 B / `bcfdd5b9a812486fe3a57c02cf311d21599463459a6743063f11eeaa90ce598f` | 984,005 B / `f220c0f2c90b0ad3c57fdbceeb1bcc94d5770425481395fe135d9611fe3aa13a` |
+| Mode / owner / mtime / inode | `640` `hris-agent:hris-agent` / 2026-09-15 15:35:11 +0700 / 1975407 | `640` `hris-agent:hris-agent` / 2026-09-16 16:03:29 +0700 / 1975699 |
+| `payslip_document` | `47ef4a74-c5b0-4ea9-a020-37b73b09b02c` | `f94b069d-8276-4489-915c-33e3303c4abb` |
+| `payslip` | `0b8c7d86-3cfc-42eb-8c98-d944cba37151` = `PS-Test01-0001` (**revoked**) | `9fef42fa-dd50-4eb1-ae93-e825e188e0bd` = `PS-Test01-0002` (**revoked** 2026-09-21, reason `dasda`) |
+| Employee | `f9ad9290-df97-490f-9895-74327d59f9e6` = TEST-002 "Test Create" (NIK `123`, DOB 2026-09-15) | `c5e206fd-4eec-423f-9249-a50d189535c4` = TEST-001 "Test Employee" (NIK `3201010101010001`, DOB 1998-07-05) |
+| Organization | `3f66da05-2817-4ea8-98db-5b3094c09626` = "System" | "System" |
+| Employee state | soft-deleted (`employee.deleted`) | soft-deleted **2026-09-22 03:25:36 UTC** (`employee.deleted`) |
+| Decrypts with | V1 password `123152026` (NIK + DD + YYYY) | V2 password `320101010101000105071998` |
+| Content | single-page, image-only PDF 595×842, **no text layer**; original filename "Penawaran Harga Pengganti Neon Box.pdf" | same original document |
+| Live references | **0** matches across 350 public text/uuid/json columns; `payslip_documents`/`payslip_document_versions`/`payslips` are all empty in production; no journal/grep match in the repo, logs or backups | same |
+
+**Why the sweep cannot attribute them.** Their employees were soft-deleted
+(`employee.deleted`), not permanently deleted (`employee.permanently_deleted`,
+of which production has **zero**). The sweep attributes a payslip PDF by
+walking the permanent-deletion audit trail, so these two files are
+structurally unattributable and are correctly held to the
+`report_only_never_deleted` policy. They are **test fixtures from the
+payroll-deletion development work**, whose provenance is preserved in
+`/opt/hris-private/payslips/.phase24c-r4-r17-20260916-154330/`
+(`metadata.txt`, `metadata-sync/payslip-document-before-sync.csv`, the V1
+source `payslip-v1.pdf` with SHA-256 prefix `597b31bd…`, and the
+`staging-v2/reencrypt-harness.mts` / `staging-v2/live-reencrypt-test.mts`
+re-encryption harnesses).
+
+**Disposition:** the sweep is correct to report them and must never delete
+them. They still need an explicit owner decision (Data Owner + Security,
+§14.10 blocker 7): either (a) accept them as permanent test residue outside
+the payroll scope, or (b) approve a targeted, audit-logged removal — which is
+a *different* operation from the employee-deletion file purge and would need
+its own authorization. **No deletion was performed.**
+
+**Preservation proof:** after the investigation, both files have identical
+SHA-256, inode, mtime, size, mode and owner, and the whole
+`/opt/hris-private` tree is **10/10 byte-identical** to its pre-investigation
+state.
+
+### 14.4 Production sweep dry-run (read-only) — proposed actions
+
+`node scripts/purge-deleted-employee-pdfs.mjs` (no `--execute`), run twice
+this session, before and after the code changes, with identical results:
+
+| Field | Value |
+| --- | --- |
+| Exit code | `0` |
+| `attributable` / `attributable_present` / `attributable_missing` | `0` / `0` / `0` |
+| `referenced_live` | `0` |
+| `unattributed_orphan` | `2` — `6de46bf1-04b7-4b1e-b69d-1922842d3f24.pdf`, `aff343f2-0d95-4ea9-80e8-dc422fa4a4d8.pdf` |
+| `unattributed_orphan_policy` | `report_only_never_deleted` |
+| `deleted_employee_document_folders` | `0` |
+| `purged` / `left_behind` | `0` / `0` |
+
+**Every proposed action is report-only.** No file and no folder is proposed
+for deletion: there are no attributable keys, no deleted-employee document
+folders, and the two orphans are explicitly excluded from deletion by policy.
+
+**Refusal guard re-verified:** `--execute` without `--confirm` →
+`DELETED_EMPLOYEE_FILE_PURGE refused: --execute requires --confirm
+PURGE-DELETED-EMPLOYEE-PDFS`, exit `1`, nothing touched.
+
+### 14.5 Production build disturbance, diagnosis and repair
+
+**What happened.** `npm run build` was run in `/opt/hris`, which is the live
+production checkout. `next build` replaces `.next` in place, so the live
+checkout's build directory was overwritten with the candidate build
+(`2XVI_zWvnAHKK4HmkRCoQ`).
+
+**Diagnosis.** The running server (`MainPID 2613678`, started 2026-10-19
+14:16:39 WIB, `NRestarts=0`) serves HTML that references 13 static assets.
+Six of them returned `500` from the new build. Comparing every preserved
+`.next*` directory in the repository against the live server's asset list
+established two facts:
+
+- The live server's asset manifest is **in memory** from its 2026-10-19
+  startup — restoring files on disk does not change what it asks for.
+- **The same six assets were already missing before this session's build.**
+  The last build in place before it (preserved as
+  `.next.verification-20261021T025033Z`) misses exactly the same six, as does
+  the release snapshot. The missing assets belong to the build deployed on
+  2026-10-19, which had already been replaced by the 2026-10-21 verification
+  builds. **The 500s were pre-existing, not introduced by this session** —
+  but this session's build made them worse by replacing the remaining files
+  with a differently-named set.
+
+**Repair.**
+
+| Step | Action |
+| --- | --- |
+| 1 | The candidate build was moved aside to `/opt/hris/.next.candidate-20261022T040211Z` (`BUILD_ID 2XVI_zWvnAHKK4HmkRCoQ`) — preserved as the release-candidate artifact, **not deployed** |
+| 2 | The genuinely deployed build was located at `/tmp/hris-deploy/20261019-141513-e735f47d23e8/source/.next` (`BUILD_ID J5cpppAYMdIb8Q5QViGP9`, deployed from commit `e735f47d23e8`) and restored into `/opt/hris/.next` |
+| 3 | The deployed build was preserved **durably** at `/opt/hris-backups/releases/20261019-141513-e735f47d23e8-J5cpppAYMdIb8Q5QViGP9/` (it previously existed only in ephemeral `/tmp`) |
+| 4 | The service was **not restarted** — `NRestarts=0`, `ExecMainStartTimestamp` unchanged, same `MainPID` |
+
+**Verification after the repair.**
+
+| Check | Result |
+| --- | --- |
+| `systemctl is-active hris.service` | `active` |
+| `GET /` | `307` → `/login` |
+| `GET /login` | `200` |
+| Every static asset referenced by `/login` (13) | **13/13 → `200`** (6 were `500` before the repair) |
+| Every static asset referenced across 9 routes (23 distinct) | **23/23 → `200`** |
+| On-disk `/opt/hris/.next/BUILD_ID` | `J5cpppAYMdIb8Q5QViGP9` — the deployed build |
+| Process | same `MainPID`, `NRestarts=0`, start timestamp unchanged — **no restart, no deploy** |
+| Production DB | employees 12, organizations 3, users 6, audit_logs 442, `payslip_documents` 0, migration ledger **18** — unchanged |
+| Private filesystem | both orphan PDFs byte-identical; announcements root still empty (0 entries) |
+
+### 14.6 Release-backup integrity defect (new, material)
+
+The release snapshot
+`/opt/hris-backups/releases/20261019-141513-kR0L8QnWCFjO3oU4Qb4w3/.next`
+does **not** contain the build that production is running. Its `BUILD_ID` is
+`kR0L8QnWCFjO3oU4Qb4w3`, but its file contents are the **2026-10-16** build,
+and the build actually deployed on 2026-10-19 is `J5cpppAYMdIb8Q5QViGP9`
+(deployed from commit `e735f47d23e8`). Consequently the snapshot matches only
+11 of the 23 assets the live server references.
+
+**Consequence:** before this session, the deployed production build existed
+**only** in an ephemeral `/tmp/hris-deploy/` directory. If the host had been
+lost, the running build could **not** have been restored from the release
+backup — the backup that claimed to preserve it preserved a different one.
+This session has closed that gap by preserving the real deployed build at
+`/opt/hris-backups/releases/20261019-141513-e735f47d23e8-J5cpppAYMdIb8Q5QViGP9/`.
+
+**Required follow-up (owner/ops):** the release procedure must archive the
+build that is actually deployed, verify that the archived `BUILD_ID` equals
+the `BUILD_ID` reported by the running service, and must not keep the only
+copy of a deployed build under `/tmp`. This report's previously published
+build ID (`kR0L8QnWCFjO3oU4Qb4w3`) was taken from that mislabeled snapshot
+and is corrected here to `J5cpppAYMdIb8Q5QViGP9`.
+
+### 14.7 Fresh verification (this session, actual commands/results)
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Full test suite | `npm test` | **PASS — 1,986/1,986 tests, 407 suites, 0 fail** (was 1,981/406; +5 new path-safety tests) |
+| TypeScript | `npx tsc --noEmit` | **PASS — exit 0** |
+| Lint | `npm run lint` | **PASS — exit 0; 0 errors, 15 warnings** — all pre-existing, **none** in the changed files |
+| Production build | `npm run build` | **PASS — exit 0**, 55 routes, no warnings; candidate `BUILD_ID 2XVI_zWvnAHKK4HmkRCoQ` (preserved, **not deployed**) |
+| **NEW** Announcement-folder runtime proof (fixed module) | `announcement-folder-proof.ts` (real shipped module, filesystem redirected to a sandbox) | **`ANNPROOF_RESULT=PASS`** — own folder removed, sibling survives; `""`, `"."`, `".."`, `"../.."`, an absolute path → all **refused with a reason**; non-UUID ids refused by the store; the real announcements root unchanged (`entries=0`, same mtime/mode) |
+| **NEW** Pre-fix vulnerability demonstration | `pre-fix-vulnerability-demo.ts` (module as of `HEAD` before the fix) | **`PREFIX_RESULT=VULNERABLE_ROOT_WIPED`** — the defect was real and is now closed |
+| Filesystem backup + restore | `tar --acls --xattrs --numeric-owner` + root restore | **PASS** — `hris-private-20261022T034129Z-pre-superadmin-force-delete.tar.gz`, SHA-256 `cee357e13c224b74c16903244a95b495198bef94b443f06b2a36086b83855e6f`; 10/10 byte-identical, ACLs/modes/owners/mtimes identical, **`hris` service account can read the restored tree**, sweep classification identical |
+| Incumbent (plain-tar) archive re-check | restore of the previous session's archive | **FAIL — confirmed not application-recoverable**: content 10/10 identical, but ACLs lost and the `hris` service account **cannot** read the restored payslips |
+| Sweep dry-run (PRODUCTION, read-only) | `node scripts/purge-deleted-employee-pdfs.mjs` | **PASS — exit 0**; `attributable=0`, `referenced_live=0`, `unattributed_orphan=2` (report-only), `purged=0`, `left_behind=0` — identical before and after the code changes |
+| Sweep refusal guard | `--execute` without `--confirm` | **PASS — refused, exit 1, nothing touched** |
+| Production state re-check (read-only) | catalog | employees 12, organizations 3, users 6, audit_logs 442, `payslip_documents` 0, migration ledger **18 rows** (`0021`/`0022` still NOT applied) |
+| Live service + assets | `systemctl is-active`, `GET /`, 23 asset requests | **PASS** — `active`, `307` → `/login`, **23/23 assets → `200`**, `NRestarts=0`, same PID, on-disk `BUILD_ID J5cpppAYMdIb8Q5QViGP9` |
+| Orphan PDF preservation | `sha256sum`, `stat` | **PASS** — both files byte-identical, inode/mtime/mode/owner unchanged; `/opt/hris-private` tree 10/10 byte-identical |
+| Disposable probe cleanup | `dropdb` | **PASS** — the disposable probe database `hris_orphan_probe2_034701Z` and the copied dump were removed; no `hris_*probe*` database remains |
+| Git | `git status` / `git log` | working tree **clean**; HEAD `a1e584b`; **11 commits ahead** of `origin/main` (`e735f47`); **nothing pushed** |
+
+Evidence workspace (operator workspace `/tmp/opencode`, not in the repo):
+`fs-restore-verify-20261022T033954Z/` — `01`–`28` filesystem backup/restore
+evidence, `30`–`32` sweep and production state, `40`–`46` test/lint/build/tsc
+and the production asset check, `announcement-storage-proof/` (hooks, the
+redirect shim, the proof, the pre-fix demonstration and their outputs), and
+`orphan-investigation/` (per-file forensics, copies and rendered output — all
+outside the private tree).
+
+### 14.8 Production release status — STILL NOT EXECUTED
+
+**No push** (`origin/main` is still `e735f47`), **no production migration**
+(ledger 18 rows; `0021`/`0022` not applied), **no deployment** (the live build
+`J5cpppAYMdIb8Q5QViGP9` is still serving), **no production deletion** of any
+kind, **no service restart**. The candidate build was built, verified and
+preserved **without** being put in front of users.
+
+### 14.9 Outstanding blockers and responsible approvers
+
+| # | Outstanding action | Responsible | Change |
+| --- | --- | --- | --- |
+| 1 | DBA + Security review of revised `0021` (`585dd2d7…c452`) AND revised `0022` (`3750812f…0b5`) — review package ready (`docs/employee-deletion-0021-dba-review-package.md` §9 rows 1–7, §10.5 rows 8–12) | DBA + Security | unchanged |
+| 2 | Policy §4 sign-off: retention schedule, eligible categories, legal-hold procedure, backup/PITR, security controls, final DPO/Data Owner authorization (0/6) | HR/Payroll, Legal, DPO, Security, DBA | unchanged |
+| 3 | Staging evidence (47-artifact register, `B-01`–`B-15`), staging isolation attestation, Part A `A1`–`A-14` signatures, then the authorized staging rehearsal (incl. file-purge steps 14a/14b) | DBA + Application Lead | unchanged |
+| 4 | Drizzle lineage reconciliation (R2→R4→R5) and journaling of `0019`–`0022` | DBA | unchanged |
+| 5 | Production Part B `B1`–`B-13`, write-freeze/payroll-cutoff window, RPO/RTO acceptance | DBA + Application Lead + Payroll/HR | unchanged |
+| 6 | **Filesystem backup procedure must adopt `--acls --xattrs --numeric-owner` + root restore, land outside `/tmp`, and be automated** — the incumbent archive is not application-recoverable (§14.2). Runbook updated; the automation itself is still outstanding | DBA + Security + Ops | **strengthened** |
+| 7 | Disposition of the 2 pre-existing unattributed orphan payslip PDFs — now attributed to revoked payslips of soft-deleted test employees (§14.3); still report-only | Data Owner + Security | **evidence added** |
+| 8 | Branch protection / deployment-environment approval; push of the release candidate; migration-first deploy order | Application Lead | unchanged |
+| 9 | **Release-backup integrity: archive the build actually deployed, verify archived `BUILD_ID` = the running service's `BUILD_ID`, and never keep the only copy under `/tmp`** (§14.6) | Ops + Application Lead | **NEW** |
+| 10 | **Deployment procedure must not build in the live checkout** — a release build must be produced out-of-tree and installed atomically, so verification can never disturb the running service (§14.5) | Ops + Application Lead | **NEW** |
+
+### 14.10 Final status after this session
+
+**RELEASE BLOCKED — on external approvals only, plus the two new operational
+gates in §14.9 rows 9–10.**
+
+The engineering scope is complete and proven end-to-end: 1,986/1,986 tests,
+clean TypeScript, lint 0 errors, a successful production build, idempotent
+migrations, exact FK invariants, a destructive rehearsal covering payroll
+deletion + retention + rollback + authorization denials + cross-tenant +
+idempotency + control-plane blocks, an audit-attributable file purge proven
+against the real storage root with pre-existing files untouched, runtime proofs
+that **no recursive delete can target or escape a private root** in the
+application action, the operator sweep **and** the announcement attachment
+storage, a filesystem backup that is now **functionally recoverable by the
+service account**, and a production sweep whose only proposed actions are
+report-only.
+
+Production is verified untouched (12/3/6/442, ledger 18, live build
+`J5cpppAYMdIb8Q5QViGP9`, service `active` with `NRestarts=0` and **23/23**
+static assets serving `200`, both orphan PDFs byte-identical). The release
+remains blocked on the external approvals in §14.9. **No approval,
+attestation, gate or deployment was fabricated.**

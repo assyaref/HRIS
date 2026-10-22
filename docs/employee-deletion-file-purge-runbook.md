@@ -4,7 +4,14 @@
 owner-approved payroll deletion scope.
 **Status:** **IMPLEMENTED and rehearsed in isolation.** Production execution is
 **NOT authorized yet** (see `docs/employee-deletion-approval-matrix.md`).
-**Date:** 2026-10-21 (UTC) · **Repo:** `/opt/hris`, local `main`.
+**Date:** 2026-10-22 (UTC) · **Repo:** `/opt/hris`, local `main`.
+
+> **Updated 2026-10-22:** §4.1 records a verified defect in the backup method —
+> a plain `tar` does not preserve the POSIX ACLs the application service
+> account depends on, so the incumbent archive is **not** application-recoverable
+> even though it restores every file byte-identically. The corrected backup and
+> restore commands, and the service-account acceptance test, are now part of
+> this runbook. §6.1 attributes the two pre-existing orphan PDFs.
 
 Related: `docs/employee-deletion-payroll-scope-decision-record.md` (scope),
 `docs/employee-deletion-owner-scope-approval-20261021.md` (owner approval),
@@ -127,6 +134,52 @@ roots.
 - Deletion is irreversible at both levels. Dry-run first, keep the output as
   evidence, and record the run in the change record.
 
+### 4.1 The filesystem backup MUST preserve POSIX ACLs (verified defect)
+
+`/opt/hris-private` is protected by **POSIX ACLs**, and the application service
+account (`hris`, uid 995 / gid 985) reaches the payslip PDFs **through those
+ACL entries** (`user:hris:--x` on the root, `user:hris:rwx` plus a default ACL
+on `payslips/`, `user:hris:r--` on the PDFs). A plain `tar -czf` does **not**
+carry ACLs, so the restored tree looks complete and byte-identical while being
+**unusable by the application**.
+
+Verified on 2026-10-22 (see `docs/SUPERADMIN-FORCE-DELETE-PRODUCTION-REPORT.md`
+§14.2):
+
+| Archive | Content restored | ACLs restored | `hris` service account can read the restored tree |
+| --- | --- | --- | --- |
+| Plain `tar -czf` (the incumbent archive from the previous session) | 10/10 byte-identical | **LOST** | **NO — the restored application is broken** |
+| `tar --acls --xattrs --numeric-owner -czf` | 10/10 byte-identical | **preserved** (access + default + `user:hris:*`) | **YES** |
+
+**Required backup procedure (use exactly this):**
+
+```bash
+# CREATE — as root, to a durable root-owned destination OUTSIDE /tmp
+tar --acls --xattrs --numeric-owner -czf \
+    /opt/hris-backups/backups/hris-private-<UTC>-pre-purge.tar.gz \
+    -C /opt hris-private
+chown root:root /opt/hris-backups/backups/hris-private-<UTC>-pre-purge.tar.gz
+chmod 600      /opt/hris-backups/backups/hris-private-<UTC>-pre-purge.tar.gz
+sha256sum /opt/hris-backups/backups/hris-private-<UTC>-pre-purge.tar.gz \
+    > /opt/hris-backups/backups/hris-private-<UTC>-pre-purge.tar.gz.sha256
+chmod 600 /opt/hris-backups/backups/hris-private-<UTC>-pre-purge.tar.gz.sha256
+
+# RESTORE — as root (NOT as the service account); ACLs are only restored by root
+tar -xzf /opt/hris-backups/backups/hris-private-<UTC>-pre-purge.tar.gz \
+    -C <restore-dir> --same-owner --preserve-permissions --acls --xattrs
+```
+
+**A restore is only proven when the service account can use it.** The
+acceptance test is: restore into an isolated directory, then confirm as
+`hris` that it can list `payslips/` and read each restored PDF. A restore that
+only compares file bytes is **not** a successful restore — that is exactly the
+gap that let the plain-tar archive pass as "verified" until 2026-10-22.
+
+**Still outstanding (owner/ops, §14.9 rows 6 and 9):** there is **no automated
+filesystem backup** on this host (no rsnapshot/borg/restic/rclone/duplicity, no
+cron entry, no systemd timer), and no release-snapshot integrity check that the
+archived `BUILD_ID` equals the running service's `BUILD_ID`.
+
 ## 5. Post-purge verification (what "done" means)
 
 1. Sweep `--execute` output shows `left_behind=0` and
@@ -149,12 +202,37 @@ roots.
 | **Document-folder path proof** (2026-10-22): the employee's own folder is removed while a sibling employee's folder survives; employee ids `..`, `../..`, `""`, `.`, `../../../../etc` are refused with a reported reason and remove nothing; the private root stays intact; refused stores write nothing | `/tmp/opencode/release-verify-20261022T011700Z/document-folder-proof.ts` | `DOCFOLDER_RESULT=PASS` |
 | **Sweep sandbox proof** (2026-10-22): sandbox roots + a disposable DB whose `audit_logs.entity_id` is deliberately `text` (a loosened schema production cannot produce) — attributable keys and deleted-employee folders purged; live-referenced file, unattributed orphan and unrelated tenant folder preserved; **both escape targets preserved**; `--execute` without confirmation refused (exit 1, nothing purged); an un-removable file reported as `left_behind=1` with its path, exit 1 | `/tmp/opencode/release-verify-20261022T011700Z/sweep-sandbox-verify.sh` | `SWEEP_SANDBOX_RESULT=PASS` |
 | **Defects found and fixed** (2026-10-22, commit `8a32176`): (1) the document-folder removal could resolve to the private root itself and `rm -r` it; (2) the sweep's escape check was inverted, so an *existing* escaping folder path reached `rm -r`; (3) the sweep double-counted a file left behind. All three are unreachable under the current `uuid` column types but were latent — the code's own invariant was not enforced | `/opt/hris` commit `8a32176` | Fixed + regression-tested (1,981/1,981) |
+| **Remaining recursive-delete defect found and fixed** (2026-10-22, commit `a1e584b`): the announcement attachment folder removal resolved to the private root itself for an empty/`"."` id and would have `rm -r`'d every announcement attachment on the instance. Proven by running the pre-fix module (root wiped) and the fixed module (all root-targeting ids refused with a reason); the real shipped module was exercised with its filesystem redirected to a sandbox, so production was never written to | `/tmp/opencode/fs-restore-verify-20261022T033954Z/announcement-storage-proof/` | `PREFIX_RESULT=VULNERABLE_ROOT_WIPED` (pre-fix) → `ANNPROOF_RESULT=PASS` (fixed) + regression tests (1,986/1,986) |
+| **Filesystem backup restore verification** (2026-10-22): the incumbent plain-tar archive restores content but **loses ACLs** and is **not** usable by the `hris` service account; the corrected `--acls --xattrs --numeric-owner` archive restores 10/10 byte-identical with identical ACLs/modes/owners/mtimes **and** is readable by `hris`; the sweep classifies the restored tree identically to production | `/tmp/opencode/fs-restore-verify-20261022T033954Z/` (`21`–`27`) | PASS (corrected archive) / FAIL (incumbent plain-tar archive) |
+| **Production sweep dry-run** (2026-10-22, read-only, run twice): 0 attributable, 0 referenced-live, 2 unattributed orphans (report-only), 0 document folders, `purged=0`, `left_behind=0`; `--execute` without the typed confirmation refuses with exit 1 and touches nothing | `45-production-sweep-dry-run-after-fix.out` | PASS |
 
 All synthetic files were cleaned up; the two pre-existing production orphan
 PDFs (`6de46bf1…pdf`, `aff343f2…pdf`) are **untouched** (SHA-256
 `bcfdd5b9…ce598f`, `f220c0f2…f3aa13a`) and remain classified
 `unattributed_orphan` — removing them is a separate decision, not part of any
 employee deletion.
+
+### 6.1 The two pre-existing orphans — attribution (2026-10-22)
+
+Read-only forensics established that both files are **test fixtures** of the
+payroll-deletion development work, and that neither can ever be attributed by
+the sweep:
+
+| File | Payslip | Employee | Why it is unattributable |
+| --- | --- | --- | --- |
+| `6de46bf1-04b7-4b1e-b69d-1922842d3f24.pdf` | `PS-Test01-0001` (**revoked**), `payslip_document 47ef4a74…` | `f9ad9290…` = TEST-002 "Test Create" (NIK `123`, DOB 2026-09-15) | employee soft-deleted via `employee.deleted`, never `employee.permanently_deleted` |
+| `aff343f2-0d95-4ea9-80e8-dc422fa4a4d8.pdf` | `PS-Test01-0002` (**revoked** 2026-09-21), `payslip_document f94b069d…` | `c5e206fd…` = TEST-001 "Test Employee" (NIK `3201010101010001`, DOB 1998-07-05) | employee soft-deleted 2026-09-22 03:25:36 UTC via `employee.deleted` |
+
+Both have **zero** live references (0 matches across 350 public text/uuid/json
+columns; `payslips`, `payslip_documents` and `payslip_document_versions` are
+all empty in production). Their provenance is preserved in
+`/opt/hris-private/payslips/.phase24c-r4-r17-20260916-154330/`.
+
+**Disposition (Data Owner + Security):** the sweep is correct to report them
+and must never delete them. Either accept them as permanent test residue
+outside the payroll scope, or approve a **separate, audit-logged** targeted
+removal — that is a different operation from the employee-deletion file purge
+and needs its own authorization. **No deletion was performed.**
 
 ## 7. Approval state
 
