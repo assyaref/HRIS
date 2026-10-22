@@ -1,16 +1,19 @@
 # Superadmin Force Delete — Production Release Report
 
 **Report date:** 2026-10-21 (UTC)
-**Last updated:** 2026-10-21 (UTC) — see §10 (review package, approval matrix,
+**Last updated:** 2026-10-22 (UTC) — see §10 (review package, approval matrix,
 lineage record, staging checklist, payroll scope decision, re-verification),
 §11 (owner-approved payroll deletion scope: implemented, verified in
-isolation) and **§12 (finalization: auditable file purge, full re-verification,
-production data-state finding — still RELEASE BLOCKED)**.
+isolation), §12 (finalization: auditable file purge, full re-verification,
+production data-state finding — still RELEASE BLOCKED) and **§13 (defect
+audit: three real file-delete path defects found and fixed in `8a32176`,
+full re-verification — still RELEASE BLOCKED)**.
 **Repository:** `/opt/hris`
 **Requested release commit:** `4d41a5af`
 **Base release-candidate commit:** `4d415afbbd43d8e53951a5af13d6aca95f10409d` (`4d415af`)
 **Integration commit (local, unpushed):** `6e49e44fa8c8971e79d24793d4cb371fe595f6fe` (`6e49e44`)
-**Branch:** `main` (local is ahead of `origin/main` = `e735f47`)
+**Latest local commit (unpushed):** `8a32176` (`fix(employees): harden recursive file-delete path resolution`)
+**Branch:** `main` (local is ahead of `origin/main` = `e735f47`; 9 commits ahead)
 **Production target:** PostgreSQL database `hris` on `127.0.0.1:5432`; Next.js service `hris.service`
 **Final status:** **RELEASE BLOCKED**
 
@@ -834,3 +837,110 @@ remains blocked on external approvals: DBA/Security SQL review, Legal/DPO/
 HR-Payroll §4 sign-off, staging evidence + authorization, lineage
 reconciliation and the approved deployment workflow. No approval, attestation,
 gate or deployment was fabricated.
+
+---
+
+## 13. Addendum 2026-10-22 (defect audit + full re-verification) — FILE-DELETE PATH HARDENING
+
+This addendum records the session on top of commit `2b2d316`. The owner
+authorized the operator to complete all remaining routine work without
+further approval-waiting. **Production was not pushed, migrated, deployed, or
+deleted from.** The deployed build `kR0L8QnWCFjO3oU4Qb4w3` is preserved;
+`hris.service` stayed `active` with `GET /` → `307` throughout; the migration
+ledger remains 18 rows; the two pre-existing orphan payslip PDFs are
+byte-for-byte unchanged.
+
+### 13.1 What this session found and fixed
+
+A line-by-line defect audit of the file-purge half of the force-delete flow
+found **three real defects** plus one documentation defect. All were fixed in
+local commit **`8a32176`** (`fix(employees): harden recursive file-delete path
+resolution`, 3 files, +201/−23) and covered by new regression tests.
+
+| # | Defect | Impact | Fix |
+| --- | --- | --- | --- |
+| 1 | `lib/employee-documents/storage.ts` — `resolveWithinRoot` allowed the resolved path to **equal** the private root (`resolved !== root && !startsWith(...)` → a path equal to the root skipped the guard). `deleteEmployeeDocumentStorage` interpolated `${organizationId}/${employeeId}` into that resolver, so a malformed employee id (`..`) resolved **to the root itself**, and `rm(root, { recursive: true, force: true })` would have erased **every employee's documents**. | Loss of all employee documents for the whole instance | New dedicated `resolveEmployeeDocumentFolder()`: both segments must be database UUIDs, and the target must resolve **strictly inside** the root. A refusal is reported as `{removed: false, error}` so it lands in the audit trail, not swallowed |
+| 2 | `scripts/purge-deleted-employee-pdfs.mjs` — `listOrphanDocumentFolders()` had an **inverted** escape check: an escaping path was skipped only when it did **not** exist (`escapes && !exists → continue`), so an escaping path that *did* exist was passed to `rm(..., { recursive: true })`. The root-equality case was also allowed. | Recursive delete of a path outside the documents root | Escaping paths are now skipped **unconditionally**; both segments are re-validated as UUIDs; the already-validated absolute path is used at the delete site instead of being re-resolved there |
+| 3 | `scripts/purge-deleted-employee-pdfs.mjs` — a file that failed to be removed **and** was still present after the sweep was pushed twice, so `left_behind=N` overstated the number of files. | Operator miscount of files requiring a retry | `leftBehind` is de-duplicated before reporting; the count is now the true number of files |
+| 4 | `lib/employee-documents/storage.ts` — the `EmployeeDocumentStorageRemoval.removed` doc comment claimed an already-absent folder reports `false`; the implementation and its test have always reported `true` (an absent folder is a no-op success). | Misleading contract for auditors/maintainers | Documentation corrected to match the pinned behaviour; `storeEmployeeDocument` now resolves the employee folder with the same strict resolver, so a stored document can never land outside the folder the removal path cleans up |
+
+**Exploitability as shipped:** defects 1–3 were **not reachable in the
+production schema** — `employees.id`, `organizations.id`,
+`audit_logs.entity_id` and `audit_logs.organization_id` are all `uuid`
+columns, so a traversal value cannot be stored, and the sweep's payslip keys
+are pattern-validated to `uuid.pdf` before any path is built. They were
+**latent**: the code's own safety invariant ("a recursive delete can never
+target the root") was not actually enforced, so the guarantee rested on the
+column types rather than on the code. The fixes make the code enforce it.
+
+### 13.2 Fresh verification (this session, actual commands/results)
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Full test suite | `npm test` | **PASS — 1,981/1,981 tests, 406 suites, 0 fail** (was 1,978; +3 new path-safety tests) |
+| TypeScript | `npx tsc --noEmit` | **PASS — exit 0** |
+| Lint | `npm run lint` | **PASS — exit 0; 0 errors, 15 warnings** (unchanged, all pre-existing) |
+| Production build (isolated copy) | `npm run build` in `/tmp/opencode/build-verify-20261022T01*Z/repo` | **PASS — exit 0, "Compiled successfully"; verification BUILD_IDs `7VlOP0qBbhVKeSgLNQBva`, `0soVFfnH_3kzeb_imTUmU`, `nXgPUaqpe1HX10vfUwhZC`**; live `.next` untouched (`kR0L8QnWCFjO3oU4Qb4w3`) |
+| Migration apply/re-apply | `0021`, `0022` on disposable DB `hris_force_delete_rehearsal_20261022T011700Z` | **PASS** — each applied **twice** successfully (idempotent) |
+| Post-apply FK invariants | catalog | **26 employee FKs = 10 `SET NULL` + 16 `RESTRICT` + 0 `CASCADE`; 6 retained-identity CHECKs** |
+| Control-plane regression | `scripts/verify-employee-deletion-control-fks.sql` | **`CONTROL_FK_REGRESSION_PASS`** (its non-approved-database guard also refused correctly) |
+| Destructive rehearsal (DB) | harness on `hris_force_delete_rehearsal_20261022T011700Z` | **`HARNESS_RESULT=PASS` (386 ms)** — payroll chain deleted exactly; 6 retained tables detached + identity-snapshotted; control employees intact; org-level payroll intact; full atomic rollback on injected failure; wrong typed confirmation, cross-tenant, repeat-delete, ACTIVE legal hold and PENDING request all refused |
+| File-purge rehearsal (files) | `file-purge-rehearsal.ts` (real `purgeStoredPayslipPdfs`, real payslip root, synthetic keys) | **`FILE_PURGE_REHEARSAL_RESULT=PASS`** — collected key purged; valid-but-missing key → `missing`; tampered `../../…` key → `failed` ("Invalid payslip storage key."); all 3 pre-existing files byte-for-byte untouched |
+| Runtime authorization proof | `authorization-proof.ts` against the disposable DB | **`AUTHZ_RESULT=PASS`** — tenant ADMIN and HR refused; a hostile grant of `employees.permanent_delete` to a tenant ADMIN still refused (`isSuperAdmin=false`); SYSTEM SUPERADMIN allowed; a cross-organization SUPERADMIN role does **not** confer the flag (org-scoped) |
+| **NEW** Document-folder path proof | `document-folder-proof.ts` (real `deleteEmployeeDocumentStorage` + `storeEmployeeDocument`, real private root) | **`DOCFOLDER_RESULT=PASS`** — the employee's own folder is removed while a sibling employee's folder survives; employee ids `..`, `../..`, `""`, `.`, `../../../../etc` are all **refused with a reported reason** and remove nothing; the private root stays intact; refused stores write nothing; store and removal resolve the same folder |
+| **NEW** Sweep sandbox proof | `sweep-sandbox-verify.sh` (sandbox roots + a disposable DB whose `audit_logs.entity_id` is deliberately `text`, i.e. a loosened schema the production DB cannot produce) | **`SWEEP_SANDBOX_RESULT=PASS`** — attributable keys and deleted-employee document folders purged; live-referenced file, unattributed orphan and an unrelated tenant folder all preserved; **both escape targets preserved** (a traversal payslip key and a traversal document folder); `--execute` without confirmation refused with exit 1 and nothing purged; an un-removable file reported as **`left_behind=1`** with its path and exit 1 |
+| Sweep dry-run (PRODUCTION, read-only) | `node scripts/purge-deleted-employee-pdfs.mjs` | **PASS — exit 0**; `attributable=0`, `referenced_live=0`, `unattributed_orphan=2` (report-only, `report_only_never_deleted`), `purged=0`, `left_behind=0` |
+| Production backup + restore | fresh `pg_dump` / `pg_restore` | **PASS** — `/var/lib/postgresql/hris-backups/production-db-20261022T011700Z-pre-superadmin-force-delete.dump`, SHA-256 `04b5cf941b067065b831a5d0c67b272271b49f81168cde0da10a9a89e1e4b5e5` (0600, postgres-owned); restore verified against a disposable DB with matching counts |
+| Filesystem backup + restore | fresh `tar` of `/opt/hris-private` | **PASS** — `hris-private-20261022T011700Z.tar.gz`, SHA-256 `daeb22d397dc54de1e1b9bfbfd4f2b52967ab50ef855aff3eb08ca42b24bafba`; restore verified 10/10 files byte-identical |
+| Production state re-check (read-only) | catalog | employees 12, organizations 3, users 6, audit_logs 442, `payslip_documents` 0, migration ledger **18 rows** (`0021`/`0022` still NOT applied) |
+| Live service | `systemctl is-active` + `GET /` | `active`; `307` → `/login`; live BUILD_ID `kR0L8QnWCFjO3oU4Qb4w3` unchanged |
+| Git | `git status` / `git log` | working tree **clean**; HEAD `8a32176`; **9 commits ahead** of `origin/main` (`e735f47`); nothing pushed |
+
+Evidence workspace (operator workspace `/tmp/opencode`, not in the repo):
+`release-verify-20261022T011700Z/` — `harness-2.out`, `authorization-proof-2.out`,
+`file-purge-rehearsal-2.out`, `document-folder-proof.out`, `sweep-dry-run-2.out`,
+`sweep-sandbox-verify.sh` + `sweep-sandbox-20261022T015059Z/`, the DB dump and
+its `.sha256`, and the filesystem tarball.
+
+### 13.3 Production release status — STILL NOT EXECUTED
+
+Unchanged from §12.6: **no push** (`origin/main` is still `e735f47`), **no
+production migration** (ledger 18 rows; `0021`/`0022` not applied), **no
+deployment** (build `kR0L8QnWCFjO3oU4Qb4w3` still serving), **no production
+deletion** of any kind. The owner authorization removes the operator-side
+"waiting for approval" blocker for routine implementation, verification,
+documentation and release preparation; it **does not** supply the third-party
+sign-offs listed in §13.4, and **none of them is fabricated or assumed here**.
+
+### 13.4 Outstanding blockers and responsible approvers (owners unchanged)
+
+| # | Outstanding action | Responsible |
+| --- | --- | --- |
+| 1 | DBA + Security review of revised `0021` (`585dd2d7…c452`) AND revised `0022` (`3750812f…0b5`) — review package ready (`docs/employee-deletion-0021-dba-review-package.md` §9 rows 1–7, §10.5 rows 8–12) | DBA + Security |
+| 2 | Policy §4 sign-off: retention schedule, eligible categories, legal-hold procedure, backup/PITR, security controls, final DPO/Data Owner authorization (0/6) | HR/Payroll, Legal, DPO, Security, DBA |
+| 3 | Staging evidence (47-artifact register, `B-01`–`B-15`), staging isolation attestation, Part A `A1`–`A14` signatures, then the authorized staging rehearsal (incl. file-purge steps 14a/14b) | DBA + Application Lead |
+| 4 | Drizzle lineage reconciliation (R2→R4→R5) and journaling of `0019`–`0022` | DBA |
+| 5 | Production Part B `B1`–`B13`, write-freeze/payroll-cutoff window, RPO/RTO acceptance | DBA + Application Lead + Payroll/HR |
+| 6 | File-purge production execution approval (runbook §7; includes the filesystem-backup position for `/opt/hris-private`) | Security + DBA + App Lead |
+| 7 | Disposition of the 2 pre-existing unattributed orphan payslip PDFs (report-only today) | Data Owner + Security |
+| 8 | Branch protection / deployment-environment approval; push of the release candidate; migration-first deploy order | Application Lead |
+
+### 13.5 Final status after this session
+
+**RELEASE BLOCKED — on external approvals only.**
+
+The engineering scope is complete and proven end-to-end in isolation:
+1,981/1,981 tests, clean TypeScript, lint 0 errors, isolated production build,
+idempotent migrations, exact FK invariants, control-plane regression, a
+destructive rehearsal covering payroll deletion + retention + rollback +
+authorization denials + cross-tenant + idempotency + control-plane blocks, an
+audit-attributable file purge (in-flow + sweep) proven against the real
+storage root with pre-existing files untouched, and — new this session —
+runtime proofs that **no recursive delete can target or escape a private
+root**, in both the application action and the operator sweep.
+
+Production is verified untouched (12/3/6/442, ledger 18, live build
+`kR0L8QnWCFjO3oU4Qb4w3`, service `active`, both orphan PDFs byte-identical) and
+freshly backed up with a restore-checked database dump and a byte-verified
+filesystem archive. The release remains blocked on the external approvals in
+§13.4. No approval, attestation, gate or deployment was fabricated.

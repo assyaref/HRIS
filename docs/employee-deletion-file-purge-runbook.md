@@ -47,6 +47,13 @@ Order of operations (all source-pinned by
    attributable.
 3. **Post-commit:** the employee document folder is removed
    (`deleteEmployeeDocumentStorage`, outcome captured, never swallowed).
+   The target is resolved by a dedicated strict resolver: both path segments
+   must be database UUIDs and the result must resolve **strictly inside** the
+   private root — never the root itself, because `rm(root, { recursive: true })`
+   would erase every employee's documents. A refused path is reported as
+   `{ removed: false, error }` and therefore lands in the file-purge audit
+   row. An **already-absent** folder reports `removed: true`: there is
+   nothing left to remove, so it is a no-op success, not a failure.
 4. **Post-commit:** `purgeStoredPayslipPdfs(keys)` removes each PDF
    individually: a valid key whose file exists → `purged`; a valid key whose
    file is absent → `missing` (idempotent); an invalid/tampered key or an
@@ -85,8 +92,19 @@ Scope contract (enforced in code):
   `unattributed_orphan`, printed, and **never deleted** — their removal is a
   separate, explicitly approved decision (they predate this feature).
 - `--execute` without the exact typed confirmation refuses (exit 1).
+- **Every recursive delete in this script targets a path that resolves
+  STRICTLY INSIDE its private root.** A payslip key must match
+  `^[0-9a-f-]{36}\.pdf$` and resolve strictly inside the payslip root; a
+  document folder must be `<uuid>/<uuid>` and resolve strictly inside the
+  documents root. The root itself is refused too — `rm(root, { recursive:
+  true })` would erase every employee's documents. Escaping paths are skipped
+  **unconditionally** (never conditionally on whether they happen to exist),
+  and the already-validated absolute path is used at the delete site rather
+  than being re-resolved there.
 - Per-item resilience: one un-removable path is recorded as `left_behind`,
-  the sweep continues, and the run exits 1 so monitoring sees it.
+  the sweep continues, and the run exits 1 so monitoring sees it. The
+  `left_behind` list is de-duplicated, so the reported count is the **true
+  number of files** left behind, not the number of times a file was detected.
 - **Post-purge verification:** after `--execute` the script re-scans, asserts
   the attributable set is gone, and prints remaining counts.
 - Machine-parseable output: `DELETED_EMPLOYEE_FILE_PURGE …` lines; storage keys
@@ -128,6 +146,9 @@ roots.
 | Sweep `--execute` happy path (sandbox root + disposable DB with a real SUCCESS audit): attributable key + deleted-employee folder purged, unattributed file untouched, verification clean | `/tmp/opencode/sweep-execute-happy2.out` | PASS |
 | Sweep `--execute` resilience: one un-removable folder recorded as `left_behind`, attributable key still purged, exit 1 | `/tmp/opencode/sweep-execute-happy.out` | PASS |
 | `--execute` without typed confirmation refuses | exit 1 | PASS |
+| **Document-folder path proof** (2026-10-22): the employee's own folder is removed while a sibling employee's folder survives; employee ids `..`, `../..`, `""`, `.`, `../../../../etc` are refused with a reported reason and remove nothing; the private root stays intact; refused stores write nothing | `/tmp/opencode/release-verify-20261022T011700Z/document-folder-proof.ts` | `DOCFOLDER_RESULT=PASS` |
+| **Sweep sandbox proof** (2026-10-22): sandbox roots + a disposable DB whose `audit_logs.entity_id` is deliberately `text` (a loosened schema production cannot produce) — attributable keys and deleted-employee folders purged; live-referenced file, unattributed orphan and unrelated tenant folder preserved; **both escape targets preserved**; `--execute` without confirmation refused (exit 1, nothing purged); an un-removable file reported as `left_behind=1` with its path, exit 1 | `/tmp/opencode/release-verify-20261022T011700Z/sweep-sandbox-verify.sh` | `SWEEP_SANDBOX_RESULT=PASS` |
+| **Defects found and fixed** (2026-10-22, commit `8a32176`): (1) the document-folder removal could resolve to the private root itself and `rm -r` it; (2) the sweep's escape check was inverted, so an *existing* escaping folder path reached `rm -r`; (3) the sweep double-counted a file left behind. All three are unreachable under the current `uuid` column types but were latent — the code's own invariant was not enforced | `/opt/hris` commit `8a32176` | Fixed + regression-tested (1,981/1,981) |
 
 All synthetic files were cleaned up; the two pre-existing production orphan
 PDFs (`6de46bf1…pdf`, `aff343f2…pdf`) are **untouched** (SHA-256
