@@ -1291,3 +1291,197 @@ Production is verified untouched (12/3/6/442, ledger 18, live build
 static assets serving `200`, both orphan PDFs byte-identical). The release
 remains blocked on the external approvals in §14.9. **No approval,
 attestation, gate or deployment was fabricated.**
+
+---
+
+## 15. Addendum 2026-10-22 (release-preparation session) — MIGRATION LINEAGE RECONCILED, PREFLIGHT COMPLETE, RELEASE CANDIDATE PREPARED
+
+Owner authorization for release **preparation** was given this session. No
+production push, deployment, migration, deletion or service restart was
+performed. All new verification below was run against **production read-only**
+or against **disposable database copies** and **out-of-tree builds**.
+
+### 15.1 Verified repository and production state (start and end of session)
+
+| Item | Verified value |
+| --- | --- |
+| HEAD | `8a078c498890ebd243ba0a313e2b8a7a85d19d5d` (`8a078c4`), working tree **clean**, `main` **12 commits ahead** of `origin/main` (`e735f47`) — **not pushed** |
+| Key commits | `a1e584b` (announcement recursive-delete fix), `3c7fa5c`/`8a32176` (path-resolution hardening), `8a078c4` (§14 docs) |
+| Production service | PID `2613678` unchanged, `NRestarts=0`, started Mon 2026-10-19 14:16:39 WIB; `GET /login → 200` at start **and** end of session |
+| Running build | `J5cpppAYMdIb8Q5QViGP9` — served in the RSC payload (`"b":"…"` field) of every route render; equal to on-disk `.next/BUILD_ID` and to the durable release archive `20261019-141513-e735f47d23e8-J5cpppAYMdIb8Q5QViGP9` (all three `.next` trees byte-identical, content-normalized digest `9a56e7a76224d0f019e7223c8a24102a58e1144d58963d6d2c361db93cafd25b`) |
+| Fresh test evidence at HEAD | `npm test`: **1,986/1,986 pass, 407 suites, 0 fail** (fresh run this session, `60-fresh-npm-test.log`); `npm run lint`: exit 0, **0 errors**, 15 pre-existing warnings; `npx tsc --noEmit`: exit 0 |
+| Production DB | employees 12, organizations 3, users 6, audit_logs 442, ledger **18 rows**; `0021` control tables **absent**; no `retained_identity_check` constraints; all pre-0022 FK actions unchanged — **untouched by this session** |
+| Private tree | 10/10 files byte-identical to the pre-session manifest; both orphan PDFs unchanged (sha256 `bcfdd5b9…ce598f`, `f220c0f2…f3aa13a`) |
+
+### 15.2 Drizzle migration lineage reconciliation (ledger ↔ journal ↔ actual schema)
+
+Ground truth established by direct schema introspection (the ledger alone is
+**not** reliable — see 0015/0016 below). Verified mechanism: the installed
+drizzle migrator (`drizzle-orm/pg-core/dialect.js`) selects candidates by
+comparing each journal entry's `when` (folderMillis) against the **single
+newest** ledger row's `created_at`, applying only entries with
+`when > created_at` (verified from source **and** empirically on disposable
+databases: no-op today; stale `when` → silent skip; fresh `when` → applies).
+
+| Migration | File | Journal | Ledger row | Actual schema | Discrepancy explanation |
+| --- | --- | --- | --- | --- | --- |
+| 0000–0014 | present | idx 0–14 | ids 1–15 | applied | none — hashes match 1:1 |
+| 0011_nasty_khan | present | idx 15, `when=1790152070913` | id 16 | applied | journal position ≠ filename order (cosmetic); applied cleanly |
+| **0015_user_account_name** | present | idx 16, `when=1790152070913` | **MISSING** | **APPLIED** (`users.name` exists) | journal hand-maintained; idx 15/16/17 share **one identical `when`** (impossible for drizzle-generated entries, which use distinct `Date.now()`). The migration was applied **out-of-band** (schema has it, ledger never recorded it). Harmless for `migrate` (only the newest ledger row is consulted) but the ledger cannot be used as an audit record for 0015/0016 |
+| **0016_employee_master_data** | present | idx 17, `when=1790152070913` | **MISSING** | **APPLIED** (all 19 columns, 2 FKs, 3 indexes exist) | same as 0015 |
+| 0017_employee_delete_safety_reconciliation | present | idx 18, `when=1790152070914` | id 17 | applied | applied in the same window as 0011_nasty_khan (created_at 0914 > 0913) |
+| 0018_employee_custom_tabs | present | idx 19, `when=1790661254287` | id 18 (`max created_at`) | applied (`employee_custom_tabs` exists) | journal was hand-edited to add it — the pre-edit copy survives as `meta/_journal.json.pre-release-a-0018.20260930T053047Z.bak` |
+| **0019_face_template_key_version** | present | **NOT in journal** | none | **NOT APPLIED** (`key_version` default `'v1'::text` still present; all rows `v1`) | deliberately not journaled by its own changelog note ("the approved candidate journal contains exactly 20 entries"); single DDL statement (`ALTER … DROP DEFAULT`); tested earlier on `hris_security_rotation_staging`. **Pending indefinitely** — must be journaled+applied or explicitly withdrawn |
+| **0020_user_password_lifecycle** | present | **NOT in journal** | none | **APPLIED** (`must_change_password`, `password_changed_at`, `last_login_at` exist) | applied out-of-band; safe because written as `ADD COLUMN IF NOT EXISTS` (idempotent). Never recorded in journal or ledger |
+| **0021_employee_deletion_controls** | present | **NOT in journal** (deliberate, per file header) | none | **NOT APPLIED** (3 control tables absent) | release migration — see §15.3 |
+| **0022_employee_retention_detach** | present | **NOT in journal** (deliberate, per file header) | none | **NOT APPLIED** (no snapshot columns, FKs still RESTRICT, employee_id NOT NULL) | release migration — see §15.3 |
+| journal meta snapshots | stop at `0014_snapshot.json` | — | — | — | `drizzle-kit generate` diffs against snapshot 0014 → would emit duplicate DDL for everything after 0014. **Generating migrations from this worktree is unsafe** (the 0021 header says the same) |
+
+**Consequences verified on disposable databases:** `npm run db:migrate` against
+a copy of production is a **no-op that reports success** (ledger max
+`created_at` = journal max `when` = `1790661254287`). If 0021/0022 are added to
+the journal with a `when` **older than or equal to** the newest ledger row,
+they are **silently skipped forever** (drill-proven). They apply only when
+journaled with a fresh `when > 1790661254287`. The reconciliation change
+(§15.6 step 1) must therefore be reviewed as a unit: ledger backfill for
+0015/0016 (and the 0019/0020 disposition) **plus** fresh-when journal entries
+for 0021/0022.
+
+### 15.3 Migration preflight — exact changes, preconditions, rollback limits (disposable-DB drills, production read-only)
+
+Applied 0021 (`585dd2d79a5e1147a57127bc1cb569985cdb76224714b9754498e8f6b028c452`)
+and 0022 (`3750812f76be5cef1f3356eaf7872208494a31b26b4a2d5ef7433c1ae69160b5`)
+to a **disposable copy of the production DB** (dump
+`production-db-20261022T011700Z…`, ledger 18 rows) and exercised every
+mechanism (`62-preflight-drill-a.out`, `63-preflight-drill-b-rollback.out`):
+
+**0021 — additive control plane (CREATE TABLE IF NOT EXISTS ×3, indexes, no data changes).**
+Verified: fail-closed CHECK rejects an ACTIVE hold with NULL employee_id
+(23514); an ACTIVE hold **blocks** employee deletion via the SET NULL→CHECK
+mechanism (23514 `employee_legal_holds_active_requires_employee`) once no
+RESTRICT child obstructs; a second concurrent ACTIVE hold is refused by the
+partial unique index (23505); a PENDING deletion request blocks deletion
+(23514 `employee_deletion_requests_active_requires_employee`); terminal
+(rejected/cancelled/executed) requests and released holds detach cleanly and
+preserve immutable identity snapshots. Rollback: `DROP TABLE` ×3 — reversible
+but destroys control-plane history (holds/requests/approvals).
+
+**0022 — retention detach + payroll backstop (single transaction, in-migration verification block).**
+Verified on the drill copy: the 6 retained tables
+(`attendance_records`, `attendance_events`, `leave_balances`, `leave_requests`,
+`permission_requests`, `employee_employment_history`) become
+`employee_id NULLABLE` + FK `ON DELETE SET NULL` + identity snapshots backfilled
+(`03233 / Employee Payslip Test`, 0 unfilled live rows) +
+`<table>_retained_identity_check`; the 5 payroll tables
+(`employee_payroll_components`, `payroll_items`, `payslips`,
+`payslip_documents`, `payslip_document_versions`) are enforced
+`ON DELETE RESTRICT` + `employee_id NOT NULL` (creation-time snapshots
+preserved). All `DROP … IF EXISTS` statements were confirmed no-ops against
+today's schema (the earlier 0022 draft was never applied). Preconditions all
+hold in production: **zero NULL employee_id** in payroll tables,
+snapshot columns `payroll_items.employee_number/employee_name_snapshot`
+(NOT NULL) and `payslips.employee_number/birth_date_snapshot` exist,
+`employees.employee_number/first_name/last_name` present for the backfill.
+
+**End-to-end deletion rehearsal (drill copy only):** with all RESTRICT
+children cleared per the application plan (Payslip → Payroll → Documents →
+Face ID (enrollment before template) → Projects → announcements), the
+employee delete succeeded; retained rows detached **with snapshots**
+(1/1 attendance_records, 4/4 attendance_events, 30 employment-history rows),
+hold/request history detached with immutable snapshots, and **zero anonymous
+retained rows** (the CHECK held). Missed-row backstops were exercised directly:
+a leftover `payroll_items` row, `employee_face_enrollments`,
+`employee_project_assignments` each refused the deletion (23503) until
+explicitly removed — the deletion cannot succeed with unhandled references.
+
+**Rollback limits (drill-proven):**
+- Before any permanent deletion: full reversal of 0022 + 0021 restores the
+  exact baseline schema (Drill B: FK actions, nullability, snapshot columns
+  and control tables all verified equal to baseline).
+- **After the first permanent deletion: 0022 is NOT reversible** —
+  `ALTER TABLE attendance_records ALTER COLUMN employee_id SET NOT NULL`
+  fails (23502, NULL values present). Re-attaching detached history is
+  impossible; identity survives only as snapshots.
+- Operational hazard discovered during the drill: executing a reverse-0022
+  statement **while the system is live** silently reverts a 0022 invariant
+  (the drill's SET NOT NULL succeeded pre-deletion and un-detached nothing
+  but restored the old constraint) — reverse-0022 statements must never be
+  run outside a full coordinated rollback (runbook §M-8).
+
+**Data-preservation guarantees (verified):** retained time/employment history
+is never deleted — it is detached with employee-number + display-name
+snapshots and can never become anonymous (CHECK enforced); payroll/payslip
+data is deleted **with** the employee per the owner-approved widened scope,
+and any row the application plan misses fails loudly (RESTRICT); the
+deletion itself is gated by the 0021 control plane (active legal hold or
+pending/approved request blocks it at the database level).
+
+### 15.4 Production sweep dry-run — complete enumeration (final)
+
+`node scripts/purge-deleted-employee-pdfs.mjs` (default dry-run): exit 0.
+**Proposed deletions: NONE.** `attributable=0 attributable_present=0
+attributable_missing=0 referenced_live=0 deleted_employee_document_folders=0
+purged=0 left_behind=0`; the 2 unattributed orphans
+(`6de46bf1-…pdf`, `aff343f2-…pdf`) are **report-only** under
+`report_only_never_deleted` policy. `--execute` without
+`--confirm PURGE-DELETED-EMPLOYEE-PDFS` refuses (exit 1). Orphans verified
+byte-identical after all drills (`64-final-sweep-enumeration.out`).
+
+### 15.5 Release candidate (prepared, NOT deployed)
+
+| Item | Value |
+| --- | --- |
+| Candidate | built **out-of-tree** from `git archive` of exact HEAD `8a078c4` (`/tmp/opencode/rc-8a078c4`); the live checkout was **never** rebuilt |
+| BUILD_ID | `g6sGasldWHsmQLXJg2EBP` (`npm run build` exit 0) |
+| Durable archive | `/opt/hris-backups/releases/20261022-164719-8a078c498890-g6sGasldWHsmQLXJg2EBP/` — `source/.next` + `build.log` + `smoke-test.out` + `manifest.sha256` (1,210 files) + `manifest.sha256.sha256` + `RELEASE-NOTES.txt` |
+| Smoke test (isolated :3999) | `GET /login → 200`, `GET / → 307 → /login`, served build id `g6sGasldWHsmQLXJg2EBP`, **13/13 assets 200**, **50/50 `page.js` route parity** with the deployed build |
+| Deployment runbook | `docs/superadmin-force-delete-deployment-runbook.md` (new, this session) |
+
+### 15.6 Backup/restore evidence (re-verified this session)
+
+- **DB**: `production-db-20261022T011700Z-pre-superadmin-force-delete.dump`
+  (postgres:postgres 0600, 349,481 B, sha256
+  `04b5cf941b067065b831a5d0c67b272271b49f81168cde0da10a9a89e1e4b5e5`, 388 TOC
+  entries) restored into a disposable database with **all row counts matching
+  production** (employees 12, organizations 3, users 6, audit_logs 442,
+  payslip_documents 0, work_locations 3, projects 2, **ledger 18**) and zero
+  errors.
+- **Filesystem**: the ACL-correct archive
+  `hris-private-20261022T034129Z-pre-superadmin-force-delete.tar.gz` (root:root
+  0600, 2,964,811 B, sha256 `cee357e13c224b74c16903244a95b495198bef94b443f06b2a36086b83855e6f`,
+  `--acls --xattrs --numeric-owner`) restored as root: **10/10 files
+  byte-identical**, owner/mode/mtime/ACL **identical on every path** (192-line
+  metadata comparison), and the `hris` service account reads the restored
+  tree exactly as it reads production (the single unreadable file
+  `payslips-test/payslip-test-001.pdf` is unreadable **in production too** —
+  faithfully reproduced). The live tree has **no extended attributes**
+  (xattrs) anywhere; ACLs are the sole access-control mechanism and they are
+  preserved. The incumbent plain-tar archive remains **non-recoverable**
+  (132 metadata differences; `hris` cannot read restored payslips).
+
+### 15.7 Release gates — PASS/FAIL (technical) vs organizational/legal authorization
+
+**Owner authorization covers release *preparation* only. It does not
+substitute for the mandatory DBA/Security/Legal/DPO controls below, and no
+such approval is claimed.**
+
+| # | Gate | Status | Evidence / owner |
+| --- | --- | --- | --- |
+| 1 | Application correctness (tests, types, lint) | **PASS** | 1,986/1,986 (fresh), tsc 0, lint 0 errors — this session at HEAD |
+| 2 | Path-safety / recursive-delete immunity | **PASS** | runtime proofs §14.1; strict resolvers in announcement/employee/payslip storage |
+| 3 | Release candidate build + archive integrity | **PASS** | §15.5; BUILD_ID-named archive with sha256 manifest |
+| 4 | DB backup recoverability | **PASS** | §15.6 restore drill |
+| 5 | Filesystem backup recoverability (ACL-correct) | **PASS** | §15.6; automation still FAIL (manual only) |
+| 6 | Migration preflight (technical) | **PASS** | §15.3 drills A+B on disposable copies |
+| 7 | Migration approval (organizational) | **FAIL — BLOCKED** | DBA + Security review of 0021/0022 outstanding (§14.9 row 1) |
+| 8 | Drizzle lineage reconciliation | **FAIL — BLOCKED** | §15.2; reconciliation change must precede tool-applied 0021/0022 |
+| 9 | Policy §4 retention/legal-hold sign-off | **FAIL — BLOCKED** | 0/6: HR/Payroll, Legal, DPO, Security, DBA (§14.9 row 2) |
+| 10 | Staging rehearsal + Part A/B signatures | **FAIL — BLOCKED** | §14.9 rows 3, 5 |
+| 11 | Orphan PDF disposition | **OPEN** (preserved, report-only) | Data Owner + Security (§14.9 row 7) |
+| 12 | Branch protection / push / deploy authorization | **FAIL — BLOCKED** | §14.9 rows 8–10; nothing pushed |
+| 13 | Production deployment / migration execution | **NOT EXECUTED** | per owner instruction and gates 7–12 |
+
+**Not production-ready.** Gates 1–6 (technical) are complete; the release is
+held by gates 7–12 (organizational/legal/operational), which owner
+authorization for *preparation* cannot waive. The exact next actions are in
+the deployment runbook (`docs/superadmin-force-delete-deployment-runbook.md`).
