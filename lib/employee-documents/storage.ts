@@ -23,7 +23,7 @@ const PRIVATE_ROOT = "/opt/hris-private/employee-documents";
 
 function resolveWithinRoot(root: string, relativePath: string): string {
   const resolved = path.resolve(root, relativePath);
-  if (resolved !== root && !resolved.startsWith(`${root}${path.sep}`)) {
+  if (!resolved.startsWith(`${root}${path.sep}`)) {
     throw new Error("Resolved path escapes the private root.");
   }
   return resolved;

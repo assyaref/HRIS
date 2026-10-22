@@ -161,10 +161,7 @@ function resolveStoragePath(storageKey: string): string {
 
   const resolved = path.resolve(PRIVATE_ROOT, normalized);
 
-  if (
-    resolved !== PRIVATE_ROOT &&
-    !resolved.startsWith(`${PRIVATE_ROOT}${path.sep}`)
-  ) {
+  if (!resolved.startsWith(`${PRIVATE_ROOT}${path.sep}`)) {
     throw new Error("Invalid payslip storage path.");
   }
 
