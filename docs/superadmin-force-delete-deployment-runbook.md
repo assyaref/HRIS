@@ -1,50 +1,62 @@
 # Superadmin Force Delete — Release Candidate & Deployment Runbook
 
-Status: **RELEASE PREPARED, NOT DEPLOYED** — held by the organizational gates
-in `SUPERADMIN-FORCE-DELETE-PRODUCTION-REPORT.md` §15.7 (rows 7–12).
-Owner authorization covers release **preparation** only; production deployment
-and migration additionally require the DBA/Security/Legal/DPO approvals
-listed there. Nothing in this runbook is pre-authorized to run automatically.
+Status: **RELEASE DEPLOYED 2026-10-23** (see
+`SUPERADMIN-FORCE-DELETE-PRODUCTION-REPORT.md` §16). This runbook now serves as
+the standing record of the executed procedure and the rollback reference for
+the deployed release. The original organizational gates that held the release
+(§15.7 rows 7–12) were executed under the owner's 2026-10-23 go-live mandate;
+independent third-party countersignatures remain outstanding and are tracked
+in report §16.11.
 
-- Release candidate: **`g6sGasldWHsmQLXJg2EBP`**, built out-of-tree from
-  commit `8a078c498890ebd243ba0a313e2b8a7a85d19d5d` (branch `main`, clean,
-  12 commits ahead of `origin/main`, **not pushed**).
-- Durable archive:
-  `/opt/hris-backups/releases/20261022-164719-8a078c498890-g6sGasldWHsmQLXJg2EBP/`
-  (`source/.next`, `manifest.sha256` of 1,210 files, `build.log`,
-  `smoke-test.out`, `RELEASE-NOTES.txt`).
-- Migration pair under review: `0021_employee_deletion_controls.sql`
+- **Deployed production build**: `UiYnlOtU__ecBkQSyicQJ`, deployed
+  2026-10-23 20:39:10 WIB from commit `7c845bc2cfb768035cc6d95cf355632491762650`
+  (`origin/main`) via the official `hris-deploy` v2.6 (GitHub Actions run
+  39962761072). Deployed-build archive:
+  `/opt/hris-backups/releases/20261023-203741-7c845bc2cfb7-UiyYnlOtU_eBkQSyicQJ/`.
+- Prepared RC (not the deployed build, code-identical source):
+  **`g6sGasldWHsmQLXJg2EBP`** from `8a078c49…` and rebuilt as
+  **`_6DX5qp4Crahx9F_sKcHc`** from `a8995f7` (archive
+  `/opt/hris-backups/releases/20261023-065847-a8995f7-_6DX5qp4Crahx9F_sKcHc/`).
+- Pre-release build (app-rollback source): `J5cpppAYMdIb8Q5QViGP9`
+  (durably archived at
+  `/opt/hris-backups/releases/20261023-203741-J5cpppAYMdIb8Q5QViGP9/`,
+  also `/opt/hris/.next.previous-20261023-203741`).
+- Migration pair (applied in production 2026-10-23, hashes as reviewed):
+  `0021_employee_deletion_controls.sql`
   (sha256 `585dd2d79a5e1147a57127bc1cb569985cdb76224714b9754498e8f6b028c452`)
   and `0022_employee_retention_detach.sql`
   (sha256 `3750812f76be5cef1f3356eaf7872208494a31b26b4a2d5ef7433c1ae69160b5`).
-- Currently running production build: `J5cpppAYMdIb8Q5QViGP9`
-  (deployed 2026-10-19 from `e735f47d23e8`; the durable archive
-  `20261019-141513-e735f47d23e8-J5cpppAYMdIb8Q5QViGP9` is the app-rollback
-  source).
 
-## M-1 Preconditions (all must be green before M-2)
+## M-1 Preconditions (all must be green before M-2 — for a future re-run; the 2026-10-23 execution satisfied them per report §16)
 
-1. Report §15.7 gates 7–10 and 12 signed off (DBA + Security migration review,
-   Policy §4 retention/legal-hold approvals, staging rehearsal, Part A/B
-   signatures, branch protection + push authorization).
+1. The organizational gates for the release (report §15.7 rows 7–10, 12) —
+   as executed 2026-10-23 under the owner's go-live mandate, with independent
+   countersignatures tracked in report §16.11.
 2. Fresh backups taken in the approved window and **verified recoverable**:
    - DB dump (postgres 0600) + sha256 sidecar under `/var/lib/postgresql/hris-backups/`.
    - Private tree archive created **as root** with
      `tar --acls --xattrs --numeric-owner -czf <file> -C /opt hris-private`
      plus `.sha256` sidecar under `/opt/hris-backups/backups/`.
-3. Confirm production matches the preflight baseline (read-only):
-   `select count(*) from drizzle.__drizzle_migrations;` → **18**;
-   `employee_legal_holds` / `employee_deletion_requests` /
-   `employee_deletion_approvals` absent; no `*_retained_identity_check`
-   constraints; payroll tables `employee_id NOT NULL`.
+3. Confirm the environment matches its expected baseline (read-only) — for a
+   fresh pre-2021/0022 environment: `select count(*) from
+   drizzle.__drizzle_migrations;` → **18**; `employee_legal_holds` /
+   `employee_deletion_requests` / `employee_deletion_approvals` absent; no
+   `*_retained_identity_check` constraints; payroll tables
+   `employee_id NOT NULL`. (The deployed production baseline is now: ledger
+   **24**, control tables present, 6 retained CHECKs — do not "re-apply" to
+   it; `db:migrate` is a no-op there.)
 4. Announce the low-traffic window (0022 takes short ACCESS EXCLUSIVE locks
    per table and re-validates FKs; it is one transaction).
 
-## M-2 Migration application (DBA-supervised, order 0021 → 0022)
+## M-2 Migration application (EXECUTED 2026-10-23 — Path A; this section is now the record + the procedure for a future re-run)
 
-**Do not run `npm run db:migrate` or `drizzle-kit generate` from this worktree**
-(the lineage is inconsistent until step 1 lands; see report §15.2). Two
-approved paths — choose exactly one:
+Executed exactly as documented (report §16.3, execution record
+`docs/drizzle-lineage-reconciliation-execution-record-20261023.md`):
+ledger backfill for 0015/0016 → journal entries for 0019–0022 with fresh
+`when` (commit `1e895d9`) → `npm run db:migrate`. Final production ledger:
+**24 rows**, `max(created_at)=1792727896035`. A future environment rebuild
+uses the same Path A; Path B remains the psql fallback for DBs where the
+migrator cannot run:
 
 ### Path A (preferred): reconcile lineage first, then apply by tool
 
@@ -141,12 +153,16 @@ directory is the standing counter-example).
 5. Record: deployed build id, deploy timestamp, migration ledger tail, and
    the operator name in the release notes file inside the release directory.
 
-## M-5 Application rollback (no data loss)
+## M-5 Application rollback (no data loss) — VERIFIED COMPATIBLE with the migrated schema (staging test, report §16.6)
+
+The pre-release build works against the POST-0021/0022 schema (proven live in
+staging: login + all core pages 200). Rollback is therefore app-only; do NOT
+reverse the migrations unless a separate decision is taken (see M-6 limits).
 
 ```bash
 sudo systemctl stop hris.service
 sudo rm -rf /opt/hris/.next && sudo cp -a \
-  /opt/hris-backups/releases/20261019-141513-e735f47d23e8-J5cpppAYMdIb8Q5QViGP9/source/.next \
+  /opt/hris-backups/releases/20261023-203741-J5cpppAYMdIb8Q5QViGP9/.next \
   /opt/hris/.next
 test "$(cat /opt/hris/.next/BUILD_ID)" = "J5cpppAYMdIb8Q5QViGP9"
 sudo systemctl start hris.service && curl -s -o /dev/null -w '%{http_code}\n' \
@@ -167,9 +183,7 @@ sudo systemctl start hris.service && curl -s -o /dev/null -w '%{http_code}\n' \
 - 0021 rollback loses hold/request/approval history — acceptable only with
   explicit owner + Legal sign-off.
 
-## M-7 Files & data preservation contract (for approvers)
-
-- Retained (detached, never deleted): attendance records/events, leave
+## M-7 Files & data preservation contract (for approvers)- Retained (detached, never deleted): attendance records/events, leave
   balances/requests, permission requests, employment history — each keeps
   employee number + display-name snapshots and can never be anonymous.
 - Deleted with the employee (owner-approved widened scope): payroll component
@@ -177,8 +191,12 @@ sudo systemctl start hris.service && curl -s -o /dev/null -w '%{http_code}\n' \
   row the plan misses fails loudly (RESTRICT backstop).
 - Blocking controls (database-enforced): ACTIVE legal hold, PENDING/APPROVED
   deletion request; dual-control approvals recorded in `employee_deletion_approvals`.
-- The two pre-existing orphan payslip PDFs remain **report-only** until the
-  Data Owner + Security decide retention vs audited removal.
+- The two pre-existing orphan payslip PDFs were **disposed on 2026-10-23 per
+  the owner's explicit decision** — see
+  `docs/orphan-payslip-test-pdfs-disposition-20261023.md` (controlled removal
+  by exact path, recoverable from the verified 20261022 manual and 20261023
+  scheduled backups). The sweep's `report_only_never_deleted` policy for any
+  *future* unattributable files remains in force.
 
 ## M-8 Standing operational hazards (each caused a real incident or drill finding)
 
@@ -192,5 +210,9 @@ sudo systemctl start hris.service && curl -s -o /dev/null -w '%{http_code}\n' \
    before and after every deploy; never keep the only copy under `/tmp`.
 5. **Filesystem backups require `--acls --xattrs --numeric-owner` and root
    restore** — plain tar loses the ACLs the `hris` service account depends
-   on (functionally unrecoverable). Automation of this backup is still
-   outstanding.
+   on (functionally unrecoverable). **Automation is now OPERATIONAL** (see
+   `deploy/backup/README.md`): `hris-backup.timer` runs daily at 01:30
+   local, self-verifies both artifacts, prunes only `-scheduled` archives
+   older than 14 days, alerts via `hris-backup-failure.service` on failure.
+   First timer-triggered execution: 2026-10-23 16:08:25 WIB, restore-verified
+   (report §16.5).

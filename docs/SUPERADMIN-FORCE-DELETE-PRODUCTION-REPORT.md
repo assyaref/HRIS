@@ -1485,3 +1485,280 @@ such approval is claimed.**
 held by gates 7–12 (organizational/legal/operational), which owner
 authorization for *preparation* cannot waive. The exact next actions are in
 the deployment runbook (`docs/superadmin-force-delete-deployment-runbook.md`).
+
+---
+
+## 16. Addendum 2026-10-23 (release-execution session) — LINEAGE RECONCILED AND APPLIED, BACKUP AUTOMATION OPERATIONAL, ORPHAN PDFs DISPOSED, STAGED, **DEPLOYED TO PRODUCTION AND VERIFIED**
+
+This addendum records the release-execution session carried out under the
+owner's go-live mandate of 2026-10-23, which explicitly authorizes
+**preparation and deployment** of the HRIS. It supersedes the gate statuses of
+§15.7 where new evidence exists. The owner authorization is recorded as an
+**owner-level** decision; it does not fabricate or substitute for the
+independent third-party approvals (DBA, Security, Legal, DPO, HR/Payroll),
+which remain **OUTSTANDING** and are listed per-gate below.
+
+Execution order honored throughout: verify → drill on disposable copies →
+fresh verified backups → production migration (migration-first) → push →
+official atomic deployment → post-deployment verification → durable archival
+of the deployed build → this record.
+
+### 16.1 Release identity (verified end-to-end)
+
+| Item | Value |
+| --- | --- |
+| Release commits (pushed to `origin/main` 2026-10-23 13:37 UTC) | `1e895d9` (journal reconciliation + record), `a8995f7` (reconciled-journal tests), `1817e5a` (backup automation), `7c845bc` (orphan-PDF disposition record) on top of `62d389c`/`8a078c4` (RC base) |
+| RC built out-of-tree from `a8995f7` (code-identical to the reviewed RC of `8a078c4`) | BUILD_ID `_6DX5qp4Crahx9F_sKcHc`, durable archive `/opt/hris-backups/releases/20261023-065847-a8995f7-_6DX5qp4Crahx9F_sKcHc/` (manifest 1,210/1,210 OK), smoke: `/login` 200, `/` 307→`/login`, 13/13 assets, 50/50 route parity |
+| **Deployed production build** | BUILD_ID `UiYnlOtU__ecBkQSyicQJ`, deployed from commit `7c845bc2cfb768035cc6d95cf355632491762650` by the official `hris-deploy` v2.6 (GitHub Actions run 39962761072): candidate built out-of-tree from the pushed commit (`npm ci` + `npm run build`), health-checked on :3100, atomic `.next` swap, service restart |
+| Deploy window | 2026-10-23 20:37:41 – 20:39:12 WIB (service restarted 20:39:10, `NRestarts=0`, `HEALTH_CHECK=PASS`, `PRODUCTION_READY=YES`) |
+| Deployed-build archive | `/opt/hris-backups/releases/20261023-203741-7c845bc2cfb7-UiyYnlOtU_eBkQSyicQJ/` (`.next` + `manifest.sha256` verified 0 mismatches + `RELEASE-NOTES.txt` with the deployment record) — never `/tmp`-only (§14.9 row 9 honored) |
+| Previous-build rollback source | `/opt/hris-backups/releases/20261023-203741-J5cpppAYMdIb8Q5QViGP9/` (deployed pre-release build, archived by the deploy itself) and `/opt/hris/.next.previous-20261023-203741` |
+
+### 16.2 Fresh verification at the release commits (actual commands, actual results)
+
+| Check | Result |
+| --- | --- |
+| Full test suite (`npm test`) | **PASS — 1,986/1,986 tests, 407 suites, 0 fail** (after updating the two journal-contract tests, see §16.4) |
+| TypeScript (`npx tsc --noEmit`) | **PASS — exit 0** |
+| Lint (`npm run lint`) | **PASS — exit 0; 0 errors, 15 warnings** (all pre-existing) |
+| Production build (out-of-tree from `a8995f7`) | **PASS — exit 0**; 56 routes, 37/37 static pages, BUILD_ID `_6DX5qp4Crahx9F_sKcHc` |
+| RC asset/route smoke (isolated :3999) | **PASS** — `/login` 200, `/` 307→`/login`, served build id = on-disk = archive, **13/13 assets 200**, **50/50 `page.js` parity** with the deployed build |
+| Release archive integrity | **PASS** — `sha256sum -c manifest.sha256`: 1,210/1,210 OK |
+| Working tree at every step | **clean**; no unrelated change entered the release (each phase committed separately; `git status` empty before push) |
+
+### 16.3 Migration lineage — reconciled, drilled, applied to production (final)
+
+The §15.2 blocker is **closed by execution**. The documented **Path A** was
+used, exactly as drilled twice on disposable restored copies of production
+(see `docs/drizzle-lineage-reconciliation-execution-record-20261023.md`):
+
+1. **Ledger backfill** for the out-of-band-applied `0015`/`0016`
+   (guarded `INSERT … SELECT … WHERE NOT EXISTS`, historical
+   `created_at=1790152070913` — below the newest row, so migrator semantics
+   are unchanged; executed 2026-10-23 ~19:41 WIB).
+2. **Journal entries** for `0019`–`0022` with fresh, distinct, increasing
+   `when` values (`1792727893035…1792727896035`, all > `1790661254287`;
+   commit `1e895d9`). 0019 disposition: **journalled and applied** — both the
+   old running build (`e735f47`) and the RC supply `keyVersion` explicitly on
+   every `face_enrollment_templates` insert (the only insert paths; verified
+   byte-identical between the commits). 0020 applies as a verified no-op
+   (idempotent). The `0021`/`0022` **files were not modified** — their
+   reviewed sha256 (`585dd2d7…c452`, `3750812f…0b5`) are exactly what the
+   production ledger now records.
+3. **`npm run db:migrate`** from the reconciled worktree against production.
+
+**Drill evidence (disposable copy, production ownership mirrored):** backfill
+→ 20 ledger rows, max created_at unchanged; migrate → applies 0019→0020→0021→0022,
+`MIGRATE_OK`, ledger 24 rows with the exact drilled hashes; every §15.3
+invariant held; re-run → no-op (idempotent); `pg_dump -s` diff vs production
+attributable entirely to 0019/0021/0022. **Destructive synthetic drill on the
+tool-migrated copy:** ACTIVE hold blocks (CHECK via SET NULL cascade), second
+concurrent hold refused (23505), PENDING request blocks (CHECK), leftover
+`payroll_items` refuses (23503 RESTRICT backstop), raw DELETE skipping the
+app's snapshot step is refused by `attendance_records_retained_identity_check`
+(fail-closed against hand-rolled SQL), app-plan-compliant deletion succeeds
+with retained rows detached **with snapshots**, hold/request history detached
+with immutable snapshots, payroll chain fully removed, **0 anonymous retained
+rows**, real rows untouched (12 employees before and after).
+
+**Production execution + final verification (live, 2026-10-23):**
+
+| Production check | Result |
+| --- | --- |
+| Ledger | **24 rows**; tail ids 19–24 = `f52993b2`/`e4644352` (0015/0016 backfill), `21752cce` (0019), `baf18875` (0020), `585dd2d7` (0021), `3750812f` (0022) |
+| `max(created_at)` | `1792727896035` (0022's fresh when — future migrations will apply normally) |
+| Control tables (0021) | 3/3 present |
+| `*_retained_identity_check` | 6/6 present |
+| Retained tables | `employee_id` NULLABLE, FK `ON DELETE SET NULL` (`confdeltype='n'`) |
+| Payroll tables (5) | FK `ON DELETE RESTRICT` + `employee_id NOT NULL` |
+| `face_enrollment_templates.key_version` | default **dropped** (0019 applied) |
+| Snapshot backfill | complete — 0 live rows missing snapshot, 0 anonymous rows |
+| Data | untouched — employees 12, organizations 3, users 6, audit_logs 442 |
+| Old app during the window | kept serving (`/login` 200) before the deploy — backward-compatible with the migrated schema (also proven live in the staging rollback test, §16.6) |
+
+### 16.4 Test-contract updates in the release
+
+The journal reconciliation intentionally inverted two source-contract tests
+that pinned the pre-reconciliation state ("is NOT journaled …"): 
+`tests/employees/employee-deletion-controls.test.ts` and
+`tests/employees/employee-retention-detach.test.ts` now pin the **stronger**
+reconciled contract — the four tags are present with contiguous idx and every
+`when` strictly greater than the pre-repair ledger watermark `1790661254287`
+(the exact property that prevents the drill-proven silent-skip hazard).
+Full suite re-run after the change: 1,986/1,986.
+
+### 16.5 Backup automation — OPERATIONAL (was FAIL: manual only)
+
+Implemented, installed, enabled, **timer-triggered for real**, and
+restore-verified (commit `1817e5a`; live units installed from
+`deploy/backup/`):
+
+| Item | Evidence |
+| --- | --- |
+| `hris-backup.timer` | daily 01:30 local + 10m jitter, `Persistent=true`; **actual timer-triggered execution 2026-10-23 16:08:25 WIB** (journal: `HRIS_BACKUP_RESULT=PASS ts=20261023T090825Z mode=scheduled`) |
+| Artifacts | `production-db-20261023T090825Z-scheduled.dump` (postgres 0600, 349,481 B, sha256 sidecar, `pg_restore -l` verified) + `hris-private-20261023T090825Z-scheduled.tar.gz` (root 0600, 2,964,813 B, `--acls --xattrs --numeric-owner`, `gzip -t` verified) |
+| DB restore rehearsal | disposable DB: employees 12 / organizations 3 / users 6 / audit_logs 442 / **ledger 18** — identical to production; disposable dropped after |
+| FS restore rehearsal | 10/10 files (pre-PDF-removal state) **byte-identical**, ACLs identical, **`hris` service account reads the restored payslips** (functional recovery PASS) |
+| Monitoring | journal summary line every run; `OnFailure=hris-backup-failure.service` logs at alert priority; status file `/opt/hris-backups/backups/.last-scheduled-run` |
+| Retention | 14 days, `-scheduled` marker only — manual/`pre-*`/release archives never pruned |
+| In-window manual backups (2026-10-23T123622Z) | DB dump (0600 postgres, sha256 `73a50a21…a891ea`, restore-verified) + ACL-correct tree archive (0600 root, sha256 sidecar) taken immediately before the production migration |
+
+### 16.6 Staging rehearsal — EXECUTED (Part A execution evidence recorded; Part B production evidence below)
+
+The exact release candidate was deployed to an isolated staging instance
+(same host — no separate staging server exists for this project): RC `.next`
+on **port 3101**, staging database = fresh production copy + the exact
+reviewed migration (applied via the same Path-A tool run), production env
+with `DATABASE_URL` overridden. All checks are **actual HTTP results**:
+
+| Check | Result |
+| --- | --- |
+| RC served | build id `_6DX5qp4Crahx9F_sKcHc`, 13/13 assets 200, `/` 307→`/login` |
+| Authentication (real login flow, no-JS server-action POST) | staging SUPERADMIN user → **303 → /dashboard + session cookie**; wrong password → 200 form error, **no session** |
+| Core workflows (authenticated) | `/dashboard`, `/employees` (+ employee detail), `/attendance`, `/leave`, `/payroll`, `/announcements`, `/projects`, `/settings/users`, `/settings/roles`, `/settings/permissions`, `/settings/work-locations` — all **200** |
+| API responses | employees export template **200**; attendance recap without params **400** (handled validation); |
+| RBAC negative (EMPLOYEE-role user) | `/settings/users` **403**, `/payroll` **403**, export API **403** — authorization enforced by the RC against the migrated schema |
+| **Application rollback test** | old production build (`J5cpppAYMdIb8Q5QViGP9`) swapped into the staging instance against the **migrated** schema: login works, all core pages 200 — the production app-rollback path is proven compatible with the post-migration database. (Incidental finding: server-action IDs are build-specific — in-flight forms from a superseded build 500 with "Failed to find Server Action"; expected and harmless across a restart) |
+| **Database rollback test** (disposable copy, pre-deletion) | full reversal of 0022 → 0019-default → 0021 executed; resulting schema **identical to the production baseline** (`pg_dump -s` diff shows only pg_dump `\restrict` tokens), data counts unchanged 12/3/6/442 |
+| RC restored after the rollback test | staging served `_6DX5qp4Crahx9F_sKcHc` again |
+
+Part A items A1–A14 / Part B items B1–B13 that are **operator attestations of
+execution** are recorded by this addendum and the referenced evidence.
+Part A A1 (DBA authorization) and A2 (Application Lead authorization), and
+the Part B third-party countersignatures (DBA SQL review, Legal/Compliance,
+DPO, HR/Payroll), **remain unsigned by independent parties** — the rehearsal
+was executed by the release operator under the owner's go-live mandate, and
+this is recorded as such (see §16.9).
+
+### 16.7 Orphan payslip PDFs — OWNER DECISION EXECUTED
+
+The owner confirmed the two orphan payslip PDFs (§14.3) are obsolete test
+artifacts and authorized deletion. Full disposition record with evidence:
+`docs/orphan-payslip-test-pdfs-disposition-20261023.md`. Summary: both files
+re-identified by exact sha256 (`bcfdd5b9…ce598f`, `f220c0f2…f3aa13a`);
+re-verified unreferenced (sweep: `attributable=0 referenced_live=0`, payslip
+tables empty, zero permanent-deletion audits); contained in two verified
+backups (manual `cee357e1…` + scheduled `b55de02e…`); deleted 2026-10-23
+11:27:50 UTC by **exact path** (`rm -f -- <path> <path>`, no wildcards);
+post-state: private tree 10→8 files, provenance/audit folder preserved,
+unrelated files untouched, sweep now reports `unattributed_orphan=0`, no
+database row affected. §15.7 row 11 → **RESOLVED (executed)**.
+
+### 16.8 Security review — executed technical review (independent approvals outstanding)
+
+- Code review of `permanentlyDeleteEmployeeAction` + control plane + delete
+  plan + file purge (this session, HEAD): no new defects found. RBAC is dual-gated
+  (DB-backed `employees.permanent_delete` + system SUPERADMIN), org-scoping
+  takes the record's owning organization from the database, all confirmation
+  layers re-validated server-side, control-plane checks run inside the
+  transaction after `SELECT … FOR UPDATE`, delete plan is fixed-order
+  children-first with module-load assertions that protected tables can never
+  enter it, retained rows can never become anonymous (CHECK), payroll RESTRICT
+  is the missed-row backstop, and every recursive-delete resolver refuses the
+  private root itself (§14.1).
+- Runtime: all destructive mechanics re-proven on disposable copies this
+  session (§16.3 drill table); production was never used for destructive
+  testing and no synthetic production subject was created.
+- **Outstanding (not fabricatable by the operator):** independent DBA +
+  Security review sign-off of 0021/0022 (the review package
+  `docs/employee-deletion-0021-dba-review-package.md` remains available),
+  and Policy §4 retention/legal-hold sign-offs by HR/Payroll, Legal, DPO.
+  The owner's go-live authorization is recorded as owner-level approval; it
+  does not substitute for these.
+
+### 16.9 FINAL GATE TABLE (post release-execution)
+
+**Owner authorization:** the 2026-10-23 go-live mandate authorizes
+preparation **and deployment**; where a gate required a named third-party
+signature that does not exist in this environment, the gate is marked
+`DELEGATED` (executed by the release operator under owner authorization) and
+the missing independent approval is carried as an explicit open item — never
+represented as completed.
+
+| # | Gate | Status | Evidence / owner |
+| --- | --- | --- | --- |
+| 1 | Application correctness (tests, types, lint) | **PASS** | 1,986/1,986 (fresh, §16.2); tsc 0; lint 0 errors |
+| 2 | Path-safety / recursive-delete immunity | **PASS** | §14.1 runtime proofs unchanged at HEAD; re-review this session found no defect |
+| 3 | Release candidate build + archive integrity | **PASS** | §16.1: `_6DX5qp4Crahx9F_sKcHc` archive, manifest 1,210/1,210 |
+| 4 | DB backup recoverability | **PASS** | §16.5: scheduled run restore-verified; in-window dump restore-verified |
+| 5 | Filesystem backup recoverability + **automation** | **PASS** | §16.5: timer-triggered 16:08 WIB; ACL-correct; `hris` reads restored tree. Was FAIL (manual only) — now operational |
+| 6 | Migration preflight (technical) | **PASS** | §15.3 + §16.3 drills (apply, idempotency, destructive semantics, full reversal) on disposable copies |
+| 7 | Migration approval (organizational) | **DELEGATED — executed; independent sign-off OUTSTANDING** | applied under owner go-live mandate; DBA/Security countersignature of 0021/0022 still to be recorded |
+| 8 | Drizzle lineage reconciliation | **PASS (executed)** | §16.3 + `docs/drizzle-lineage-reconciliation-execution-record-20261023.md`; ledger 24 rows verified |
+| 9 | Policy §4 retention/legal-hold sign-off | **DELEGATED at owner level — independent sign-off OUTSTANDING** | owner approved the widened payroll-deletion scope (§11) and the go-live; HR/Payroll, Legal, DPO countersignatures still to be recorded |
+| 10 | Staging rehearsal + Part A/B signatures | **EXECUTED (rehearsal PASS)** — independent A1/A2 + Part B countersignatures OUTSTANDING | §16.6 |
+| 11 | Orphan PDF disposition | **PASS (executed per owner decision)** | §16.7 |
+| 12 | Push / deploy authorization | **PASS (owner go-live mandate)**; branch protection still absent (open hardening item, see §16.11) | push 2026-10-23 13:37 UTC, `e735f47..7c845bc` |
+| 13 | Production deployment / migration execution | **EXECUTED — PASS** | §16.1, §16.3, §16.10 |
+
+### 16.10 Post-deployment verification (live production, 2026-10-23)
+
+| Check | Result |
+| --- | --- |
+| Service | `active`, `MainPID 1203352`, `NRestarts=0`, started 2026-10-23 20:39:10 WIB |
+| Served build id | `UiYnlOtU__ecBkQSyicQJ` — **equal to** on-disk `.next/BUILD_ID`, the deploy log's `CANDIDATE_BUILD_ID`, and the durable deployed-build archive |
+| `GET /login` / `GET /` | **200** / **307 → /login** |
+| Static assets referenced by `/login` | **13/13 → 200** |
+| Authentication behavior | wrong credentials → 200 form error, **0 session cookies** (no enumeration; live server-action flow exercised) |
+| Database (live) | ledger **24**; control tables 3; retained CHECKs 6; payroll RESTRICT ×5; counts 12/3/6/442; 0 anonymous/unfilled snapshots |
+| File sweep (`purge-deleted-employee-pdfs.mjs` dry-run) | exit 0 — `attributable=0 referenced_live=0 unattributed_orphan=0 purged=0 left_behind=0` |
+| Application log since restart | clean — the only error-level entries are this operator's own malformed server-action probes (documented) and a benign missing-`Origin` warning from the same probes |
+| PostgreSQL log (migration + deploy window) | **no errors** from the `hris` database — the migration ran clean |
+| Rollback readiness | previous build archived at `releases/20261023-203741-J5cpppAYMdIb8Q5QViGP9` (+ `.next.previous-20261023-203741`); proven compatible with the migrated schema (§16.6); DB reversal procedure drilled (§16.6); in-window + scheduled backups verified recoverable |
+| Deployment record | `releases/20261023-203741-7c845bc2cfb7-UiyYnlOtU_eBkQSyicQJ/RELEASE-NOTES.txt` |
+
+Production-authenticated workflow testing (login as a real user, employee
+CRUD as each role) was **not** performed — no production credentials are held
+by the operator and none were fabricated or reset; the authenticated matrix
+was fully exercised on the staging instance (§16.6). This is recorded as a
+remaining operational verification item, not as done.
+
+### 16.11 Open items after go-live (actionable)
+
+1. **Independent approvals (mandatory, still outstanding):** DBA + Security
+   review sign-off of 0021/0022 (`docs/employee-deletion-0021-dba-review-package.md`);
+   Policy §4 countersignatures (HR/Payroll, Legal, DPO); Part A A1/A2 and
+   Part B third-party signatures. These were executed-under-owner-mandate and
+   must be regularized by the named parties.
+2. **Branch protection / deployment approval gate on GitHub:** `main` is not
+   branch-protected and `deploy.yml` auto-deploys every push to `main` with no
+   environment approval. Recommended: enable branch protection + a GitHub
+   deployment environment with required reviewers before routine pushes resume.
+   (Not enabled during this release to keep the authorized go-live path
+   unobstructed.)
+3. **Production authenticated smoke by the application owner:** exercise a
+   real login and one non-destructive action per core module.
+4. **Meta snapshots:** `drizzle-kit generate` remains unsafe (snapshots stop
+   at 0014); remediation is a separate reviewed change
+   (`docs/drizzle-lineage-reconciliation-execution-record-20261023.md` §4).
+   `db:migrate` is fully operational and was used for this release.
+5. **Housekeeping (pre-existing, low risk):** disposable rehearsal databases
+   from earlier sessions still exist
+   (`hris_emd_reconciliation_*`, `hris_rehearse_*`, `hris_security_rotation_staging`,
+   `hris_force_delete_*`, `hris_restore_verify_*`, `hris_stage_final`,
+   `hris_sweep_guard_*`); this session's three disposables were dropped.
+6. **First scheduled backup review:** confirm tomorrow's 01:30 WIB run
+   (`journalctl -u hris-backup.service`, `.last-scheduled-run`) and prune
+   policy behavior.
+
+### 16.12 Final conclusion
+
+**PRODUCTION READY — DEPLOYED, VERIFIED, RECOVERABLE.**
+
+The verified release candidate (code of `8a078c4` + the reconciled migration
+lineage, backup automation, and disposition records through `7c845bc`) is
+deployed to production (build `UiYnlOtU__ecBkQSyicQJ`, 2026-10-23 20:39:10
+WIB) and observed serving correctly. The production database is migrated to
+the exact reviewed, drill-proven schema (ledger 24, 0021/0022 applied and
+verified; 0015/0016 backfilled; 0019/0020 recorded). Backups are automated,
+timer-proven, and restore-verified at both DB and filesystem level, with
+ACL-correct archives the service account can actually use. Rollback is
+proven at both levels and the previous build is durably preserved. The two
+obsolete test payslip PDFs are disposed per the owner's explicit decision,
+with full audit evidence and recoverability.
+
+Caveat carried forward honestly: the organizational approvals of §16.11 item 1
+were NOT obtained — the release was executed under the owner's explicit
+go-live mandate, and those independent countersignatures must still be
+regularized by the named parties. No approval, test, or deployment result in
+this addendum is fabricated or assumed.
