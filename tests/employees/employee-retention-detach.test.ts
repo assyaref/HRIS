@@ -351,11 +351,40 @@ describe("migration 0022: structure and safety", () => {
     );
   });
 
-  it("is NOT journaled and integrates the control plane without weakening it (0021)", () => {
-    assert.equal(journalSource.includes("0022"), false);
-    assert.equal(journalSource.includes("0019"), false);
-    assert.equal(journalSource.includes("0020"), false);
-    assert.equal(journalSource.includes("0021"), false);
+  it("is journaled with a FRESH when after the approved lineage repair, and integrates the control plane without weakening it (0021)", () => {
+    // The approved lineage-reconciliation change
+    // (docs/drizzle-lineage-reconciliation-execution-record-20261023.md)
+    // journalled 0019-0022 with fresh `when` values. A stale or tied `when`
+    // is silently skipped forever by the drizzle migrator (drill-proven), so
+    // the journal contract pins: exact tags present, idx contiguous, and
+    // every new `when` strictly greater than the pre-repair ledger
+    // watermark 1790661254287 (0018_employee_custom_tabs, ledger id 18).
+    const journal = JSON.parse(journalSource) as {
+      entries: {
+        idx: number;
+        when: number;
+        tag: string;
+        breakpoints: boolean;
+      }[];
+    };
+    const reconciledTags = [
+      "0019_face_template_key_version",
+      "0020_user_password_lifecycle",
+      "0021_employee_deletion_controls",
+      "0022_employee_retention_detach",
+    ];
+    for (const tag of reconciledTags) {
+      const entry = journal.entries.find((candidate) => candidate.tag === tag);
+      assert.notEqual(entry, undefined, `journal must contain ${tag}`);
+      assert.equal(
+        (entry?.when ?? 0) > 1790661254287,
+        true,
+        `${tag} must carry a fresh when > the 0018 ledger watermark 1790661254287 (stale/tied when is silently skipped by the migrator)`
+      );
+    }
+    for (let idx = 0; idx < journal.entries.length; idx += 1) {
+      assert.equal(journal.entries[idx]?.idx, idx, "journal idx must be contiguous");
+    }
     // 0021 detaches released/terminal control history, but a LIVE hold/request
     // still blocks the DELETE through a database CHECK after SET NULL.
     assert.equal(

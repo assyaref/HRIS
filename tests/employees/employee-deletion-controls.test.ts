@@ -569,8 +569,25 @@ describe("migration and schema integrity", () => {
     assert.equal(controlCheck < snapshotStep, true);
   });
 
-  it("is NOT journaled (lineage repair is a separate approved change)", () => {
-    assert.equal(journalSource.includes("0021"), false);
+  it("is journaled with a fresh when after the approved lineage repair", () => {
+    // docs/drizzle-lineage-reconciliation-execution-record-20261023.md
+    // journalled 0021 (with 0019/0020/0022) using fresh `when` values so the
+    // drizzle migrator applies them. A stale or tied `when` is silently
+    // skipped forever (drill-proven), so the contract pins the exact tag,
+    // its file presence, and when > the pre-repair ledger watermark
+    // 1790661254287 (0018_employee_custom_tabs, ledger id 18).
+    const journal = JSON.parse(journalSource) as {
+      entries: { idx: number; when: number; tag: string }[];
+    };
+    const entry = journal.entries.find(
+      (candidate) => candidate.tag === "0021_employee_deletion_controls"
+    );
+    assert.notEqual(entry, undefined, "journal must contain 0021");
+    assert.equal(
+      (entry?.when ?? 0) > 1790661254287,
+      true,
+      "0021 must carry a fresh when > 1790661254287 (stale/tied when is silently skipped by the migrator)"
+    );
   });
 });
 
