@@ -1,0 +1,95 @@
+#!/bin/bash
+# hris-backup — scheduled database + filesystem backup for the HRIS host.
+#
+# Installed at /usr/local/sbin/hris-backup (root:root 0755) and driven by
+# hris-backup.timer (daily). Versioned in the repository at
+# deploy/backup/hris-backup.
+#
+# Scope (mirrors the verified manual procedure,
+# docs/superadmin-force-delete-deployment-runbook.md §M-1 step 2):
+#   1. PostgreSQL: pg_dump -Fc of the `hris` database into
+#      /var/lib/postgresql/hris-backups/, owned postgres:postgres 0600,
+#      plus a sha256 sidecar. The dump is LIST-verified (pg_restore -l)
+#      before it is accepted.
+#   2. Filesystem: /opt/hris-private archived with
+#      tar --acls --xattrs --numeric-owner (plain tar LOSES the ACLs the
+#      `hris` service account depends on — drill-proven unrecoverable) into
+#      /opt/hris-backups/backups/, root:root 0600, plus a sha256 sidecar and
+#      gzip integrity test.
+#   3. Retention: only archives carrying the `-scheduled` name marker and
+#      older than HRIS_BACKUP_RETENTION_DAYS are pruned. Manual and
+#      pre-deployment archives are NEVER touched.
+#
+# Monitoring: every run logs to the journal (systemd) with a single summary
+# line HRIS_BACKUP_RESULT=PASS|FAIL; OnFailure activates
+# hris-backup-failure.service which logs at alert priority. The last-run
+# status file /opt/hris-backups/backups/.last-scheduled-run is refreshed on
+# every execution.
+#
+# Exit codes: 0 = both archives created and self-verified; 1 = any failure.
+
+set -Eeuo pipefail
+
+DB_NAME="${HRIS_BACKUP_DB:-hris}"
+DB_DIR="/var/lib/postgresql/hris-backups"
+FS_ROOT="/opt/hris-private"
+FS_DIR="/opt/hris-backups/backups"
+RETENTION_DAYS="${HRIS_BACKUP_RETENTION_DAYS:-14}"
+TS="$(date -u +%Y%m%dT%H%M%SZ)"
+MODE="${1:-scheduled}"   # scheduled | manual (name marker only)
+
+log() { echo "[hris-backup] $*"; }
+
+fail() {
+  echo "[hris-backup] FAILED: $*" >&2
+  echo "HRIS_BACKUP_RESULT=FAIL ts=${TS} detail=$*" >&2
+  exit 1
+}
+
+[ "$(id -u)" -eq 0 ] || fail "must run as root"
+
+# --- database dump ---------------------------------------------------------
+DB_FILE="${DB_DIR}/production-db-${TS}-${MODE}.dump"
+log "pg_dump ${DB_NAME} -> ${DB_FILE}"
+sudo -u postgres pg_dump -Fc "${DB_NAME}" -f "${DB_FILE}" \
+  || fail "pg_dump exited non-zero"
+sudo -u postgres test -s "${DB_FILE}" || fail "dump is empty"
+sudo -u postgres pg_restore -l "${DB_FILE}" > /dev/null \
+  || fail "dump failed pg_restore -l verification"
+sudo -u postgres sh -c "sha256sum '${DB_FILE}' > '${DB_FILE}.sha256'" \
+  || fail "dump sha256 sidecar failed"
+sudo -u postgres chmod 0600 "${DB_FILE}" "${DB_FILE}.sha256"
+DB_SHA="$(sudo -u postgres awk '{print $1}' "${DB_FILE}.sha256")"
+DB_SIZE="$(stat -c %s "${DB_FILE}")"
+
+# --- filesystem archive (ACL-correct; plain tar is NOT application-recoverable)
+FS_FILE="${FS_DIR}/hris-private-${TS}-${MODE}.tar.gz"
+log "tar ${FS_ROOT} -> ${FS_FILE} (acls+xattrs+numeric-owner)"
+mkdir -p "${FS_DIR}"
+tar --acls --xattrs --numeric-owner -czf "${FS_FILE}" -C "$(dirname "${FS_ROOT}")" "$(basename "${FS_ROOT}")" \
+  || fail "tar archive creation exited non-zero"
+gzip -t "${FS_FILE}" || fail "archive failed gzip integrity test"
+sha256sum "${FS_FILE}" > "${FS_FILE}.sha256" || fail "archive sha256 sidecar failed"
+chmod 0600 "${FS_FILE}" "${FS_FILE}.sha256"
+FS_SHA="$(awk '{print $1}' "${FS_FILE}.sha256")"
+FS_SIZE="$(stat -c %s "${FS_FILE}")"
+
+# --- retention: prune only this tool's own scheduled artifacts -------------
+if [ "${MODE}" = "scheduled" ]; then
+  PRUNED_DB=0; PRUNED_FS=0
+  while IFS= read -r -d '' f; do
+    rm -f -- "$f" && PRUNED_DB=$((PRUNED_DB+1))
+  done < <(find "${DB_DIR}" -maxdepth 1 -type f -name "production-db-*-scheduled.dump*" -mtime "+${RETENTION_DAYS}" -print0)
+  while IFS= read -r -d '' f; do
+    rm -f -- "$f" && PRUNED_FS=$((PRUNED_FS+1))
+  done < <(find "${FS_DIR}" -maxdepth 1 -type f -name "hris-private-*-scheduled.tar.gz*" -mtime "+${RETENTION_DAYS}" -print0)
+  log "retention pruned db=${PRUNED_DB} fs=${PRUNED_FS} (older than ${RETENTION_DAYS}d, scheduled marker only)"
+fi
+
+# --- status file + summary --------------------------------------------------
+printf 'ts=%s mode=%s db_file=%s db_sha256=%s db_bytes=%s fs_file=%s fs_sha256=%s fs_bytes=%s\n' \
+  "${TS}" "${MODE}" "${DB_FILE}" "${DB_SHA}" "${DB_SIZE}" "${FS_FILE}" "${FS_SHA}" "${FS_SIZE}" \
+  > "${FS_DIR}/.last-scheduled-run"
+chmod 0644 "${FS_DIR}/.last-scheduled-run"
+
+echo "HRIS_BACKUP_RESULT=PASS ts=${TS} mode=${MODE} db=${DB_FILE} db_bytes=${DB_SIZE} fs=${FS_FILE} fs_bytes=${FS_SIZE}"

@@ -1,0 +1,18 @@
+[Unit]
+Description=HRIS scheduled backup (PostgreSQL dump + ACL-correct /opt/hris-private archive)
+# Versioned in the repository at deploy/backup/hris-backup.service.
+# Driven by hris-backup.timer. The script self-verifies both artifacts
+# (pg_restore -l list check, gzip -t) and never deletes non-scheduled archives.
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/hris-backup scheduled
+OnFailure=hris-backup-failure.service
+# Hardening: the backup only needs read access to /opt/hris-private and the
+# postgres utilities.
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+[Install]
+WantedBy=multi-user.target

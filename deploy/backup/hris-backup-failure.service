@@ -1,0 +1,7 @@
+[Unit]
+Description=HRIS failure alert for the scheduled backup (see hris-backup.service)
+# Activated by OnFailure= of hris-backup.service.
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemd-cat --priority=alert --identifier=hris-backup echo "ALERT: scheduled HRIS backup FAILED. Run: journalctl -u hris-backup.service -n 100; inspect /opt/hris-backups/backups/.last-scheduled-run. Database and /opt/hris-private recovery point may be stale."
