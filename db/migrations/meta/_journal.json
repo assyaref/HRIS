@@ -141,6 +141,34 @@
       "when": 1790661254287,
       "tag": "0018_employee_custom_tabs",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792727893035,
+      "tag": "0019_face_template_key_version",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792727894035,
+      "tag": "0020_user_password_lifecycle",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1792727895035,
+      "tag": "0021_employee_deletion_controls",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1792727896035,
+      "tag": "0022_employee_retention_detach",
+      "breakpoints": true
     }
   ]
 }
