@@ -452,6 +452,32 @@ export async function getEmployeeById(
 }
 
 /**
+ * Load several employees by id, scoped to one organization.
+ *
+ * Used by the bulk permanent-delete flow so every selected id is resolved
+ * against the database and an id owned by another tenant (or unknown) simply
+ * does not appear in the result set — cross-tenant existence never leaks.
+ * Returns rows in the order of `employeeIds` when present.
+ */
+export async function getEmployeesByIds(
+  employeeIds: readonly string[],
+  organizationId: string
+): Promise<EmployeeDetail[]> {
+  if (employeeIds.length === 0) return [];
+  const rows = await db
+    .select(employeeDetailSelection)
+    .from(employees)
+    .leftJoin(users, eq(users.id, employees.userId))
+    .where(
+      and(
+        inArray(employees.id, employeeIds),
+        eq(employees.organizationId, organizationId)
+      )
+    );
+  return rows.map(toEmployeeDetail);
+}
+
+/**
  * Load one employee, but only when it belongs to `organizationId`.
  * Returns `null` for unknown employees and for employees owned by another
  * organization (callers respond with forbidden so cross-org existence is

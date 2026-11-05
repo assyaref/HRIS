@@ -1,6 +1,9 @@
-import Link from "next/link";
+"use client";
 
-import { buttonVariants } from "@/components/ui/button";
+import Link from "next/link";
+import { useCallback, useMemo, useState } from "react";
+
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -12,8 +15,8 @@ import {
 
 import { EmployeeDeleteDialog } from "./employee-delete-dialog";
 import { EmployeePermanentDeleteDialog } from "./delete-employee-dialog";
+import { EmployeeBulkDeleteDialog } from "./employee-bulk-delete-dialog";
 import { EmployeeStatusBadge } from "./employee-status-badge";
-import { SelectAllEmployees } from "./export/select-all-checkbox";
 import type { EmployeeListItem } from "./queries";
 
 function formatDate(value: Date | null): string {
@@ -76,12 +79,20 @@ function rowActions({
 }
 
 /**
- * Org-scoped employee table (server component). Rows carry View | Edit |
+ * Org-scoped employee table (client component). Rows carry View | Edit |
  * Deactivate | Permanent Delete actions; every destination/action is
  * independently protected server-side. The destructive Deactivate action is
  * rendered for callers holding `employees.delete`, and Permanent Delete only
  * for callers holding `employees.permanent_delete`. On small screens the table
  * collapses into stacked cards with the same action set.
+ *
+ * Selection state lives here: the header checkbox toggles every displayed row,
+ * individual checkboxes toggle specific employees, and the bulk "Delete
+ * Selected Employees" action (Super Administrator only) applies only to
+ * explicitly selected employees. Selection never survives a change of
+ * organization, project, search, status filter or page — stale ids are dropped
+ * whenever the displayed list changes, so a hidden employee can never be
+ * deleted by accident.
  */
 export function EmployeeTable({
   employees,
@@ -90,6 +101,7 @@ export function EmployeeTable({
   canDelete = false,
   canPermanentDelete = false,
   detailContext,
+  organizationName,
 }: {
   employees: EmployeeListItem[];
   /**
@@ -106,14 +118,89 @@ export function EmployeeTable({
    * filters the user was browsing.
    */
   detailContext?: string;
+  /** Display name of the listed organization (Super Administrator only). */
+  organizationName?: string;
 }) {
+  const [rawSelectedIds, setRawSelectedIds] = useState<string[]>([]);
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+
+  const employeeIds = useMemo(
+    () => new Set(employees.map((employee) => employee.id)),
+    [employees]
+  );
+
+  // Selection only ever refers to employees currently displayed. When the
+  // organization, project, search, status filter or page changes, ids that are
+  // no longer displayed drop out automatically — previously hidden selections
+  // are never acted on.
+  const selectedIds = useMemo(
+    () => rawSelectedIds.filter((id) => employeeIds.has(id)),
+    [rawSelectedIds, employeeIds]
+  );
+
+  const isSelected = useCallback(
+    (id: string) => selectedIds.includes(id),
+    [selectedIds]
+  );
+  const toggle = (id: string) => {
+    setRawSelectedIds((current) =>
+      current.includes(id) ? current.filter((existing) => existing !== id) : [...current, id]
+    );
+  };
+  const toggleAll = useCallback(() => {
+    const allDisplayed = employees.map((employee) => employee.id);
+    const allSelected = allDisplayed.length > 0 && allDisplayed.every((id) => isSelected(id));
+    setRawSelectedIds(allSelected ? [] : allDisplayed);
+  }, [employees, isSelected]);
+
+  const selectedCount = selectedIds.length;
+  const selectedEmployees = employees.filter((employee) => isSelected(employee.id));
+  const canBulkDelete = canPermanentDelete && selectedCount > 0;
+
+  const handleBulkDelete = async () => {
+    setBulkDialogOpen(true);
+  };
+
   return (
     <div className="rounded-lg border border-border bg-card">
+      {canBulkDelete ? (
+        <div className="border-b border-border p-3 flex items-center justify-between gap-2 bg-muted/40">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            {selectedCount} employee{selectedCount === 1 ? "" : "s"} selected
+          </div>
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            onClick={handleBulkDelete}
+            data-testid="bulk-delete-selected-employees"
+          >
+            Delete Selected Employees ({selectedCount})
+          </Button>
+        </div>
+      ) : null}
+
+      <EmployeeBulkDeleteDialog
+        open={bulkDialogOpen}
+        onClose={() => setBulkDialogOpen(false)}
+        employees={selectedEmployees}
+        organizationId={organizationId}
+        organizationName={organizationName}
+      />
+
       <Table className="hidden md:table">
         <TableHeader>
           <TableRow>
             <TableHead className="w-10">
-              <SelectAllEmployees />
+              <label className="flex items-center">
+                <span className="sr-only">Select all employees on this page</span>
+                <input
+                  type="checkbox"
+                  checked={employees.length > 0 && selectedCount === employees.length}
+                  onChange={toggleAll}
+                  className="h-4 w-4 rounded border-input"
+                />
+              </label>
             </TableHead>
             <TableHead>Employee No.</TableHead>
             <TableHead>Name</TableHead>
@@ -136,6 +223,8 @@ export function EmployeeTable({
                     data-employee-select
                     name="employee"
                     value={employee.id}
+                    checked={isSelected(employee.id)}
+                    onChange={() => toggle(employee.id)}
                     className="h-4 w-4 rounded border-input"
                   />
                 </label>
@@ -157,7 +246,14 @@ export function EmployeeTable({
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex flex-wrap justify-end gap-1">
-{rowActions({ employee, organizationId, canEdit, canDelete, canPermanentDelete, detailContext })}
+                  {rowActions({
+                    employee,
+                    organizationId,
+                    canEdit,
+                    canDelete,
+                    canPermanentDelete,
+                    detailContext,
+                  })}
                 </div>
               </TableCell>
             </TableRow>
@@ -185,7 +281,14 @@ export function EmployeeTable({
             <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
               <span>Hired {formatDate(employee.hireDate)}</span>
               <div className="flex flex-wrap justify-end gap-1">
-                {rowActions({ employee, organizationId, canEdit, canDelete, canPermanentDelete, detailContext })}
+                {rowActions({
+                  employee,
+                  organizationId,
+                  canEdit,
+                  canDelete,
+                  canPermanentDelete,
+                  detailContext,
+                })}
               </div>
             </div>
           </li>

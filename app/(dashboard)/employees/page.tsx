@@ -449,6 +449,7 @@ export default async function EmployeesPage({
             canDelete={canDelete}
             canPermanentDelete={canPermanentDelete}
             detailContext={employeeDetailContext}
+            organizationName={activeOrganizationName ?? undefined}
           />
 
           {totalPages > 1 ? (

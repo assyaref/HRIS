@@ -1284,7 +1284,10 @@ describe("server action: transaction and explicit deletion", () => {
   });
 
   it("deletes exactly one row directly, scoped to id AND organization", () => {
-    const deletes = actionsSource.match(/\.delete\([A-Za-z]+\)/g) ?? [];
+    // Scoped to the single-employee action: the separate bulk action
+    // (bulkPermanentlyDeleteEmployeesAction) legitimately deletes employee
+    // rows too and is pinned by its own test suite.
+    const deletes = permanentDelete.match(/\.delete\([A-Za-z]+\)/g) ?? [];
     assert.deepEqual(
       deletes,
       [".delete(employees)"],

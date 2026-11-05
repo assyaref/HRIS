@@ -6,6 +6,8 @@ import { forbidden, redirect } from "next/navigation";
 import type { z } from "zod";
 
 import { db } from "@/db";
+import { randomUUID } from "node:crypto";
+import { UUID_PATTERN } from "./schemas";
 import {
   employeeCustomFieldValues,
   employeeEmploymentHistory,
@@ -63,6 +65,7 @@ import {
   getEmployeeById,
   getEmployeeDeletionControlState,
   getEmployeeInOrganization,
+  getEmployeesByIds,
   listEmployeeDeletionDependencies,
   listLinkableUsers,
   snapshotEmployeeRetainedRecords,
@@ -1676,6 +1679,562 @@ export async function permanentlyDeleteEmployeeAction(
       ? EMPLOYEE_PERMANENT_DELETE_NOT_FOUND_MESSAGE
       : EMPLOYEE_PERMANENT_DELETE_CONFIRMATION_MESSAGE
   );
+}
+
+/**
+ * State returned by the bulk permanent-deletion flow.
+ */
+export interface EmployeeBulkPermanentDeleteState {
+  status: "idle" | "error" | "success";
+  message?: string;
+  code?:
+    | "FORBIDDEN"
+    | "NO_ORGANIZATION"
+    | "EMPTY_SELECTION"
+    | "DUPLICATE_IDS"
+    | "INVALID_IDS"
+    | "NOT_FOUND"
+    | "CONFIRMATION_MISMATCH"
+    | "ACKNOWLEDGEMENT_MISSING"
+    | "LEGAL_HOLD"
+    | "ACTIVE_DELETION_REQUEST"
+    | "SELF_LINKED"
+    | "DEPENDENCIES"
+    | "FAILED";
+  /** How many employees the operator selected. */
+  selectedCount?: number;
+  /** How many employees were permanently deleted. */
+  deletedCount?: number;
+  /** How many employees could not be deleted and why. */
+  failedCount?: number;
+  /** Employee numbers that were deleted, for the result summary. */
+  deletedEmployeeNumbers?: string[];
+  /** Employees that could not be deleted, with the exact reason each. */
+  failedEmployees?: Array<{
+    id: string;
+    employeeNumber: string;
+    reason: string;
+  }>;
+  /** Aggregate count of deletable related records removed, per category. */
+  removedSummary?: Record<string, number>;
+}
+
+/** The exact confirmation phrase the operator must type for a bulk deletion. */
+function bulkConfirmationPhrase(selectedCount: number): string {
+  return `DELETE ${selectedCount} EMPLOYEES`;
+}
+
+function isAcknowledgedBulkPermanentDelete(formData: FormData): boolean {
+  const raw = formData.get("acknowledgedBulkPermanentDelete");
+  return raw === "true" || raw === "on" || raw === "1";
+}
+
+/**
+ * Permanently delete several selected employee records in one controlled,
+ * all-or-nothing operation.
+ *
+ * Reserved for the system-level SUPERADMIN (the same gate as the single
+ * permanent-delete action). All authorization, organization scoping and
+ * dependency policy are re-checked server-side; nothing about the caller or
+ * the selection is trusted from the form.
+ *
+ * Guards, in order — the first failure wins and nothing is written:
+ * 1. `requireUser` → 401/redirect otherwise.
+ * 2. `employees.permanent_delete` AND `isSuperAdmin` from the DB-backed RBAC → 403 otherwise.
+ * 3. The caller must have an organization (session org).
+ * 4. Input validation: a non-empty array of valid, unique employee ids → 400 otherwise.
+ * 5. Every id must resolve to an employee owned by the listing's organization
+ *    (the `organizationId` form field is only a consistency assertion, never a
+ *    lookup key) → 404 otherwise; cross-tenant ids are refused without leaking
+ *    existence.
+ * 6. The typed confirmation must equal `DELETE <count> EMPLOYEES` exactly → 400 otherwise.
+ * 7. The irreversibility acknowledgement must be ticked → 400 otherwise.
+ * 8. ONE transaction: lock every selected row `FOR UPDATE`, re-verify each still
+ *    exists and belongs to the organization, refuse any employee with an active
+ *    legal hold or a pending/approved deletion request, then snapshot retained
+ *    history, remove the deletable related records table-by-table, and delete
+ *    each employee row. Any throw rolls the entire batch back — no partial
+ *    deletion, no employee reported as deleted whose transaction failed.
+ * 9. Audit record (SUCCESS / DENIED / FAILED) with the actor, organization,
+ *    selected count, employee ids/numbers, result, failed ids+reasons and a
+ *    correlation id; no secrets.
+ *
+ * Post-commit (best-effort, never rolls the deletion back): remove each
+ * deleted employee's document folder and purge the orphaned payslip PDFs.
+ */
+export async function bulkPermanentlyDeleteEmployeesAction(
+  organizationId: string,
+  _prevState: EmployeeBulkPermanentDeleteState,
+  formData: FormData
+): Promise<EmployeeBulkPermanentDeleteState> {
+  const user = await requireUser();
+  const sessionOrganizationId = user.organizationId ?? null;
+
+  const authorization = await getUserAuthorization(user.id);
+  const canPermanentlyDelete = canPermanentlyDeleteEmployees(authorization);
+  const actorRole = displayRoleLabel(authorization.roleCodes);
+  const correlationId = randomUUID();
+
+  // `organizationId` is the listing's selected tenant (a consistency assertion,
+  // never a lookup key): every selected id is resolved against the database and
+  // must be owned by this organization. This mirrors the single-employee
+  // action, which receives the organization context as an action argument
+  // rather than reading it from the form body.
+  if (!UUID_PATTERN.test(organizationId)) {
+    return {
+      status: "error",
+      code: "INVALID_IDS",
+      message: "The organization context is invalid.",
+    };
+  }
+
+  const auditDenied = async (result: "DENIED" | "FAILED", reason: string) => {
+    try {
+      await writeAuditLog({
+        organizationId: sessionOrganizationId,
+        actorUserId: user.id,
+        action: "employee.bulk_permanently_deleted",
+        entityType: "employee",
+        entityId: null,
+        metadata: {
+          operation: "EMPLOYEE_BULK_PERMANENT_DELETE",
+          correlationId,
+          actorUserId: user.id,
+          actorEmail: user.email,
+          actorRole,
+          result,
+          reason,
+        },
+      });
+    } catch (error) {
+      console.error("[employees] bulk permanent delete audit failed", error);
+    }
+  };
+
+  if (!canPermanentlyDelete) {
+    await auditDenied("DENIED", "PERMISSION_DENIED");
+    return {
+      status: "error",
+      code: "FORBIDDEN",
+      message: EMPLOYEE_PERMANENT_DELETE_FORBIDDEN_MESSAGE,
+    };
+  }
+
+  if (!sessionOrganizationId) {
+    await auditDenied("DENIED", "NO_ORGANIZATION");
+    return {
+      status: "error",
+      code: "NO_ORGANIZATION",
+      message: "Your account is not assigned to an organization.",
+    };
+  }
+
+  const confirmation = field(formData, "confirmation");
+  const acknowledged = isAcknowledgedBulkPermanentDelete(formData);
+
+  // --- Input validation ------------------------------------------------
+  let employeeIds: string[];
+  try {
+    const parsed = JSON.parse(field(formData, "employeeIds"));
+    if (!Array.isArray(parsed) || parsed.some((v) => typeof v !== "string")) {
+      throw new Error("not an array of strings");
+    }
+    employeeIds = parsed;
+  } catch {
+    return {
+      status: "error",
+      code: "INVALID_IDS",
+      message: "The selection is invalid. Please refresh and try again.",
+    };
+  }
+
+  if (employeeIds.length === 0) {
+    return {
+      status: "error",
+      code: "EMPTY_SELECTION",
+      message: "No employees were selected.",
+    };
+  }
+
+  const duplicateIds = employeeIds.filter(
+    (id, index) => employeeIds.indexOf(id) !== index
+  );
+  if (duplicateIds.length > 0) {
+    return {
+      status: "error",
+      code: "DUPLICATE_IDS",
+      message: "The selection contains duplicate employees.",
+    };
+  }
+
+  const invalidIds = employeeIds.filter((id) => !UUID_PATTERN.test(id));
+  if (invalidIds.length > 0) {
+    return {
+      status: "error",
+      code: "INVALID_IDS",
+      message: "One or more selected employee ids are invalid.",
+    };
+  }
+
+  const expectedConfirmation = bulkConfirmationPhrase(employeeIds.length);
+  if (confirmation !== expectedConfirmation) {
+    return {
+      status: "error",
+      code: "CONFIRMATION_MISMATCH",
+      message: `Type exactly “${expectedConfirmation}” to confirm.`,
+    };
+  }
+
+  if (!acknowledged) {
+    return {
+      status: "error",
+      code: "ACKNOWLEDGEMENT_MISSING",
+      message: EMPLOYEE_PERMANENT_DELETE_ACKNOWLEDGEMENT_MESSAGE,
+    };
+  }
+
+  // --- Organization scope: every selected employee must belong to the
+  //     listing's organization. An id from another tenant (or unknown) is
+  //     treated as not found — cross-tenant existence never leaks.
+  const selected = await getEmployeesByIds(employeeIds, organizationId);
+  if (selected.length !== employeeIds.length) {
+    await auditDenied("DENIED", "NOT_FOUND");
+    return {
+      status: "error",
+      code: "NOT_FOUND",
+      message: EMPLOYEE_PERMANENT_DELETE_NOT_FOUND_MESSAGE,
+    };
+  }
+
+  const scopedOrganizationId = organizationId;
+
+  const employeeContext = {
+    organizationId: scopedOrganizationId,
+    actorUserId: user.id,
+    actorEmail: user.email,
+    actorRole,
+    employeeIds,
+    employeeNumbers: selected.map((e) => e.employeeNumber),
+    selectedCount: selected.length,
+    correlationId,
+  };
+
+  let outcome:
+    | {
+        code: "SUCCESS";
+        deleted: Array<{
+          id: string;
+          employeeNumber: string;
+          removedSummary: Record<string, number>;
+          payslipFileKeys: string[];
+        }>;
+        removedSummary: Record<string, number>;
+      }
+    | {
+        code: "DENIED";
+        failed: Array<{ id: string; employeeNumber: string; reason: string }>;
+      };
+
+  try {
+    outcome = await db.transaction(async (tx) => {
+      // Phase A — lock and validate every selected row before any deletion.
+      const locked: Array<{
+        id: string;
+        employeeNumber: string;
+        userId: string | null;
+        firstName: string;
+        lastName: string;
+      }> = [];
+      for (const id of employeeIds) {
+        const rows = await tx
+          .select({
+            id: employees.id,
+            employeeNumber: employees.employeeNumber,
+            userId: employees.userId,
+            firstName: employees.firstName,
+            lastName: employees.lastName,
+          })
+          .from(employees)
+          .where(
+            and(
+              eq(employees.id, id),
+              eq(employees.organizationId, scopedOrganizationId)
+            )
+          )
+          .for("update")
+          .limit(1);
+        const current = rows[0];
+        if (!current) {
+          return {
+            code: "DENIED",
+            failed: [{ id, employeeNumber: "", reason: "Employee not found." }],
+          };
+        }
+        locked.push(current);
+      }
+
+      const failed: Array<{ id: string; employeeNumber: string; reason: string }> = [];
+      const toDelete: Array<{
+        id: string;
+        employeeNumber: string;
+        employeeName: string;
+        userId: string | null;
+      }> = [];
+
+      for (const current of locked) {
+        const controlState = await getEmployeeDeletionControlState(
+          tx,
+          current.id,
+          scopedOrganizationId
+        );
+        if (controlState.activeLegalHoldCount > 0) {
+          failed.push({
+            id: current.id,
+            employeeNumber: current.employeeNumber,
+            reason: `${DELETION_LEGAL_HOLD_MESSAGE} Cannot delete employee ${current.employeeNumber}.`,
+          });
+          continue;
+        }
+        if (controlState.blockingDeletionRequestCount > 0) {
+          failed.push({
+            id: current.id,
+            employeeNumber: current.employeeNumber,
+            reason: `${DELETION_ACTIVE_REQUEST_MESSAGE} Cannot delete employee ${current.employeeNumber}.`,
+          });
+          continue;
+        }
+
+        const dependencies = await listEmployeeDeletionDependencies(
+          tx,
+          current.id,
+          scopedOrganizationId
+        );
+        const decision = evaluatePermanentEmployeeDeletion({
+          actorUserId: user.id,
+          employeeNumber: current.employeeNumber,
+          linkedUserId: current.userId,
+          dependencies,
+          superAdminOverride: true,
+        });
+        if (!decision.allowed) {
+          failed.push({
+            id: current.id,
+            employeeNumber: current.employeeNumber,
+            reason: decision.message,
+          });
+          continue;
+        }
+
+        toDelete.push({
+          id: current.id,
+          employeeNumber: current.employeeNumber,
+          employeeName: `${current.firstName} ${current.lastName}`,
+          userId: current.userId,
+        });
+      }
+
+      if (failed.length > 0) {
+        return { code: "DENIED", failed } as const;
+      }
+
+      // Phase B — execute every deletion inside the same transaction.
+      const removedSummary: Record<string, number> = {};
+      const deleted: Array<{
+        id: string;
+        employeeNumber: string;
+        removedSummary: Record<string, number>;
+        payslipFileKeys: string[];
+      }> = [];
+
+      for (const current of toDelete) {
+        // Freeze the retained history's identity before the employee row is
+        // detached (migration 0022). Discarded here — the single-employee
+        // flow reports per-table snapshots; the bulk audit records the
+        // operation-level outcome instead.
+        await snapshotEmployeeRetainedRecords(
+          tx,
+          current.id,
+          scopedOrganizationId,
+          {
+            employeeNumber: current.employeeNumber,
+            employeeName: current.employeeName,
+          }
+        );
+
+        const payslipFileKeys = await collectEmployeePayslipFileKeys(
+          tx,
+          current.id,
+          scopedOrganizationId
+        );
+
+        const categoryRemoved = await deleteEmployeeDeletableRecords(
+          tx,
+          current.id,
+          scopedOrganizationId
+        );
+        for (const [label, count] of Object.entries(categoryRemoved)) {
+          removedSummary[label] = (removedSummary[label] ?? 0) + count;
+        }
+
+        const removed = await tx
+          .delete(employees)
+          .where(
+            and(
+              eq(employees.id, current.id),
+              eq(employees.organizationId, scopedOrganizationId)
+            )
+          )
+          .returning({ id: employees.id });
+        if (removed.length === 0) {
+          return {
+            code: "DENIED",
+            failed: [{ id: current.id, employeeNumber: current.employeeNumber, reason: "Employee no longer exists." }],
+          };
+        }
+
+        deleted.push({
+          id: current.id,
+          employeeNumber: current.employeeNumber,
+          removedSummary: categoryRemoved,
+          payslipFileKeys,
+        });
+      }
+
+      return {
+        code: "SUCCESS",
+        deleted,
+        removedSummary,
+      } as const;
+    });
+  } catch (error) {
+    console.error("[employees] bulk permanent delete failed", error);
+    await auditDenied("FAILED", "UNEXPECTED_ERROR");
+    return {
+      status: "error",
+      code: "FAILED",
+      message: EMPLOYEE_PERMANENT_DELETE_FAILED_MESSAGE,
+    };
+  }
+
+  if (outcome.code === "DENIED") {
+    await writeAuditLog({
+      organizationId: scopedOrganizationId,
+      actorUserId: user.id,
+      action: "employee.bulk_permanently_deleted",
+      entityType: "employee",
+      entityId: null,
+      metadata: {
+        operation: "EMPLOYEE_BULK_PERMANENT_DELETE",
+        correlationId,
+        actorUserId: user.id,
+        actorEmail: user.email,
+        actorRole,
+        result: "DENIED",
+        reason: "BULK_REFUSED",
+        selectedCount: employeeContext.selectedCount,
+        employeeIds: employeeContext.employeeIds,
+        employeeNumbers: employeeContext.employeeNumbers,
+        failedEmployees: outcome.failed.map((f) => ({
+          id: f.id,
+          employeeNumber: f.employeeNumber,
+          reason: f.reason,
+        })),
+      },
+    });
+    return {
+      status: "error",
+      code: "DEPENDENCIES",
+      selectedCount: employeeContext.selectedCount,
+      failedCount: outcome.failed.length,
+      failedEmployees: outcome.failed,
+      message: outcome.failed
+        .map((f) => `Cannot delete ${f.employeeNumber}: ${f.reason}`)
+        .join("\n"),
+    };
+  }
+
+  // SUCCESS — commit has happened inside the transaction.
+  const deletedEmployeeNumbers = outcome.deleted.map((d) => d.employeeNumber);
+  const allPayslipFileKeys = outcome.deleted.flatMap((d) => d.payslipFileKeys);
+
+  try {
+    await writeAuditLog({
+      organizationId: scopedOrganizationId,
+      actorUserId: user.id,
+      action: "employee.bulk_permanently_deleted",
+      entityType: "employee",
+      entityId: null,
+      metadata: {
+        operation: "EMPLOYEE_BULK_PERMANENT_DELETE",
+        correlationId,
+        actorUserId: user.id,
+        actorEmail: user.email,
+        actorRole,
+        result: "SUCCESS",
+        selectedCount: employeeContext.selectedCount,
+        deletedCount: outcome.deleted.length,
+        employeeIds: employeeContext.employeeIds,
+        employeeNumbers: employeeContext.employeeNumbers,
+        deletedEmployeeNumbers,
+        deletedRelatedRecords: outcome.removedSummary,
+      },
+    });
+  } catch (error) {
+    console.error("[employees] bulk permanent delete success audit failed", error);
+  }
+
+  // POST-COMMIT: document folders + payslip PDF purge (best-effort).
+  const documentRemovals = await Promise.all(
+    outcome.deleted.map((d) =>
+      deleteEmployeeDocumentStorage(scopedOrganizationId, d.id)
+    )
+  );
+  let payslipFilePurge = { purged: [] as string[], missing: [] as string[], failed: [] as { storageKey: string; error: string }[] };
+  try {
+    payslipFilePurge = await purgeStoredPayslipPdfs(allPayslipFileKeys);
+  } catch (error) {
+    console.error("[employees] bulk payslip file purge failed", error);
+    payslipFilePurge.failed = allPayslipFileKeys.map((storageKey) => ({
+      storageKey,
+      error: error instanceof Error ? error.message : "purge did not complete",
+    }));
+  }
+
+  try {
+    await writeAuditLog({
+      organizationId: scopedOrganizationId,
+      actorUserId: user.id,
+      action: "employee.bulk_permanently_deleted_files",
+      entityType: "employee",
+      entityId: null,
+      metadata: {
+        operation: "EMPLOYEE_BULK_PERMANENT_DELETE_FILES",
+        correlationId,
+        actorUserId: user.id,
+        actorEmail: user.email,
+        actorRole,
+        result: "SUCCESS",
+        deletedEmployeeNumbers,
+        payslipFileScopeCount: allPayslipFileKeys.length,
+        payslipFilesPurged: payslipFilePurge.purged.length,
+        payslipFilesMissing: payslipFilePurge.missing.length,
+        payslipFileFailures: payslipFilePurge.failed.length,
+        documentFolderRemovals: documentRemovals.length,
+      },
+    });
+  } catch (error) {
+    console.error("[employees] bulk file-purge audit failed", error);
+  }
+
+  revalidatePath("/employees");
+  return {
+    status: "success",
+    message: `Permanently deleted ${outcome.deleted.length} employee(s).`,
+    selectedCount: employeeContext.selectedCount,
+    deletedCount: outcome.deleted.length,
+    deletedEmployeeNumbers,
+    removedSummary: outcome.removedSummary,
+  };
 }
 
 /** Read-only dependency report used to enable/disable the confirm button. */
