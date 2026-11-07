@@ -3,15 +3,25 @@ import type { ReactNode } from "react";
 import { HrisIcon, type HrisIconName } from "@/components/layout/icons";
 import { cn } from "@/lib/utils/cn";
 
-export type StatTone = "primary" | "blue" | "green" | "amber" | "rose" | "slate";
+export type StatTone =
+  | "primary"
+  | "blue"
+  | "green"
+  | "amber"
+  | "rose"
+  | "slate"
+  | "info"
+  | "violet";
 
 const iconToneClasses: Record<StatTone, string> = {
   primary: "bg-primary text-primary-foreground",
-  blue: "bg-secondary text-secondary-foreground",
-  green: "bg-emerald-50 text-emerald-600",
-  amber: "bg-amber-50 text-amber-600",
-  rose: "bg-rose-50 text-rose-600",
-  slate: "bg-slate-100 text-slate-600",
+  blue: "bg-surface-primary text-primary",
+  green: "bg-surface-success text-success",
+  amber: "bg-surface-warning text-warning",
+  rose: "bg-surface-danger text-danger",
+  slate: "bg-muted text-muted-foreground",
+  info: "bg-surface-info text-info",
+  violet: "bg-surface-info text-info",
 };
 
 /** A single aggregate metric card used across both dashboards. */
@@ -33,7 +43,7 @@ export function StatCard({
   return (
     <div
       className={cn(
-        "flex items-center gap-4 rounded-xl border border-border bg-card p-4 shadow-sm",
+        "flex items-center gap-4 rounded-xl border border-border bg-card p-4 shadow-sm hris-card-hover",
         className
       )}
     >

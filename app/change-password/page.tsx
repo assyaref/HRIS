@@ -16,7 +16,7 @@ export default async function ChangePasswordPage() {
     <div className="flex flex-col gap-6 max-w-md mx-auto">
       <div className="flex justify-center">
         <svg
-          className="h-12 w-12 text-[#1677e8]"
+          className="h-12 w-12 text-primary"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"

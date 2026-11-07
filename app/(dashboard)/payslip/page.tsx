@@ -54,10 +54,10 @@ export default async function EmployeePayslipPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-[#172554]">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             Pay Slip
           </h1>
-          <p className="mt-1 text-sm text-[#64748b]">Slip gaji Anda</p>
+          <p className="mt-1 text-sm text-muted-foreground">Slip gaji Anda</p>
         </div>
 
         <EmployeeEmptyState
@@ -74,15 +74,15 @@ export default async function EmployeePayslipPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-[#172554]">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           Pay Slip
         </h1>
-        <p className="mt-1 text-sm text-[#64748b]">
+        <p className="mt-1 text-sm text-muted-foreground">
           {employee.firstName} {employee.lastName} · {employee.employeeNumber}
         </p>
       </div>
 
-      <p className="flex items-start gap-2 rounded-2xl bg-blue-50 px-4 py-3 text-xs text-blue-800">
+      <p className="flex items-start gap-2 rounded-2xl hris-surface-info px-4 py-3 text-xs text-info">
         <HrisIcon name="lock" className="mt-0.5 size-4 shrink-0" />
         <span>
           PDF slip gaji terenkripsi. Untuk membukanya gunakan Nomor Induk

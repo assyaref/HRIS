@@ -19,10 +19,10 @@ export interface AnnouncementCarouselItem {
 }
 
 const badgeToneClasses: Record<AnnouncementCarouselItem["badgeTone"], string> = {
-  info: "bg-blue-50 text-blue-700",
-  warning: "bg-amber-50 text-amber-700",
-  danger: "bg-red-50 text-red-700",
-  neutral: "bg-white/85 text-slate-600",
+  info: "hris-surface-info text-info",
+  warning: "hris-surface-warning text-warning",
+  danger: "hris-surface-danger text-danger",
+  neutral: "bg-muted text-muted-foreground",
 };
 
 /**
@@ -31,6 +31,7 @@ const badgeToneClasses: Record<AnnouncementCarouselItem["badgeTone"], string> = 
  * Data is supplied by the server (existing announcements query). The component
  * holds only presentation state and never fetches or invents content. Touch
  * swipe, pagination dots and a pause-on-interaction auto-slide are included.
+ * Theme-adaptive.
  */
 export function AnnouncementCarousel({
   items,
@@ -103,7 +104,7 @@ export function AnnouncementCarousel({
             >
               <Link
                 href={item.href}
-                className="emp-card emp-card-tap relative block min-h-44 overflow-hidden"
+                className="hris-card emp-card-tap relative block min-h-44 overflow-hidden"
               >
                 {item.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -113,7 +114,7 @@ export function AnnouncementCarousel({
                     className="absolute inset-0 size-full object-cover"
                   />
                 ) : (
-                  <div className="emp-gradient-soft absolute inset-0" />
+                  <div className="bg-muted/40 absolute inset-0" />
                 )}
                 <div
                   aria-hidden="true"
@@ -121,7 +122,7 @@ export function AnnouncementCarousel({
                     "absolute inset-0",
                     item.imageUrl
                       ? "bg-gradient-to-t from-slate-900/85 via-slate-900/35 to-transparent"
-                      : "bg-gradient-to-t from-white/95 via-white/70 to-white/30"
+                      : "bg-gradient-to-t from-white/90 via-white/60 to-white/30 dark:from-muted/80 dark:via-muted/60 dark:to-muted/30"
                   )}
                 />
                 <div className="relative flex min-h-44 flex-col justify-end gap-1.5 p-5">
@@ -135,7 +136,7 @@ export function AnnouncementCarousel({
                       {item.badgeLabel ?? "Pengumuman"}
                     </span>
                     {item.unread ? (
-                      <span className="inline-flex items-center rounded-full bg-[#1677e8] px-2 py-0.5 text-[10px] font-semibold text-white">
+                      <span className="inline-flex items-center rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
                         Baru
                       </span>
                     ) : null}
@@ -143,7 +144,7 @@ export function AnnouncementCarousel({
                   <h3
                     className={cn(
                       "line-clamp-2 text-base font-semibold",
-                      item.imageUrl ? "text-white" : "text-[#172554]"
+                      item.imageUrl ? "text-white" : "text-foreground"
                     )}
                   >
                     {item.title}
@@ -151,7 +152,7 @@ export function AnnouncementCarousel({
                   <p
                     className={cn(
                       "line-clamp-2 text-sm",
-                      item.imageUrl ? "text-white/85" : "text-[#64748b]"
+                      item.imageUrl ? "text-white/85" : "text-muted-foreground"
                     )}
                   >
                     {item.excerpt}
@@ -160,7 +161,7 @@ export function AnnouncementCarousel({
                     <p
                       className={cn(
                         "text-xs",
-                        item.imageUrl ? "text-white/70" : "text-[#94a3b8]"
+                        item.imageUrl ? "text-white/70" : "text-muted-foreground"
                       )}
                     >
                       {item.dateLabel}
@@ -188,8 +189,8 @@ export function AnnouncementCarousel({
               className={cn(
                 "h-1.5 rounded-full transition-all",
                 dotIndex === index
-                  ? "w-5 bg-[#1677e8]"
-                  : "w-1.5 bg-slate-300 hover:bg-slate-400"
+                  ? "w-5 bg-primary"
+                  : "w-1.5 bg-muted/50 hover:bg-muted/70 dark:hover:bg-muted/40"
               )}
             />
           ))}
@@ -202,7 +203,7 @@ export function AnnouncementCarousel({
             type="button"
             aria-label="Previous announcement"
             onClick={() => go(index - 1)}
-            className="absolute top-1/2 -left-1 hidden size-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-slate-500 shadow ring-1 ring-slate-200 hover:text-[#1677e8] sm:flex"
+            className="absolute top-1/2 -left-1 hidden size-8 -translate-y-1/2 items-center justify-center rounded-full bg-card/90 text-muted-foreground shadow ring-1 ring-border hover:text-primary sm:flex"
           >
             <HrisIcon name="chevron-right" className="size-4 rotate-180" />
           </button>
@@ -210,7 +211,7 @@ export function AnnouncementCarousel({
             type="button"
             aria-label="Next announcement"
             onClick={() => go(index + 1)}
-            className="absolute top-1/2 -right-1 hidden size-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-slate-500 shadow ring-1 ring-slate-200 hover:text-[#1677e8] sm:flex"
+            className="absolute top-1/2 -right-1 hidden size-8 -translate-y-1/2 items-center justify-center rounded-full bg-card/90 text-muted-foreground shadow ring-1 ring-border hover:text-primary sm:flex"
           >
             <HrisIcon name="chevron-right" className="size-4" />
           </button>

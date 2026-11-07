@@ -41,10 +41,10 @@ export default async function AccountSettingsPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-[#172554]">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           Profil Saya
         </h1>
-        <p className="mt-1 text-sm text-[#64748b]">
+        <p className="mt-1 text-sm text-muted-foreground">
           Informasi kepegawaian dan pengaturan akun Anda.
         </p>
       </div>

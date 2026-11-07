@@ -1,10 +1,19 @@
 @import "tailwindcss";
 
-:root {
-  /* ==========================================================
-     HRIS — FRESH SOFT BLUE DESIGN SYSTEM
-     ========================================================== */
+/* ==========================================================
+   HRIS — ENTERPRISE DESIGN SYSTEM
+   Approved visual identity:
+   - Primary: Royal Blue
+   - Secondary: Navy Blue
+   - Background: Soft White / Light Blue
+   - Surface: White
+   - Text Primary: Deep Navy
+   - Text Secondary: Slate Gray
+   - Success: Emerald · Warning: Amber · Danger: Red · Info: Blue
+   ========================================================== */
 
+:root {
+  /* ---- Semantic surface colors (light) ---- */
   --background: #f7fafc;
   --foreground: #172554;
 
@@ -15,40 +24,91 @@
   --muted-foreground: #64748b;
 
   --accent: #eaf5ff;
-  --accent-foreground: #0f6fd1;
+  --accent-foreground: #155eaf;
 
   --border: #e2e8f0;
   --input: #e2e8f0;
-  --ring: #1687f8;
+  --ring: #2563eb;
 
-  --primary: #1687f8;
+  --primary: #2563eb;
   --primary-foreground: #ffffff;
 
-  --secondary: #eaf5ff;
-  --secondary-foreground: #0f6fd1;
+  --secondary: #1e3a8a;
+  --secondary-foreground: #ffffff;
 
-  --destructive: #ef4444;
+  --destructive: #dc2626;
   --destructive-foreground: #ffffff;
 
-  /* HRIS semantic colors */
-  --success: #16b894;
-  --warning: #f59e0b;
-  --danger: #ef4444;
+  /* ---- Semantic status colors ---- */
+  --success: #15803d;
+  --success-foreground: #ffffff;
+  --warning: #b45309;
+  --warning-foreground: #ffffff;
+  --danger: #dc2626;
+  --danger-foreground: #ffffff;
+  --info: #2563eb;
+  --info-foreground: #ffffff;
 
-  /* Soft surfaces */
-  --surface-blue: #eaf5ff;
+  /* ---- Soft status surfaces ---- */
+  --surface-primary: #eaf5ff;
   --surface-success: #ecfdf5;
   --surface-warning: #fffbeb;
   --surface-danger: #fef2f2;
+  --surface-info: #eff6ff;
 
-  /* Radius */
+  /* ---- Radius ---- */
   --radius-sm: 0.5rem;
   --radius-md: 0.75rem;
   --radius-lg: 1rem;
   --radius-xl: 1.25rem;
+  --radius-full: 9999px;
+
+  /* ---- Shadows ---- */
+  --shadow-sm: 0 1px 2px 0 rgb(15 23 42 / 0.03);
+  --shadow-md: 0 4px 6px -1px rgb(15 23 42 / 0.04), 0 2px 4px -1px rgb(15 23 42 / 0.02);
+  --shadow-lg: 0 10px 15px -3px rgb(15 23 42 / 0.05), 0 4px 6px -2px rgb(15 23 42 / 0.03);
+  --shadow-xl: 0 20px 25px -5px rgb(15 23 42 / 0.06), 0 8px 10px -6px rgb(15 23 42 / 0.03);
+
+  /* ---- Typography ---- */
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --text-xs: 0.75rem;
+  --text-xs-line: 1rem;
+  --text-sm: 0.875rem;
+  --text-sm-line: 1.25rem;
+  --text-base: 1rem;
+  --text-base-line: 1.5rem;
+  --text-lg: 1.125rem;
+  --text-lg-line: 1.75rem;
+  --text-xl: 1.25rem;
+  --text-xl-line: 1.75rem;
+  --text-2xl: 1.5rem;
+  --text-2xl-line: 2rem;
+  --text-3xl: 1.875rem;
+  --text-3xl-line: 2.25rem;
+
+  /* ---- Spacing (component dimensions) ---- */
+  --height-8: 2rem;   /* h-8 / 32px touch target */
+  --height-10: 2.5rem; /* h-10 / 40px */
+  --height-11: 2.75rem; /* h-11 / 44px minimum touch target */
+  --height-14: 3.5rem; /* h-14 / 56px */
+  --height-16: 4rem;   /* h-16 / 64px */
+  --width-64: 16rem;   /* w-64 sidebar */
+  --width-80: 20rem;   /* w-80 drawer */
+
+  /* ---- Z-index scale ---- */
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-fixed: 300;
+  --z-modal-backdrop: 400;
+  --z-modal: 500;
+  --z-popover: 600;
+  --z-toast: 700;
 }
 
 @theme inline {
+  /* Colors */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 
@@ -74,15 +134,86 @@
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
 
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
 
+  /* Soft status surfaces */
+  --color-surface-primary: var(--surface-primary);
+  --color-surface-success: var(--surface-success);
+  --color-surface-warning: var(--surface-warning);
+  --color-surface-danger: var(--surface-danger);
+  --color-surface-info: var(--surface-info);
+
+  /* Fonts */
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  /* Radius */
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);
   --radius-xl: var(--radius-xl);
 }
 
+/* ==========================================================
+   DARK MODE — `.dark` (class strategy, persisted to localStorage)
+   ========================================================== */
+.dark {
+  --background: #0f172a;
+  --foreground: #f8fafc;
+
+  --card: #1e293b;
+  --card-foreground: #f8fafc;
+
+  --muted: #334155;
+  --muted-foreground: #94a3b8;
+
+  --accent: #1e3a8a;
+  --accent-foreground: #93c5fd;
+
+  --border: #334155;
+  --input: #334155;
+  --ring: #60a5fa;
+
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+
+  --secondary: #1e3a8a;
+  --secondary-foreground: #ffffff;
+
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+
+  --success: #34d399;
+  --success-foreground: #064e3b;
+  --warning: #fbbf24;
+  --warning-foreground: #451a03;
+  --danger: #f87171;
+  --danger-foreground: #7f1d1d;
+  --info: #60a5fa;
+  --info-foreground: #1e3a8a;
+
+  --surface-primary: #1e3a8a;
+  --surface-success: #064e3b;
+  --surface-warning: #451a03;
+  --surface-danger: #7f1d1d;
+  --surface-info: #1e3a8a;
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.25);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.20), 0 2px 4px -1px rgb(0 0 0 / 0.10);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.20), 0 4px 6px -2px rgb(0 0 0 / 0.10);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.25), 0 8px 10px -6px rgb(0 0 0 / 0.15);
+}
+
+/* ==========================================================
+   GLOBAL BASE
+   ========================================================== */
 html {
   min-height: 100%;
   background: var(--background);
@@ -93,14 +224,13 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
+    "Segoe UI Symbol", "Noto Color Emoji";
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
-
-/* ==========================================================
-   HRIS GLOBAL UX
-   ========================================================== */
 
 * {
   border-color: var(--border);
@@ -120,14 +250,13 @@ a {
 }
 
 ::selection {
-  background: #cfe9ff;
-  color: #0f3f75;
+  background: #bfdbfe;
+  color: #0f172a;
 }
 
 /* ==========================================================
-   SOFT SCROLLBAR
+   SCROLLBAR
    ========================================================== */
-
 * {
   scrollbar-width: thin;
   scrollbar-color: #cbd5e1 transparent;
@@ -151,17 +280,30 @@ a {
   background: #94a3b8;
 }
 
-/* ==========================================================
-   HRIS SURFACE HELPERS
-   ========================================================== */
+.dark *::-webkit-scrollbar-thumb {
+  background: #475569;
+}
 
+.dark *::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* ==========================================================
+   COMPONENT SURFACE HELPERS
+   ========================================================== */
 .hris-card {
   border: 1px solid var(--border);
-  border-radius: 1rem;
+  border-radius: var(--radius-lg);
   background: var(--card);
   box-shadow:
     0 1px 2px rgb(15 23 42 / 0.03),
     0 8px 24px rgb(15 23 42 / 0.04);
+}
+
+.dark .hris-card {
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.20),
+    0 8px 24px rgb(0 0 0 / 0.15);
 }
 
 .hris-card-hover {
@@ -176,107 +318,35 @@ a {
   border-color: #bfdbfe;
   box-shadow:
     0 4px 6px rgb(15 23 42 / 0.04),
-    0 12px 32px rgb(22 135 248 / 0.08);
+    0 12px 32px rgb(37 99 235 / 0.08);
 }
 
-.hris-soft-blue {
-  background: var(--surface-blue);
+.dark .hris-card-hover:hover {
+  border-color: rgba(59, 130, 246, 0.35);
+  box-shadow:
+    0 4px 6px rgb(0 0 0 / 0.10),
+    0 12px 32px rgb(37 99 235 / 0.12);
 }
 
-.hris-gradient-blue {
-  background:
-    linear-gradient(
-      135deg,
-      #1687f8 0%,
-      #3b9df9 55%,
-      #69b5ff 100%
-    );
-  color: white;
+.hris-surface-primary {
+  background: var(--surface-primary);
+}
+.hris-surface-success {
+  background: var(--surface-success);
+}
+.hris-surface-warning {
+  background: var(--surface-warning);
+}
+.hris-surface-danger {
+  background: var(--surface-danger);
+}
+.hris-surface-info {
+  background: var(--surface-info);
 }
 
 /* ==========================================================
-   EMPLOYEE SELF-SERVICE (mobile-first HRIS app)
-   ==========================================================
-   Scope note: these tokens/classes are additive. Management pages keep using
-   the existing design tokens above; employee pages opt into the `.emp-*`
-   vocabulary below so an employee redesign can never leak into admin UI.
+   MOBILE UX — minimum 44px touch targets, no horizontal overflow
    ========================================================== */
-
-:root {
-  --emp-bg: #f5f8fc;
-  --emp-primary: #1677e8;
-  --emp-primary-strong: #0f63c9;
-  --emp-secondary: #2d9bdb;
-  --emp-cyan: #38c6c8;
-  --emp-text: #172554;
-  --emp-text-muted: #64748b;
-  --emp-success: #16a34a;
-  --emp-warning: #f59e0b;
-  --emp-danger: #dc2626;
-  --emp-radius: 1.5rem;
-}
-
-.emp-shell {
-  background: var(--emp-bg);
-}
-
-.emp-card {
-  border: 1px solid rgb(226 232 240 / 0.75);
-  border-radius: var(--emp-radius);
-  background: #ffffff;
-  box-shadow:
-    0 1px 2px rgb(15 23 42 / 0.03),
-    0 12px 32px -18px rgb(15 23 42 / 0.18);
-}
-
-.emp-card-tap {
-  transition:
-    transform 160ms ease,
-    box-shadow 160ms ease,
-    border-color 160ms ease;
-}
-
-.emp-card-tap:active {
-  transform: scale(0.985);
-}
-
-.emp-card-tap:hover {
-  border-color: #bae0ff;
-  box-shadow:
-    0 1px 2px rgb(15 23 42 / 0.03),
-    0 18px 40px -20px rgb(22 119 232 / 0.28);
-}
-
-/* Elegant, restrained gradient used only for hero/accent surfaces. */
-.emp-gradient {
-  background: linear-gradient(135deg, #1677e8 0%, #2d9bdb 55%, #38c6c8 100%);
-}
-
-.emp-gradient-soft {
-  background: linear-gradient(135deg, #eaf3ff 0%, #e6fbfa 100%);
-}
-
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-
-.no-scrollbar {
-  scrollbar-width: none;
-}
-
-/* Safe-area aware spacing for bottom navigation + floating action. */
-.emp-safe-bottom {
-  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
-}
-
-.emp-safe-top {
-  padding-top: env(safe-area-inset-top);
-}
-
-/* ==========================================================
-   MOBILE UX
-   ========================================================== */
-
 @media (max-width: 767px) {
   body {
     font-size: 0.9375rem;
@@ -287,5 +357,10 @@ a {
   textarea,
   button {
     min-height: 44px;
+  }
+
+  html,
+  body {
+    overflow-x: hidden;
   }
 }

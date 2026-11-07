@@ -73,13 +73,13 @@ export default async function NotificationsPage({
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-[#172554]">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           Notifikasi
         </h1>
-        <p className="mt-1 text-sm text-[#64748b]">
+        <p className="mt-1 text-sm text-muted-foreground">
           Pembaruan pengumuman, persetujuan, dan payroll Anda.
           {unreadCount > 0 ? (
-            <span className="ml-2 inline-flex items-center rounded-full bg-[#1677e8] px-2 py-0.5 text-xs font-semibold text-white">
+            <span className="ml-2 inline-flex items-center rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground">
               {unreadCount} baru
             </span>
           ) : null}
@@ -100,10 +100,10 @@ export default async function NotificationsPage({
               role="tab"
               aria-selected={active}
               className={[
-                "inline-flex min-h-10 shrink-0 items-center rounded-full px-4 text-sm font-medium transition-colors",
+                "inline-flex min-h-10 shrink-0 items-center rounded-full px-4 text-sm font-medium transition-colors border",
                 active
-                  ? "bg-[#1677e8] text-white"
-                  : "bg-white text-[#64748b] ring-1 ring-slate-200 hover:text-[#172554]",
+                  ? "bg-primary text-primary-foreground border-transparent"
+                  : "bg-card text-muted-foreground border-border hover:text-foreground dark:hover:text-foreground/90",
               ].join(" ")}
             >
               {NOTIFICATION_CATEGORY_LABELS[entry]}

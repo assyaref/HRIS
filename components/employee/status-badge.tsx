@@ -5,16 +5,16 @@ import { cn } from "@/lib/utils/cn";
 export type StatusTone = "success" | "warning" | "danger" | "info" | "neutral";
 
 const toneClasses: Record<StatusTone, string> = {
-  success: "bg-emerald-50 text-emerald-700 ring-emerald-100",
-  warning: "bg-amber-50 text-amber-700 ring-amber-100",
-  danger: "bg-red-50 text-red-700 ring-red-100",
-  info: "bg-blue-50 text-blue-700 ring-blue-100",
-  neutral: "bg-slate-100 text-slate-600 ring-slate-200",
+  success: "hris-surface-success text-success ring-1 ring-inset ring-success/20",
+  warning: "hris-surface-warning text-warning ring-1 ring-inset ring-warning/20",
+  danger: "hris-surface-danger text-danger ring-1 ring-inset ring-danger/20",
+  info: "hris-surface-info text-info ring-1 ring-inset ring-info/20",
+  neutral: "bg-muted text-muted-foreground ring-1 ring-inset ring-muted/30",
 };
 
 /**
  * Shared employee-app status chip. Uses colour + text (never colour alone),
- * so it remains accessible and readable on small screens.
+ * so it remains accessible and readable on small screens. Theme-adaptive.
  */
 export function StatusBadge({
   tone = "neutral",
@@ -30,7 +30,7 @@ export function StatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex w-fit items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset",
+        "inline-flex w-fit items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold",
         toneClasses[tone],
         className
       )}

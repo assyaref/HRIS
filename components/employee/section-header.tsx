@@ -23,11 +23,11 @@ export function SectionHeader({
       ].join(" ")}
     >
       <div className="min-w-0">
-        <h2 className="text-base font-semibold tracking-tight text-[#172554]">
+        <h2 className="text-base font-semibold tracking-tight text-foreground">
           {title}
         </h2>
         {description ? (
-          <p className="mt-0.5 text-sm text-[#64748b]">{description}</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
         ) : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}

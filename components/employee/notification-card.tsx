@@ -14,11 +14,11 @@ const toneStyles: Record<
   NotificationTone,
   { icon: HrisIconName; className: string }
 > = {
-  announcement: { icon: "announcements", className: "bg-blue-50 text-blue-600" },
-  approval: { icon: "check", className: "bg-emerald-50 text-emerald-600" },
-  payroll: { icon: "payslip", className: "bg-violet-50 text-violet-600" },
-  attendance: { icon: "clock", className: "bg-cyan-50 text-cyan-600" },
-  system: { icon: "info", className: "bg-slate-100 text-slate-600" },
+  announcement: { icon: "announcements", className: "hris-surface-primary text-primary" },
+  approval: { icon: "check", className: "hris-surface-success text-success" },
+  payroll: { icon: "payslip", className: "hris-surface-info text-info" },
+  attendance: { icon: "clock", className: "hris-surface-warning text-warning" },
+  system: { icon: "info", className: "bg-muted text-muted-foreground" },
 };
 
 export interface NotificationCardProps {
@@ -30,7 +30,7 @@ export interface NotificationCardProps {
   href?: string;
 }
 
-/** Employee notification row. Icon + title + description + time + unread dot. */
+/** Employee notification row. Icon + title + description + time + unread dot. Theme-adaptive. */
 export function NotificationCard({
   tone,
   title,
@@ -54,25 +54,18 @@ export function NotificationCard({
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-3">
-          <p
-            className={cn(
-              "text-sm font-semibold text-[#172554]",
-              unread && "font-semibold"
-            )}
-          >
-            {title}
-          </p>
+          <p className="text-sm font-semibold text-foreground">{title}</p>
           {unread ? (
             <span
               aria-label="Belum dibaca"
-              className="mt-1 size-2 shrink-0 rounded-full bg-[#1677e8]"
+              className="mt-1 size-2 shrink-0 rounded-full bg-primary"
             />
           ) : null}
         </div>
-        <p className="mt-0.5 line-clamp-2 text-sm text-[#64748b]">
+        <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
           {description}
         </p>
-        <p className="mt-1 text-xs text-[#94a3b8]">{timeLabel}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{timeLabel}</p>
       </div>
     </div>
   );
@@ -82,8 +75,8 @@ export function NotificationCard({
       <Link
         href={href}
         className={cn(
-          "emp-card emp-card-tap block focus-visible:ring-2 focus-visible:ring-[#1677e8] focus-visible:ring-offset-2 focus-visible:outline-none",
-          unread && "ring-1 ring-blue-100"
+          "hris-card emp-card-tap block focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
+          unread && "ring-1 ring-inset ring-primary/50"
         )}
       >
         {body}
@@ -91,5 +84,5 @@ export function NotificationCard({
     );
   }
 
-  return <div className={cn("emp-card", unread && "ring-1 ring-blue-100")}>{body}</div>;
+  return <div className={cn("hris-card", unread && "ring-1 ring-inset ring-primary/50")}>{body}</div>;
 }

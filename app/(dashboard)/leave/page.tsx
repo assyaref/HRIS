@@ -56,7 +56,7 @@ export default async function LeavePage({
   if (!employee) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-[#172554]">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           Cuti
         </h1>
         <EmployeeEmptyState
@@ -94,10 +94,10 @@ export default async function LeavePage({
     <div className="space-y-5">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-[#172554]">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             Cuti
           </h1>
-          <p className="mt-1 text-sm text-[#64748b]">
+          <p className="mt-1 text-sm text-muted-foreground">
             {employee.firstName} {employee.lastName} · {availableTotal} hari
             tersedia
           </p>
@@ -157,25 +157,25 @@ export default async function LeavePage({
             </div>
           ) : null}
 
-          <div className="emp-card flex flex-col items-center gap-3 p-6 text-center">
+      <div className="hris-card flex flex-col items-center gap-3 p-6 text-center">
             <span
               aria-hidden="true"
-              className="flex size-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600"
+              className="flex size-12 items-center justify-center rounded-2xl hris-surface-warning text-warning"
             >
               <HrisIcon name="leave" className="size-6" />
             </span>
             <div>
-              <p className="text-sm font-semibold text-[#172554]">
+              <p className="text-sm font-semibold text-foreground">
                 Ajukan cuti baru
               </p>
-              <p className="mt-0.5 text-sm text-[#64748b]">
+              <p className="mt-0.5 text-sm text-muted-foreground">
                 Pilih jenis cuti, tanggal, dan alasan pengajuan Anda.
               </p>
             </div>
             {canCreate ? (
               <LeaveCreateDialog leaveTypes={leaveTypes} />
             ) : (
-              <p className="text-sm text-[#94a3b8]">
+              <p className="text-sm text-muted-foreground">
                 Anda tidak memiliki izin untuk mengajukan cuti.
               </p>
             )}
@@ -193,18 +193,18 @@ export default async function LeavePage({
               description="Pengajuan cuti Anda akan tampil di sini."
             />
           ) : (
-            <div className="emp-card divide-y divide-slate-100">
+            <div className="hris-card divide-y divide-border">
               {requests.map((request) => (
                 <Link
                   key={request.id}
                   href={`/leave/${request.id}`}
-                  className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-slate-50"
+                  className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-accent dark:hover:bg-muted/40"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-[#172554]">
+                    <p className="truncate text-sm font-medium text-foreground">
                       {request.leaveTypeName}
                     </p>
-                    <p className="text-xs text-[#64748b]">
+                    <p className="text-xs text-muted-foreground">
                       {formatDate(request.startDate)} →{" "}
                       {formatDate(request.endDate)} ·{" "}
                       {formatDayCount(request.totalDays)}

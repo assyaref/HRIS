@@ -1,14 +1,16 @@
 import Link from "next/link";
 
-import { AnnouncementCarousel } from "@/components/employee/announcement-carousel";
+import { SectionHeader } from "@/components/employee/section-header";
 import { AttendanceStatusCard } from "@/components/employee/attendance-status-card";
 import { EmployeeHeader } from "@/components/employee/employee-header";
 import { QuickServiceGrid } from "@/components/employee/quick-service-grid";
 import type { QuickServiceItem } from "@/components/employee/quick-service-card";
-import { SectionHeader } from "@/components/employee/section-header";
 import { StatusBadge, statusTone } from "@/components/employee/status-badge";
 import { EmployeeEmptyState } from "@/components/employee/ui-states";
+import { AnnouncementCarousel } from "@/components/employee/announcement-carousel";
 import { HrisIcon } from "@/components/layout/icons";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { PERMISSIONS, type Permission } from "@/lib/auth/permissions";
 import type { UserAuthorization } from "@/lib/auth/rbac";
 import type { CurrentUser } from "@/lib/auth/types";
@@ -86,7 +88,7 @@ export async function EmployeeDashboard({
   if (!employee) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-[#172554]">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           Beranda
         </h1>
         <EmployeeEmptyState
@@ -316,7 +318,7 @@ export async function EmployeeDashboard({
     {
       label: "Pay slip",
       value: myPayslips.length ? String(myPayslips.length) : "—",
-      tone: "violet" as const,
+      tone: "info" as const,
       icon: "payslip" as const,
     },
   ];
@@ -356,12 +358,12 @@ export async function EmployeeDashboard({
             action={
               <Link
                 href="/announcements"
-                className="inline-flex items-center gap-1 text-sm font-medium text-[#1677e8]"
+                className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/90 dark:text-primary/90"
               >
                 {unreadAnnouncements > 0 ? (
-                  <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-[#1677e8] px-1.5 py-0.5 text-[11px] font-semibold text-white">
+                  <Badge variant="destructive" className="ml-2 min-w-[1.5rem] text-[11px]">
                     {unreadAnnouncements}
-                  </span>
+                  </Badge>
                 ) : null}
                 Lihat semua
                 <HrisIcon name="chevron-right" className="size-4" />
@@ -394,22 +396,33 @@ export async function EmployeeDashboard({
         <SectionHeader title="Ringkasan Bulan Ini" />
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {monthlyTiles.map((tile) => (
-            <div key={tile.label} className="emp-card flex items-center gap-3 p-4">
+            <div
+              key={tile.label}
+              className={cn(
+                "hris-card flex items-center gap-3 p-4",
+                tile.tone === "green" && "hris-surface-success",
+                tile.tone === "amber" && "hris-surface-warning",
+                tile.tone === "blue" && "hris-surface-primary",
+                tile.tone === "info" && "hris-surface-info"
+              )}
+            >
               <span
                 aria-hidden="true"
                 className={cn(
                   "flex size-10 shrink-0 items-center justify-center rounded-2xl",
-                  tile.tone === "green" && "bg-emerald-50 text-emerald-600",
-                  tile.tone === "amber" && "bg-amber-50 text-amber-600",
-                  tile.tone === "blue" && "bg-blue-50 text-blue-600",
-                  tile.tone === "violet" && "bg-violet-50 text-violet-600"
+                  tile.tone === "green" && "text-success",
+                  tile.tone === "amber" && "text-warning",
+                  tile.tone === "blue" && "text-primary",
+                  tile.tone === "info" && "text-info"
                 )}
               >
                 <HrisIcon name={tile.icon} className="size-5" />
               </span>
               <div className="min-w-0">
-                <p className="truncate text-xs text-[#64748b]">{tile.label}</p>
-                <p className="text-lg font-semibold tracking-tight text-[#172554]">
+                <p className="truncate text-xs text-muted-foreground">
+                  {tile.label}
+                </p>
+                <p className="text-lg font-semibold tracking-tight text-foreground">
                   {tile.value}
                 </p>
               </div>
@@ -425,7 +438,7 @@ export async function EmployeeDashboard({
           action={
             <Link
               href="/leave"
-              className="inline-flex items-center gap-1 text-sm font-medium text-[#1677e8]"
+              className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/90 dark:text-primary/90"
             >
               Semua
               <HrisIcon name="chevron-right" className="size-4" />
@@ -439,7 +452,7 @@ export async function EmployeeDashboard({
             description="Pengajuan cuti dan izin Anda akan tampil di sini."
           />
         ) : (
-          <div className="emp-card divide-y divide-slate-100">
+          <Card className="hris-card divide-y divide-border">
             {recentRequests.map((request) => (
               <Link
                 key={`${request.kind}-${request.id}`}
@@ -448,13 +461,13 @@ export async function EmployeeDashboard({
                     ? `/leave/${request.id}`
                     : `/permission/${request.id}`
                 }
-                className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-slate-50"
+                className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-accent dark:hover:bg-muted/40"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-[#172554]">
+                  <p className="truncate text-sm font-medium text-foreground">
                     {request.title}
                   </p>
-                  <p className="text-xs text-[#94a3b8]">
+                  <p className="text-xs text-muted-foreground">
                     {new Intl.DateTimeFormat("id-ID", {
                       day: "numeric",
                       month: "short",
@@ -467,17 +480,17 @@ export async function EmployeeDashboard({
                 </StatusBadge>
               </Link>
             ))}
-          </div>
+          </Card>
         )}
       </section>
 
       {canAttendance ? (
         <section className="space-y-3">
           <SectionHeader title="Status Presensi" description="Ringkasan hari ini" />
-          <div className="emp-card grid grid-cols-2 divide-x divide-slate-100 sm:grid-cols-4 sm:divide-x">
+          <Card className="hris-card grid grid-cols-2 divide-x divide-border sm:grid-cols-4 sm:divide-x">
             <div className="p-4">
-              <p className="text-xs text-[#64748b]">Status</p>
-              <p className="mt-0.5 text-sm font-semibold text-[#172554]">
+              <p className="text-xs text-muted-foreground">Status</p>
+              <p className="mt-0.5 text-sm font-semibold text-foreground">
                 {todayRecord
                   ? ATTENDANCE_STATUS_LABELS[
                       todayRecord.status as AttendanceStatus
@@ -486,24 +499,24 @@ export async function EmployeeDashboard({
               </p>
             </div>
             <div className="p-4">
-              <p className="text-xs text-[#64748b]">Jam masuk</p>
-              <p className="mt-0.5 text-sm font-semibold text-[#172554]">
+              <p className="text-xs text-muted-foreground">Jam masuk</p>
+              <p className="mt-0.5 text-sm font-semibold text-foreground">
                 {checkInLabel ?? "—"}
               </p>
             </div>
             <div className="p-4">
-              <p className="text-xs text-[#64748b]">Jam pulang</p>
-              <p className="mt-0.5 text-sm font-semibold text-[#172554]">
+              <p className="text-xs text-muted-foreground">Jam pulang</p>
+              <p className="mt-0.5 text-sm font-semibold text-foreground">
                 {checkOutLabel ?? "—"}
               </p>
             </div>
             <div className="p-4">
-              <p className="text-xs text-[#64748b]">Lokasi</p>
-              <p className="mt-0.5 text-sm font-semibold text-[#172554]">
+              <p className="text-xs text-muted-foreground">Lokasi</p>
+              <p className="mt-0.5 text-sm font-semibold text-foreground">
                 {activeRecord?.workLocationName ?? "—"}
               </p>
             </div>
-          </div>
+          </Card>
         </section>
       ) : null}
     </div>

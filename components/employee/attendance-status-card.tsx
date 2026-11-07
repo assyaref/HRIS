@@ -87,7 +87,7 @@ export interface AttendanceStatusCardProps {
 /**
  * The primary employee-home attendance card. Every value is passed in from
  * server-resolved data for the authenticated employee; the example figures in
- * the design brief are never rendered.
+ * the design brief are never rendered. Theme-adaptive.
  */
 export function AttendanceStatusCard({
   state,
@@ -106,21 +106,21 @@ export function AttendanceStatusCard({
   return (
     <section
       className={cn(
-        "emp-card relative overflow-hidden p-5",
-        success && "ring-1 ring-emerald-100"
+        "hris-card relative overflow-hidden p-5",
+        success && "ring-1 ring-inset ring-success/20"
       )}
     >
       {success ? (
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -top-16 -right-12 size-40 rounded-full bg-emerald-50 blur-2xl"
+          className="pointer-events-none absolute -top-16 -right-12 size-40 rounded-full hris-surface-success blur-2xl"
         />
       ) : null}
 
       <div className="relative flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-[#172554]">{copy.title}</p>
-          <p className="mt-0.5 text-sm text-[#64748b]">{copy.description}</p>
+          <p className="text-sm font-semibold text-foreground">{copy.title}</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">{copy.description}</p>
         </div>
         <StatusBadge
           tone={copy.tone}
@@ -138,24 +138,24 @@ export function AttendanceStatusCard({
 
       {hasRecord ? (
         <dl className="relative mt-4 grid grid-cols-2 gap-3">
-          <div className="rounded-2xl bg-slate-50 px-4 py-3">
-            <dt className="text-xs font-medium text-[#64748b]">Jam Masuk</dt>
-            <dd className="mt-0.5 text-lg font-semibold text-[#172554]">
+          <div className="rounded-2xl bg-muted/50 px-4 py-3">
+            <dt className="text-xs font-medium text-muted-foreground">Jam Masuk</dt>
+            <dd className="mt-0.5 text-lg font-semibold text-foreground">
               {checkInLabel ?? "—"}
             </dd>
           </div>
-          <div className="rounded-2xl bg-slate-50 px-4 py-3">
-            <dt className="text-xs font-medium text-[#64748b]">Jam Pulang</dt>
-            <dd className="mt-0.5 text-lg font-semibold text-[#172554]">
+          <div className="rounded-2xl bg-muted/50 px-4 py-3">
+            <dt className="text-xs font-medium text-muted-foreground">Jam Pulang</dt>
+            <dd className="mt-0.5 text-lg font-semibold text-foreground">
               {checkOutLabel ?? "—"}
             </dd>
           </div>
           {durationLabel ? (
-            <div className="col-span-2 flex items-center justify-between rounded-2xl bg-blue-50/70 px-4 py-3">
-              <dt className="text-xs font-medium text-[#64748b]">
+            <div className="col-span-2 flex items-center justify-between rounded-2xl hris-surface-primary px-4 py-3">
+              <dt className="text-xs font-medium text-muted-foreground">
                 Durasi Kerja
               </dt>
-              <dd className="text-sm font-semibold text-[#1677e8]">
+              <dd className="text-sm font-semibold text-primary">
                 {durationLabel}
               </dd>
             </div>
@@ -181,7 +181,7 @@ export function AttendanceStatusCard({
       {showAction ? (
         <Link
           href={actionHref}
-          className="emp-gradient mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl py-3 text-sm font-semibold text-white shadow-[0_12px_28px_-14px_rgba(22,119,232,0.8)] transition-opacity hover:opacity-95 focus-visible:ring-2 focus-visible:ring-[#1677e8] focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="block min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
         >
           <HrisIcon name="scan" className="size-5" />
           PRESENSI SEKARANG

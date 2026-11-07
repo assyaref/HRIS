@@ -12,7 +12,7 @@ export interface TabNavItem {
 /**
  * Link-based tab bar. State lives in the URL (server-rendered active tab) so
  * heavy client panels are only mounted for the selected tab. Horizontally
- * scrollable on small screens.
+ * scrollable on small screens. Fully theme-adaptive.
  */
 export function TabNav({ items }: { items: TabNavItem[] }) {
   return (
@@ -28,10 +28,10 @@ export function TabNav({ items }: { items: TabNavItem[] }) {
           role="tab"
           aria-selected={item.active}
           className={cn(
-            "inline-flex min-h-10 shrink-0 items-center rounded-full px-4 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-[#1677e8] focus-visible:outline-none",
+            "inline-flex min-h-10 shrink-0 items-center rounded-full px-4 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
             item.active
-              ? "bg-[#1677e8] text-white shadow-[0_10px_22px_-12px_rgba(22,119,232,0.9)]"
-              : "bg-white text-[#64748b] ring-1 ring-slate-200 hover:text-[#172554]"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "bg-card text-muted-foreground border border-border ring-1 ring-inset hover:text-foreground"
           )}
         >
           {item.label}

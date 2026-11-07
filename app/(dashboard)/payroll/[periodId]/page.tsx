@@ -116,9 +116,9 @@ function InfoRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50/80 px-4 py-3">
-      <span className="text-sm text-slate-500">{label}</span>
-      <span className="text-right text-sm font-semibold text-slate-900">
+    <div className="flex items-center justify-between gap-4 rounded-xl bg-muted/40/80 px-4 py-3">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="text-right text-sm font-semibold text-foreground">
         {children}
       </span>
     </div>
@@ -213,7 +213,7 @@ export default async function PayrollPeriodDetailPage({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#1687F8] via-[#1687F8] to-[#0F6FD1] px-5 py-6 text-white shadow-[0_12px_35px_rgba(22,135,248,0.18)] sm:px-7 sm:py-7">
+      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-primary/90 to-secondary px-5 py-6 text-primary-foreground shadow-sm sm:px-7 sm:py-7">
         <div className="absolute -right-20 -top-24 size-64 rounded-full bg-white/10 blur-2xl" />
         <div className="absolute -bottom-28 right-24 size-52 rounded-full bg-white/10 blur-3xl" />
 
@@ -230,7 +230,7 @@ export default async function PayrollPeriodDetailPage({
               {period.name}
             </h1>
 
-            <p className="mt-2 text-sm text-blue-50 sm:text-base">
+            <p className="mt-2 text-sm text-primary sm:text-base">
               {period.code} · {period.organizationName}
             </p>
           </div>
@@ -241,7 +241,7 @@ export default async function PayrollPeriodDetailPage({
               variant: "outline",
               size: "sm",
               className:
-                "w-full border-white/40 bg-white text-blue-700 shadow-sm hover:bg-blue-50 hover:text-blue-800 sm:w-auto",
+                "w-full border-border bg-card text-primary shadow-sm hover:bg-accent hover:text-primary/90 sm:w-auto",
             })}
           >
             ← Back to payroll
@@ -251,50 +251,50 @@ export default async function PayrollPeriodDetailPage({
 
       {/* Overview */}
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="border-slate-200/80 shadow-[0_3px_18px_rgba(15,23,42,0.035)]">
+        <Card className="border-border shadow-sm">
           <CardContent className="p-5">
-            <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-[#EAF5FF] text-[#1687F8]">
+            <div className="mb-4 flex size-10 items-center justify-center rounded-xl hris-surface-primary text-primary">
               <SectionIcon type="calendar" />
             </div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Payroll window
             </p>
-            <p className="mt-2 text-sm font-bold text-slate-900">
+            <p className="mt-2 text-sm font-bold text-foreground">
               {formatDate(period.periodStart)}
             </p>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               to {formatDate(period.periodEnd)}
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/80 shadow-[0_3px_18px_rgba(15,23,42,0.035)]">
+        <Card className="border-border shadow-sm">
           <CardContent className="p-5">
             <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
               <SectionIcon type="money" />
             </div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Payment date
             </p>
-            <p className="mt-2 text-sm font-bold text-slate-900">
+            <p className="mt-2 text-sm font-bold text-foreground">
               {formatDate(period.paymentDate)}
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/80 shadow-[0_3px_18px_rgba(15,23,42,0.035)]">
+        <Card className="border-border shadow-sm">
           <CardContent className="p-5">
             <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
               <SectionIcon type="workflow" />
             </div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Run status
             </p>
             <div className="mt-2">
               {period.run ? (
                 <PayrollRunStatusBadge status={period.run.status} />
               ) : (
-                <span className="text-sm font-semibold text-slate-500">
+                <span className="text-sm font-semibold text-muted-foreground">
                   Not calculated
                 </span>
               )}
@@ -302,15 +302,15 @@ export default async function PayrollPeriodDetailPage({
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/80 shadow-[0_3px_18px_rgba(15,23,42,0.035)]">
+        <Card className="border-border shadow-sm">
           <CardContent className="p-5">
             <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
               <SectionIcon type="history" />
             </div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Created
             </p>
-            <p className="mt-2 text-sm font-bold text-slate-900">
+            <p className="mt-2 text-sm font-bold text-foreground">
               {formatDateTime(period.createdAt)}
             </p>
           </CardContent>
@@ -319,10 +319,10 @@ export default async function PayrollPeriodDetailPage({
 
       {/* Period + Workflow */}
       <div className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
-        <Card className="border-slate-200/80 shadow-[0_3px_18px_rgba(15,23,42,0.035)]">
-          <CardHeader className="border-b border-slate-100 pb-4">
+        <Card className="border-border shadow-sm">
+          <CardHeader className="border-b border-border pb-4">
             <div className="flex items-center gap-3">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#EAF5FF] text-[#1687F8]">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl hris-surface-primary text-primary">
                 <SectionIcon type="calendar" />
               </div>
               <div>
@@ -350,10 +350,10 @@ export default async function PayrollPeriodDetailPage({
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/80 shadow-[0_3px_18px_rgba(15,23,42,0.035)]">
-          <CardHeader className="border-b border-slate-100 pb-4">
+        <Card className="border-border shadow-sm">
+          <CardHeader className="border-b border-border pb-4">
             <div className="flex items-center gap-3">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#EAF5FF] text-[#1687F8]">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl hris-surface-primary text-primary">
                 <SectionIcon type="workflow" />
               </div>
               <div>
@@ -384,11 +384,11 @@ export default async function PayrollPeriodDetailPage({
                 </div>
               </div>
             ) : (
-              <div className="rounded-2xl border border-dashed border-blue-200 bg-[#EAF5FF]/70 p-4">
-                <p className="text-sm font-semibold text-[#0F6FD1]">
+              <div className="rounded-2xl border border-dashed border-primary/30 bg-primary/10 p-4">
+                <p className="text-sm font-semibold text-primary">
                   No payroll run yet
                 </p>
-                <p className="mt-1 text-sm text-slate-600">
+                <p className="mt-1 text-sm text-muted-foreground">
                   Use Calculate run to generate payroll items.
                 </p>
               </div>
@@ -412,10 +412,10 @@ export default async function PayrollPeriodDetailPage({
       </div>
 
       {/* Payroll Items */}
-      <Card className="overflow-hidden border-slate-200/80 shadow-[0_3px_18px_rgba(15,23,42,0.035)]">
-        <CardHeader className="border-b border-slate-100">
+      <Card className="overflow-hidden border-border shadow-sm">
+        <CardHeader className="border-b border-border">
           <div className="flex items-center gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#EAF5FF] text-[#1687F8]">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl hris-surface-primary text-primary">
               <SectionIcon type="money" />
             </div>
             <div>
@@ -440,14 +440,14 @@ export default async function PayrollPeriodDetailPage({
                 {items.map((item) => (
                   <div
                     key={item.id}
-                    className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                    className="rounded-2xl border border-border bg-white p-4 shadow-sm"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-bold text-slate-900">
+                        <p className="truncate text-sm font-bold text-foreground">
                           {item.employeeNameSnapshot}
                         </p>
-                        <p className="mt-1 font-mono text-xs text-slate-500">
+                        <p className="mt-1 font-mono text-xs text-muted-foreground">
                           {item.employeeNumberSnapshot}
                         </p>
                       </div>
@@ -455,27 +455,27 @@ export default async function PayrollPeriodDetailPage({
                     </div>
 
                     <div className="mt-4 grid grid-cols-3 gap-2">
-                      <div className="rounded-xl bg-slate-50 p-3">
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                      <div className="rounded-xl bg-muted/40 p-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                           Gross
                         </p>
-                        <p className="mt-1 text-xs font-bold text-slate-900">
+                        <p className="mt-1 text-xs font-bold text-foreground">
                           {formatIDR(item.grossAmount)}
                         </p>
                       </div>
-                      <div className="rounded-xl bg-slate-50 p-3">
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                      <div className="rounded-xl bg-muted/40 p-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                           Deduction
                         </p>
-                        <p className="mt-1 text-xs font-bold text-slate-900">
+                        <p className="mt-1 text-xs font-bold text-foreground">
                           {formatIDR(item.totalDeductions)}
                         </p>
                       </div>
-                      <div className="rounded-xl bg-[#EAF5FF] p-3">
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-[#0F6FD1]">
+                      <div className="rounded-xl bg-primary/10 p-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">
                           Net
                         </p>
-                        <p className="mt-1 text-xs font-bold text-[#0F6FD1]">
+                        <p className="mt-1 text-xs font-bold text-primary">
                           {formatIDR(item.netAmount)}
                         </p>
                       </div>
@@ -487,7 +487,7 @@ export default async function PayrollPeriodDetailPage({
                         variant: "outline",
                         size: "sm",
                         className:
-                          "mt-4 w-full border-blue-200 text-[#0F6FD1] hover:bg-[#EAF5FF]",
+                          "mt-4 w-full border-primary/30 text-primary hover:bg-primary/10",
                       })}
                     >
                       View payroll item
@@ -497,10 +497,10 @@ export default async function PayrollPeriodDetailPage({
               </div>
 
               {/* Desktop */}
-              <div className="hidden overflow-hidden rounded-2xl border border-slate-200/80 lg:block">
+              <div className="hidden overflow-hidden rounded-2xl border border-border lg:block">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
+                    <TableRow className="bg-muted/40 hover:bg-muted/40">
                       <TableHead>Employee</TableHead>
                       <TableHead className="text-right">Gross</TableHead>
                       <TableHead className="text-right">Deductions</TableHead>
@@ -511,12 +511,12 @@ export default async function PayrollPeriodDetailPage({
                   </TableHeader>
                   <TableBody>
                     {items.map((item) => (
-                      <TableRow key={item.id} className="hover:bg-blue-50/30">
+                      <TableRow key={item.id} className="hover:bg-primary/10">
                         <TableCell>
-                          <span className="font-semibold text-slate-900">
+                          <span className="font-semibold text-foreground">
                             {item.employeeNameSnapshot}
                           </span>
-                          <span className="block font-mono text-xs text-slate-500">
+                          <span className="block font-mono text-xs text-muted-foreground">
                             {item.employeeNumberSnapshot}
                           </span>
                         </TableCell>
@@ -526,7 +526,7 @@ export default async function PayrollPeriodDetailPage({
                         <TableCell className="text-right font-medium">
                           {formatIDR(item.totalDeductions)}
                         </TableCell>
-                        <TableCell className="text-right font-bold text-[#0F6FD1]">
+                        <TableCell className="text-right font-bold text-primary">
                           {formatIDR(item.netAmount)}
                         </TableCell>
                         <TableCell>
@@ -539,7 +539,7 @@ export default async function PayrollPeriodDetailPage({
                               variant: "ghost",
                               size: "sm",
                               className:
-                                "text-[#0F6FD1] hover:bg-[#EAF5FF] hover:text-[#0F6FD1]",
+                                "text-primary hover:bg-primary/10 hover:text-primary",
                             })}
                           >
                             View →
@@ -556,8 +556,8 @@ export default async function PayrollPeriodDetailPage({
       </Card>
 
       {/* Payslips */}
-      <Card className="overflow-hidden border-slate-200/80 shadow-[0_3px_18px_rgba(15,23,42,0.035)]">
-        <CardHeader className="border-b border-slate-100">
+      <Card className="overflow-hidden border-border shadow-sm">
+        <CardHeader className="border-b border-border">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
@@ -591,11 +591,11 @@ export default async function PayrollPeriodDetailPage({
 
         <CardContent className="space-y-4 p-4 sm:p-6">
           {payslips.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 p-6 text-center">
-              <p className="text-sm font-semibold text-slate-700">
+            <div className="rounded-2xl border border-dashed border-border bg-muted/40/60 p-6 text-center">
+              <p className="text-sm font-semibold text-muted-foreground">
                 No payslips generated
               </p>
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-muted-foreground">
                 Payslips will appear here after they are generated for this
                 period.
               </p>
@@ -607,28 +607,28 @@ export default async function PayrollPeriodDetailPage({
                 {payslips.map((payslip) => (
                   <div
                     key={payslip.id}
-                    className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                    className="rounded-2xl border border-border bg-white p-4 shadow-sm"
                   >
                     <div className="flex items-center justify-between gap-3">
                       {payslip.status === "published" ? (
                         <Link
                           href={`/payroll/payslips/${payslip.id}`}
-                          className="font-mono text-xs font-bold text-[#0F6FD1] underline underline-offset-4"
+                          className="font-mono text-xs font-bold text-primary underline underline-offset-4"
                         >
                           {payslip.payslipNumber}
                         </Link>
                       ) : (
-                        <span className="font-mono text-xs font-bold text-slate-700">
+                        <span className="font-mono text-xs font-bold text-muted-foreground">
                           {payslip.payslipNumber}
                         </span>
                       )}
                       <PayslipStatusBadge status={payslip.status} />
                     </div>
 
-                    <p className="mt-3 text-xs text-slate-500">
+                    <p className="mt-3 text-xs text-muted-foreground">
                       Issued {formatDateTime(payslip.issuedAt)}
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs text-muted-foreground">
                       {payslip.kind === "distribution"
                         ? "Distribution payslip"
                         : "Calculated payslip"}
@@ -672,10 +672,10 @@ export default async function PayrollPeriodDetailPage({
               </div>
 
               {/* Desktop */}
-              <div className="hidden overflow-hidden rounded-2xl border border-slate-200/80 lg:block">
+              <div className="hidden overflow-hidden rounded-2xl border border-border lg:block">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
+                    <TableRow className="bg-muted/40 hover:bg-muted/40">
                       <TableHead>Payslip</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead>Issued</TableHead>
@@ -686,12 +686,12 @@ export default async function PayrollPeriodDetailPage({
                   </TableHeader>
                   <TableBody>
                     {payslips.map((payslip) => (
-                      <TableRow key={payslip.id} className="hover:bg-blue-50/30">
+                      <TableRow key={payslip.id} className="hover:bg-primary/10">
                         <TableCell className="font-mono text-xs">
                           {payslip.status === "published" ? (
                             <Link
                               href={`/payroll/payslips/${payslip.id}`}
-                              className="font-semibold text-[#0F6FD1] underline underline-offset-4"
+                              className="font-semibold text-primary underline underline-offset-4"
                             >
                               {payslip.payslipNumber}
                             </Link>
@@ -699,7 +699,7 @@ export default async function PayrollPeriodDetailPage({
                             payslip.payslipNumber
                           )}
                         </TableCell>
-                        <TableCell className="text-xs text-slate-500">
+                        <TableCell className="text-xs text-muted-foreground">
                           {payslip.kind === "distribution"
                             ? "Distribution"
                             : "Calculated"}
@@ -718,7 +718,7 @@ export default async function PayrollPeriodDetailPage({
                               }
                             />
                           ) : (
-                            <span className="text-xs text-slate-400">—</span>
+                            <span className="text-xs text-muted-foreground">—</span>
                           )}
                         </TableCell>
                         <TableCell className="text-right">
@@ -736,7 +736,7 @@ export default async function PayrollPeriodDetailPage({
                               payslipNumber={payslip.payslipNumber}
                             />
                           ) : (
-                            <span className="text-xs text-slate-400">—</span>
+                            <span className="text-xs text-muted-foreground">—</span>
                           )}
                         </TableCell>
                       </TableRow>
@@ -748,16 +748,16 @@ export default async function PayrollPeriodDetailPage({
           )}
 
           {myPayslipsForPeriod.length > 0 ? (
-            <div className="rounded-2xl border border-blue-100 bg-[#EAF5FF]/60 p-4 sm:p-5">
+            <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4 sm:p-5">
               <div className="flex items-start gap-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white text-[#1687F8] shadow-sm">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-card text-primary shadow-sm">
                   <SectionIcon type="document" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-slate-900">
+                  <p className="text-sm font-bold text-foreground">
                     Your published payslips
                   </p>
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     Published payslips available to your employee account.
                   </p>
                 </div>
@@ -771,11 +771,11 @@ export default async function PayrollPeriodDetailPage({
                   >
                     <Link
                       href={`/payroll/payslips/${payslip.id}`}
-                      className="font-mono text-xs font-bold text-[#0F6FD1] underline underline-offset-4"
+                      className="font-mono text-xs font-bold text-primary underline underline-offset-4"
                     >
                       {payslip.payslipNumber}
                     </Link>
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-muted-foreground">
                       Published on {formatDateTime(payslip.issuedAt)}
                     </span>
                   </li>
@@ -787,8 +787,8 @@ export default async function PayrollPeriodDetailPage({
       </Card>
 
       {/* History */}
-      <Card className="overflow-hidden border-slate-200/80 shadow-[0_3px_18px_rgba(15,23,42,0.035)]">
-        <CardHeader className="border-b border-slate-100">
+      <Card className="overflow-hidden border-border shadow-sm">
+        <CardHeader className="border-b border-border">
           <div className="flex items-center gap-3">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
               <SectionIcon type="history" />
@@ -804,7 +804,7 @@ export default async function PayrollPeriodDetailPage({
 
         <CardContent className="p-4 sm:p-6">
           {events.length === 0 ? (
-            <p className="rounded-2xl bg-slate-50 p-5 text-sm text-slate-500">
+            <p className="rounded-2xl bg-muted/40 p-5 text-sm text-muted-foreground">
               No events.
             </p>
           ) : (
@@ -813,32 +813,32 @@ export default async function PayrollPeriodDetailPage({
                 {events.map((event) => (
                   <div
                     key={event.id}
-                    className="rounded-2xl border border-slate-200 bg-white p-4"
+                    className="rounded-2xl border border-border bg-white p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <span className="font-mono text-xs font-bold text-[#0F6FD1]">
+                      <span className="font-mono text-xs font-bold text-primary">
                         {event.eventType}
                       </span>
-                      <span className="text-right text-xs text-slate-500">
+                      <span className="text-right text-xs text-muted-foreground">
                         {formatDateTime(event.eventAt)}
                       </span>
                     </div>
-                    <p className="mt-3 text-sm font-medium text-slate-700">
+                    <p className="mt-3 text-sm font-medium text-muted-foreground">
                       {(event.fromStatus ?? "—") +
                         " → " +
                         (event.toStatus ?? "—")}
                     </p>
-                    <p className="mt-2 text-xs text-slate-500">
+                    <p className="mt-2 text-xs text-muted-foreground">
                       Actor: {event.actorEmail ?? "—"}
                     </p>
                   </div>
                 ))}
               </div>
 
-              <div className="hidden overflow-hidden rounded-2xl border border-slate-200/80 lg:block">
+              <div className="hidden overflow-hidden rounded-2xl border border-border lg:block">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
+                    <TableRow className="bg-muted/40 hover:bg-muted/40">
                       <TableHead>Event</TableHead>
                       <TableHead>Transition</TableHead>
                       <TableHead>Actor</TableHead>
@@ -847,8 +847,8 @@ export default async function PayrollPeriodDetailPage({
                   </TableHeader>
                   <TableBody>
                     {events.map((event) => (
-                      <TableRow key={event.id} className="hover:bg-blue-50/30">
-                        <TableCell className="font-mono text-xs font-semibold text-[#0F6FD1]">
+                      <TableRow key={event.id} className="hover:bg-primary/10">
+                        <TableCell className="font-mono text-xs font-semibold text-primary">
                           {event.eventType}
                         </TableCell>
                         <TableCell>

@@ -220,10 +220,10 @@ export default async function AttendancePage({
           />
 
           {activeRecord ? (
-            <section className="space-y-3">
-              <SectionHeader title="Detail Presensi" />
-              <div className="emp-card divide-y divide-slate-100">
-                <DetailRow
+              <section className="space-y-3">
+                <SectionHeader title="Detail Presensi" />
+                <div className="hris-card divide-y divide-border">
+                  <DetailRow
                   icon="check-in"
                   label="Presensi Masuk"
                   value={checkInLabel}
@@ -291,7 +291,7 @@ export default async function AttendancePage({
           ) : null}
 
           {state === "CHECKED_OUT" ? (
-            <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            <p className="rounded-2xl hris-surface-success px-4 py-3 text-sm text-success">
               Anda sudah menyelesaikan presensi hari ini.
             </p>
           ) : null}
@@ -301,7 +301,7 @@ export default async function AttendancePage({
       {tab === "riwayat" ? (
         <div className="space-y-4">
           <div className="space-y-2">
-            <p className="px-1 text-xs font-medium text-[#94a3b8]">Periode</p>
+            <p className="px-1 text-xs font-medium text-muted-foreground">Periode</p>
             <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1">
               <FilterChip
                 href={riwayatHref({ status: statusFilter })}
@@ -323,7 +323,7 @@ export default async function AttendancePage({
           </div>
 
           <div className="space-y-2">
-            <p className="px-1 text-xs font-medium text-[#94a3b8]">Status</p>
+            <p className="px-1 text-xs font-medium text-muted-foreground">Status</p>
             <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1">
               <FilterChip
                 href={riwayatHref({ month: monthFilter })}
@@ -348,15 +348,15 @@ export default async function AttendancePage({
               description="Riwayat kehadiran Anda akan tampil di sini."
             />
           ) : (
-            <div className="emp-card divide-y divide-slate-100">
+            <div className="hris-card divide-y divide-border">
               {history.items.map((record) => (
                 <Link
                   key={record.id}
                   href={`/attendance/${record.id}`}
-                  className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-slate-50"
+                  className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-accent dark:hover:bg-muted/40"
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-[#172554]">
+                    <p className="text-sm font-medium text-foreground">
                       {new Intl.DateTimeFormat("id-ID", {
                         weekday: "long",
                         day: "numeric",
@@ -364,7 +364,7 @@ export default async function AttendancePage({
                         timeZone: "UTC",
                       }).format(record.attendanceDate)}
                     </p>
-                    <p className="text-xs text-[#64748b]">
+                    <p className="text-xs text-muted-foreground">
                       {formatTime(record.checkInAt, record.workLocationTimezone)}
                       {" - "}
                       {formatTime(
@@ -414,9 +414,9 @@ export default async function AttendancePage({
               tone="danger"
             />
           </div>
-          <div className="emp-card flex items-center justify-between p-4">
-            <p className="text-sm text-[#64748b]">Total catatan</p>
-            <p className="text-sm font-semibold text-[#172554]">
+          <div className="hris-card flex items-center justify-between p-4">
+            <p className="text-sm text-muted-foreground">Total catatan</p>
+            <p className="text-sm font-semibold text-foreground">
               {monthSummary.total}
             </p>
           </div>
@@ -429,11 +429,11 @@ export default async function AttendancePage({
 function PageHeader({ name, number }: { name: string | null; number: string | null }) {
   return (
     <div>
-      <h1 className="text-2xl font-semibold tracking-tight text-[#172554]">
+      <h1 className="text-2xl font-semibold tracking-tight text-foreground">
         Kehadiran
       </h1>
       {name ? (
-        <p className="mt-1 text-sm text-[#64748b]">
+        <p className="mt-1 text-sm text-muted-foreground">
           {name}
           {number ? ` · ${number}` : ""}
         </p>
@@ -461,16 +461,16 @@ function DetailRow({
     <div className="flex items-start gap-3 p-4">
       <span
         aria-hidden="true"
-        className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-[#1677e8]"
+        className="flex size-10 shrink-0 items-center justify-center rounded-2xl hris-surface-primary text-primary"
       >
         <HrisIcon name={icon} className="size-5" />
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-sm font-semibold text-[#172554]">{label}</p>
-          <p className="text-sm font-semibold text-[#172554]">{value ?? "—"}</p>
+          <p className="text-sm font-semibold text-foreground">{label}</p>
+          <p className="text-sm font-semibold text-foreground">{value ?? "—"}</p>
         </div>
-        {meta ? <p className="mt-0.5 text-xs text-[#94a3b8]">{meta}</p> : null}
+        {meta ? <p className="mt-0.5 text-xs text-muted-foreground">{meta}</p> : null}
         <div className="mt-2 flex flex-wrap gap-2">
           {locationStatus ? (
             <StatusBadge
@@ -512,17 +512,17 @@ function FilterChip({
   active: boolean;
 }) {
   return (
-    <Link
-      href={href}
-      className={[
-        "inline-flex min-h-9 shrink-0 items-center rounded-full px-3.5 text-xs font-medium transition-colors",
-        active
-          ? "bg-[#1677e8] text-white"
-          : "bg-white text-[#64748b] ring-1 ring-slate-200 hover:text-[#172554]",
-      ].join(" ")}
-    >
-      {label}
-    </Link>
+      <Link
+        href={href}
+        className={[
+          "inline-flex min-h-9 shrink-0 items-center rounded-full px-3.5 text-xs font-medium transition-colors border",
+          active
+            ? "bg-primary text-primary-foreground border-transparent"
+            : "bg-card text-muted-foreground border-border hover:text-foreground dark:hover:text-foreground/90",
+        ].join(" ")}
+      >
+        {label}
+      </Link>
   );
 }
 
@@ -536,13 +536,13 @@ function SummaryTile({
   tone: "success" | "info" | "warning" | "danger";
 }) {
   const toneClass = {
-    success: "bg-emerald-50 text-emerald-700",
-    info: "bg-blue-50 text-blue-700",
-    warning: "bg-amber-50 text-amber-700",
-    danger: "bg-red-50 text-red-700",
+    success: "hris-surface-success text-success",
+    info: "hris-surface-info text-info",
+    warning: "hris-surface-warning text-warning",
+    danger: "hris-surface-danger text-danger",
   }[tone];
   return (
-    <div className="emp-card p-4">
+    <div className="hris-card p-4">
       <span
         className={[
           "inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold",
@@ -551,7 +551,7 @@ function SummaryTile({
       >
         {label}
       </span>
-      <p className="mt-2 text-2xl font-semibold tracking-tight text-[#172554]">
+      <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
         {value}
       </p>
     </div>

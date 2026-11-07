@@ -18,16 +18,16 @@ export function EmployeeEmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="emp-card flex flex-col items-center justify-center px-6 py-10 text-center">
+    <div className="hris-card flex flex-col items-center justify-center px-6 py-10 text-center">
       <span
         aria-hidden="true"
-        className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400"
+        className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground"
       >
         <HrisIcon name={icon} className="size-6" />
       </span>
-      <p className="text-sm font-semibold text-[#172554]">{title}</p>
+      <p className="text-sm font-semibold text-foreground">{title}</p>
       {description ? (
-        <p className="mt-1 max-w-xs text-sm text-[#64748b]">{description}</p>
+        <p className="mt-1 max-w-xs text-sm text-muted-foreground">{description}</p>
       ) : null}
       {action ? <div className="mt-4">{action}</div> : null}
     </div>
@@ -49,22 +49,22 @@ export function EmployeeErrorState({
   return (
     <div
       role="alert"
-      className="emp-card flex flex-col items-center justify-center px-6 py-10 text-center"
+      className="hris-card flex flex-col items-center justify-center px-6 py-10 text-center hris-surface-danger"
     >
       <span
         aria-hidden="true"
-        className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-red-50 text-red-500"
+        className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-surface-danger text-destructive"
       >
         <HrisIcon name="alert" className="size-6" />
       </span>
-      <p className="text-sm font-semibold text-[#172554]">{title}</p>
+      <p className="text-sm font-semibold text-foreground">{title}</p>
       {description ? (
-        <p className="mt-1 max-w-xs text-sm text-[#64748b]">{description}</p>
+        <p className="mt-1 max-w-xs text-sm text-muted-foreground">{description}</p>
       ) : null}
       {retryHref ? (
         <Link
           href={retryHref}
-          className="mt-4 inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-[#1677e8] px-4 text-sm font-semibold text-white"
+          className="mt-4 inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground"
         >
           <HrisIcon name="refresh" className="size-4" />
           {retryLabel}
@@ -77,7 +77,7 @@ export function EmployeeErrorState({
 /** Skeleton block used while employee data streams in. */
 export function EmployeeCardSkeleton({ className }: { className?: string }) {
   return (
-    <div className={cn("emp-card space-y-3 p-5", className)}>
+    <div className={cn("hris-card space-y-3 p-5", className)}>
       <Skeleton className="h-4 w-1/3" />
       <Skeleton className="h-3 w-2/3" />
       <Skeleton className="h-24 w-full rounded-2xl" />
@@ -90,7 +90,7 @@ export function EmployeeListSkeleton({ count = 3 }: { count?: number }) {
   return (
     <div className="space-y-3" aria-hidden="true">
       {Array.from({ length: count }).map((_, index) => (
-        <div key={index} className="emp-card flex items-center gap-3 p-4">
+        <div key={index} className="hris-card flex items-center gap-3 p-4">
           <Skeleton className="size-10 shrink-0 rounded-2xl" />
           <div className="flex-1 space-y-2">
             <Skeleton className="h-3.5 w-1/2" />

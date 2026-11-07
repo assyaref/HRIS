@@ -174,39 +174,35 @@ export async function ManagementDashboard({
 
   return (
     <div className="space-y-8">
-      {/* Hero */}
-      <section className="relative overflow-hidden rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-600 via-blue-500 to-sky-500 p-6 text-white shadow-lg shadow-blue-200/50 sm:p-8">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -top-24 -right-24 size-72 rounded-full bg-white/10 blur-2xl"
-        />
-        <div className="relative flex flex-wrap items-end justify-between gap-4">
+      {/* Page header */}
+      <section>
+        <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold tracking-wider text-blue-100 uppercase">
+            <p className="text-xs font-semibold tracking-wider text-primary uppercase">
               {organizationName ?? "Organization"}
             </p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
               {greeting(new Date().getHours())} — team overview
             </h1>
-            <p className="mt-1 text-sm text-blue-50">
-              {TODAY_LABEL}
+            <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+              <time>{TODAY_LABEL}</time>
               {roleLabel ? (
-                <span className="ml-2 inline-flex rounded-full border border-white/30 bg-white/10 px-2 py-0.5 text-xs font-medium">
+                <span className="ml-2 inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary dark:border-primary/30 dark:bg-primary/5 dark:text-primary">
                   {roleLabel}
                 </span>
               ) : null}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-white/10 px-3 py-1">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-primary dark:border-primary/30 dark:bg-primary/5 dark:text-primary">
               <HrisIcon name="employees" className="size-3.5" />
               {workforce.total} employees
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-emerald-100">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-success/20 bg-success/10 px-3 py-1 text-success dark:border-success/30 dark:bg-success/5 dark:text-success">
               <HrisIcon name="check-in" className="size-3.5" />
               {attendance.checkedInNow} checked in now
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-white/10 px-3 py-1">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/20 bg-warning/10 px-3 py-1 text-warning dark:border-warning/30 dark:bg-warning/5 dark:text-warning">
               <HrisIcon name="leave" className="size-3.5" />
               {onLeaveToday} on leave
             </span>
@@ -222,9 +218,9 @@ export async function ManagementDashboard({
             <Link
               key={action.href}
               href={action.href}
-              className="group flex items-start gap-4 rounded-xl border border-border bg-card p-4 shadow-sm transition-colors hover:border-blue-200 hover:bg-secondary/60"
+              className="group flex items-start gap-4 rounded-xl border border-border bg-card p-4 shadow-sm hris-card-hover"
             >
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                 <HrisIcon name={action.icon} className="size-5" />
               </span>
               <span className="min-w-0 flex-1">
@@ -253,7 +249,7 @@ export async function ManagementDashboard({
             can(P.EMPLOYEES_VIEW) ? (
               <Link
                 href="/employees"
-                className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/90"
+                className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/90 dark:text-primary/90"
               >
                 Manage employees
                 <HrisIcon name="arrow-right" className="size-4" />
@@ -296,7 +292,7 @@ export async function ManagementDashboard({
             can(P.ATTENDANCE_VIEW) ? (
               <Link
                 href="/attendance/management"
-                className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/90"
+                className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/90 dark:text-primary/90"
               >
                 Open attendance
                 <HrisIcon name="arrow-right" className="size-4" />
@@ -349,7 +345,7 @@ export async function ManagementDashboard({
 
       {/* Priorities + payroll */}
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-5">
-        <Card className="lg:col-span-3">
+        <Card className="lg:col-span-3 hris-card">
           <CardHeader>
             <CardTitle>Needs attention</CardTitle>
             <CardDescription>
@@ -363,7 +359,7 @@ export async function ManagementDashboard({
                   <li key={item.href}>
                     <Link
                       href={item.href}
-                      className="flex items-center justify-between gap-4 py-3 transition-colors hover:text-primary"
+                      className="flex items-center justify-between gap-4 py-3 transition-colors hover:text-primary dark:hover:text-primary/90"
                     >
                       <span className="text-sm font-medium text-foreground">
                         {item.label}
@@ -381,7 +377,7 @@ export async function ManagementDashboard({
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 hris-card">
           <CardHeader>
             <CardTitle>Payroll</CardTitle>
             <CardDescription>Latest payroll period</CardDescription>
@@ -414,7 +410,7 @@ export async function ManagementDashboard({
                 {can(P.PAYROLL_VIEW) ? (
                   <Link
                     href="/payroll"
-                    className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/90"
+                    className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/90 dark:text-primary/90"
                   >
                     Go to payroll
                     <HrisIcon name="arrow-right" className="size-4" />
@@ -443,7 +439,7 @@ export async function ManagementDashboard({
             }
           />
           {recentAudit.length ? (
-            <Card>
+            <Card className="hris-card">
               <ul className="divide-y divide-border">
                 {recentAudit.map((entry) => (
                   <li
@@ -467,7 +463,7 @@ export async function ManagementDashboard({
               </ul>
             </Card>
           ) : (
-            <Card>
+            <Card className="hris-card">
               <CardContent className="p-6">
                 <p className="text-sm text-muted-foreground">
                   The audit trail is empty so far.

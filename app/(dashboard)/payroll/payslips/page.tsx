@@ -121,7 +121,7 @@ export default async function PayslipsOverviewPage() {
                         {payslip.status === "published" ? (
                           <Link
                             href={`/payroll/payslips/${payslip.id}`}
-                            className="font-semibold text-[#0F6FD1] underline underline-offset-4"
+                            className="font-semibold text-primary underline underline-offset-4"
                           >
                             {payslip.payslipNumber}
                           </Link>
