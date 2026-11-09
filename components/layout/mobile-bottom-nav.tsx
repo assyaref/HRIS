@@ -1,99 +1,40 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { HrisIcon, type HrisIconName } from "@/components/layout/icons";
+import { cn } from "@/lib/utils/cn";
 import type { NavSection } from "@/types/navigation";
 
-const preferredTitles = [
-  "Dashboard",
-  "Attendance",
-  "Employees",
-  "Payroll",
-  "Payslip",
-];
+/** Destinations exposed to management/administrative users on mobile. */
+const preferredTitles = ["Dashboard", "Attendance", "Employees", "Payroll", "Payslip"];
+
+const iconByTitle: Record<string, HrisIconName> = {
+  Dashboard: "dashboard",
+  Attendance: "attendance",
+  Employees: "employees",
+  Payroll: "payroll",
+  Payslip: "payslip",
+};
 
 function isActivePath(pathname: string, href: string) {
   if (href === "/dashboard") {
     return pathname === "/dashboard" || pathname === "/";
   }
-
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function Icon({
-  type,
-  className = "size-5",
-}: {
-  type: string;
-  className?: string;
-}) {
-  const common = {
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: 1.8,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-    className,
-    "aria-hidden": true,
-  };
-
-  switch (type) {
-    case "Dashboard":
-      return (
-        <svg {...common}>
-          <rect x="4" y="4" width="6" height="6" rx="1" />
-          <rect x="14" y="4" width="6" height="6" rx="1" />
-          <rect x="4" y="14" width="6" height="6" rx="1" />
-          <rect x="14" y="14" width="6" height="6" rx="1" />
-        </svg>
-      );
-
-    case "Attendance":
-      return (
-        <svg {...common}>
-          <circle cx="12" cy="12" r="8.5" />
-          <path d="M12 7v5l3 2" />
-        </svg>
-      );
-
-    case "Employees":
-      return (
-        <svg {...common}>
-          <circle cx="9" cy="8" r="3" />
-          <path d="M3 20c.6-3.3 2.6-5 6-5s5.4 1.7 6 5" />
-          <path d="M16 5.5a3 3 0 0 1 0 5.8" />
-          <path d="M17 15c2.4.4 3.7 2 4 5" />
-        </svg>
-      );
-
-    case "Payroll":
-      return (
-        <svg {...common}>
-          <rect x="3" y="5" width="18" height="14" rx="2" />
-          <path d="M3 10h18" />
-          <path d="M15 15h3" />
-        </svg>
-      );
-
-    case "Payslip":
-      return (
-        <svg {...common}>
-          <path d="M6 3h9l3 3v15H6z" />
-          <path d="M14 3v4h4" />
-          <path d="M9 12h6M9 16h4" />
-        </svg>
-      );
-
-    default:
-      return (
-        <svg {...common}>
-          <circle cx="12" cy="12" r="8" />
-        </svg>
-      );
-  }
-}
-
+/**
+ * Management mobile bottom navigation (BCS Enterprise v4.3).
+ *
+ * Five destinations drawn from the permission-filtered sections: Dashboard ·
+ * Attendance · Employees · Payroll · Payslip. Fixed bottom position · active
+ * Royal Blue icon and label · consistent inactive states · safe-area inset
+ * support · minimum 44px touch targets · hidden on `lg+` where the desktop
+ * shell (navy sidebar + header) takes over. Reuses HrisIcon so the icon
+ * vocabulary is shared with the sidebar, drawer and dashboards.
+ */
 export function MobileBottomNav({
   sections,
 }: {
@@ -106,8 +47,7 @@ export function MobileBottomNav({
     .filter((item) => preferredTitles.includes(item.title))
     .sort(
       (a, b) =>
-        preferredTitles.indexOf(a.title) -
-        preferredTitles.indexOf(b.title),
+        preferredTitles.indexOf(a.title) - preferredTitles.indexOf(b.title),
     )
     .slice(0, 5);
 
@@ -116,35 +56,34 @@ export function MobileBottomNav({
   return (
     <nav
       aria-label="Quick navigation"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/90 bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_30px_rgba(15,23,42,0.07)] backdrop-blur lg:hidden"
+      className="emp-safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 px-2.5 pb-1 pt-1.5 shadow-[0_-10px_34px_-16px_rgba(16,42,86,0.12)] backdrop-blur-lg lg:hidden"
     >
-      <div
-        className={[
-          "mx-auto grid max-w-lg gap-1",
-          items.length === 5 ? "grid-cols-5" : "grid-cols-4",
-        ].join(" ")}
-      >
+      <div className="mx-auto grid max-w-lg grid-cols-5 items-end">
         {items.map((item) => {
           const active = isActivePath(pathname, item.href);
+          const iconName: HrisIconName = item.icon ?? iconByTitle[item.title] ?? "dashboard";
 
           return (
-            <a
+            <Link
               key={item.href}
               href={item.href}
               aria-current={active ? "page" : undefined}
-              className={[
-                "flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-semibold transition-colors",
+              className={cn(
+                "flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[10px] font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
                 active
-                  ? "bg-blue-50 text-blue-700"
-                  : "text-slate-500 hover:bg-slate-50 hover:text-blue-600",
-              ].join(" ")}
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-primary"
+              )}
             >
-              <Icon
-                type={item.title}
-                className={active ? "size-5" : "size-[19px]"}
+              <HrisIcon
+                name={iconName}
+                className={cn(
+                  "size-5 shrink-0",
+                  active ? "text-primary" : "text-muted-foreground"
+                )}
               />
-              <span className="max-w-full truncate">{item.title}</span>
-            </a>
+              <span className="truncate">{item.title}</span>
+            </Link>
           );
         })}
       </div>
