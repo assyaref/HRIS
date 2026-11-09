@@ -54,6 +54,7 @@ export function StatCard({
   hint,
   tone = "soft-blue",
   className,
+  compact = false,
 }: {
   icon: HrisIconName;
   label: string;
@@ -61,29 +62,41 @@ export function StatCard({
   hint?: ReactNode;
   tone?: StatTone;
   className?: string;
+  /** Compact workforce-statistics variant (smaller icon/padding, fixed height). */
+  compact?: boolean;
 }) {
   return (
     <div
       className={cn(
-        "flex items-center gap-3 rounded-[20px] border border-border bg-card p-4 hris-card-hover",
+        "flex items-center gap-3 rounded-[20px] border border-border bg-card hris-card hris-card-hover",
+        compact ? "p-3 h-[108px] shrink-0" : "p-4",
         className
       )}
     >
       <span
         aria-hidden="true"
         className={cn(
-          "flex size-9 shrink-0 items-center justify-center rounded-[12px]",
+          "flex shrink-0 items-center justify-center rounded-[12px]",
+          compact ? "size-7" : "size-9",
           iconToneClasses[tone]
         )}
       >
-        <HrisIcon name={icon} className="size-4.5" />
+        <HrisIcon name={icon} className={compact ? "size-3.5" : "size-4.5"} />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[11px] font-medium text-muted-foreground uppercase tracking-[0.08em]">
+        <p className={cn(
+          "truncate font-medium uppercase tracking-[0.08em]",
+          compact
+            ? "text-[10px] leading-none text-primary"
+            : "text-[11px] text-muted-foreground"
+        )}>
           {label}
         </p>
         <div className="flex flex-wrap items-baseline gap-x-2">
-          <span className="text-lg font-semibold tracking-tight text-foreground">
+          <span className={cn(
+            "font-semibold tracking-tight text-foreground",
+            compact ? "text-lg" : "text-lg"
+          )}>
             {value}
           </span>
           {hint ? (

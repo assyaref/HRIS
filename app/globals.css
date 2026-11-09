@@ -76,13 +76,13 @@
   --radius-full: 9999px;
 
   /* ---- Card borders (tonal, subtle — never harsh) ---- */
-  --card-border: rgb(25 28 36 / 0.07);
-  --card-border-hover: rgb(82 111 174 / 0.18);
-  --card-border-level2: rgb(25 28 36 / 0.05);
+  --card-border: rgb(25 28 36 / 0.05);
+  --card-border-hover: rgb(82 111 174 / 0.14);
+  --card-border-level2: rgb(25 28 36 / 0.04);
 
-  /* ---- Shadows (soft, low-contrast tonal elevation) ---- */
-  --shadow-card: 0 1px 3px 0 rgb(25 28 36 / 0.05), 0 4px 16px 0 rgb(25 28 36 / 0.035);
-  --shadow-card-hover: 0 4px 10px 0 rgb(25 28 36 / 0.06), 0 12px 32px 0 rgb(82 111 174 / 0.07);
+  /* ---- Shadows (single-layer, low-opacity neutral elevation) ---- */
+  --shadow-card: 0 1px 3px 0 rgb(25 28 36 / 0.06);
+  --shadow-card-hover: 0 4px 12px 0 rgb(25 28 36 / 0.08);
   --shadow-md: 0 4px 6px -1px rgb(25 28 36 / 0.05), 0 2px 4px -1px rgb(25 28 36 / 0.03);
   --shadow-lg: 0 10px 15px -3px rgb(25 28 36 / 0.06), 0 4px 6px -2px rgb(25 28 36 / 0.04);
   --shadow-xl: 0 20px 25px -5px rgb(25 28 36 / 0.07), 0 8px 10px -6px rgb(25 28 36 / 0.05);
@@ -301,8 +301,8 @@
   --card-border-hover: rgb(143 165 232 / 0.25);
   --card-border-level2: rgb(255 255 255 / 0.05);
 
-  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.35), 0 4px 16px 0 rgb(0 0 0 / 0.25);
-  --shadow-card-hover: 0 4px 10px 0 rgb(0 0 0 / 0.30), 0 12px 32px 0 rgb(143 165 232 / 0.12);
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.35);
+  --shadow-card-hover: 0 4px 12px 0 rgb(0 0 0 / 0.40);
 }
 
 /* ==========================================================

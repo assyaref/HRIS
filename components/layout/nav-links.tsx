@@ -56,7 +56,7 @@ export function NavLinks({ sections, onNavigate, variant = "light" }: NavLinksPr
                     className={cn(
                       "group flex min-h-9 items-center gap-3 rounded-[16px] px-3 py-1.75 text-sm font-medium transition-colors",
                       active
-                        ? "bg-surface-soft-blue border border-primary/30 text-primary"
+                        ? "bg-surface-soft-blue text-primary"
                         : "border-transparent text-muted-foreground hover:bg-accent/40 hover:text-primary"
                     )}
                   >

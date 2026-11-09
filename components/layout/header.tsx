@@ -28,7 +28,7 @@ export function Header({
 }) {
   return (
     <header
-      className="sticky top-0 z-sticky flex h-14 shrink-0 items-center gap-2 border-b border-[var(--card-border)] bg-background/90 px-4 backdrop-blur-md lg:h-16 lg:px-8"
+      className="sticky top-0 z-sticky flex shrink-0 items-center gap-2 border-b border-border bg-card/95 px-4 backdrop-blur-md h-13 lg:h-16 lg:px-8"
     >
       <MobileNav sections={sections} />
       <div className="min-w-0 lg:hidden">
@@ -38,7 +38,7 @@ export function Header({
       <div className="flex-1" />
 
       {roleLabel ? (
-        <span className="hidden rounded-[10px] border border-primary/20 bg-surface-primary px-2.5 py-1 text-[11px] font-medium whitespace-nowrap text-primary dark:border-primary/30 dark:bg-surface-primary dark:text-primary sm:inline-flex">
+        <span className="hidden rounded-[10px] bg-surface-primary px-2.5 py-1 text-[11px] font-medium whitespace-nowrap text-primary dark:bg-surface-primary dark:text-primary sm:inline-flex">
           {roleLabel}
         </span>
       ) : null}
@@ -55,7 +55,7 @@ export function Header({
         <button
           type="button"
           aria-label="Notifications"
-          className="relative inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="relative inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           <svg
             viewBox="0 0 24 24"

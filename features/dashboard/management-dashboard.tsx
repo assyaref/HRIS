@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { SectionHeading } from "@/components/dashboard/section-heading";
 import { StatCard } from "@/components/dashboard/stat-card";
+import { QuickAccessCard } from "@/components/dashboard/quick-access-card";
 import { AttendanceTrendChart } from "@/components/dashboard/attendance-trend-chart";
 import { HrisIcon, type HrisIconName } from "@/components/layout/icons";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +24,6 @@ import {
 import { PERMISSIONS, type Permission } from "@/lib/auth/permissions";
 import type { CurrentUser } from "@/lib/auth/types";
 import type { UserAuthorization } from "@/lib/auth/rbac";
-import { cn } from "@/lib/utils/cn";
 import {
   dateStringInTimeZone,
   parseAttendanceDate,
@@ -34,12 +34,12 @@ import { PayrollPeriodStatusBadge } from "@/features/payroll/payroll-badges";
 
 import {
   countLeaveRequestsOnDate,
-    getApprovalsOverview,
+  getApprovalsOverview,
   getAttendanceOverview,
-  getAttendanceTrend,
   getPayrollOverview,
   getWorkforceOverview,
   listRecentAuditActivity,
+  getAttendanceTrend,
 } from "./queries";
 
 interface ManagementDashboardProps {
@@ -152,29 +152,11 @@ const QUICK_ACTIONS: Array<{
   },
 ];
 
-const iconToneClasses: Record<StatTone, string> = {
-  primary: "bg-surface-primary text-accent-foreground",
-  "soft-blue": "bg-surface-soft-blue text-accent-foreground",
-  indigo: "bg-surface-indigo text-accent-foreground",
-  lavender: "bg-surface-lavender text-accent-foreground",
-  pink: "bg-surface-pink text-accent-foreground",
-  coral: "bg-surface-coral text-accent-foreground",
-  peach: "bg-surface-peach text-accent-foreground",
-  amber: "bg-surface-amber text-accent-foreground",
-  mint: "bg-surface-mint text-accent-foreground",
-  teal: "bg-surface-teal text-accent-foreground",
-  success: "bg-surface-success text-success",
-  warning: "bg-surface-warning text-warning",
-  danger: "bg-surface-danger text-danger",
-  info: "bg-surface-info text-info",
-  slate: "bg-muted text-muted-foreground",
-};
-
-/** Simple responsive SVG line chart (client component, real data). */
+/** Compact responsive SVG donut for workforce distribution. */
 function DistributionDonut({
   series,
-  width = 250,
-  height = 210,
+  width = 220,
+  height = 180,
 }: {
   series: Array<{ label: string; value: number; color: string }>;
   width?: number;
@@ -185,8 +167,8 @@ function DistributionDonut({
 
   const cx = width / 2;
   const cy = height / 2;
-  const outerR = Math.min(width, height) * 0.36;
-  const innerR = outerR * 0.6;
+  const outerR = Math.min(width, height) * 0.34;
+  const innerR = outerR * 0.62;
 
   const arcs = series.reduce((acc, d) => {
     const startAngle = acc.angle;
@@ -209,11 +191,11 @@ function DistributionDonut({
     };
   }, { arcs: [] as React.ReactNode[], angle: -90 }).arcs;
 
-      const legend = series.map((d) => {
-    const pct = ((d.value / total) * 100).toFixed(0);
+  const legend = series.map((d) => {
+    const pct = total > 0 ? ((d.value / total) * 100).toFixed(0) : "0";
     return (
       <div key={d.label} className="flex items-center gap-2">
-        <span className="size-3 rounded-full" style={{ backgroundColor: d.color }} />
+        <span className="size-3.5 rounded-full" style={{ backgroundColor: d.color }} />
         <span className="text-xs text-muted-foreground">{d.label}</span>
         <span className="text-xs font-medium text-foreground ml-auto">{pct}%</span>
       </div>
@@ -221,24 +203,27 @@ function DistributionDonut({
   });
 
   return (
-    <Card className="p-5">
+    <Card className="p-4">
       <CardHeader className="pb-0">
         <CardTitle>Employee distribution</CardTitle>
-        <CardDescription>
-          Headcount by employment status
-        </CardDescription>
+        <CardDescription>Headcount by employment status</CardDescription>
       </CardHeader>
       <CardContent className="pt-0">
-        <div className="flex items-center gap-5">
-          <svg width={width} height={height} viewBox="0 0 250 210" className="block">
+        <div className="flex items-center gap-4">
+          <svg
+            width={width}
+            height={height}
+            viewBox={`0 0 ${width} ${height}`}
+            className="block shrink-0"
+          >
             {arcs}
             <circle cx={cx} cy={cy} r={innerR} fill="var(--card)" />
             <text
               x={cx}
-              y={cy + 6}
+              y={cy + 5}
               textAnchor="middle"
               fill="#191C24"
-              fontSize="17"
+              fontSize="16"
               fontWeight="700"
               fontFamily="var(--font-geist-sans), sans-serif"
             >
@@ -246,7 +231,7 @@ function DistributionDonut({
             </text>
             <text
               x={cx}
-              y={cy + 23}
+              y={cy + 21}
               textAnchor="middle"
               fill="#747986"
               fontSize="11"
@@ -255,10 +240,27 @@ function DistributionDonut({
               employees
             </text>
           </svg>
-          <div className="flex-1 min-w-0">{legend}</div>
+          <div className="min-w-0 flex-1">{legend}</div>
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/** Compact empty state for the attendance trend when no data exists. */
+function AttendanceTrendEmpty() {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 rounded-[20px] border border-border bg-card p-6 text-center">
+      <div className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
+        <HrisIcon name="trend-up" className="size-5" />
+      </div>
+      <h3 className="text-sm font-semibold text-foreground">
+        No attendance data yet
+      </h3>
+      <p className="text-xs text-muted-foreground">
+        Check-in records will appear here as employees record their attendance.
+      </p>
+    </div>
   );
 }
 
@@ -336,7 +338,7 @@ export async function ManagementDashboard({
   const visiblePriorities = priorities.filter((p) => p.show && p.count > 0);
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-6">
       {/* Page header */}
       <section>
         <div className="flex flex-wrap items-end justify-between gap-4">
@@ -373,45 +375,27 @@ export async function ManagementDashboard({
         </div>
       </section>
 
-      {/* Quick access */}
+      {/* Quick access — compact horizontal shortcut cards */}
       <section className="space-y-3">
         <SectionHeading
           title="Quick access"
           description="Jump to an authorized module"
         />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           {visibleActions.map((action) => (
-            <Link
+            <QuickAccessCard
               key={action.href}
               href={action.href}
-              className="flex flex-col items-start gap-3 rounded-[20px] border border-border bg-card p-4 hris-card-hover"
-            >
-              <span
-                className={cn(
-                  "flex size-9 shrink-0 items-center justify-center rounded-[12px]",
-                  iconToneClasses[action.tone]
-                )}
-              >
-                <HrisIcon name={action.icon} className="size-4.5" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold text-foreground">
-                  {action.title}
-                </span>
-                <span className="block text-xs text-muted-foreground">
-                  {action.description}
-                </span>
-              </div>
-              <HrisIcon
-                name="arrow-right"
-                className="mt-1 size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary"
-              />
-            </Link>
+              icon={action.icon}
+              title={action.title}
+              description={action.description}
+              tone={action.tone as "soft-blue" | "mint" | "lavender" | "peach" | "indigo" | "teal" | "pink"}
+            />
           ))}
         </div>
       </section>
 
-      {/* Workforce statistics */}
+      {/* Workforce statistics — compact metric cards */}
       <section className="space-y-3">
         <SectionHeading
           title="Workforce statistics"
@@ -428,13 +412,14 @@ export async function ManagementDashboard({
             ) : undefined
           }
         />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             icon="employees"
             label="Total employees"
             value={workforce.total}
             hint={`${workforce.active} active`}
             tone="soft-blue"
+            compact
           />
           <StatCard
             icon="profile"
@@ -442,18 +427,21 @@ export async function ManagementDashboard({
             value={workforce.active}
             hint={`${workforce.inactive} inactive`}
             tone="mint"
+            compact
           />
           <StatCard
             icon="trend-up"
             label="Joined (30 days)"
             value={workforce.newLast30Days}
             tone="amber"
+            compact
           />
           <StatCard
             icon="leave"
             label="On leave today"
             value={onLeaveToday}
             tone="peach"
+            compact
           />
         </div>
       </section>
@@ -481,22 +469,15 @@ export async function ManagementDashboard({
               ) : undefined
             }
           />
-          {trendHasData ? (
-            <Card className="p-5">
-              <AttendanceTrendChart points={trendPoints} height={250} />
-            </Card>
-          ) : (
-            <Card className="p-5">
-              <CardContent className="p-8 text-center">
-                <HrisIcon name="trend-up" className="mx-auto size-12 mb-3 text-muted-foreground" />
-                <h3 className="text-sm font-semibold text-foreground">No attendance data yet</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Check-in records will appear here as employees record their
-                  attendance. The trend updates automatically.
-                </p>
-              </CardContent>
-            </Card>
-          )}
+          <Card className="p-4">
+            <CardContent className="pt-0">
+              {trendHasData ? (
+                <AttendanceTrendChart points={trendPoints} height={190} />
+              ) : (
+                <AttendanceTrendEmpty />
+              )}
+            </CardContent>
+          </Card>
 
           <div className="grid gap-3 lg:grid-cols-2">
             <AttendanceAnalytics
@@ -527,7 +508,7 @@ export async function ManagementDashboard({
         {/* Supporting content ~35% */}
         <div className="lg:col-span-4 space-y-4">
           {/* Needs attention + pending approvals */}
-          <Card className="p-5">
+          <Card className="p-4">
             <CardHeader className="pb-0">
               <CardTitle>Needs attention</CardTitle>
               <CardDescription>
@@ -560,7 +541,7 @@ export async function ManagementDashboard({
           </Card>
 
           {/* Payroll overview */}
-          <Card className="p-5">
+          <Card className="p-4">
             <CardHeader className="pb-0">
               <CardTitle>Payroll</CardTitle>
               <CardDescription>Latest payroll period</CardDescription>
@@ -612,7 +593,7 @@ export async function ManagementDashboard({
 
           {/* Recent activity */}
           {canViewAudit ? (
-            <Card className="p-5">
+            <Card className="p-4">
               <CardHeader className="pb-0">
                 <CardTitle>Recent activity</CardTitle>
                 <CardDescription>
@@ -679,7 +660,7 @@ function AttendanceAnalytics({
   rejected: number;
 }) {
   return (
-    <Card className="p-5">
+    <Card className="p-4">
       <CardHeader className="pb-0">
         <CardTitle>Attendance today</CardTitle>
         <CardDescription>
