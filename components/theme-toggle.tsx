@@ -58,8 +58,9 @@ export function ThemeToggle() {
   return (
     <Button
       type="button"
-      variant="outline"
-      size="sm"
+      variant="text"
+      size="icon"
+      className="size-10 rounded-xl"
       onClick={() => setTheme(nextTheme[theme])}
       aria-label={labels[theme]}
       title={labels[theme]}

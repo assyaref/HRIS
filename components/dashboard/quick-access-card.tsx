@@ -14,12 +14,12 @@ type QuickAccessTone =
 
 const iconToneClasses: Record<QuickAccessTone, string> = {
   "soft-blue": "bg-surface-soft-blue text-primary",
-  mint: "bg-surface-mint text-info",
-  lavender: "bg-surface-lavender text-indigo",
-  peach: "bg-surface-peach text-warning",
-  indigo: "bg-surface-indigo text-primary",
-  teal: "bg-surface-teal text-info",
-  pink: "bg-surface-pink text-danger",
+  mint: "bg-surface-mint text-success",
+  lavender: "bg-surface-lavender text-violet-600 dark:text-violet-300",
+  peach: "bg-surface-peach text-orange-600 dark:text-orange-300",
+  indigo: "bg-surface-indigo text-indigo-600 dark:text-indigo-300",
+  teal: "bg-surface-teal text-teal-700 dark:text-teal-300",
+  pink: "bg-surface-pink text-pink-600 dark:text-pink-300",
 };
 
 interface QuickAccessCardProps {
@@ -33,10 +33,9 @@ interface QuickAccessCardProps {
 /**
  * Compact horizontal shortcut card for Quick Access.
  *
- * Target height 76–88px: pastel icon container on the left, module title and
- * short description in the middle, small chevron on the right. White surface
- * with a subtle border and soft hover elevation — no large full-color
- * backgrounds.
+ * Tinted icon tile on the left, module title and short description in the
+ * middle, chevron on the right. White surface, hairline border, soft hover
+ * elevation and primary-tinted chevron on hover.
  */
 export function QuickAccessCard({
   href,
@@ -49,30 +48,30 @@ export function QuickAccessCard({
     <Link
       href={href}
       className={cn(
-        "group flex w-full items-center gap-3 rounded-[20px] border border-border bg-card p-3 hris-card-hover",
-        "md:h-[84px] min-h-[76px]"
+        "group flex min-h-[72px] w-full items-center gap-3.5 rounded-2xl border border-[var(--card-border)] bg-card p-3.5 hris-card hris-card-hover",
+        "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       )}
     >
       <span
         aria-hidden="true"
         className={cn(
-          "flex shrink-0 items-center justify-center rounded-[12px]",
+          "flex size-11 shrink-0 items-center justify-center rounded-xl",
           iconToneClasses[tone]
         )}
       >
         <HrisIcon name={icon} className="size-5" />
       </span>
       <div className="min-w-0 flex-1">
-        <span className="block text-sm font-semibold text-foreground tracking-tight">
+        <span className="block truncate text-sm font-semibold tracking-tight text-foreground">
           {title}
         </span>
-        <span className="block text-xs text-muted-foreground">
+        <span className="mt-0.5 block truncate text-xs text-muted-foreground">
           {description}
         </span>
       </div>
       <HrisIcon
         name="arrow-right"
-        className="shrink-0 size-4 text-muted-foreground group-hover:text-primary transition-colors"
+        className="size-4 shrink-0 text-muted-foreground/70 transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-primary"
         aria-hidden="true"
       />
     </Link>

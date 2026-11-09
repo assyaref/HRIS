@@ -34,8 +34,8 @@ export function EmployeeTabs({
   }
 
   return (
-    <div className="flex overflow-x-auto border-b border-border">
-      <ul className="flex min-w-max gap-1" role="tablist">
+    <div className="no-scrollbar flex overflow-x-auto">
+      <ul className="flex min-w-max gap-1 rounded-xl bg-muted p-1 ring-1 ring-border/60 ring-inset" role="tablist">
         {visible.map((tab) => {
           const selected = tab.key === active;
           return (
@@ -47,8 +47,8 @@ export function EmployeeTabs({
                 onClick={() => select(tab.key)}
                 className={
                   selected
-                    ? "border-b-2 border-primary px-4 py-2 text-sm font-medium text-primary"
-                    : "border-b-2 border-transparent px-4 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    ? "rounded-[10px] bg-card px-4 py-2 text-sm font-semibold text-primary shadow-[var(--shadow-card)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                    : "rounded-[10px] px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                 }
               >
                 {tab.label}

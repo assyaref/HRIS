@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils/cn";
 
 export function Table({ className, ...props }: ComponentProps<"table">) {
   return (
-    <div className="relative w-full overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
+    <div className="relative w-full overflow-x-auto rounded-2xl border border-[var(--card-border)] bg-card shadow-[var(--shadow-card)]">
       <table
         className={cn("w-full caption-bottom text-sm", className)}
         {...props}
@@ -14,7 +14,7 @@ export function Table({ className, ...props }: ComponentProps<"table">) {
 
 export function TableHeader({ className, ...props }: ComponentProps<"thead">) {
   return (
-    <thead className={cn("[&_tr]:border-b border-border", className)} {...props} />
+    <thead className={cn("bg-muted/70 [&_tr]:border-b [&_tr]:border-border [&_tr]:hover:bg-transparent", className)} {...props} />
   );
 }
 
@@ -37,7 +37,7 @@ export function TableRow({ className, ...props }: ComponentProps<"tr">) {
   return (
     <tr
       className={cn(
-        "border-b border-border/50 transition-colors hover:bg-muted/30",
+        "border-b border-border/70 transition-colors hover:bg-surface-primary/40 data-[state=selected]:bg-surface-primary/60",
         className
       )}
       {...props}
@@ -50,7 +50,7 @@ export function TableHead({ className, ...props }: ComponentProps<"th">) {
     <th
       scope="col"
       className={cn(
-        "h-10 px-4 text-left align-middle text-xs font-semibold tracking-wide text-muted-foreground uppercase bg-muted/40",
+        "h-11 px-4 text-left align-middle text-xs font-semibold whitespace-nowrap text-foreground/75",
         className
       )}
       {...props}
@@ -60,7 +60,7 @@ export function TableHead({ className, ...props }: ComponentProps<"th">) {
 
 export function TableCell({ className, ...props }: ComponentProps<"td">) {
   return (
-    <td className={cn("p-4 align-middle", className)} {...props} />
+    <td className={cn("px-4 py-3 align-middle", className)} {...props} />
   );
 }
 
@@ -94,19 +94,19 @@ export function TableStatusBadge({
   children?: React.ReactNode;
 }) {
   const variantClasses: Record<string, string> = {
-    primary: "bg-surface-primary text-primary border border-primary/40",
-    secondary: "bg-surface-indigo text-accent-foreground border border-primary/40",
-    outline: "border-border bg-transparent text-foreground",
-    success: "bg-surface-success text-success border border-success/40",
-    warning: "bg-surface-warning text-warning border border-warning/40",
-    danger: "bg-surface-danger text-danger border border-danger/40",
-    info: "bg-surface-info text-info border border-info/40",
+    primary: "border-transparent bg-surface-primary text-primary",
+    secondary: "border-transparent bg-surface-indigo text-accent-foreground",
+    outline: "border-border bg-card text-muted-foreground",
+    success: "border-transparent bg-surface-success text-success",
+    warning: "border-transparent bg-surface-warning text-warning",
+    danger: "border-transparent bg-surface-danger text-danger",
+    info: "border-transparent bg-surface-info text-info",
   };
 
   return (
     <span
       className={cn(
-        "inline-flex w-fit items-center gap-1 rounded-lg border px-2.5 py-0.5 text-[10px] font-medium whitespace-nowrap",
+        "inline-flex w-fit items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] leading-4 font-semibold whitespace-nowrap",
         variantClasses[variant],
         className
       )}

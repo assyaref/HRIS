@@ -28,10 +28,10 @@ export function TabNav({ items }: { items: TabNavItem[] }) {
           role="tab"
           aria-selected={item.active}
           className={cn(
-            "inline-flex min-h-10 shrink-0 items-center rounded-full px-4 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+            "inline-flex min-h-10 shrink-0 items-center rounded-xl px-4 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
             item.active
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "bg-card text-muted-foreground border border-border ring-1 ring-inset hover:text-foreground"
+              ? "bg-surface-primary text-primary ring-1 ring-primary/25 ring-inset"
+              : "bg-card text-muted-foreground ring-1 ring-border ring-inset hover:bg-muted hover:text-foreground"
           )}
         >
           {item.label}

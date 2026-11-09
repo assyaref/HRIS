@@ -1,91 +1,105 @@
 @import "tailwindcss";
 
+/* Class-based dark mode: the ThemeProvider toggles `.dark` on <html>
+   (tailwind.config.ts `darkMode: "class"` is not loaded under Tailwind v4). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ==========================================================
-   HRIS — MATERIAL DESIGN 3 · COLORFUL SOFT BLUE
-   Design foundation (MD3 semantic tokens):
-   - Primary:      #526FAE   (soft blue brand identity)
-   - Secondary:    #625B71   (muted blue-gray)
-   - Tertiary:     #386B63   (deep teal)
-   - Background:   #F8F9FF   (clean light blue-white)
-   - Surface:      #FFFFFF   (white cards)
+   HRIS — MD3 EXPRESSIVE · ENTERPRISE BLUE (v5)
+   Visual language: deep navy navigation rail, vivid blue primary,
+   white cards on a cool blue-gray canvas, hairline borders, solid
+   gradient icon tiles, soft tinted status chips.
    ========================================================== */
 
 :root {
   /* ---- Semantic surface colors (light) ---- */
-  --background: #F8F9FF;
-  --foreground: #191C24;
+  --background: #F4F7FC;
+  --foreground: #0F172A;
 
   --card: #FFFFFF;
-  --card-foreground: #191C24;
+  --card-foreground: #0F172A;
 
-  --muted: #F2F3FA;
-  --muted-foreground: #747986;
+  --muted: #F1F4F9;
+  --muted-foreground: #64748B;
 
-  --accent: #D7E3FF;
-  --accent-foreground: #101C38;
+  --accent: #EAF1FF;
+  --accent-foreground: #1747A6;
 
-  --border: #777D8A;
-  --input: #C5C8D3;
-  --ring: #526FAE;
+  --border: #E3E8F0;
+  --input: #D5DCE6;
+  --ring: #1F6FEB;
 
-  --primary: #526FAE;
+  --primary: #1F6FEB;
   --primary-foreground: #FFFFFF;
 
-  --secondary: #625B71;
+  --secondary: #475569;
   --secondary-foreground: #FFFFFF;
 
-  --destructive: #BA1A1A;
+  --destructive: #DC2626;
   --destructive-foreground: #FFFFFF;
 
-  /* ---- Semantic status colors (MD3) ---- */
-  --success: #386B50;
+  /* ---- Semantic status colors ---- */
+  --success: #15803D;
   --success-foreground: #FFFFFF;
-  --warning: #795900;
+  --warning: #B45309;
   --warning-foreground: #FFFFFF;
-  --danger: #BA1A1A;
+  --danger: #DC2626;
   --danger-foreground: #FFFFFF;
-  --info: #35658C;
+  --info: #0369A1;
   --info-foreground: #FFFFFF;
 
-  /* ---- Soft status surfaces (pastel containers) ---- */
-  --surface-primary: #D7E3FF;
-  --surface-success: #C9EBD2;
-  --surface-warning: #F9E1A7;
-  --surface-danger: #FFDAD6;
-  --surface-info: #D2E8FF;
+  /* ---- Soft status surfaces (tinted chips/containers) ---- */
+  --surface-primary: #EAF1FF;
+  --surface-success: #DCFCE7;
+  --surface-warning: #FEF3C7;
+  --surface-danger: #FEE2E2;
+  --surface-info: #E0F2FE;
 
-  /* ---- Pastel accent surfaces (colorful cards) ---- */
-  --surface-soft-blue: #D7E3FF;
-  --surface-indigo: #E0E0FF;
-  --surface-lavender: #EADDFF;
-  --surface-pink: #FFD8E4;
-  --surface-coral: #FFDBD1;
-  --surface-peach: #FFDEC2;
-  --surface-amber: #FCE7B2;
-  --surface-mint: #C8F0DC;
-  --surface-teal: #BDECE8;
+  /* ---- Pastel accent surfaces ---- */
+  --surface-soft-blue: #E6EEFF;
+  --surface-indigo: #E7E8FF;
+  --surface-lavender: #F0E8FF;
+  --surface-pink: #FCE7F3;
+  --surface-coral: #FFE6E0;
+  --surface-peach: #FFEDD5;
+  --surface-amber: #FEF3C7;
+  --surface-mint: #DCFCE7;
+  --surface-teal: #CCFBF1;
 
-  /* ---- Radius (MD3 Expressive surface hierarchy) ---- */
-  --radius-control: 0.75rem; /* 12px — interactive controls */
+  /* ---- Navigation rail (deep navy) ---- */
+  --sidebar: #0B1A36;
+  --sidebar-end: #0E2350;
+  --sidebar-foreground: #C7D2E8;
+  --sidebar-muted: #7F8CA8;
+  --sidebar-strong: #FFFFFF;
+  --sidebar-hover: rgb(255 255 255 / 0.07);
+  --sidebar-border: rgb(255 255 255 / 0.08);
+  --sidebar-panel: rgb(255 255 255 / 0.06);
+  --sidebar-active: #1F6FEB;
+  --sidebar-active-shadow: 0 6px 16px -6px rgb(31 111 235 / 0.65);
+
+  /* ---- Radius ---- */
+  --radius-control: 0.625rem; /* 10px — controls */
   --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
-  --radius-card: 1.25rem;   /* 20px — main cards */
-  --radius-card-nested: 1rem; /* 16px — nested content */
-  --radius-xl: 1.5rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
+  --radius-card: 1rem;        /* 16px — main cards */
+  --radius-card-nested: 0.75rem; /* 12px — nested content */
+  --radius-xl: 1.25rem;
   --radius-full: 9999px;
 
-  /* ---- Card borders (tonal, subtle — never harsh) ---- */
-  --card-border: rgb(25 28 36 / 0.05);
-  --card-border-hover: rgb(82 111 174 / 0.14);
-  --card-border-level2: rgb(25 28 36 / 0.04);
+  /* ---- Card borders (hairline) ---- */
+  --card-border: #E6EBF2;
+  --card-border-hover: rgb(31 111 235 / 0.22);
+  --card-border-level2: #EDF1F6;
 
-  /* ---- Shadows (single-layer, low-opacity neutral elevation) ---- */
-  --shadow-card: 0 1px 3px 0 rgb(25 28 36 / 0.06);
-  --shadow-card-hover: 0 4px 12px 0 rgb(25 28 36 / 0.08);
-  --shadow-md: 0 4px 6px -1px rgb(25 28 36 / 0.05), 0 2px 4px -1px rgb(25 28 36 / 0.03);
-  --shadow-lg: 0 10px 15px -3px rgb(25 28 36 / 0.06), 0 4px 6px -2px rgb(25 28 36 / 0.04);
-  --shadow-xl: 0 20px 25px -5px rgb(25 28 36 / 0.07), 0 8px 10px -6px rgb(25 28 36 / 0.05);
+  /* ---- Shadows (soft, cool-tinted) ---- */
+  --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.03);
+  --shadow-card-hover: 0 10px 24px -10px rgb(15 23 42 / 0.16);
+  --shadow-md: 0 4px 6px -1px rgb(15 23 42 / 0.05), 0 2px 4px -1px rgb(15 23 42 / 0.03);
+  --shadow-lg: 0 10px 15px -3px rgb(15 23 42 / 0.07), 0 4px 6px -2px rgb(15 23 42 / 0.04);
+  --shadow-xl: 0 24px 48px -12px rgb(15 23 42 / 0.22);
+  --shadow-primary: 0 6px 14px -6px rgb(31 111 235 / 0.55);
 
   /* ---- Typography ---- */
   --font-sans: var(--font-geist-sans);
@@ -179,6 +193,16 @@
   --color-surface-mint: var(--surface-mint);
   --color-surface-teal: var(--surface-teal);
 
+  /* Navigation rail */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-strong: var(--sidebar-strong);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-panel: var(--sidebar-panel);
+  --color-sidebar-active: var(--sidebar-active);
+
   /* Fonts */
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
@@ -242,67 +266,72 @@
    DARK MODE — coordinated deep muted blue (`.dark`, class strategy)
    ========================================================== */
 .dark {
-  --background: #121826;
-  --foreground: #F2F4FA;
+  --background: #0B1220;
+  --foreground: #E8EDF7;
 
-  --card: #1B2130;
-  --card-foreground: #F2F4FA;
+  --card: #111A2E;
+  --card-foreground: #E8EDF7;
 
-  --muted: #212738;
-  --muted-foreground: #9AA3B8;
+  --muted: #17223A;
+  --muted-foreground: #94A3B8;
 
-  --accent: #2A3450;
-  --accent-foreground: #C7D2FE;
+  --accent: #1A2B4D;
+  --accent-foreground: #BFD3FF;
 
-  --border: #3A4155;
-  --input: #4A5168;
-  --ring: #8FA5E8;
+  --border: #23314D;
+  --input: #2F3F5E;
+  --ring: #5B9BFF;
 
-  --primary: #8FA5E8;
-  --primary-foreground: #121826;
+  --primary: #5B9BFF;
+  --primary-foreground: #0B1220;
 
-  --secondary: #9A93A8;
-  --secondary-foreground: #121826;
+  --secondary: #94A3B8;
+  --secondary-foreground: #0B1220;
 
-  --destructive: #E88383;
-  --destructive-foreground: #121826;
+  --destructive: #F87171;
+  --destructive-foreground: #1F0A0A;
 
-  --success: #7CC29E;
-  --success-foreground: #0E241A;
-  --warning: #E8C96E;
-  --warning-foreground: #2E2200;
-  --danger: #E88383;
-  --danger-foreground: #2E0D0D;
-  --info: #8FB9D9;
-  --info-foreground: #0F2234;
+  --success: #4ADE80;
+  --success-foreground: #052E16;
+  --warning: #FBBF24;
+  --warning-foreground: #2E1F00;
+  --danger: #F87171;
+  --danger-foreground: #1F0A0A;
+  --info: #38BDF8;
+  --info-foreground: #062033;
 
-  --surface-primary: #2A3450;
-  --surface-success: #1E3229;
-  --surface-warning: #3A310F;
-  --surface-danger: #3A1E1E;
-  --surface-info: #1E344A;
+  --surface-primary: #1A2B4D;
+  --surface-success: #12301F;
+  --surface-warning: #33270A;
+  --surface-danger: #3A1618;
+  --surface-info: #0F2C40;
 
-  --surface-soft-blue: #2A3450;
-  --surface-indigo: #3A3460;
-  --surface-lavender: #3A3460;
-  --surface-pink: #3A222E;
-  --surface-coral: #3A2824;
-  --surface-peach: #3A3020;
-  --surface-amber: #3A3110;
-  --surface-mint: #1E3A2E;
-  --surface-teal: #1E3A38;
+  --surface-soft-blue: #1A2B4D;
+  --surface-indigo: #252A55;
+  --surface-lavender: #2C2450;
+  --surface-pink: #3A1830;
+  --surface-coral: #3A1E1A;
+  --surface-peach: #3A2615;
+  --surface-amber: #33270A;
+  --surface-mint: #12301F;
+  --surface-teal: #0F3330;
+
+  --sidebar: #070F1F;
+  --sidebar-end: #0A1730;
+  --sidebar-active: #2F7BF5;
 
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.30);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.25), 0 2px 4px -1px rgb(0 0 0 / 0.15);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.25), 0 4px 6px -2px rgb(0 0 0 / 0.15);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.30), 0 8px 10px -6px rgb(0 0 0 / 0.20);
+  --shadow-xl: 0 24px 48px -12px rgb(0 0 0 / 0.55);
+  --shadow-primary: 0 6px 14px -6px rgb(91 155 255 / 0.45);
 
-  --card-border: rgb(255 255 255 / 0.08);
-  --card-border-hover: rgb(143 165 232 / 0.25);
-  --card-border-level2: rgb(255 255 255 / 0.05);
+  --card-border: #1E2B45;
+  --card-border-hover: rgb(91 155 255 / 0.30);
+  --card-border-level2: #1C2840;
 
-  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.35);
-  --shadow-card-hover: 0 4px 12px 0 rgb(0 0 0 / 0.40);
+  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.35);
+  --shadow-card-hover: 0 10px 24px -10px rgb(0 0 0 / 0.6);
 }
 
 /* ==========================================================
@@ -326,8 +355,14 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-* {
-  border-color: var(--border);
+/* Default border color. Must live in a layer: an unlayered rule here would
+   override every `border-*` color utility (Tailwind v4 utilities are layered). */
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
 }
 
 button,
@@ -353,7 +388,7 @@ a {
    ========================================================== */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #C5C8D3 transparent;
+  scrollbar-color: #CBD5E1 transparent;
 }
 
 *::-webkit-scrollbar {
@@ -366,16 +401,16 @@ a {
 }
 
 *::-webkit-scrollbar-thumb {
-  background: #C5C8D3;
+  background: #CBD5E1;
   border-radius: 999px;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: #747986;
+  background: #94A3B8;
 }
 
 .dark *::-webkit-scrollbar-thumb {
-  background: #4A5168;
+  background: #2F3F5E;
 }
 
 .dark *::-webkit-scrollbar-thumb:hover {
@@ -435,11 +470,11 @@ a {
 }
 
 .emp-gradient {
-  background: linear-gradient(135deg, #526FAE 0%, #386B63 100%);
+  background: linear-gradient(135deg, #1F6FEB 0%, #4C8DF8 100%);
 }
 
 .emp-gradient-hover:hover {
-  background: linear-gradient(135deg, #4A63A0 0%, #305C55 100%);
+  background: linear-gradient(135deg, #1A5FD0 0%, #3F7FEA 100%);
 }
 
 /* Drawer slide animation */
@@ -464,11 +499,11 @@ a {
   outline: none;
 }
 .emp-focus-ring:focus-visible {
-  box-shadow: 0 0 0 3px rgb(82 111 174 / 0.4);
+  box-shadow: 0 0 0 3px rgb(31 111 235 / 0.35);
 }
 
 .dark .emp-focus-ring:focus-visible {
-  box-shadow: 0 0 0 3px rgb(143 165 232 / 0.5);
+  box-shadow: 0 0 0 3px rgb(91 155 255 / 0.5);
 }
 
 /* ==========================================================
@@ -508,18 +543,19 @@ a {
 
   /* Hierarchy text */
   .text-page-title {
-    font-size: 1.875rem;
-    font-weight: 600;
+    font-size: 1.5rem;
+    line-height: 2rem;
+    font-weight: 700;
     letter-spacing: -0.02em;
   }
   .text-section-title {
-    font-size: 1.125rem;
-    font-weight: 600;
+    font-size: 1rem;
+    font-weight: 700;
     letter-spacing: -0.01em;
   }
   .text-metric {
     font-size: 1.75rem;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: -0.02em;
   }
   .text-meta {
@@ -533,4 +569,43 @@ a {
   .hris-card-hover:hover {
     transform: none;
   }
+}
+
+/* ==========================================================
+   v5 — NAVIGATION RAIL & SOLID ICON TILES
+   ========================================================== */
+.hris-sidebar {
+  background: linear-gradient(180deg, var(--sidebar) 0%, var(--sidebar-end) 100%);
+  color: var(--sidebar-foreground);
+}
+
+.hris-nav-active {
+  background: var(--sidebar-active);
+  color: #FFFFFF;
+  box-shadow: var(--sidebar-active-shadow);
+}
+
+/* Solid gradient icon tiles (KPI cards) — white glyph on vivid tone. */
+.hris-tile {
+  color: #FFFFFF;
+  box-shadow: 0 8px 16px -8px var(--tile-shadow, rgb(15 23 42 / 0.35));
+}
+.hris-tile-blue    { background: linear-gradient(135deg, #4C8DF8 0%, #1F5FD6 100%); --tile-shadow: rgb(31 95 214 / 0.55); }
+.hris-tile-red     { background: linear-gradient(135deg, #FB7185 0%, #E11D48 100%); --tile-shadow: rgb(225 29 72 / 0.5); }
+.hris-tile-green   { background: linear-gradient(135deg, #34D399 0%, #059669 100%); --tile-shadow: rgb(5 150 105 / 0.5); }
+.hris-tile-amber   { background: linear-gradient(135deg, #FBBF24 0%, #D97706 100%); --tile-shadow: rgb(217 119 6 / 0.5); }
+.hris-tile-orange  { background: linear-gradient(135deg, #FB923C 0%, #EA580C 100%); --tile-shadow: rgb(234 88 12 / 0.5); }
+.hris-tile-violet  { background: linear-gradient(135deg, #A78BFA 0%, #7C3AED 100%); --tile-shadow: rgb(124 58 237 / 0.5); }
+.hris-tile-indigo  { background: linear-gradient(135deg, #818CF8 0%, #4F46E5 100%); --tile-shadow: rgb(79 70 229 / 0.5); }
+.hris-tile-teal    { background: linear-gradient(135deg, #2DD4BF 0%, #0D9488 100%); --tile-shadow: rgb(13 148 136 / 0.5); }
+.hris-tile-pink    { background: linear-gradient(135deg, #F472B6 0%, #DB2777 100%); --tile-shadow: rgb(219 39 119 / 0.5); }
+.hris-tile-sky     { background: linear-gradient(135deg, #38BDF8 0%, #0284C7 100%); --tile-shadow: rgb(2 132 199 / 0.5); }
+.hris-tile-slate   { background: linear-gradient(135deg, #94A3B8 0%, #475569 100%); --tile-shadow: rgb(71 85 105 / 0.5); }
+
+/* Horizontal scrollers (tab rows, chip rows) without a visible scrollbar. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }

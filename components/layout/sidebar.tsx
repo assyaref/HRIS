@@ -9,12 +9,11 @@ export interface SidebarUserInfo {
   roleLabel: string | null;
 }
 
-/** Desktop/tablet sidebar. Hidden below the `lg` breakpoint.
+/** Desktop sidebar. Hidden below the `lg` breakpoint.
  *
- * MD3 Soft Blue shell: light pastel-blue surface, soft blue logo area,
- * muted blue-gray navigation text, rounded active indicator, soft
- * lavender/blue active container, gentle hover background, user profile
- * at the bottom.
+ * Deep navy navigation rail: white wordmark, muted blue-gray links, solid
+ * primary pill for the active route, and the signed-in user's profile panel
+ * pinned to the bottom.
  */
 export function Sidebar({
   sections,
@@ -25,25 +24,23 @@ export function Sidebar({
   sections: NavSection[];
 } & SidebarUserInfo) {
   return (
-    <aside
-      className="sticky top-0 hidden h-svh w-64 shrink-0 flex-col border-r border-border bg-card text-foreground lg:flex"
-    >
-      <div className="flex h-12 shrink-0 items-center px-4">
-        <Brand />
+    <aside className="hris-sidebar sticky top-0 hidden h-svh w-64 shrink-0 flex-col lg:flex">
+      <div className="flex h-16 shrink-0 items-center px-5">
+        <Brand tone="dark" />
       </div>
-      <div className="flex-1 overflow-y-auto px-2 py-2">
-        <NavLinks sections={sections} variant="light" />
+      <div className="flex-1 overflow-y-auto px-3 py-3 [scrollbar-color:rgb(255_255_255/0.18)_transparent]">
+        <NavLinks sections={sections} variant="dark" />
       </div>
-      <div className="px-3 py-2">
-        <div className="flex items-center gap-2.5">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-soft-blue text-primary text-xs font-semibold select-none ring-1 ring-primary/20">
+      <div className="shrink-0 p-3">
+        <div className="flex items-center gap-3 rounded-2xl bg-sidebar-panel p-3 ring-1 ring-sidebar-border">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-sidebar-active text-sm font-semibold text-white select-none ring-2 ring-white/15">
             {user.email.charAt(0).toUpperCase()}
           </span>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-foreground">
+            <p className="truncate text-sm font-semibold text-sidebar-strong" title={user.email}>
               {user.email}
             </p>
-            <p className="truncate text-xs text-muted-foreground">
+            <p className="truncate text-xs text-sidebar-muted">
               {roleLabel ?? "Team member"}
               {organizationName ? ` · ${organizationName}` : ""}
             </p>

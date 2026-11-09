@@ -5,7 +5,7 @@ export function Label({ className, ...props }: ComponentProps<"label">) {
   return (
     <label
       className={cn(
-        "text-sm leading-none font-medium text-foreground mb-1 block",
+        "mb-1.5 block text-[13px] leading-none font-semibold text-foreground",
         className
       )}
       {...props}

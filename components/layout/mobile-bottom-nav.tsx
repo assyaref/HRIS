@@ -26,13 +26,12 @@ function isActivePath(pathname: string, href: string) {
 }
 
 /**
- * Management mobile bottom navigation — MD3 Soft Blue.
+ * Management mobile bottom navigation — MD3 navigation bar.
  *
  * Five destinations drawn from the permission-filtered sections: Dashboard ·
- * Attendance · Employees · Payroll · Payslip. Fixed bottom position · white
- * surface · soft rounded active indicator · pastel blue active icon · muted
- * inactive icons · safe-area inset support · minimum 44px touch targets ·
- * hidden on `lg+` where the desktop shell takes over.
+ * Attendance · Employees · Payroll · Payslip. White bar, MD3 active
+ * indicator pill behind the icon, primary label for the active route,
+ * safe-area inset support, 56px touch targets, hidden on `lg+`.
  */
 export function MobileBottomNav({
   sections,
@@ -55,7 +54,7 @@ export function MobileBottomNav({
   return (
     <nav
       aria-label="Quick navigation"
-      className="emp-safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 px-2.5 pb-1 pt-1.5 shadow-[0_-10px_34px_-16px_rgb(25,28,36,0.10)] backdrop-blur-md lg:hidden"
+      className="emp-safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 px-2.5 pt-1.5 pb-1 shadow-[0_-8px_24px_-16px_rgb(15_23_42/0.18)] backdrop-blur-md lg:hidden"
     >
       <div className="mx-auto grid max-w-lg grid-cols-5 items-end">
         {items.map((item) => {
@@ -68,20 +67,19 @@ export function MobileBottomNav({
               href={item.href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex min-h-14 flex-col items-center justify-center gap-1.5 rounded-2xl px-1 text-[10px] font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
-                active
-                  ? "bg-surface-primary text-primary"
-                  : "text-muted-foreground hover:text-primary hover:bg-accent/40"
+                "group flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[11px] transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                active ? "font-semibold text-primary" : "font-medium text-muted-foreground hover:text-foreground"
               )}
             >
-              <HrisIcon
-                name={iconName}
+              <span
                 className={cn(
-                  "size-5 shrink-0",
-                  active ? "text-primary" : "text-muted-foreground"
+                  "flex h-7 w-12 items-center justify-center rounded-full transition-colors",
+                  active ? "bg-surface-primary" : "group-hover:bg-muted"
                 )}
-              />
-              <span className="truncate">{item.title}</span>
+              >
+                <HrisIcon name={iconName} className="size-5 shrink-0" />
+              </span>
+              <span className="max-w-full truncate">{item.title}</span>
             </Link>
           );
         })}

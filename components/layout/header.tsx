@@ -1,19 +1,18 @@
 "use client";
 
 import { Brand } from "./brand";
+import { HrisIcon } from "./icons";
 import { MobileNav } from "./mobile-nav";
-import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { logoutAction } from "@/features/auth/actions";
 import type { CurrentUser } from "@/lib/auth/types";
 import type { NavSection } from "@/types/navigation";
 
 /**
- * Sticky top bar — MD3 Soft Blue shell.
+ * Sticky top bar — clean white surface with hairline bottom border.
  *
- * Clean translucent surface, search where supported, notification icon with
- * unread badge, theme switcher, organization context, user avatar and account
- * menu, soft role badge, subtle bottom border.
+ * Organization context chip, theme switcher, notification icon, user avatar
+ * with identity + role, and sign-out. Brand + drawer trigger below `lg`.
  */
 export function Header({
   user,
@@ -27,70 +26,65 @@ export function Header({
   roleLabel?: string | null;
 }) {
   return (
-    <header
-      className="sticky top-0 z-sticky flex shrink-0 items-center gap-2 border-b border-border bg-card/95 px-4 backdrop-blur-md h-13 lg:h-16 lg:px-8"
-    >
+    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-card/90 px-4 backdrop-blur-md lg:h-16 lg:px-8">
       <MobileNav sections={sections} />
       <div className="min-w-0 lg:hidden">
-        <Brand />
+        <Brand wordmark="sm" />
       </div>
+
+      {organizationName ? (
+        <span className="hidden min-w-0 items-center gap-2 rounded-xl border border-border bg-background px-3 py-1.5 text-sm text-muted-foreground lg:inline-flex">
+          <HrisIcon name="building" className="size-4 shrink-0 text-primary" />
+          <span className="max-w-56 truncate font-medium text-foreground">
+            {organizationName}
+          </span>
+        </span>
+      ) : null}
 
       <div className="flex-1" />
 
-      {roleLabel ? (
-        <span className="hidden rounded-[10px] bg-surface-primary px-2.5 py-1 text-[11px] font-medium whitespace-nowrap text-primary dark:bg-surface-primary dark:text-primary sm:inline-flex">
-          {roleLabel}
-        </span>
-      ) : null}
-
-      {organizationName ? (
-        <span className="hidden max-w-44 truncate text-sm text-secondary sm:block">
-          {organizationName}
-        </span>
-      ) : null}
-
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         <ThemeToggle />
 
         <button
           type="button"
           aria-label="Notifications"
-          className="relative inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="relative inline-flex size-10 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-            className="size-5"
-          >
-            <path d="M6 9a6 6 0 0 1 12 0c0 4 1.2 5.3 1.8 6H4.2C4.8 14.3 6 13 6 9Z" />
-            <path d="M10 18.5a2 2 0 0 0 4 0" />
-          </svg>
-          <span className="absolute right-1 top-1 flex size-3.5 shrink-0 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold ring-1 ring-background">
-            0
-          </span>
+          <HrisIcon name="bell" className="size-5" />
         </button>
+      </div>
 
+      <span aria-hidden="true" className="mx-1 hidden h-8 w-px bg-border sm:block" />
+
+      <div className="flex min-w-0 items-center gap-2.5">
         <span
           aria-label={`Signed in as ${user.email}`}
           title={user.email}
-          className="hidden max-w-52 truncate text-sm text-secondary sm:block"
+          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground select-none ring-2 ring-surface-primary"
         >
-          {user.email}
-        </span>
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground select-none">
           {user.email.charAt(0).toUpperCase()}
         </span>
+        <div className="hidden min-w-0 leading-tight md:block">
+          <p className="max-w-48 truncate text-sm font-semibold text-foreground" title={user.email}>
+            {user.email}
+          </p>
+          {roleLabel ? (
+            <p className="truncate text-xs text-muted-foreground">{roleLabel}</p>
+          ) : null}
+        </div>
       </div>
 
       <form action={logoutAction}>
-        <Button type="submit" variant="ghost" size="sm" aria-label="Sign out">
-          Sign out
-        </Button>
+        <button
+          type="submit"
+          aria-label="Sign out"
+          title="Sign out"
+          className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl px-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-surface-danger hover:text-danger focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        >
+          <HrisIcon name="logout" className="size-[18px]" />
+          <span className="hidden xl:inline">Sign out</span>
+        </button>
       </form>
     </header>
   );

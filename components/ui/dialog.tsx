@@ -113,7 +113,7 @@ export function DialogContent({
       <div
         aria-hidden="true"
         onClick={() => onOpenChange(false)}
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]"
       />
       <div
         ref={contentRef}
@@ -122,7 +122,7 @@ export function DialogContent({
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
         className={cn(
-          "relative z-10 flex max-h-[min(88vh,44rem)] w-full max-w-2xl flex-col gap-4 overflow-y-auto rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-xl outline-none sm:rounded-[24px]",
+          "relative z-10 flex max-h-[min(88vh,44rem)] w-full max-w-2xl flex-col gap-5 overflow-y-auto rounded-2xl border border-[var(--card-border)] bg-card p-5 text-card-foreground shadow-[var(--shadow-xl)] outline-none sm:rounded-[20px] sm:p-6",
           className
         )}
         {...props}
@@ -131,7 +131,7 @@ export function DialogContent({
           type="button"
           onClick={() => onOpenChange(false)}
           aria-label="Close dialog"
-          className="absolute top-4 right-4 inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="absolute top-4 right-4 inline-flex size-9 shrink-0 items-center justify-center rounded-[10px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           <svg
             viewBox="0 0 24 24"
@@ -169,7 +169,7 @@ export function DialogFooter({
   return (
     <div
       className={cn(
-        "mt-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
+        "mt-1 flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end",
         className
       )}
       {...props}
@@ -186,7 +186,7 @@ export function DialogTitle({
     <h2
       id={titleId}
       className={cn(
-        "pr-8 text-lg leading-6 font-semibold tracking-tight text-foreground",
+        "pr-10 text-lg leading-6 font-bold tracking-tight text-foreground",
         className
       )}
       {...props}

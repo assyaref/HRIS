@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils/cn";
 
 type Point = { label: string; value: number };
 
-const VIEW_BOX_WIDTH = 430;
+/** Initial (server-render) width; replaced by the measured container width. */
+const DEFAULT_VIEW_BOX_WIDTH = 430;
 
 interface AttendanceTrendChartProps {
   points: Point[];
@@ -16,20 +17,34 @@ interface AttendanceTrendChartProps {
  * Responsive SVG line chart for the attendance trend.
  *
  * Renders from real aggregates only — empty series are handled by the
- * parent. Soft blue line, subtle grid, minimal axes, translucent area fill
- * and a hover tooltip. Uses a fixed viewBox with percentage-positioned
- * overlay so it stays correct server-side and at any container width.
+ * parent. Primary-token line, subtle grid, minimal axes, translucent area fill
+ * and a hover tooltip. The viewBox tracks the measured container width (and a
+ * fixed pixel height), so axis labels render at their true size at every
+ * breakpoint instead of being scaled with the container.
  */
 export function AttendanceTrendChart({
   points,
   height = 250,
 }: AttendanceTrendChartProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [viewW, setViewW] = useState(DEFAULT_VIEW_BOX_WIDTH);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(([entry]) => {
+      const w = Math.round(entry.contentRect.width);
+      if (w > 0) setViewW(w);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   if (points.length === 0) return null;
 
   const padding = { top: 22, right: 22, bottom: 34, left: 36 };
-  const plotW = VIEW_BOX_WIDTH - padding.left - padding.right;
+  const plotW = viewW - padding.left - padding.right;
   const plotH = height - padding.top - padding.bottom;
   const max = Math.max(...points.map((p) => p.value), 1);
   const xStep = points.length > 1 ? plotW / (points.length - 1) : plotW;
@@ -57,13 +72,14 @@ export function AttendanceTrendChart({
 
   return (
     <div
+      ref={containerRef}
       className="relative w-full"
-      style={{ aspectRatio: `${VIEW_BOX_WIDTH / height}` }}
+      style={{ height }}
     >
       <svg
         width="100%"
         height="100%"
-        viewBox={`0 0 ${VIEW_BOX_WIDTH} ${height}`}
+        viewBox={`0 0 ${viewW} ${height}`}
         preserveAspectRatio="xMidYMid meet"
         className="block"
         aria-label="Attendance trend"
@@ -72,16 +88,15 @@ export function AttendanceTrendChart({
       >
         <defs>
           <linearGradient id="attendanceGradient" x1="0" x2="0" y1="0" y2="1">
-            <stop stopColor="#526FAE" stopOpacity="0.30" offset="0%" />
-            <stop stopColor="#526FAE" stopOpacity="0.02" offset="100%" />
+            <stop style={{ stopColor: "var(--primary)" }} stopOpacity="0.24" offset="0%" />
+            <stop style={{ stopColor: "var(--primary)" }} stopOpacity="0.01" offset="100%" />
           </linearGradient>
         </defs>
 
         <g
-          stroke="#C5C8D3"
+          style={{ stroke: "var(--border)" }}
           strokeWidth="1"
           strokeDasharray="4 6"
-          opacity="0.5"
           pointerEvents="none"
         >
           {[0, Math.round(max / 2), max].map((v, i) => {
@@ -107,7 +122,7 @@ export function AttendanceTrendChart({
         <polyline
           points={linePoints}
           fill="none"
-          stroke="#526FAE"
+          style={{ stroke: "var(--primary)" }}
           strokeWidth={2.5}
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -131,8 +146,8 @@ export function AttendanceTrendChart({
                   cx={pt.x}
                   cy={pt.y}
                   r={6}
-                  fill="#526FAE"
-                  fillOpacity="0.12"
+                  style={{ fill: "var(--primary)" }}
+                  fillOpacity="0.14"
                   pointerEvents="none"
                 />
               )}
@@ -140,8 +155,7 @@ export function AttendanceTrendChart({
                 cx={pt.x}
                 cy={pt.y}
                 r={active ? 4 : 3.5}
-                fill="#FFFFFF"
-                stroke="#526FAE"
+                style={{ fill: "var(--card)", stroke: "var(--primary)" }}
                 strokeWidth={2}
                 pointerEvents="none"
               />
@@ -149,7 +163,7 @@ export function AttendanceTrendChart({
                 x={pt.x}
                 y={padding.top + plotH + 20}
                 textAnchor="middle"
-                fill="#747986"
+                style={{ fill: "var(--muted-foreground)" }}
                 fontSize="11"
                 fontFamily="var(--font-geist-sans), sans-serif"
                 pointerEvents="none"
@@ -160,7 +174,7 @@ export function AttendanceTrendChart({
           );
         })}
         <g
-          fill="#747986"
+          style={{ fill: "var(--muted-foreground)" }}
           fontSize="11"
           fontFamily="var(--font-geist-sans), sans-serif"
           textAnchor="end"
@@ -186,7 +200,7 @@ export function AttendanceTrendChart({
                   "-translate-y-full mb-2"
                 )}
                 style={{
-                  left: `${(pt.x / VIEW_BOX_WIDTH) * 100}%`,
+                  left: `${(pt.x / viewW) * 100}%`,
                   top: `${(pt.y / height) * 100}%`,
                   transform: "translateX(-50%)",
                 }}

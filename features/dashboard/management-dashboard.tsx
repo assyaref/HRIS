@@ -194,17 +194,17 @@ function DistributionDonut({
   const legend = series.map((d) => {
     const pct = total > 0 ? ((d.value / total) * 100).toFixed(0) : "0";
     return (
-      <div key={d.label} className="flex items-center gap-2">
-        <span className="size-3.5 rounded-full" style={{ backgroundColor: d.color }} />
+      <div key={d.label} className="flex items-center gap-2 py-1">
+        <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: d.color }} />
         <span className="text-xs text-muted-foreground">{d.label}</span>
-        <span className="text-xs font-medium text-foreground ml-auto">{pct}%</span>
+        <span className="ml-auto text-xs font-semibold text-foreground tabular-nums">{pct}%</span>
       </div>
     );
   });
 
   return (
-    <Card className="p-4">
-      <CardHeader className="pb-0">
+    <Card>
+      <CardHeader className="pb-4">
         <CardTitle>Employee distribution</CardTitle>
         <CardDescription>Headcount by employment status</CardDescription>
       </CardHeader>
@@ -222,8 +222,8 @@ function DistributionDonut({
               x={cx}
               y={cy + 5}
               textAnchor="middle"
-              fill="#191C24"
-              fontSize="16"
+              style={{ fill: "var(--foreground)" }}
+              fontSize="18"
               fontWeight="700"
               fontFamily="var(--font-geist-sans), sans-serif"
             >
@@ -233,7 +233,7 @@ function DistributionDonut({
               x={cx}
               y={cy + 21}
               textAnchor="middle"
-              fill="#747986"
+              style={{ fill: "var(--muted-foreground)" }}
               fontSize="11"
               fontFamily="var(--font-geist-sans), sans-serif"
             >
@@ -250,8 +250,8 @@ function DistributionDonut({
 /** Compact empty state for the attendance trend when no data exists. */
 function AttendanceTrendEmpty() {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-[20px] border border-border bg-card p-6 text-center">
-      <div className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
+    <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-input bg-muted/40 p-6 text-center">
+      <div className="flex size-10 items-center justify-center rounded-xl bg-surface-primary text-primary">
         <HrisIcon name="trend-up" className="size-5" />
       </div>
       <h3 className="text-sm font-semibold text-foreground">
@@ -352,22 +352,22 @@ export async function ManagementDashboard({
             <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
               <time>{TODAY_LABEL}</time>
               {roleLabel ? (
-                <span className="ml-2 inline-flex items-center rounded-[10px] border border-primary/20 bg-surface-primary px-2.5 py-1 text-[11px] font-medium text-primary dark:border-primary/30 dark:bg-surface-primary dark:text-primary">
+                <span className="ml-1 inline-flex items-center rounded-md bg-surface-primary px-2 py-0.5 text-[11px] font-semibold text-primary">
                   {roleLabel}
                 </span>
               ) : null}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-            <span className="inline-flex items-center gap-1.5 rounded-[10px] border border-primary/20 bg-surface-primary px-3 py-1.5 text-primary dark:border-primary/30 dark:bg-surface-primary dark:text-primary">
+            <span className="inline-flex items-center gap-1.5 rounded-xl bg-surface-primary px-3 py-1.5 text-primary">
               <HrisIcon name="employees" className="size-3.5" />
               {workforce.total} employees
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-[10px] border border-success/20 bg-surface-success px-3 py-1.5 text-success dark:border-success/30 dark:bg-surface-success dark:text-success">
+            <span className="inline-flex items-center gap-1.5 rounded-xl bg-surface-success px-3 py-1.5 text-success">
               <HrisIcon name="check-in" className="size-3.5" />
               {attendance.checkedInNow} checked in now
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-[10px] border border-warning/20 bg-surface-warning px-3 py-1.5 text-warning dark:border-warning/30 dark:bg-surface-warning dark:text-warning">
+            <span className="inline-flex items-center gap-1.5 rounded-xl bg-surface-warning px-3 py-1.5 text-warning">
               <HrisIcon name="leave" className="size-3.5" />
               {onLeaveToday} on leave
             </span>
@@ -395,7 +395,7 @@ export async function ManagementDashboard({
         </div>
       </section>
 
-      {/* Workforce statistics — compact metric cards */}
+      {/* Workforce statistics — KPI cards */}
       <section className="space-y-3">
         <SectionHeading
           title="Workforce statistics"
@@ -419,7 +419,6 @@ export async function ManagementDashboard({
             value={workforce.total}
             hint={`${workforce.active} active`}
             tone="soft-blue"
-            compact
           />
           <StatCard
             icon="profile"
@@ -427,21 +426,18 @@ export async function ManagementDashboard({
             value={workforce.active}
             hint={`${workforce.inactive} inactive`}
             tone="mint"
-            compact
           />
           <StatCard
             icon="trend-up"
             label="Joined (30 days)"
             value={workforce.newLast30Days}
             tone="amber"
-            compact
           />
           <StatCard
             icon="leave"
             label="On leave today"
             value={onLeaveToday}
             tone="peach"
-            compact
           />
         </div>
       </section>
@@ -469,8 +465,8 @@ export async function ManagementDashboard({
               ) : undefined
             }
           />
-          <Card className="p-4">
-            <CardContent className="pt-0">
+          <Card>
+            <CardContent className="pt-5">
               {trendHasData ? (
                 <AttendanceTrendChart points={trendPoints} height={190} />
               ) : (
@@ -489,16 +485,16 @@ export async function ManagementDashboard({
             />
             <DistributionDonut
               series={[
-                { label: "Active", value: workforce.active, color: "#386B50" },
+                { label: "Active", value: workforce.active, color: "#10B981" },
                 {
                   label: "Inactive",
                   value: workforce.inactive,
-                  color: "#625B71",
+                  color: "#94A3B8",
                 },
                 {
                   label: "New (30d)",
                   value: workforce.newLast30Days,
-                  color: "#526FAE",
+                  color: "#1F6FEB",
                 },
               ]}
             />
@@ -508,8 +504,8 @@ export async function ManagementDashboard({
         {/* Supporting content ~35% */}
         <div className="lg:col-span-4 space-y-4">
           {/* Needs attention + pending approvals */}
-          <Card className="p-4">
-            <CardHeader className="pb-0">
+          <Card>
+            <CardHeader className="pb-4">
               <CardTitle>Needs attention</CardTitle>
               <CardDescription>
                 Items waiting for a decision or already mid-workflow
@@ -522,7 +518,7 @@ export async function ManagementDashboard({
                     <li key={item.href}>
                       <Link
                         href={item.href}
-                        className="flex items-center justify-between gap-3 py-3 transition-colors hover:bg-accent/50 dark:hover:bg-muted/40"
+                        className="-mx-2 flex items-center justify-between gap-3 rounded-lg px-2 py-3 transition-colors hover:bg-muted"
                       >
                         <span className="text-sm font-medium text-foreground truncate">
                           {item.label}
@@ -541,8 +537,8 @@ export async function ManagementDashboard({
           </Card>
 
           {/* Payroll overview */}
-          <Card className="p-4">
-            <CardHeader className="pb-0">
+          <Card>
+            <CardHeader className="pb-4">
               <CardTitle>Payroll</CardTitle>
               <CardDescription>Latest payroll period</CardDescription>
             </CardHeader>
@@ -593,8 +589,8 @@ export async function ManagementDashboard({
 
           {/* Recent activity */}
           {canViewAudit ? (
-            <Card className="p-4">
-              <CardHeader className="pb-0">
+            <Card>
+              <CardHeader className="pb-4">
                 <CardTitle>Recent activity</CardTitle>
                 <CardDescription>
                   Latest entries from the audit trail
@@ -660,42 +656,47 @@ function AttendanceAnalytics({
   rejected: number;
 }) {
   return (
-    <Card className="p-4">
-      <CardHeader className="pb-0">
+    <Card>
+      <CardHeader className="pb-4">
         <CardTitle>Attendance today</CardTitle>
         <CardDescription>
           Check-ins, completes and records for the current day
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-0">
-        <div className="grid gap-3">
+        <div className="grid gap-2.5">
           <StatCard
             icon="check-in"
             label="Checked in now"
             value={checkedInNow}
             tone="mint"
+            compact
           />
           <StatCard
             icon="check"
             label="Present"
             value={present}
+            compact
           />
           <StatCard
             icon="clock"
             label="Completed"
             value={completed}
+            compact
           />
           <StatCard
             icon="alert"
             label="Incomplete"
             value={incomplete}
             tone="amber"
+            compact
           />
           <StatCard
             icon="alert"
             label="Rejected"
             value={rejected}
             tone="peach"
+            compact
           />
         </div>
       </CardContent>

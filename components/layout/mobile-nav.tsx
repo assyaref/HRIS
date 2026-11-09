@@ -8,9 +8,8 @@ import { NavLinks } from "./nav-links";
 
 /**
  * Mobile navigation: hamburger trigger + accessible slide-over drawer.
- * MD3 Soft Blue drawer: HRIS branding, employee profile header, rounded menu
- * items, soft blue active state, muted icons, clear separators, logout action,
- * smooth slide animation, accessible keyboard handling.
+ * Navy drawer matching the desktop navigation rail: HRIS branding, solid
+ * primary active pill, muted icons, accessible keyboard handling.
  *
  * Rendered as a modal (focus trap, Esc to close, scroll lock).
  * `sections` are permission-filtered server-side before they reach this
@@ -63,7 +62,7 @@ export function MobileNav({ sections }: { sections: NavSection[] }) {
         aria-label="Open navigation menu"
         aria-haspopup="dialog"
         aria-expanded={open}
-        className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none lg:hidden"
+        className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl text-foreground/80 transition-colors hover:bg-muted hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none lg:hidden"
       >
         <svg
           viewBox="0 0 24 24"
@@ -85,22 +84,22 @@ export function MobileNav({ sections }: { sections: NavSection[] }) {
           <div
             aria-hidden="true"
             onClick={() => setOpen(false)}
-            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+            className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm"
           />
           <div
             ref={panelRef}
             role="dialog"
             aria-modal="true"
             aria-label="Navigation menu"
-            className="absolute inset-y-0 left-0 flex w-80 max-w-[85%] flex-col border-r border-border bg-card shadow-xl"
+            className="hris-sidebar absolute inset-y-0 left-0 flex w-80 max-w-[85%] flex-col shadow-xl"
           >
-            <div className="flex h-16 shrink-0 items-center justify-between border-b border-border pr-2 pl-6">
-              <Brand />
+            <div className="flex h-16 shrink-0 items-center justify-between border-b border-sidebar-border pr-2 pl-5">
+              <Brand tone="dark" />
               <button
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Close navigation menu"
-                className="inline-flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                className="inline-flex size-9 items-center justify-center rounded-lg text-sidebar-foreground transition-colors hover:bg-sidebar-hover hover:text-sidebar-strong focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:outline-none"
               >
                 <svg
                   viewBox="0 0 24 24"
@@ -121,12 +120,13 @@ export function MobileNav({ sections }: { sections: NavSection[] }) {
               className="flex-1 overflow-y-auto p-3"
             >
               <NavLinks
+                variant="dark"
                 sections={sections}
                 onNavigate={() => setOpen(false)}
               />
             </nav>
-            <div className="shrink-0 border-t border-border px-6 py-4">
-              <p className="text-xs text-muted-foreground">
+            <div className="shrink-0 border-t border-sidebar-border px-6 py-4">
+              <p className="text-xs text-sidebar-muted">
                 Enterprise HRIS
               </p>
             </div>

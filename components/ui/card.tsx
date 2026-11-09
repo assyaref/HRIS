@@ -5,7 +5,7 @@ export function Card({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        "rounded-[20px] border border-border bg-card text-card-foreground hris-card",
+        "rounded-2xl border border-[var(--card-border)] bg-card text-card-foreground hris-card",
         className
       )}
       {...props}
@@ -23,7 +23,7 @@ export function CardTitle({ className, ...props }: ComponentProps<"h3">) {
   return (
     <h3
       className={cn(
-        "text-base font-semibold tracking-tight text-foreground",
+        "text-base font-bold tracking-tight text-foreground",
         className
       )}
       {...props}
@@ -58,7 +58,7 @@ export function CardNested({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        "rounded-[16px] border border-border bg-muted text-foreground hris-card-level-2",
+        "rounded-xl border border-[var(--card-border-level2)] bg-muted text-foreground hris-card-level-2",
         className
       )}
       {...props}
@@ -110,7 +110,7 @@ export function CardTone({
   return (
     <div
       className={cn(
-        "rounded-[16px] border border-border hris-card-hover",
+        "rounded-xl border border-[var(--card-border)] hris-card-hover",
         toneClasses[tone ?? "primary"],
         className
       )}

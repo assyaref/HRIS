@@ -19,28 +19,28 @@ export interface ButtonVariants {
 }
 
 const baseButtonClasses =
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed";
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[10px] text-sm font-semibold transition-all duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed";
 
 const buttonVariantClasses: Record<ButtonVariant, string> = {
   primary:
-    "bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary/80 shadow-sm",
+    "bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary/85 shadow-[var(--shadow-primary)]",
   secondary:
-    "bg-secondary text-secondary-foreground hover:bg-secondary/80 active:bg-secondary/70 shadow-sm",
+    "bg-secondary text-secondary-foreground hover:bg-secondary/90 active:bg-secondary/80",
   tonal:
-    "bg-surface-primary text-accent-foreground hover:bg-surface-primary/90 active:bg-surface-primary/80 shadow-sm",
+    "bg-surface-primary text-primary hover:bg-accent active:bg-accent/80",
   outline:
-    "border border-input bg-background hover:bg-accent hover:text-accent-foreground text-foreground active:bg-accent/80 shadow-sm",
-  ghost: "bg-transparent text-foreground hover:bg-accent hover:text-accent-foreground active:bg-accent/60 shadow-sm",
-  text: "bg-transparent text-foreground hover:bg-accent hover:text-accent-foreground active:bg-accent/60",
+    "border border-input bg-card text-foreground hover:border-primary/40 hover:bg-surface-primary hover:text-primary active:bg-accent",
+  ghost: "bg-transparent text-foreground hover:bg-muted hover:text-primary active:bg-accent/60",
+  text: "bg-transparent text-primary hover:bg-surface-primary active:bg-accent/60",
   destructive:
-    "bg-destructive text-destructive-foreground hover:bg-destructive/90 active:bg-destructive/80 shadow-sm",
+    "bg-destructive text-destructive-foreground hover:bg-destructive/90 active:bg-destructive/80 shadow-[0_6px_14px_-6px_rgb(220_38_38/0.5)]",
 };
 
 const buttonSizeClasses: Record<ButtonSize, string> = {
-  sm: "h-8 rounded-md px-3 text-xs",
+  sm: "h-9 rounded-lg px-3 text-[13px]",
   md: "h-10 px-4 py-2",
-  lg: "h-11 rounded-md px-8",
-  icon: "size-10 rounded-xl",
+  lg: "h-11 rounded-xl px-6",
+  icon: "size-10 rounded-[10px]",
 };
 
 /** Shared class builder so links can be styled exactly like <Button>. */

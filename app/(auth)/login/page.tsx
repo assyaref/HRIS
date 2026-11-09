@@ -32,14 +32,14 @@ export default async function LoginPage() {
       <div className="flex justify-center">
         <Brand />
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Sign in</CardTitle>
+      <Card className="shadow-[var(--shadow-lg)]">
+        <CardHeader className="p-6 pb-4">
+          <CardTitle className="text-xl">Sign in</CardTitle>
           <CardDescription>
             Enter your Employee Number or Email and password to access Enterprise HRIS.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6 pt-0">
           <LoginForm />
         </CardContent>
       </Card>
