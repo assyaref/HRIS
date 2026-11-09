@@ -1,7 +1,9 @@
 import Link from "next/link";
 
+import {
+  type AttendanceCardState,
+} from "@/components/employee/attendance-status-card";
 import { SectionHeader } from "@/components/employee/section-header";
-import { AttendanceStatusCard } from "@/components/employee/attendance-status-card";
 import { EmployeeHeader } from "@/components/employee/employee-header";
 import { QuickServiceGrid } from "@/components/employee/quick-service-grid";
 import type { QuickServiceItem } from "@/components/employee/quick-service-card";
@@ -10,7 +12,7 @@ import { EmployeeEmptyState } from "@/components/employee/ui-states";
 import { AnnouncementCarousel } from "@/components/employee/announcement-carousel";
 import { HrisIcon } from "@/components/layout/icons";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { PERMISSIONS, type Permission } from "@/lib/auth/permissions";
 import type { UserAuthorization } from "@/lib/auth/rbac";
 import type { CurrentUser } from "@/lib/auth/types";
@@ -27,9 +29,7 @@ import {
 } from "@/features/announcements/queries";
 import {
   ATTENDANCE_STATUS_LABELS,
-  ATTENDANCE_VERIFICATION_STATUS_LABELS,
   type AttendanceStatus,
-  type AttendanceVerificationStatus,
 } from "@/features/attendance/constants";
 import { formatTime } from "@/features/attendance/format";
 import {
@@ -65,14 +65,192 @@ function greeting(hour: number): string {
   return "Selamat malam";
 }
 
-function durationLabel(from: Date, to: Date): string {
-  const minutes = Math.max(0, Math.floor((to.getTime() - from.getTime()) / 60000));
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  return `${hours} Jam ${rest} Menit`;
+/** Circular progress visualization (inline SVG). */
+function CircularProgress({
+  percentage,
+  size = 88,
+  stroke = 8,
+}: {
+  percentage: number;
+  size?: number;
+  stroke?: number;
+}) {
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (percentage / 100) * circumference;
+
+  return (
+    <svg
+      width={size}
+      height={size}
+      className="transform -rotate-90"
+      aria-label="Kehadiran bulan ini"
+      role="img"
+    >
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke="#E7EAF0"
+        strokeWidth={stroke}
+        strokeLinecap="round"
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke="#155EEF"
+        strokeWidth={stroke}
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        className="transition-all duration-700 ease-out"
+      />
+      <text
+        x={size / 2}
+        y={size / 2 + size * 0.06}
+        textAnchor="middle"
+        fontSize={size * 0.32}
+        fontWeight="700"
+        fill="#172B4D"
+        letterSpacing="-0.02em"
+      >
+        {percentage}%
+      </text>
+    </svg>
+  );
 }
 
-/** The employee's self-service dashboard — mobile-first HRIS home. */
+/** A single stat tile inside the monthly summary. */
+function SummaryStat({ label, value, tone }: { label: string; value: string | number; tone: "success" | "info" | "warning" | "danger" }) {
+  const toneClass = {
+    success: "text-success hris-surface-success",
+    info: "text-info hris-surface-info",
+    warning: "text-warning hris-surface-warning",
+    danger: "text-danger hris-surface-danger",
+  }[tone];
+  return (
+    <div className="flex flex-col items-center gap-1 p-3 rounded-xl border border-border bg-card">
+      <span className={cn("inline-flex items-center justify-center rounded-md px-2 py-0.5 text-[10px] font-semibold", toneClass)}>
+        {label}
+      </span>
+      <p className="text-lg font-semibold tracking-tight text-foreground">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+/** A single attendance info card (2-column grid). */
+function InfoCard({
+  label,
+  value,
+  sub,
+  icon,
+  tone = "primary",
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  icon: Parameters<typeof HrisIcon>[0]["name"];
+  tone?: "primary" | "success" | "info" | "warning" | "danger";
+}) {
+  const toneClass = {
+    primary: "hris-surface-primary text-primary",
+    success: "hris-surface-success text-success",
+    info: "hris-surface-info text-info",
+    warning: "hris-surface-warning text-warning",
+    danger: "hris-surface-danger text-danger",
+  }[tone];
+  return (
+    <div className="hris-card p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            {label}
+          </p>
+          <p className="mt-0.5 text-sm font-semibold text-foreground truncate">
+            {value}
+          </p>
+          {sub ? (
+            <p className="mt-0.5 text-[10px] text-muted-foreground">
+              {sub}
+            </p>
+          ) : null}
+        </div>
+        <span
+          aria-hidden="true"
+          className={cn(
+            "flex size-10 shrink-0 items-center justify-center rounded-2xl",
+            toneClass
+          )}
+        >
+          <HrisIcon name={icon} className="size-5" />
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** A single quick menu item (3-column grid). */
+function QuickMenuItem({
+  href,
+  icon,
+  label,
+  badge,
+  tone = "blue",
+}: {
+  href: string;
+  icon: Parameters<typeof HrisIcon>[0]["name"];
+  label: string;
+  badge?: string | number | null;
+  tone?: "blue" | "cyan" | "green" | "amber" | "violet" | "rose" | "slate";
+}) {
+  const toneClasses: Record<string, string> = {
+    blue: "hris-surface-primary text-primary",
+    cyan: "hris-surface-info text-info",
+    green: "hris-surface-success text-success",
+    amber: "hris-surface-warning text-warning",
+    violet: "hris-surface-info text-info",
+    rose: "hris-surface-danger text-danger",
+    slate: "bg-muted text-muted-foreground",
+  };
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "hris-card emp-card-tap group flex min-h-[5.5rem] flex-col items-center justify-center gap-2 px-2 py-3 text-center focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
+        badge ? "group-hover:border-primary/50" : "border-transparent"
+      )}
+    >
+      <span
+        aria-hidden="true"
+        className={cn(
+          "relative flex size-11 items-center justify-center rounded-2xl mb-1",
+          toneClasses[tone]
+        )}
+      >
+        <HrisIcon name={icon} className="size-5.5" />
+        {badge ? (
+          <span className="absolute -top-1.5 -right-1.5 flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
+            {badge}
+          </span>
+        ) : null}
+      </span>
+      <span className="text-xs leading-tight font-medium text-foreground truncate">
+        {label}
+      </span>
+    </Link>
+  );
+}
+
+/**
+ * The employee's self-service dashboard — mobile-first HRIS home, rebuilt on
+ * the BCS Enterprise v4.3 design system. All values are dynamic and resolved
+ * server-side for the signed-in employee — nothing is hard-coded.
+ */
 export async function EmployeeDashboard({
   user,
   authorization,
@@ -88,7 +266,7 @@ export async function EmployeeDashboard({
   if (!employee) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">
           Beranda
         </h1>
         <EmployeeEmptyState
@@ -137,7 +315,7 @@ export async function EmployeeDashboard({
   );
   const isWeekend = today.getUTCDay() === 0 || today.getUTCDay() === 6;
 
-  let state: Parameters<typeof AttendanceStatusCard>[0]["state"];
+  let state: AttendanceCardState;
   if (!employeeActive) {
     state = "UNAVAILABLE";
   } else if (openAttendance) {
@@ -161,25 +339,6 @@ export async function EmployeeDashboard({
   const checkOutLabel = todayRecord?.checkOutAt
     ? formatTime(todayRecord.checkOutAt, timeZone)
     : null;
-  const workedDuration =
-    todayRecord?.checkInAt && todayRecord.checkOutAt
-      ? durationLabel(todayRecord.checkInAt, todayRecord.checkOutAt)
-      : openAttendance?.checkInAt
-        ? durationLabel(openAttendance.checkInAt, new Date())
-        : null;
-
-  const verificationLabel =
-    activeRecord?.checkInVerificationStatus === "verified"
-      ? ATTENDANCE_VERIFICATION_STATUS_LABELS[
-          activeRecord.checkInVerificationStatus as AttendanceVerificationStatus
-        ] ?? "Terverifikasi"
-      : null;
-  const locationLabel =
-    activeRecord?.checkInLocationStatus === "valid"
-      ? "Dalam Area Kerja"
-      : activeRecord?.checkInLocationStatus === "outside_geofence"
-        ? "Di Luar Area Kerja"
-        : null;
 
   const canCheckIn = can(P.ATTENDANCE_CHECK_IN);
   const canAttendance = can(P.ATTENDANCE_VIEW);
@@ -200,40 +359,34 @@ export async function EmployeeDashboard({
     canAttendance && {
       href: "/attendance",
       icon: "attendance",
-      label: "Kehadiran",
+      label: "Absensi",
       tone: "blue",
     },
-    canLeave && { href: "/leave", icon: "leave", label: "Cuti", tone: "amber" },
+    canLeave && { href: "/leave", icon: "leave", label: "Pengajuan Cuti", tone: "amber" },
     canPermission && {
       href: "/permission",
       icon: "permission",
-      label: "Izin",
+      label: "Izin Kegiatan",
       tone: "cyan",
     },
     canPayslip && {
       href: "/payslip",
       icon: "payslip",
-      label: "Pay Slip",
+      label: "Payslip",
       tone: "violet",
     },
-    canAttendance && {
-      href: "/attendance",
-      icon: "history",
-      label: "Riwayat",
-      tone: "green",
-    },
-    {
-      href: "/announcements",
-      icon: "document",
-      label: "Dokumen",
-      tone: "slate",
-    },
-    { href: "/face-id", icon: "scan", label: "Face ID", tone: "rose" },
     {
       href: "/settings/account",
       icon: "profile",
       label: "Profil Saya",
       tone: "blue",
+    },
+    {
+      href: "/notifications",
+      icon: "bell",
+      label: "Notifikasi",
+      tone: "rose",
+      badge: unreadAnnouncements > 0 ? unreadAnnouncements : null,
     },
   ];
   const services = serviceCandidates.filter(
@@ -296,32 +449,13 @@ export async function EmployeeDashboard({
     .sort((a, b) => b.on.getTime() - a.on.getTime())
     .slice(0, 4);
 
-  const monthlyTiles = [
-    {
-      label: "Hadir bulan ini",
-      value: String(monthSummary.present + monthSummary.completed),
-      tone: "green" as const,
-      icon: "calendar-check" as const,
-    },
-    {
-      label: "Saldo cuti",
-      value: `${availableLeave} hari`,
-      tone: "amber" as const,
-      icon: "leave" as const,
-    },
-    {
-      label: "Menunggu",
-      value: String(pendingLeave + pendingPermission),
-      tone: "blue" as const,
-      icon: "clock" as const,
-    },
-    {
-      label: "Pay slip",
-      value: myPayslips.length ? String(myPayslips.length) : "—",
-      tone: "info" as const,
-      icon: "payslip" as const,
-    },
-  ];
+  const totalDays = monthSummary.present + monthSummary.completed + monthSummary.incomplete + monthSummary.rejected;
+  const attendancePct = totalDays > 0 ? Math.round(((monthSummary.present + monthSummary.completed) / totalDays) * 100) : 0;
+
+  const monthLabel = new Intl.DateTimeFormat("id-ID", {
+    month: "long",
+    year: "numeric",
+  }).format(new Date());
 
   const todayLabel = new Intl.DateTimeFormat("id-ID", {
     weekday: "long",
@@ -330,7 +464,8 @@ export async function EmployeeDashboard({
   }).format(new Date());
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* Welcome Section */}
       <EmployeeHeader
         profile={{
           firstName: employee.firstName,
@@ -351,6 +486,163 @@ export async function EmployeeDashboard({
         }
       />
 
+      {/* Attendance Info Cards (2-column) */}
+      {canAttendance ? (
+        <section className="grid grid-cols-2 gap-3">
+          <InfoCard
+            label="Hadir Hari Ini"
+            value={String(monthSummary.present)}
+            sub={new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long" })}
+            icon="calendar-check"
+            tone="success"
+          />
+          <InfoCard
+            label="Jadwal Kerja"
+            value={activeRecord?.projectName ?? "—"}
+            sub={activeRecord?.workLocationName ?? "Belum ditetapkan"}
+            icon="briefcase"
+            tone="info"
+          />
+          <InfoCard
+            label="Lokasi Kerja"
+            value={activeRecord?.workLocationName ?? "—"}
+            sub={activeRecord?.projectName ?? "—"}
+            icon="map-pin"
+            tone="primary"
+          />
+          <InfoCard
+            label="Status Kehadiran"
+            value={
+              todayRecord
+                ? ATTENDANCE_STATUS_LABELS[
+                    todayRecord.status as AttendanceStatus
+                  ] ?? todayRecord.status
+                : "Belum absensi"
+            }
+            sub={checkInLabel ? `Masuk ${checkInLabel}` : "Belum check-in"}
+            icon="clock"
+            tone={
+              todayRecord?.status === "present" || todayRecord?.status === "completed"
+                ? "success"
+                : todayRecord?.status === "rejected"
+                  ? "danger"
+                  : "info"
+            }
+          />
+        </section>
+      ) : null}
+
+      {/* Primary Attendance Action */}
+      <section className="hris-card rounded-2xl overflow-hidden relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
+        <div className="relative p-5">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span
+                aria-hidden="true"
+                className="flex size-14 shrink-0 items-center justify-center rounded-2xl hris-surface-primary text-primary shadow-lg"
+              >
+                <HrisIcon name="scan" className="size-6" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-foreground">
+                  Absensi Sekarang
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Check-in / Check-out
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <StatusBadge
+                tone={
+                  state === "CHECKED_IN" || state === "CHECKED_OUT"
+                    ? "success"
+                    : state === "NOT_CHECKED_IN"
+                      ? "warning"
+                      : "neutral"
+                }
+              >
+                {state === "CHECKED_IN"
+                  ? "Sudah Masuk"
+                  : state === "CHECKED_OUT"
+                    ? "Selesai"
+                    : state === "NOT_CHECKED_IN"
+                      ? "Belum Absen"
+                      : state}
+              </StatusBadge>
+            </div>
+          </div>
+
+          {state === "NOT_CHECKED_IN" && canCheckIn ? (
+            <Link
+              href="/attendance"
+              className="mt-5 block min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+            >
+              <HrisIcon name="scan" className="size-5" />
+              Check-in Sekarang
+            </Link>
+          ) : null}
+
+          {state === "CHECKED_IN" && can(P.ATTENDANCE_CHECK_OUT) ? (
+            <Link
+              href="/attendance"
+              className="mt-5 block min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+            >
+              <HrisIcon name="scan" className="size-5" />
+              Check-out Sekarang
+            </Link>
+          ) : null}
+
+          {(state === "CHECKED_OUT" || state === "ON_LEAVE" || state === "WEEKEND" || state === "UNAVAILABLE") && (
+            <p className="mt-5 rounded-xl hris-surface-success px-4 py-3 text-sm text-success">
+              {state === "CHECKED_OUT"
+                ? "Anda sudah menyelesaikan absensi hari ini."
+                : state === "ON_LEAVE"
+                  ? "Anda sedang cuti. Tidak perlu absensi."
+                  : state === "WEEKEND"
+                    ? "Hari ini akhir pekan."
+                    : "Absensi tidak tersedia untuk profil Anda."}
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* Monthly Attendance Summary */}
+      <section className="hris-card rounded-2xl p-5">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold tracking-tight text-foreground">
+              Rekap Kehadiran Bulan Ini
+            </h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {monthLabel} · {totalDays} catatan
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 flex items-center gap-6">
+          <CircularProgress percentage={attendancePct} size={96} stroke={9} />
+          <div className="min-w-0 flex-1">
+            <p className="text-3xl font-bold tracking-tight text-foreground">
+              {attendancePct}%
+            </p>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              Tingkat kehadiran bulan ini
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <SummaryStat label="Hadir" value={monthSummary.present + monthSummary.completed} tone="success" />
+          <SummaryStat label="Izin" value={monthSummary.incomplete} tone="warning" />
+          <SummaryStat label="Cuti" value={availableLeave} tone="info" />
+          <SummaryStat label="Alpa" value={monthSummary.rejected} tone="danger" />
+        </div>
+      </section>
+
+      {/* Announcements */}
       {carouselItems.length > 0 ? (
         <section className="space-y-3">
           <SectionHeader
@@ -374,63 +666,16 @@ export async function EmployeeDashboard({
         </section>
       ) : null}
 
-      <AttendanceStatusCard
-        state={state}
-        checkInLabel={checkInLabel}
-        checkOutLabel={checkOutLabel}
-        durationLabel={workedDuration}
-        verificationLabel={verificationLabel}
-        locationLabel={locationLabel}
-        showAction={state === "NOT_CHECKED_IN" && canCheckIn}
-      />
-
+      {/* Quick Menu (3-column grid) */}
       <section className="space-y-3">
         <SectionHeader
-          title="Layanan Aplikasi"
-          description="Akses cepat modul HRIS Anda"
+          title="Menu Cepat"
+          description="Akses langsung ke modul HRIS Anda"
         />
         <QuickServiceGrid items={services} />
       </section>
 
-      <section className="space-y-3">
-        <SectionHeader title="Ringkasan Bulan Ini" />
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {monthlyTiles.map((tile) => (
-            <div
-              key={tile.label}
-              className={cn(
-                "hris-card flex items-center gap-3 p-4",
-                tile.tone === "green" && "hris-surface-success",
-                tile.tone === "amber" && "hris-surface-warning",
-                tile.tone === "blue" && "hris-surface-primary",
-                tile.tone === "info" && "hris-surface-info"
-              )}
-            >
-              <span
-                aria-hidden="true"
-                className={cn(
-                  "flex size-10 shrink-0 items-center justify-center rounded-2xl",
-                  tile.tone === "green" && "text-success",
-                  tile.tone === "amber" && "text-warning",
-                  tile.tone === "blue" && "text-primary",
-                  tile.tone === "info" && "text-info"
-                )}
-              >
-                <HrisIcon name={tile.icon} className="size-5" />
-              </span>
-              <div className="min-w-0">
-                <p className="truncate text-xs text-muted-foreground">
-                  {tile.label}
-                </p>
-                <p className="text-lg font-semibold tracking-tight text-foreground">
-                  {tile.value}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
+      {/* Recent Requests */}
       <section className="space-y-3">
         <SectionHeader
           title="Aktivitas Terbaru"
@@ -483,42 +728,6 @@ export async function EmployeeDashboard({
           </Card>
         )}
       </section>
-
-      {canAttendance ? (
-        <section className="space-y-3">
-          <SectionHeader title="Status Presensi" description="Ringkasan hari ini" />
-          <Card className="hris-card grid grid-cols-2 divide-x divide-border sm:grid-cols-4 sm:divide-x">
-            <div className="p-4">
-              <p className="text-xs text-muted-foreground">Status</p>
-              <p className="mt-0.5 text-sm font-semibold text-foreground">
-                {todayRecord
-                  ? ATTENDANCE_STATUS_LABELS[
-                      todayRecord.status as AttendanceStatus
-                    ] ?? todayRecord.status
-                  : "Belum ada"}
-              </p>
-            </div>
-            <div className="p-4">
-              <p className="text-xs text-muted-foreground">Jam masuk</p>
-              <p className="mt-0.5 text-sm font-semibold text-foreground">
-                {checkInLabel ?? "—"}
-              </p>
-            </div>
-            <div className="p-4">
-              <p className="text-xs text-muted-foreground">Jam pulang</p>
-              <p className="mt-0.5 text-sm font-semibold text-foreground">
-                {checkOutLabel ?? "—"}
-              </p>
-            </div>
-            <div className="p-4">
-              <p className="text-xs text-muted-foreground">Lokasi</p>
-              <p className="mt-0.5 text-sm font-semibold text-foreground">
-                {activeRecord?.workLocationName ?? "—"}
-              </p>
-            </div>
-          </Card>
-        </section>
-      ) : null}
     </div>
   );
 }
