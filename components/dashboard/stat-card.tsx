@@ -74,7 +74,7 @@ export function StatCard({
   return (
     <div
       className={cn(
-        "flex items-center rounded-[18px] border border-[var(--card-border)] bg-card hris-card hris-card-hover",
+        "flex items-center rounded-2xl border border-[var(--card-border)] bg-card hris-card hris-card-hover",
         compact ? "gap-3 p-3.5" : "gap-4 p-4 sm:px-5 sm:py-[18px]",
         className
       )}

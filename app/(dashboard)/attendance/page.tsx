@@ -430,7 +430,7 @@ function PageHeader({ name, number }: { name: string | null; number: string | nu
   return (
     <div>
       <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-        Kehadiran
+        Absensi
       </h1>
       {name ? (
         <p className="mt-1 text-sm text-muted-foreground">

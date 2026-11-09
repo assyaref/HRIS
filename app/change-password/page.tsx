@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { AuthShell } from "@/components/layout/auth-shell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/auth";
 import { ChangePasswordForm } from "@/features/account/change-password-form";
@@ -13,6 +14,7 @@ export default async function ChangePasswordPage() {
   await requireUser({ allowPendingPasswordChange: true });
 
   return (
+    <AuthShell>
     <div className="flex flex-col gap-6 max-w-md mx-auto">
       <div className="flex justify-center">
         <svg
@@ -42,5 +44,6 @@ export default async function ChangePasswordPage() {
         Butuh bantuan? Hubungi administrator HRIS.
       </p>
     </div>
+    </AuthShell>
   );
 }

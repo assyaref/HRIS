@@ -60,21 +60,16 @@ export function Sidebar() {
             </span>
           )}
         </Link>
-        <button
-          type="button"
-          onClick={toggleCollapsed}
-          aria-label={collapsed ? "Perluas sidebar" : "Ciutkan sidebar"}
-          aria-pressed={collapsed}
-          className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25 focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none",
-            collapsed ? "absolute -right-3 bottom-2 size-7 bg-primary shadow-md ring-2 ring-white" : "ml-auto"
-          )}
-        >
-          <HrisIcon
-            name={collapsed ? "chevron-right" : "chevron-left"}
-            className="size-[18px]"
-          />
-        </button>
+        {collapsed ? null : (
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            aria-label="Ciutkan sidebar"
+            className="ml-auto flex size-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25 focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none"
+          >
+            <HrisIcon name="chevron-left" className="size-[18px]" />
+          </button>
+        )}
       </div>
 
       {/* Organization chip */}

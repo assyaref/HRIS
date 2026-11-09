@@ -45,7 +45,7 @@ export default async function TestDataPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            Test Data
+            Data Uji
           </h1>
           <p className="mt-1 text-sm text-muted-foreground sm:text-base">
             Remove records this organization created as test data.
@@ -70,7 +70,7 @@ export default async function TestDataPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-          Test Data
+          Data Uji
         </h1>
         <p className="mt-1 text-sm text-muted-foreground sm:text-base">
           Remove records this organization created as test data, without

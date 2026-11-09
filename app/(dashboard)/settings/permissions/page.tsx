@@ -43,7 +43,7 @@ export default async function PermissionsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-          Permissions
+          Hak Akses
         </h1>
         <p className="mt-1 text-sm text-muted-foreground sm:text-base">
           {rows.length} capabilities across {modules.size} modules. Permissions

@@ -348,7 +348,7 @@ export default async function EmployeesPage({
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              Employees
+              Karyawan
             </h1>
             {authorization.isSuperAdmin && activeOrganizationName ? (
               <Badge variant="outline" aria-label="Active organization">

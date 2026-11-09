@@ -125,8 +125,8 @@ export function PayrollRunActions({
         </div>
       ) : null}
 
-      <div className="rounded-2xl border border-blue-100 bg-[#EAF5FF]/60 p-4">
-        <p className="mb-3 text-xs font-bold uppercase tracking-wide text-[#0F6FD1]">
+      <div className="rounded-2xl border border-primary/15 bg-surface-primary/60 p-4">
+        <p className="mb-3 text-xs font-bold uppercase tracking-wide text-primary">
           Available workflow actions
         </p>
 
@@ -136,7 +136,7 @@ export function PayrollRunActions({
               type="button"
               onClick={() => run(() => calculatePayrollAction(periodId))}
               disabled={pending}
-              className={`${actionBase} bg-[#1687F8] text-white hover:bg-[#0F6FD1]`}
+              className={`${actionBase} bg-primary text-white hover:bg-primary/90`}
             >
               {pending ? "Working…" : "Calculate run"}
             </Button>
@@ -148,7 +148,7 @@ export function PayrollRunActions({
               variant="secondary"
               onClick={() => run(() => submitPayrollRunAction(periodId))}
               disabled={pending}
-              className={`${actionBase} bg-white text-[#0F6FD1] ring-1 ring-blue-200 hover:bg-blue-50`}
+              className={`${actionBase} bg-card text-primary ring-1 ring-primary/25 hover:bg-surface-primary`}
             >
               Submit for approval
             </Button>
@@ -183,7 +183,7 @@ export function PayrollRunActions({
               variant="secondary"
               onClick={() => run(() => lockPayrollRunAction(periodId))}
               disabled={pending}
-              className={`${actionBase} bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50`}
+              className={`${actionBase} bg-card text-foreground/85 ring-1 ring-slate-200 hover:bg-muted`}
             >
               Lock and finalize
             </Button>
@@ -195,7 +195,7 @@ export function PayrollRunActions({
               variant="outline"
               onClick={() => run(() => generatePayslipsAction(periodId))}
               disabled={pending}
-              className={`${actionBase} border-violet-200 bg-white text-violet-700 hover:bg-violet-50`}
+              className={`${actionBase} border-violet-200 bg-card text-violet-700 hover:bg-violet-50`}
             >
               Generate payslips
             </Button>
@@ -206,7 +206,7 @@ export function PayrollRunActions({
               type="button"
               onClick={() => run(() => publishPayslipsAction(periodId))}
               disabled={pending}
-              className={`${actionBase} bg-[#1687F8] text-white hover:bg-[#0F6FD1]`}
+              className={`${actionBase} bg-primary text-white hover:bg-primary/90`}
             >
               Publish payslips
             </Button>
@@ -218,7 +218,7 @@ export function PayrollRunActions({
               variant="destructive"
               onClick={() => run(() => cancelPayrollPeriodAction(periodId))}
               disabled={pending}
-              className={`${actionBase} bg-white text-red-700 ring-1 ring-red-200 hover:bg-red-50`}
+              className={`${actionBase} bg-card text-red-700 ring-1 ring-red-200 hover:bg-red-50`}
             >
               Cancel period
             </Button>
@@ -249,7 +249,7 @@ export function PayrollRunActions({
               name="reason"
               rows={3}
               required
-              className="flex min-h-24 w-full rounded-xl border border-red-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition-colors placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-red-300"
+              className="flex min-h-24 w-full rounded-xl border border-red-200 bg-card px-4 py-3 text-sm text-foreground shadow-sm outline-none transition-colors placeholder:text-muted-foreground/80 focus-visible:ring-2 focus-visible:ring-red-300"
             />
           </div>
 

@@ -62,7 +62,7 @@ type PillTone = "emerald" | "sky" | "gray" | "destructive";
 const PILL_TONES: Record<PillTone, string> = {
   emerald: "bg-emerald-100 text-emerald-700",
   sky: "bg-surface-soft-blue text-primary",
-  gray: "bg-gray-100 text-gray-700",
+  gray: "bg-gray-100 text-foreground/85",
   destructive: "bg-destructive/10 text-destructive",
 };
 

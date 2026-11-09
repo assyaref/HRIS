@@ -156,15 +156,15 @@ export default async function PayrollPage() {
           ====================================================== */}
       <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-semibold text-blue-600">
-            Enterprise HRIS
+          <p className="text-sm font-semibold text-primary">
+            HRIS Lite Enterprise
           </p>
 
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-            Payroll
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            Penggajian
           </h1>
 
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
             Manage payroll periods, processing runs and payroll components
             from one workspace.
           </p>
@@ -182,7 +182,7 @@ export default async function PayrollPage() {
       {/* ======================================================
           HERO
           ====================================================== */}
-      <section className="relative overflow-hidden rounded-2xl bg-linear-to-br from-[#1687F8] via-[#238FF5] to-[#63B4FF] p-6 text-white shadow-[0_12px_40px_rgba(22,135,248,0.16)] sm:p-8">
+      <section className="relative overflow-hidden rounded-2xl hris-band p-6 text-white shadow-[0_12px_40px_rgba(22,135,248,0.16)] sm:p-8">
         <div className="relative z-10">
           <div className="flex size-12 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/25">
             <PayrollIcon type="wallet" className="size-6" />
@@ -192,7 +192,7 @@ export default async function PayrollPage() {
             Payroll management
           </h2>
 
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:text-base">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-white/85 sm:text-base">
             Review payroll cycles, monitor workflow status and access
             organization payroll configuration.
           </p>
@@ -264,7 +264,7 @@ export default async function PayrollPage() {
               </div>
             </div>
 
-            <p className="mt-4 text-xs text-slate-500">
+            <p className="mt-4 text-xs text-muted-foreground">
               Organization-scoped payroll cycles.
             </p>
           </CardContent>
@@ -296,13 +296,13 @@ export default async function PayrollPage() {
                   {latestPeriod.run ? (
                     <PayrollRunStatusBadge status={latestPeriod.run.status} />
                   ) : (
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-muted-foreground">
                       Run not started
                     </span>
                   )}
                 </div>
               ) : (
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   Create a payroll period to begin.
                 </p>
               )}
@@ -316,11 +316,11 @@ export default async function PayrollPage() {
           ====================================================== */}
       <section>
         <div className="mb-4">
-          <h2 className="text-lg font-bold text-slate-900">
+          <h2 className="text-lg font-bold text-foreground">
             Payroll Periods
           </h2>
 
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-muted-foreground">
             Review payroll cycles and open their processing workspace.
           </p>
         </div>
@@ -341,11 +341,11 @@ export default async function PayrollPage() {
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-base font-bold text-slate-900">
+                        <p className="truncate text-base font-bold text-foreground">
                           {period.name}
                         </p>
 
-                        <p className="mt-1 font-mono text-[11px] text-slate-500">
+                        <p className="mt-1 font-mono text-[11px] text-muted-foreground">
                           {period.code}
                         </p>
                       </div>
@@ -379,7 +379,7 @@ export default async function PayrollPage() {
 
 <div className="mt-4 flex items-center justify-between gap-3 border-t border-border pt-4">
                         <div>
-                          <p className="text-[10px] font-semibold tracking-wide text-slate-400 uppercase">
+                          <p className="text-[10px] font-semibold tracking-wide text-muted-foreground/80 uppercase">
                             Run
                           </p>
 
@@ -387,7 +387,7 @@ export default async function PayrollPage() {
                             {period.run ? (
                               <PayrollRunStatusBadge status={period.run.status} />
                             ) : (
-                              <span className="text-xs text-slate-500">
+                              <span className="text-xs text-muted-foreground">
                                 Not started
                               </span>
                             )}
@@ -440,7 +440,7 @@ export default async function PayrollPage() {
             <div className="hidden overflow-hidden hris-card lg:block">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
+                  <TableRow className="bg-muted/80 hover:bg-muted/80">
                     <TableHead className="h-12 pl-5">
                       Period
                     </TableHead>
@@ -471,25 +471,25 @@ export default async function PayrollPage() {
                   {periods.map((period) => (
                     <TableRow
                       key={period.id}
-                      className="transition-colors hover:bg-blue-50/40"
+                      className="transition-colors hover:bg-surface-primary/40"
                     >
                       <TableCell className="py-4 pl-5">
-                        <span className="font-semibold text-slate-800">
+                        <span className="font-semibold text-foreground">
                           {period.name}
                         </span>
 
-                        <span className="mt-0.5 block font-mono text-[11px] text-slate-500">
+                        <span className="mt-0.5 block font-mono text-[11px] text-muted-foreground">
                           {period.code}
                         </span>
                       </TableCell>
 
-                      <TableCell className="text-sm text-slate-600">
+                      <TableCell className="text-sm text-muted-foreground">
                         {formatDate(period.periodStart)}
-                        <span className="mx-1 text-slate-400">→</span>
+                        <span className="mx-1 text-muted-foreground/80">→</span>
                         {formatDate(period.periodEnd)}
                       </TableCell>
 
-                      <TableCell className="text-sm text-slate-600">
+                      <TableCell className="text-sm text-muted-foreground">
                         {formatDate(period.paymentDate)}
                       </TableCell>
 
@@ -501,7 +501,7 @@ export default async function PayrollPage() {
                         {period.run ? (
                           <PayrollRunStatusBadge status={period.run.status} />
                         ) : (
-                          <span className="text-sm text-slate-500">
+                          <span className="text-sm text-muted-foreground">
                             Not started
                           </span>
                         )}
@@ -566,11 +566,11 @@ export default async function PayrollPage() {
             </span>
 
             <div>
-              <h3 className="text-sm font-bold text-slate-800">
+              <h3 className="text-sm font-bold text-foreground">
                 Payroll controls
               </h3>
 
-              <div className="mt-2 space-y-1.5 text-xs leading-5 text-slate-600 sm:text-sm">
+              <div className="mt-2 space-y-1.5 text-xs leading-5 text-muted-foreground sm:text-sm">
                 <p>
                   Payroll periods and runs remain organization-scoped.
                 </p>

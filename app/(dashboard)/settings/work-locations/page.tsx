@@ -54,7 +54,7 @@ export default async function WorkLocationsPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            Work Locations
+            Lokasi Kerja
           </h1>
           <p className="mt-1 text-sm text-muted-foreground sm:text-base">
             Manage geofenced work locations for attendance check-ins.

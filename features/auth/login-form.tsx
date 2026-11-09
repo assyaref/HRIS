@@ -13,8 +13,8 @@ const initialState: LoginState = { status: "idle" };
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending} className="w-full">
-      {pending ? "Signing in..." : "Sign in"}
+    <Button type="submit" size="lg" disabled={pending} className="w-full">
+      {pending ? "Memproses..." : "Masuk"}
     </Button>
   );
 }
@@ -43,7 +43,7 @@ export function LoginForm() {
       ) : null}
 
       <div className="space-y-2">
-        <Label htmlFor="identifier">Employee Number / Email</Label>
+        <Label htmlFor="identifier">Nomor Karyawan / Email</Label>
         <Input
           id="identifier"
           name="identifier"

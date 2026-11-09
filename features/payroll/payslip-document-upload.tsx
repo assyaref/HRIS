@@ -153,11 +153,11 @@ export function PayslipDocumentUpload({
   return (
     <div className="flex min-w-[220px] flex-col items-end gap-2">
       {hasDocument && document ? (
-        <div className="w-full max-w-xs rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-2 text-left">
-          <p className="truncate text-xs font-semibold text-slate-800">
+        <div className="w-full max-w-xs rounded-lg border border-border bg-muted/70 px-3 py-2 text-left">
+          <p className="truncate text-xs font-semibold text-foreground">
             {document.originalFilename}
           </p>
-          <p className="mt-0.5 text-[11px] text-slate-500">
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
             v{document.version} · {document.source} ·{" "}
             {formatFileSize(document.fileSize)}
           </p>
@@ -176,7 +176,7 @@ export function PayslipDocumentUpload({
 
       {hasDocument ? (
         <label className="w-full max-w-xs text-left">
-          <span className="text-[11px] font-medium text-slate-600">
+          <span className="text-[11px] font-medium text-muted-foreground">
             Reason for replacement
           </span>
           <textarea
@@ -185,7 +185,7 @@ export function PayslipDocumentUpload({
             maxLength={PAYSLIP_DOCUMENT_REPLACE_REASON_MAX_LENGTH}
             rows={2}
             onChange={(event) => setReason(event.target.value)}
-            className="mt-1 w-full resize-none rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-800 outline-none focus:border-[#1687F8] focus:ring-1 focus:ring-[#1687F8]/30"
+            className="mt-1 w-full resize-none rounded-md border border-border bg-card px-2 py-1.5 text-xs text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary/30"
             aria-label={`Reason for replacing ${payslipNumber}`}
           />
         </label>

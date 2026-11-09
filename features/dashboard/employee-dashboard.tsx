@@ -347,6 +347,7 @@ export async function EmployeeDashboard({
 
   return (
     <div className="grid gap-5 pt-1 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-6">
+      <h1 className="sr-only">Beranda</h1>
       <div className="min-w-0 space-y-5">
         {/* Day at a glance */}
         <section aria-label="Ringkasan hari ini" className="grid grid-cols-2 gap-3 sm:gap-4">

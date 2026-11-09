@@ -13,19 +13,19 @@ export default function ForbiddenPage() {
       <div className="flex max-w-md flex-col items-center text-center">
         <span
           aria-hidden="true"
-          className="flex size-12 items-center justify-center rounded-full bg-destructive/10 text-sm font-bold text-destructive"
+          className="flex size-16 items-center justify-center rounded-2xl bg-surface-danger text-lg font-extrabold text-danger shadow-[0_10px_24px_-14px_rgb(220_38_38/0.7)]"
         >
           403
         </span>
         <h1 className="mt-4 text-2xl font-semibold tracking-tight">
-          Access denied
+          Akses ditolak
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          You do not have permission to view this page. If you believe this is
-          a mistake, contact your administrator.
+          Anda tidak memiliki izin untuk membuka halaman ini. Jika menurut Anda
+          ini keliru, hubungi administrator.
         </p>
         <Link href="/dashboard" className={buttonVariants({ className: "mt-6" })}>
-          Return to dashboard
+          Kembali ke Beranda
         </Link>
       </div>
     </main>

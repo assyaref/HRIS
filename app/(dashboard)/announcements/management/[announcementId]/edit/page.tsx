@@ -79,7 +79,7 @@ export default async function EditAnnouncementPage({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            Edit announcement
+            Ubah Pengumuman
           </h1>
           <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <AnnouncementStatusBadge status={detail.status} />

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-import { Brand } from "@/components/layout/brand";
 import {
   Card,
   CardContent,
@@ -13,7 +12,7 @@ import { LoginForm } from "@/features/auth/login-form";
 import { getCurrentUser } from "@/lib/auth/auth";
 
 export const metadata: Metadata = {
-  title: "Sign in",
+  title: "Masuk",
 };
 
 /**
@@ -28,23 +27,20 @@ export default async function LoginPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex justify-center">
-        <Brand />
-      </div>
-      <Card className="shadow-[var(--shadow-lg)]">
-        <CardHeader className="p-6 pb-4">
-          <CardTitle className="text-xl">Sign in</CardTitle>
+    <div className="flex flex-col gap-5">
+      <Card className="shadow-[var(--shadow-xl)]">
+        <CardHeader className="p-6 pb-4 sm:p-8 sm:pb-5">
+          <CardTitle className="text-2xl!">Masuk</CardTitle>
           <CardDescription>
-            Enter your Employee Number or Email and password to access Enterprise HRIS.
+            Gunakan Nomor Karyawan atau Email dan password Anda.
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-6 pt-0">
+        <CardContent className="p-6 pt-0 sm:p-8 sm:pt-0">
           <LoginForm />
         </CardContent>
       </Card>
       <p className="text-center text-xs text-muted-foreground">
-        Authorized personnel only. Sessions are protected and monitored.
+        Khusus personel berwenang. Sesi dilindungi dan dipantau.
       </p>
     </div>
   );

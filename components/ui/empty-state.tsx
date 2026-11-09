@@ -21,7 +21,7 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "relative flex flex-col items-center justify-center overflow-hidden rounded-[18px] border border-[var(--card-border)] bg-gradient-to-b from-card to-[#F3F7FF] px-6 py-12 text-center dark:to-muted/40",
+        "relative flex flex-col items-center justify-center overflow-hidden rounded-2xl border border-[var(--card-border)] bg-gradient-to-b from-card to-[#F3F7FF] px-6 py-12 text-center dark:to-muted/40",
         className
       )}
       {...props}

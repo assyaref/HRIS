@@ -150,10 +150,10 @@ function Greeting() {
         <p className="text-lg font-medium text-white/95 lg:text-[19px]">
           {profile.greeting},
         </p>
-        <h1 className="mt-1 max-w-[calc(100%-5.75rem)] text-[24px] leading-tight font-extrabold tracking-tight text-white sm:text-[26px] md:max-w-none lg:text-[32px]">
+        <p className="mt-1 max-w-[calc(100%-5.75rem)] text-[24px] leading-tight font-extrabold tracking-tight text-white sm:text-[26px] md:max-w-none lg:text-[32px]">
           {profile.displayName}{" "}
           <span aria-hidden="true" className="inline-block">👋</span>
-        </h1>
+        </p>
         {identity ? (
           <p className="mt-1.5 text-[15px] font-medium text-white/90 lg:text-base">
             {identity}

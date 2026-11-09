@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/auth";
 
 export const metadata: Metadata = {
-  title: "Enterprise HRIS",
+  title: "HRIS Lite Enterprise",
 };
 
 /**

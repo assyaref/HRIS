@@ -120,10 +120,11 @@ export function MonthlyRecapCard({
     label: monthKeyLabel(value),
   }));
   const band = header === "band";
+  const headingId = band ? "ringkasan-bulan-ini-band" : "ringkasan-bulan-ini";
 
   return (
     <section
-      aria-labelledby="ringkasan-bulan-ini"
+      aria-labelledby={headingId}
       className={cn(
         "overflow-hidden rounded-[20px] border border-[var(--card-border)] bg-card hris-card",
         className
@@ -138,7 +139,7 @@ export function MonthlyRecapCard({
         )}
       >
         <h2
-          id="ringkasan-bulan-ini"
+          id={headingId}
           className={cn(
             "text-[17px] font-bold tracking-tight",
             band ? "text-white" : "text-foreground"

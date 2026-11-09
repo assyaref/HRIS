@@ -138,7 +138,7 @@ export function PayslipRevocationDialog({
                 }}
                 disabled={pending}
                 placeholder="Explain why this published payslip must be revoked."
-                className="flex min-h-24 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition-colors placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-blue-300 disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex min-h-24 w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground shadow-sm outline-none transition-colors placeholder:text-muted-foreground/80 focus-visible:ring-2 focus-visible:ring-blue-300 disabled:cursor-not-allowed disabled:opacity-60"
               />
               <p className="text-xs text-muted-foreground">
                 Required. The reason is stored with the payslip history.

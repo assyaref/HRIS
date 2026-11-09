@@ -82,7 +82,7 @@ export default async function AttendanceManagementPage({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            Attendance management
+            Kelola Absensi
           </h1>
           <p className="mt-1 text-sm text-muted-foreground sm:text-base">
             {total} {total === 1 ? "record" : "records"} in your organization.

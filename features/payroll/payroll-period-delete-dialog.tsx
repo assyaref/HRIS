@@ -97,23 +97,23 @@ export function PayrollPeriodDeleteDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+          <div className="grid gap-3 rounded-xl border border-border bg-muted/60 p-4">
             <div className="grid grid-cols-[8rem_1fr] gap-2 text-sm">
-              <span className="text-slate-500">Period name</span>
-              <span className="font-semibold text-slate-800">{periodName}</span>
+              <span className="text-muted-foreground">Period name</span>
+              <span className="font-semibold text-foreground">{periodName}</span>
 
-              <span className="text-slate-500">Period window</span>
-              <span className="font-medium text-slate-700">
+              <span className="text-muted-foreground">Period window</span>
+              <span className="font-medium text-foreground/85">
                 {periodStart}
-                <span className="mx-1 text-slate-400">→</span>
+                <span className="mx-1 text-muted-foreground/80">→</span>
                 {periodEnd}
               </span>
 
-              <span className="text-slate-500">Payment date</span>
-              <span className="font-medium text-slate-700">{paymentDate}</span>
+              <span className="text-muted-foreground">Payment date</span>
+              <span className="font-medium text-foreground/85">{paymentDate}</span>
 
-              <span className="text-slate-500">Status</span>
-              <span className="font-medium text-slate-700">{statusLabel}</span>
+              <span className="text-muted-foreground">Status</span>
+              <span className="font-medium text-foreground/85">{statusLabel}</span>
             </div>
 
             {error ? (

@@ -42,7 +42,7 @@ export default async function NewAnnouncementPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-          New announcement
+          Pengumuman Baru
         </h1>
         <p className="mt-1 text-sm text-muted-foreground sm:text-base">
           Draft an announcement for all employees or a selected audience, then

@@ -268,20 +268,20 @@ export function BulkDistributionPayslipUpload({
             {result.message}
           </p>
 
-          <div className="overflow-x-auto rounded-md border border-slate-200">
+          <div className="overflow-x-auto rounded-md border border-border">
             <table className="min-w-full divide-y divide-slate-200 text-left text-xs">
-              <thead className="bg-slate-50">
+              <thead className="bg-muted">
                 <tr>
-                  <th className="px-3 py-2 font-semibold text-slate-600">
+                  <th className="px-3 py-2 font-semibold text-muted-foreground">
                     File
                   </th>
-                  <th className="px-3 py-2 font-semibold text-slate-600">
+                  <th className="px-3 py-2 font-semibold text-muted-foreground">
                     Employee
                   </th>
-                  <th className="px-3 py-2 font-semibold text-slate-600">
+                  <th className="px-3 py-2 font-semibold text-muted-foreground">
                     Status
                   </th>
-                  <th className="px-3 py-2 font-semibold text-slate-600">
+                  <th className="px-3 py-2 font-semibold text-muted-foreground">
                     Detail
                   </th>
                 </tr>
@@ -289,10 +289,10 @@ export function BulkDistributionPayslipUpload({
               <tbody className="divide-y divide-slate-100">
                 {result.entries.map((entry) => (
                   <tr key={`${entry.filename}-${entry.status}`}>
-                    <td className="max-w-[220px] truncate px-3 py-2 text-slate-700">
+                    <td className="max-w-[220px] truncate px-3 py-2 text-foreground/85">
                       {entry.filename}
                     </td>
-                    <td className="px-3 py-2 text-slate-700">
+                    <td className="px-3 py-2 text-foreground/85">
                       {entry.employeeNumber ?? "—"}
                       {entry.employeeName ? ` · ${entry.employeeName}` : ""}
                     </td>
@@ -303,7 +303,7 @@ export function BulkDistributionPayslipUpload({
                     >
                       {statusLabel(entry.status)}
                     </td>
-                    <td className="px-3 py-2 text-slate-500">
+                    <td className="px-3 py-2 text-muted-foreground">
                       {entry.message ||
                         (entry.payslipNumber
                           ? `${entry.payslipNumber} · generated`

@@ -13,7 +13,7 @@
  * origin root, and Vercel-style deployments. No environment path is hardcoded.
  */
 
-export const PWA_APP_NAME = "Enterprise HRIS";
+export const PWA_APP_NAME = "HRIS Lite Enterprise";
 export const PWA_APP_SHORT_NAME = "HRIS";
 export const PWA_APP_DESCRIPTION =
   "Enterprise HRIS — a human resource information system for employee records, attendance, leave, and payroll.";

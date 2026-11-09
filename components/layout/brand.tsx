@@ -4,62 +4,59 @@ import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
 
 /**
- * HRIS application brand.
- *
- * `tone="dark"` renders on the navy navigation rail (white wordmark);
- * the default renders on light surfaces (header, auth pages).
- * `wordmark="sm"` keeps only the logo mark on narrow headers.
- * Presentation only. Does not affect authentication or authorization.
+ * HRIS Lite Enterprise v2.0 wordmark: round white logo disc, "HRIS" and the
+ * edition line. `tone="onBlue"` for the blue band, `tone="light"` for white
+ * surfaces. Presentation only.
  */
 export function Brand({
   tone = "light",
-  wordmark = "always",
+  size = "md",
 }: {
-  tone?: "light" | "dark";
-  /** "sm" hides the wordmark below the `sm` breakpoint (logo mark only). */
-  wordmark?: "always" | "sm";
+  tone?: "light" | "onBlue";
+  size?: "md" | "lg";
 }) {
-  const onDark = tone === "dark";
+  const onBlue = tone === "onBlue";
+  const disc = size === "lg" ? 60 : 48;
   return (
     <Link
       href="/"
-      aria-label="Enterprise HRIS home"
-      className="group flex min-w-0 items-center gap-3 rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+      aria-label="HRIS Lite Enterprise"
+      className="group flex min-w-0 items-center gap-3 rounded-2xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
     >
       <span
         className={cn(
-          "relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl",
-          onDark
-            ? "bg-white/10 ring-1 ring-white/15"
-            : "bg-primary text-primary-foreground shadow-[var(--shadow-primary)]"
+          "flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-white",
+          onBlue ? "shadow-[0_8px_18px_-10px_rgb(0_0_0/0.45)]" : "ring-1 ring-border shadow-sm"
         )}
+        style={{ width: disc, height: disc }}
       >
         <Image
           src="/brand/hris-logo.png"
-          alt="Enterprise HRIS"
-          width={40}
-          height={40}
+          alt=""
+          width={disc}
+          height={disc}
           priority
-          className="size-10 object-contain p-1"
+          className="object-contain p-1.5"
+          style={{ width: disc, height: disc }}
         />
       </span>
-
-      <span className={cn("min-w-0", wordmark === "sm" && "hidden sm:block")}>
+      <span className="min-w-0 leading-tight">
         <span
           className={cn(
-            "block truncate text-[15px] font-bold tracking-tight",
-            onDark ? "text-sidebar-strong" : "text-foreground"
+            "block font-extrabold tracking-tight",
+            size === "lg" ? "text-[26px]" : "text-[22px]",
+            onBlue ? "text-white" : "text-foreground"
           )}
         >
-          Enterprise HRIS
+          HRIS
         </span>
         <span
           className={cn(
-            "block truncate text-[11px] font-medium",
-            onDark ? "text-sidebar-muted" : "text-muted-foreground"
+            "block truncate text-[13px] font-medium",
+            onBlue ? "text-white/85" : "text-muted-foreground"
           )}
         >
-          Human Resources Information System
+          Lite Enterprise v2.0
         </span>
       </span>
     </Link>
