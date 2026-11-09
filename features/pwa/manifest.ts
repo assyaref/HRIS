@@ -17,7 +17,7 @@ export const PWA_APP_NAME = "Enterprise HRIS";
 export const PWA_APP_SHORT_NAME = "HRIS";
 export const PWA_APP_DESCRIPTION =
   "Enterprise HRIS — a human resource information system for employee records, attendance, leave, and payroll.";
-export const PWA_THEME_COLOR = "#526FAE";
+export const PWA_THEME_COLOR = "#1E5EEB";
 export const PWA_BACKGROUND_COLOR = "#F8F9FF";
 export const PWA_START_URL = "/";
 export const PWA_DISPLAY = "standalone";

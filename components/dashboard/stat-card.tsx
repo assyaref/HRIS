@@ -24,34 +24,34 @@ export type StatTone =
   | "rose"
   | "violet";
 
-/** Each tone maps to a solid gradient icon tile (see `.hris-tile-*`). */
-const tileToneClasses: Record<StatTone, string> = {
-  primary: "hris-tile-blue",
-  "soft-blue": "hris-tile-blue",
-  blue: "hris-tile-blue",
-  indigo: "hris-tile-indigo",
-  lavender: "hris-tile-violet",
-  violet: "hris-tile-violet",
-  pink: "hris-tile-pink",
-  rose: "hris-tile-pink",
-  coral: "hris-tile-red",
-  danger: "hris-tile-red",
-  peach: "hris-tile-orange",
-  amber: "hris-tile-amber",
-  warning: "hris-tile-amber",
-  mint: "hris-tile-green",
-  green: "hris-tile-green",
-  success: "hris-tile-green",
-  teal: "hris-tile-teal",
-  info: "hris-tile-sky",
-  slate: "hris-tile-slate",
+/** Each tone maps to a pastel icon well (see `.hris-chip-*`). */
+const chipToneClasses: Record<StatTone, string> = {
+  primary: "hris-chip-blue",
+  "soft-blue": "hris-chip-blue",
+  blue: "hris-chip-blue",
+  indigo: "hris-chip-indigo",
+  lavender: "hris-chip-violet",
+  violet: "hris-chip-violet",
+  pink: "hris-chip-rose",
+  rose: "hris-chip-rose",
+  coral: "hris-chip-rose",
+  danger: "hris-chip-rose",
+  peach: "hris-chip-amber",
+  amber: "hris-chip-amber",
+  warning: "hris-chip-amber",
+  mint: "hris-chip-green",
+  green: "hris-chip-green",
+  success: "hris-chip-green",
+  teal: "hris-chip-teal",
+  info: "hris-chip-sky",
+  slate: "hris-chip-slate",
 };
 
-/** A single aggregate metric card used across both dashboards.
+/** A single aggregate metric card used across dashboards and reports.
  *
- * KPI layout: solid gradient icon tile on the left, muted label, large bold
- * metric and an optional supporting hint. `compact` is the dense variant for
- * nested lists (smaller tile, smaller metric).
+ * HRIS Lite v2: pastel round icon well on the left, small uppercase blue
+ * label, large bold metric and an optional hint with a green status dot.
+ * `compact` is the dense variant for nested lists.
  */
 export function StatCard({
   icon,
@@ -68,51 +68,50 @@ export function StatCard({
   hint?: ReactNode;
   tone?: StatTone;
   className?: string;
-  /** Dense variant (smaller tile and metric) for nested lists. */
+  /** Dense variant (smaller well and metric) for nested lists. */
   compact?: boolean;
 }) {
   return (
     <div
       className={cn(
-        "flex items-center rounded-2xl border border-[var(--card-border)] bg-card hris-card hris-card-hover",
-        compact ? "gap-3 p-3.5" : "gap-4 p-4 sm:p-5",
+        "flex items-center rounded-[18px] border border-[var(--card-border)] bg-card hris-card hris-card-hover",
+        compact ? "gap-3 p-3.5" : "gap-4 p-4 sm:px-5 sm:py-[18px]",
         className
       )}
     >
       <span
         aria-hidden="true"
         className={cn(
-          "hris-tile flex shrink-0 items-center justify-center",
-          compact ? "size-10 rounded-xl" : "size-12 rounded-2xl sm:size-14",
-          tileToneClasses[tone]
+          "flex shrink-0 items-center justify-center rounded-full",
+          compact ? "size-10" : "size-14",
+          chipToneClasses[tone]
         )}
       >
-        <HrisIcon name={icon} className={compact ? "size-5" : "size-6 sm:size-7"} />
+        <HrisIcon name={icon} className={compact ? "size-5" : "size-7"} />
       </span>
       <div className="min-w-0 flex-1">
         <p
           className={cn(
-            "truncate font-medium text-muted-foreground",
-            compact ? "text-xs" : "text-[13px]"
+            "leading-tight font-semibold tracking-wide text-primary uppercase",
+            compact ? "text-[10px]" : "text-[11px]"
           )}
         >
           {label}
         </p>
-        <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2">
-          <span
-            className={cn(
-              "font-bold tracking-tight text-foreground tabular-nums",
-              compact ? "text-xl leading-7" : "text-[26px] leading-8 sm:text-[28px]"
-            )}
-          >
-            {value}
-          </span>
-          {hint ? (
-            <span className="truncate text-xs font-medium text-muted-foreground">
-              {hint}
-            </span>
-          ) : null}
-        </div>
+        <p
+          className={cn(
+            "font-extrabold tracking-tight text-foreground tabular-nums",
+            compact ? "text-xl leading-7" : "mt-0.5 text-[26px] leading-8"
+          )}
+        >
+          {value}
+        </p>
+        {hint ? (
+          <p className="mt-0.5 flex items-center gap-1.5 truncate text-[13px] font-medium text-muted-foreground">
+            <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full border-2 border-[#22C55E]" />
+            {hint}
+          </p>
+        ) : null}
       </div>
     </div>
   );

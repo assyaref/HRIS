@@ -9,9 +9,10 @@ import { getOrganizationName } from "@/features/employees/queries";
 import { hasManagementDashboard } from "@/features/dashboard/access";
 import { EmployeeDashboard } from "@/features/dashboard/employee-dashboard";
 import { ManagementDashboard } from "@/features/dashboard/management-dashboard";
+import { normalizeMonthKey } from "@/features/dashboard/queries";
 
 export const metadata: Metadata = {
-  title: "Dashboard",
+  title: "Beranda",
 };
 
 /**
@@ -26,8 +27,16 @@ export const metadata: Metadata = {
  * Every metric rendered by either view comes from organization-scoped
  * server queries, so cross-organization data is structurally unreachable.
  */
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const user = await requireUser();
+  const params = await searchParams;
+  const monthKey = normalizeMonthKey(
+    typeof params.bulan === "string" ? params.bulan : null
+  );
 
   if (!user.organizationId) {
     forbidden();
@@ -48,6 +57,7 @@ export default async function DashboardPage() {
         authorization={authorization}
         organizationName={organizationName}
         roleLabel={roleLabel}
+        monthKey={monthKey}
       />
     );
   }
@@ -58,6 +68,7 @@ export default async function DashboardPage() {
       authorization={authorization}
       organizationName={organizationName}
       roleLabel={roleLabel}
+      monthKey={monthKey}
     />
   );
 }

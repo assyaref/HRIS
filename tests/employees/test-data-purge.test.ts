@@ -1012,7 +1012,7 @@ describe("isolation: permanent delete is untouched", () => {
       "the purge needs a Settings navigation entry"
     );
     assert.ok(
-      source("components/layout/navigation.ts").includes('title: "Test Data"')
+      source("components/layout/navigation.ts").includes('title: "Data Uji"')
     );
   });
 });

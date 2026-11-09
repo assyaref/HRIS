@@ -21,7 +21,7 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center rounded-2xl border border-dashed border-input bg-card/60 px-6 py-12 text-center",
+        "relative flex flex-col items-center justify-center overflow-hidden rounded-[18px] border border-[var(--card-border)] bg-gradient-to-b from-card to-[#F3F7FF] px-6 py-12 text-center dark:to-muted/40",
         className
       )}
       {...props}
@@ -29,12 +29,12 @@ export function EmptyState({
       {icon ? (
         <div
           aria-hidden="true"
-          className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-surface-primary text-primary"
+          className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-surface-primary text-primary shadow-[0_8px_20px_-12px_rgb(30_99_238/0.6)]"
         >
           {icon}
         </div>
       ) : null}
-      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+      <h3 className="text-[15px] font-bold text-foreground">{title}</h3>
       {description ? (
         <p className="mt-1 max-w-sm text-sm text-muted-foreground">
           {description}

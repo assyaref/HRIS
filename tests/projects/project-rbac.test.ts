@@ -178,7 +178,7 @@ describe("pages: direct URL access is denied for non-superadmins", () => {
 
 describe("navigation: Projects menu is SUPERADMIN-only", () => {
   it("marks the Projects item superadminOnly (role, not permission)", () => {
-    const itemStart = navigationSource.indexOf('title: "Projects"');
+    const itemStart = navigationSource.indexOf('title: "Proyek"');
     assert.notEqual(itemStart, -1, "navigation must contain the Projects item");
     const itemEnd = navigationSource.indexOf("\n  },", itemStart);
     assert.notEqual(itemEnd, -1);

@@ -23,7 +23,7 @@ export function SectionHeader({
       ].join(" ")}
     >
       <div className="min-w-0">
-        <h2 className="text-base font-semibold tracking-tight text-foreground">
+        <h2 className="text-lg font-bold tracking-tight text-foreground">
           {title}
         </h2>
         {description ? (

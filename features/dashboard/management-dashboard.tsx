@@ -1,9 +1,16 @@
 import Link from "next/link";
 
+import { AttendanceTrendChart } from "@/components/dashboard/attendance-trend-chart";
+import {
+  MonthlyRecapCard,
+  type MonthlyRecapView,
+} from "@/components/dashboard/monthly-recap-card";
+import {
+  QuickAccessCard,
+  type QuickAccessTone,
+} from "@/components/dashboard/quick-access-card";
 import { SectionHeading } from "@/components/dashboard/section-heading";
 import { StatCard } from "@/components/dashboard/stat-card";
-import { QuickAccessCard } from "@/components/dashboard/quick-access-card";
-import { AttendanceTrendChart } from "@/components/dashboard/attendance-trend-chart";
 import { HrisIcon, type HrisIconName } from "@/components/layout/icons";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -28,7 +35,13 @@ import {
   dateStringInTimeZone,
   parseAttendanceDate,
 } from "@/lib/attendance/time";
+import {
+  APP_TIME_ZONE,
+  indonesianGreeting,
+  longDateLabel,
+} from "@/lib/utils/greeting";
 
+import { getEmployeeSelfProfile } from "@/features/employees/queries";
 import { formatDate } from "@/features/payroll/format";
 import { PayrollPeriodStatusBadge } from "@/features/payroll/payroll-badges";
 
@@ -36,10 +49,12 @@ import {
   countLeaveRequestsOnDate,
   getApprovalsOverview,
   getAttendanceOverview,
+  getAttendanceTrend,
+  getMonthlyRecap,
   getPayrollOverview,
   getWorkforceOverview,
   listRecentAuditActivity,
-  getAttendanceTrend,
+  recentMonthKeys,
 } from "./queries";
 
 interface ManagementDashboardProps {
@@ -47,21 +62,9 @@ interface ManagementDashboardProps {
   authorization: UserAuthorization;
   organizationName: string | null;
   roleLabel: string | null;
+  /** Selected recap month ("YYYY-MM", from `?bulan=`). */
+  monthKey: string;
 }
-
-function greeting(hour: number): string {
-  if (hour < 6) return "Good evening";
-  if (hour < 12) return "Good morning";
-  if (hour < 15) return "Good afternoon";
-  return "Good evening";
-}
-
-const TODAY_LABEL = new Intl.DateTimeFormat("en-US", {
-  weekday: "long",
-  year: "numeric",
-  month: "long",
-  day: "numeric",
-}).format(new Date());
 
 function titleCase(value: string): string {
   return value
@@ -69,84 +72,61 @@ function titleCase(value: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-type StatTone =
-  | "primary"
-  | "soft-blue"
-  | "indigo"
-  | "lavender"
-  | "pink"
-  | "coral"
-  | "peach"
-  | "amber"
-  | "mint"
-  | "teal"
-  | "success"
-  | "warning"
-  | "danger"
-  | "info"
-  | "slate";
-
 const QUICK_ACTIONS: Array<{
   href: string;
   icon: HrisIconName;
   title: string;
   description: string;
-  tone: StatTone;
-  permission: Permission;
+  tone: QuickAccessTone;
+  permission: Permission | null;
+  superadminOnly?: boolean;
 }> = [
   {
     href: "/employees",
     icon: "employees",
-    title: "Employees",
-    description: "Manage profiles",
+    title: "Karyawan",
+    description: "Kelola profil karyawan",
     tone: "soft-blue",
     permission: PERMISSIONS.EMPLOYEES_VIEW,
   },
   {
     href: "/attendance/management",
-    icon: "attendance",
-    title: "Attendance",
-    description: "Review today's records",
+    icon: "calendar-check",
+    title: "Absensi",
+    description: "Tinjau absensi hari ini",
     tone: "mint",
-    permission: PERMISSIONS.ATTENDANCE_VIEW,
+    permission: PERMISSIONS.ATTENDANCE_MANAGE,
   },
   {
     href: "/leave/management",
     icon: "leave",
-    title: "Leave",
-    description: "Approve leave requests",
+    title: "Cuti",
+    description: "Setujui pengajuan cuti",
     tone: "lavender",
-    permission: PERMISSIONS.LEAVE_VIEW,
-  },
-  {
-    href: "/payroll",
-    icon: "payroll",
-    title: "Payroll",
-    description: "Run and lock payroll",
-    tone: "peach",
-    permission: PERMISSIONS.PAYROLL_VIEW,
+    permission: PERMISSIONS.LEAVE_APPROVE,
   },
   {
     href: "/settings/users",
     icon: "users",
-    title: "Users",
-    description: "Manage accounts & roles",
+    title: "Pengguna",
+    description: "Kelola akun & role",
     tone: "indigo",
     permission: PERMISSIONS.USERS_VIEW,
   },
   {
     href: "/projects",
     icon: "projects",
-    title: "Projects",
-    description: "Track teams & locations",
+    title: "Proyek",
+    description: "Pantau tim & lokasi",
     tone: "teal",
-    permission: PERMISSIONS.PROJECTS_VIEW,
+    permission: null,
+    superadminOnly: true,
   },
   {
-    href: "/announcements",
-    icon: "announcements",
-    title: "Notifications",
-    description: "Organization announcements",
+    href: "/announcements/management",
+    icon: "megaphone",
+    title: "Pengumuman",
+    description: "Pengumuman organisasi",
     tone: "pink",
     permission: PERMISSIONS.ANNOUNCEMENTS_VIEW,
   },
@@ -155,8 +135,8 @@ const QUICK_ACTIONS: Array<{
 /** Compact responsive SVG donut for workforce distribution. */
 function DistributionDonut({
   series,
-  width = 220,
-  height = 180,
+  width = 170,
+  height = 150,
 }: {
   series: Array<{ label: string; value: number; color: string }>;
   width?: number;
@@ -205,8 +185,8 @@ function DistributionDonut({
   return (
     <Card>
       <CardHeader className="pb-4">
-        <CardTitle>Employee distribution</CardTitle>
-        <CardDescription>Headcount by employment status</CardDescription>
+        <CardTitle>Distribusi karyawan</CardTitle>
+        <CardDescription>Jumlah karyawan per status kerja</CardDescription>
       </CardHeader>
       <CardContent className="pt-0">
         <div className="flex items-center gap-4">
@@ -225,7 +205,7 @@ function DistributionDonut({
               style={{ fill: "var(--foreground)" }}
               fontSize="18"
               fontWeight="700"
-              fontFamily="var(--font-geist-sans), sans-serif"
+              fontFamily="var(--font-jakarta), sans-serif"
             >
               {total}
             </text>
@@ -235,9 +215,9 @@ function DistributionDonut({
               textAnchor="middle"
               style={{ fill: "var(--muted-foreground)" }}
               fontSize="11"
-              fontFamily="var(--font-geist-sans), sans-serif"
+              fontFamily="var(--font-jakarta), sans-serif"
             >
-              employees
+              karyawan
             </text>
           </svg>
           <div className="min-w-0 flex-1">{legend}</div>
@@ -247,36 +227,62 @@ function DistributionDonut({
   );
 }
 
-/** Compact empty state for the attendance trend when no data exists. */
+/** Empty state for the attendance trend: chart icon over a soft wave. */
 function AttendanceTrendEmpty() {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-input bg-muted/40 p-6 text-center">
-      <div className="flex size-10 items-center justify-center rounded-xl bg-surface-primary text-primary">
-        <HrisIcon name="trend-up" className="size-5" />
+    <div className="relative flex min-h-[170px] flex-col items-center justify-center overflow-hidden rounded-2xl px-6 pt-6 pb-12 text-center">
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 600 120"
+        preserveAspectRatio="none"
+        className="absolute inset-x-0 bottom-0 h-14 w-full text-surface-primary"
+      >
+        <path
+          d="M0 80C80 40 150 60 220 70s150-50 230-40 110 40 150 30v60H0z"
+          fill="currentColor"
+          opacity="0.7"
+        />
+        <path
+          d="M0 100c90-20 170-10 260 0s200-30 340-10v30H0z"
+          fill="currentColor"
+        />
+      </svg>
+      <div className="relative flex size-14 items-center justify-center rounded-2xl bg-surface-primary text-primary shadow-[0_10px_20px_-14px_rgb(30_99_238/0.8)]">
+        <HrisIcon name="bar-chart" className="size-7" />
       </div>
-      <h3 className="text-sm font-semibold text-foreground">
-        No attendance data yet
+      <h3 className="relative mt-3 text-base font-bold text-foreground">
+        Belum ada data absensi
       </h3>
-      <p className="text-xs text-muted-foreground">
-        Check-in records will appear here as employees record their attendance.
+      <p className="relative mt-1 text-sm text-muted-foreground">
+        Catatan check-in akan muncul di sini saat karyawan melakukan absensi.
       </p>
     </div>
   );
 }
 
-/** Organization-wide view for admins, HR, management and supervisors. */
+const linkClass =
+  "inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary/85";
+
+/**
+ * Organization-wide view for admins, HR, management and supervisors
+ * (HRIS Lite Enterprise v2.0). Two columns on desktop: modules, workforce
+ * metrics and the attendance trend on the left; the signed-in user's monthly
+ * recap, items needing attention and payroll on the right.
+ */
 export async function ManagementDashboard({
   user,
   authorization,
-  organizationName,
   roleLabel,
+  monthKey,
 }: ManagementDashboardProps) {
   const organizationId = user.organizationId as string;
   const granted = new Set(authorization.permissionCodes);
   const can = (code: Permission) => granted.has(code);
   const P = PERMISSIONS;
 
-  const today = parseAttendanceDate(dateStringInTimeZone(new Date(), null));
+  const today = parseAttendanceDate(
+    dateStringInTimeZone(new Date(), APP_TIME_ZONE)
+  );
 
   const [
     workforce,
@@ -285,7 +291,7 @@ export async function ManagementDashboard({
     approvals,
     payroll,
     trend,
-    canViewAudit,
+    selfProfile,
   ] = await Promise.all([
     getWorkforceOverview(organizationId),
     getAttendanceOverview(organizationId, today),
@@ -293,317 +299,205 @@ export async function ManagementDashboard({
     getApprovalsOverview(organizationId),
     getPayrollOverview(organizationId),
     getAttendanceTrend(organizationId),
-    can(P.AUDIT_VIEW),
+    getEmployeeSelfProfile(user.id, organizationId),
   ]);
 
-  const recentAudit = canViewAudit
-    ? await listRecentAuditActivity(organizationId, 8)
-    : [];
+  const canViewAudit = can(P.AUDIT_VIEW);
+  const [recentAudit, recap] = await Promise.all([
+    canViewAudit ? listRecentAuditActivity(organizationId, 6) : Promise.resolve([]),
+    selfProfile
+      ? getMonthlyRecap(organizationId, selfProfile.id, monthKey, selfProfile.hireDate)
+      : Promise.resolve(null),
+  ]);
 
-  const trendHasData = trend.some(
-    (p) => p.present > 0 || p.completed > 0
-  );
+  const trendHasData = trend.some((p) => p.present > 0 || p.completed > 0);
   const trendPoints = trend.map((p) => ({
     label: p.label,
     value: p.present + p.completed,
   }));
 
-  const visibleActions = QUICK_ACTIONS.filter((a) => can(a.permission));
+  const visibleActions = QUICK_ACTIONS.filter((action) =>
+    action.superadminOnly
+      ? authorization.isSuperAdmin
+      : action.permission === null || can(action.permission)
+  );
 
-  const priorities: Array<{
-    href: string;
-    label: string;
-    count: number;
-    show: boolean;
-  }> = [
+  const priorities = [
     {
       href: "/leave/management",
-      label: "Leave requests awaiting approval",
+      label: "Pengajuan cuti menunggu persetujuan",
       count: approvals.pendingLeave,
-      show: can(P.LEAVE_VIEW),
+      show: can(P.LEAVE_APPROVE) || can(P.LEAVE_MANAGE),
     },
     {
       href: "/permission/management",
-      label: "Permission requests awaiting approval",
+      label: "Pengajuan izin menunggu persetujuan",
       count: approvals.pendingPermission,
-      show: can(P.PERMISSION_VIEW),
+      show: can(P.PERMISSION_APPROVE) || can(P.PERMISSION_MANAGE),
     },
     {
       href: "/payroll",
-      label: "Payroll periods mid-process",
+      label: "Periode payroll sedang diproses",
       count: approvals.payrollAttention,
       show: can(P.PAYROLL_VIEW),
     },
-  ];
-  const visiblePriorities = priorities.filter((p) => p.show && p.count > 0);
+  ].filter((item) => item.show && item.count > 0);
+
+  const recapView: MonthlyRecapView | null = recap;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       {/* Page header */}
-      <section>
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold tracking-wider text-primary uppercase">
-              {organizationName ?? "Organization"}
-            </p>
-            <h1 className="mt-1 text-page-title tracking-tight">
-              {greeting(new Date().getHours())} — team overview
-            </h1>
-            <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-              <time>{TODAY_LABEL}</time>
-              {roleLabel ? (
-                <span className="ml-1 inline-flex items-center rounded-md bg-surface-primary px-2 py-0.5 text-[11px] font-semibold text-primary">
-                  {roleLabel}
-                </span>
-              ) : null}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-            <span className="inline-flex items-center gap-1.5 rounded-xl bg-surface-primary px-3 py-1.5 text-primary">
-              <HrisIcon name="employees" className="size-3.5" />
-              {workforce.total} employees
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-xl bg-surface-success px-3 py-1.5 text-success">
-              <HrisIcon name="check-in" className="size-3.5" />
-              {attendance.checkedInNow} checked in now
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-xl bg-surface-warning px-3 py-1.5 text-warning">
-              <HrisIcon name="leave" className="size-3.5" />
-              {onLeaveToday} on leave
-            </span>
-          </div>
+      <section className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-xs font-bold tracking-[0.08em] text-primary uppercase">
+            Sistem
+          </p>
+          <h1 className="mt-1 text-2xl tracking-tight sm:text-[28px]">
+            {indonesianGreeting()} — ringkasan tim
+          </h1>
+          <p className="mt-1.5 flex flex-wrap items-center gap-2.5 text-sm text-muted-foreground">
+            <time>{longDateLabel()}</time>
+            {roleLabel ? (
+              <span className="inline-flex items-center rounded-full border border-primary/40 bg-surface-primary px-2.5 py-0.5 text-[11px] font-semibold text-primary">
+                {roleLabel}
+              </span>
+            ) : null}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2.5 text-sm font-semibold">
+          <span className="inline-flex items-center gap-2 rounded-xl bg-[#E4EEFF] px-3.5 py-2 text-primary dark:bg-surface-primary">
+            <HrisIcon name="user" className="size-4" />
+            {workforce.total} karyawan
+          </span>
+          <span className="inline-flex items-center gap-2 rounded-xl bg-[#DDF5E6] px-3.5 py-2 text-[#15803D] dark:bg-surface-success dark:text-success">
+            <HrisIcon name="calendar-check" className="size-4" />
+            {attendance.checkedInNow} sedang hadir
+          </span>
+          <span className="inline-flex items-center gap-2 rounded-xl bg-[#FFEFD2] px-3.5 py-2 text-[#B45309] dark:bg-surface-warning dark:text-warning">
+            <HrisIcon name="calendar" className="size-4" />
+            {onLeaveToday} cuti hari ini
+          </span>
         </div>
       </section>
 
-      {/* Quick access — compact horizontal shortcut cards */}
-      <section className="space-y-3">
-        <SectionHeading
-          title="Quick access"
-          description="Jump to an authorized module"
-        />
-        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-          {visibleActions.map((action) => (
-            <QuickAccessCard
-              key={action.href}
-              href={action.href}
-              icon={action.icon}
-              title={action.title}
-              description={action.description}
-              tone={action.tone as "soft-blue" | "mint" | "lavender" | "peach" | "indigo" | "teal" | "pink"}
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+        {/* Main column */}
+        <div className="min-w-0 space-y-7">
+          {visibleActions.length > 0 ? (
+            <section className="space-y-3.5">
+              <SectionHeading
+                title="Akses Cepat"
+                description="Buka modul yang Anda miliki aksesnya"
+              />
+              <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 2xl:grid-cols-3">
+                {visibleActions.map((action) => (
+                  <QuickAccessCard
+                    key={action.href}
+                    href={action.href}
+                    icon={action.icon}
+                    title={action.title}
+                    description={action.description}
+                    tone={action.tone}
+                  />
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          <section className="space-y-3.5">
+            <SectionHeading
+              title="Statistik Karyawan"
+              description="Jumlah karyawan di organisasi Anda"
+              action={
+                can(P.EMPLOYEES_VIEW) ? (
+                  <Link href="/employees" className={linkClass}>
+                    Kelola karyawan
+                    <HrisIcon name="arrow-right" className="size-4" />
+                  </Link>
+                ) : undefined
+              }
             />
-          ))}
-        </div>
-      </section>
+            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 2xl:grid-cols-4">
+              <StatCard
+                icon="employees"
+                label="Total karyawan"
+                value={workforce.total}
+                hint={`${workforce.active} aktif`}
+                tone="soft-blue"
+              />
+              <StatCard
+                icon="user"
+                label="Aktif"
+                value={workforce.active}
+                hint={`${workforce.inactive} nonaktif`}
+                tone="mint"
+              />
+              <StatCard
+                icon="calendar"
+                label="Bergabung (30 hari)"
+                value={workforce.newLast30Days}
+                tone="amber"
+              />
+              <StatCard
+                icon="plane"
+                label="Cuti hari ini"
+                value={onLeaveToday}
+                tone="lavender"
+              />
+            </div>
+          </section>
 
-      {/* Workforce statistics — KPI cards */}
-      <section className="space-y-3">
-        <SectionHeading
-          title="Workforce statistics"
-          description="Headcount across your organization"
-          action={
-            can(P.EMPLOYEES_VIEW) ? (
-              <Link
-                href="/employees"
-                className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/90 dark:text-primary/90"
-              >
-                Manage employees
-                <HrisIcon name="arrow-right" className="size-4" />
-              </Link>
-            ) : undefined
-          }
-        />
-        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            icon="employees"
-            label="Total employees"
-            value={workforce.total}
-            hint={`${workforce.active} active`}
-            tone="soft-blue"
-          />
-          <StatCard
-            icon="profile"
-            label="Active"
-            value={workforce.active}
-            hint={`${workforce.inactive} inactive`}
-            tone="mint"
-          />
-          <StatCard
-            icon="trend-up"
-            label="Joined (30 days)"
-            value={workforce.newLast30Days}
-            tone="amber"
-          />
-          <StatCard
-            icon="leave"
-            label="On leave today"
-            value={onLeaveToday}
-            tone="peach"
-          />
-        </div>
-      </section>
-
-      {/* Main dashboard content — asymmetric 65/35 desktop layout */}
-      <section className="grid gap-4 lg:grid-cols-12">
-        {/* Main content ~65% */}
-        <div className="lg:col-span-8 space-y-4">
-          <SectionHeading
-            title="Attendance trend"
-            description={
-              trendHasData
-                ? "Check-ins and completions over the trailing 7 days"
-                : "No attendance records yet. The chart will appear as employees check in."
-            }
-            action={
-              can(P.ATTENDANCE_VIEW) ? (
-                <Link
-                  href="/attendance/management"
-                  className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/90 dark:text-primary/90"
-                >
-                  Open attendance
-                  <HrisIcon name="arrow-right" className="size-4" />
-                </Link>
-              ) : undefined
-            }
-          />
-          <Card>
-            <CardContent className="pt-5">
-              {trendHasData ? (
-                <AttendanceTrendChart points={trendPoints} height={190} />
-              ) : (
-                <AttendanceTrendEmpty />
-              )}
-            </CardContent>
-          </Card>
-
-          <div className="grid gap-3 lg:grid-cols-2">
-            <AttendanceAnalytics
-              checkedInNow={attendance.checkedInNow}
-              present={attendance.present}
-              completed={attendance.completed}
-              incomplete={attendance.incomplete}
-              rejected={attendance.rejected}
+          <section className="space-y-3.5">
+            <SectionHeading
+              title="Tren Kehadiran"
+              description={
+                trendHasData
+                  ? "Check-in dan absensi selesai dalam 7 hari terakhir"
+                  : "Belum ada catatan absensi. Grafik muncul saat karyawan check-in."
+              }
+              action={
+                can(P.ATTENDANCE_MANAGE) ? (
+                  <Link href="/attendance/management" className={linkClass}>
+                    Buka absensi
+                    <HrisIcon name="arrow-right" className="size-4" />
+                  </Link>
+                ) : undefined
+              }
             />
-            <DistributionDonut
-              series={[
-                { label: "Active", value: workforce.active, color: "#10B981" },
-                {
-                  label: "Inactive",
-                  value: workforce.inactive,
-                  color: "#94A3B8",
-                },
-                {
-                  label: "New (30d)",
-                  value: workforce.newLast30Days,
-                  color: "#1F6FEB",
-                },
-              ]}
-            />
-          </div>
-        </div>
+            <Card>
+              <CardContent className="p-3 sm:p-4">
+                {trendHasData ? (
+                  <AttendanceTrendChart points={trendPoints} height={210} />
+                ) : (
+                  <AttendanceTrendEmpty />
+                )}
+              </CardContent>
+            </Card>
+          </section>
 
-        {/* Supporting content ~35% */}
-        <div className="lg:col-span-4 space-y-4">
-          {/* Needs attention + pending approvals */}
-          <Card>
-            <CardHeader className="pb-4">
-              <CardTitle>Needs attention</CardTitle>
-              <CardDescription>
-                Items waiting for a decision or already mid-workflow
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              {visiblePriorities.length ? (
-                <ul className="divide-y divide-border">
-                  {visiblePriorities.map((item) => (
-                    <li key={item.href}>
-                      <Link
-                        href={item.href}
-                        className="-mx-2 flex items-center justify-between gap-3 rounded-lg px-2 py-3 transition-colors hover:bg-muted"
-                      >
-                        <span className="text-sm font-medium text-foreground truncate">
-                          {item.label}
-                        </span>
-                        <Badge variant="tonal">{item.count}</Badge>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  All caught up — no pending approvals right now.
-                </p>
-              )}
-            </CardContent>
-          </Card>
+          <AttendanceAnalytics
+            checkedInNow={attendance.checkedInNow}
+            present={attendance.present}
+            completed={attendance.completed}
+            incomplete={attendance.incomplete}
+            rejected={attendance.rejected}
+          />
 
-          {/* Payroll overview */}
-          <Card>
-            <CardHeader className="pb-4">
-              <CardTitle>Payroll</CardTitle>
-              <CardDescription>Latest payroll period</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0 space-y-4">
-              {payroll.latestPeriod ? (
-                <>
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-foreground">
-                        {payroll.latestPeriod.name}
-                      </p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {payroll.latestPeriod.code} · payment{" "}
-                        {payroll.latestPeriod.paymentDate
-                          ? formatDate(payroll.latestPeriod.paymentDate)
-                          : "—"}
-                      </p>
-                    </div>
-                    <PayrollPeriodStatusBadge
-                      status={payroll.latestPeriod.status}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
-                    <span className="text-xs text-muted-foreground">
-                      Published payslips
-                    </span>
-                    <span className="text-sm font-semibold text-foreground">
-                      {payroll.publishedPayslips}
-                    </span>
-                  </div>
-                  {can(P.PAYROLL_VIEW) ? (
-                    <Link
-                      href="/payroll"
-                      className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/90 dark:text-primary/90"
-                    >
-                      Go to payroll
-                      <HrisIcon name="arrow-right" className="size-4" />
-                    </Link>
-                  ) : null}
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No payroll period created yet.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Recent activity */}
           {canViewAudit ? (
             <Card>
               <CardHeader className="pb-4">
-                <CardTitle>Recent activity</CardTitle>
-                <CardDescription>
-                  Latest entries from the audit trail
-                </CardDescription>
+                <CardTitle>Aktivitas terbaru</CardTitle>
+                <CardDescription>Entri terbaru dari jejak audit</CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
                 {recentAudit.length ? (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Action</TableHead>
-                        <TableHead className="w-40">Actor</TableHead>
-                        <TableHead className="w-48">Time</TableHead>
+                        <TableHead>Aksi</TableHead>
+                        <TableHead className="w-48">Pelaku</TableHead>
+                        <TableHead className="w-48">Waktu</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -612,11 +506,12 @@ export async function ManagementDashboard({
                           <TableCell className="text-sm font-medium text-foreground">
                             {titleCase(entry.action)}
                           </TableCell>
-                          <TableCell className="text-sm text-muted-foreground truncate max-w-xs">
-                            {entry.actorEmail ? entry.actorEmail : "System"}
+                          <TableCell className="max-w-xs truncate text-sm text-muted-foreground">
+                            {entry.actorEmail ? entry.actorEmail : "Sistem"}
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
                             {new Intl.DateTimeFormat("id-ID", {
+                              timeZone: APP_TIME_ZONE,
                               day: "numeric",
                               month: "short",
                               year: "numeric",
@@ -630,14 +525,105 @@ export async function ManagementDashboard({
                   </Table>
                 ) : (
                   <p className="text-sm text-muted-foreground">
-                    The audit trail is empty so far.
+                    Jejak audit masih kosong.
                   </p>
                 )}
               </CardContent>
             </Card>
           ) : null}
         </div>
-      </section>
+
+        {/* Side column */}
+        <aside className="min-w-0 space-y-5">
+          {recapView ? (
+            <MonthlyRecapCard
+              recap={recapView}
+              monthOptions={recentMonthKeys(6)}
+              header="band"
+            />
+          ) : null}
+
+          <section className="hris-attention rounded-[20px] p-5" aria-labelledby="perlu-perhatian">
+            <div className="flex items-center gap-3">
+              <span className="flex size-10 items-center justify-center rounded-xl bg-[#FFE7C2] text-[#D97706] dark:bg-surface-warning">
+                <HrisIcon name="alert-triangle" className="size-[22px]" />
+              </span>
+              <h2 id="perlu-perhatian" className="text-[17px] font-bold text-foreground">
+                Perlu Perhatian
+              </h2>
+            </div>
+            <ul className="mt-3.5 space-y-2.5 text-[15px] text-foreground/90">
+              <li className="flex gap-2.5">
+                <span aria-hidden="true" className="mt-2 size-1.5 shrink-0 rounded-full bg-[#F59E0B]" />
+                Item yang menunggu keputusan atau sedang diproses
+              </li>
+              {priorities.length ? (
+                priorities.map((item) => (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      className="-mx-2 flex items-center gap-2.5 rounded-lg px-2 py-1 transition-colors hover:bg-white/70 dark:hover:bg-white/5"
+                    >
+                      <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-[#F59E0B]" />
+                      <span className="min-w-0 flex-1">{item.label}</span>
+                      <Badge variant="warning">{item.count}</Badge>
+                    </Link>
+                  </li>
+                ))
+              ) : (
+                <li className="flex gap-2.5">
+                  <span aria-hidden="true" className="mt-2 size-1.5 shrink-0 rounded-full bg-[#F59E0B]" />
+                  Semua beres — tidak ada persetujuan yang tertunda.
+                </li>
+              )}
+            </ul>
+          </section>
+
+          {can(P.PAYROLL_VIEW) ? (
+            <Link
+              href="/payroll"
+              className="group flex items-center gap-4 rounded-[20px] border border-[var(--card-border)] bg-card p-5 hris-card hris-card-hover"
+            >
+              <span className="hris-chip-blue flex size-14 shrink-0 items-center justify-center rounded-2xl">
+                <HrisIcon name="wallet" className="size-7" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[17px] font-bold text-foreground">Payroll</span>
+                {payroll.latestPeriod ? (
+                  <span className="mt-0.5 block truncate text-sm text-muted-foreground">
+                    {payroll.latestPeriod.name}
+                    {payroll.latestPeriod.paymentDate
+                      ? ` · bayar ${formatDate(payroll.latestPeriod.paymentDate)}`
+                      : ""}
+                  </span>
+                ) : (
+                  <span className="mt-0.5 block text-sm text-muted-foreground">
+                    Periode payroll terbaru
+                  </span>
+                )}
+                {payroll.latestPeriod ? (
+                  <span className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                    <PayrollPeriodStatusBadge status={payroll.latestPeriod.status} />
+                    {payroll.publishedPayslips} slip terbit
+                  </span>
+                ) : null}
+              </span>
+              <HrisIcon
+                name="chevron-right"
+                className="size-6 shrink-0 text-foreground/70 transition-transform group-hover:translate-x-0.5"
+              />
+            </Link>
+          ) : null}
+
+          <DistributionDonut
+            series={[
+              { label: "Aktif", value: workforce.active, color: "#22C55E" },
+              { label: "Nonaktif", value: workforce.inactive, color: "#94A3B8" },
+              { label: "Baru (30 hari)", value: workforce.newLast30Days, color: "#1E63EE" },
+            ]}
+          />
+        </aside>
+      </div>
     </div>
   );
 }
@@ -658,46 +644,16 @@ function AttendanceAnalytics({
   return (
     <Card>
       <CardHeader className="pb-4">
-        <CardTitle>Attendance today</CardTitle>
-        <CardDescription>
-          Check-ins, completes and records for the current day
-        </CardDescription>
+        <CardTitle>Absensi hari ini</CardTitle>
+        <CardDescription>Check-in, selesai, dan catatan hari ini</CardDescription>
       </CardHeader>
       <CardContent className="pt-0">
-        <div className="grid gap-2.5">
-          <StatCard
-            icon="check-in"
-            label="Checked in now"
-            value={checkedInNow}
-            tone="mint"
-            compact
-          />
-          <StatCard
-            icon="check"
-            label="Present"
-            value={present}
-            compact
-          />
-          <StatCard
-            icon="clock"
-            label="Completed"
-            value={completed}
-            compact
-          />
-          <StatCard
-            icon="alert"
-            label="Incomplete"
-            value={incomplete}
-            tone="amber"
-            compact
-          />
-          <StatCard
-            icon="alert"
-            label="Rejected"
-            value={rejected}
-            tone="peach"
-            compact
-          />
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 2xl:grid-cols-5">
+          <StatCard icon="check-in" label="Sedang hadir" value={checkedInNow} tone="mint" compact />
+          <StatCard icon="check" label="Hadir" value={present} compact />
+          <StatCard icon="clock" label="Selesai" value={completed} tone="teal" compact />
+          <StatCard icon="alert" label="Belum lengkap" value={incomplete} tone="amber" compact />
+          <StatCard icon="alert" label="Ditolak" value={rejected} tone="rose" compact />
         </div>
       </CardContent>
     </Card>

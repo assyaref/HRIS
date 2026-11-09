@@ -13,7 +13,7 @@
 
 :root {
   /* ---- Semantic surface colors (light) ---- */
-  --background: #F4F7FC;
+  --background: #F4F7FD;
   --foreground: #0F172A;
 
   --card: #FFFFFF;
@@ -23,13 +23,13 @@
   --muted-foreground: #64748B;
 
   --accent: #EAF1FF;
-  --accent-foreground: #1747A6;
+  --accent-foreground: #1748B8;
 
-  --border: #E3E8F0;
+  --border: #E4EAF4;
   --input: #D5DCE6;
-  --ring: #1F6FEB;
+  --ring: #1E63EE;
 
-  --primary: #1F6FEB;
+  --primary: #1E63EE;
   --primary-foreground: #FFFFFF;
 
   --secondary: #475569;
@@ -39,9 +39,9 @@
   --destructive-foreground: #FFFFFF;
 
   /* ---- Semantic status colors ---- */
-  --success: #15803D;
+  --success: #16A34A;
   --success-foreground: #FFFFFF;
-  --warning: #B45309;
+  --warning: #D97706;
   --warning-foreground: #FFFFFF;
   --danger: #DC2626;
   --danger-foreground: #FFFFFF;
@@ -66,43 +66,48 @@
   --surface-mint: #DCFCE7;
   --surface-teal: #CCFBF1;
 
-  /* ---- Navigation rail (deep navy) ---- */
-  --sidebar: #0B1A36;
-  --sidebar-end: #0E2350;
-  --sidebar-foreground: #C7D2E8;
-  --sidebar-muted: #7F8CA8;
-  --sidebar-strong: #FFFFFF;
-  --sidebar-hover: rgb(255 255 255 / 0.07);
-  --sidebar-border: rgb(255 255 255 / 0.08);
-  --sidebar-panel: rgb(255 255 255 / 0.06);
-  --sidebar-active: #1F6FEB;
-  --sidebar-active-shadow: 0 6px 16px -6px rgb(31 111 235 / 0.65);
+  /* ---- Navigation rail (white, v2) ---- */
+  --sidebar: #FFFFFF;
+  --sidebar-end: #FFFFFF;
+  --sidebar-foreground: #1E293B;
+  --sidebar-muted: #64748B;
+  --sidebar-strong: #0F172A;
+  --sidebar-hover: #F1F5FD;
+  --sidebar-border: #E8EDF6;
+  --sidebar-panel: #F5F8FF;
+  --sidebar-active: #1E63EE;
+  --sidebar-active-shadow: 0 10px 20px -10px rgb(30 99 238 / 0.75);
+
+  /* ---- Brand blue band (header + hero) ---- */
+  --brand-band-from: #1747C9;
+  --brand-band-via: #1E5EEB;
+  --brand-band-to: #2F7BF6;
 
   /* ---- Radius ---- */
   --radius-control: 0.625rem; /* 10px — controls */
   --radius-sm: 0.5rem;
   --radius-md: 0.625rem;
   --radius-lg: 0.875rem;
-  --radius-card: 1rem;        /* 16px — main cards */
+  --radius-card: 1.125rem;    /* 18px — main cards */
   --radius-card-nested: 0.75rem; /* 12px — nested content */
   --radius-xl: 1.25rem;
   --radius-full: 9999px;
 
   /* ---- Card borders (hairline) ---- */
-  --card-border: #E6EBF2;
-  --card-border-hover: rgb(31 111 235 / 0.22);
+  --card-border: #E6ECF5;
+  --card-border-hover: rgb(30 99 238 / 0.25);
   --card-border-level2: #EDF1F6;
 
   /* ---- Shadows (soft, cool-tinted) ---- */
-  --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.03);
-  --shadow-card-hover: 0 10px 24px -10px rgb(15 23 42 / 0.16);
+  --shadow-card: 0 1px 2px 0 rgb(30 64 175 / 0.04), 0 4px 14px -6px rgb(30 64 175 / 0.10);
+  --shadow-card-hover: 0 14px 30px -12px rgb(30 64 175 / 0.25);
   --shadow-md: 0 4px 6px -1px rgb(15 23 42 / 0.05), 0 2px 4px -1px rgb(15 23 42 / 0.03);
   --shadow-lg: 0 10px 15px -3px rgb(15 23 42 / 0.07), 0 4px 6px -2px rgb(15 23 42 / 0.04);
   --shadow-xl: 0 24px 48px -12px rgb(15 23 42 / 0.22);
-  --shadow-primary: 0 6px 14px -6px rgb(31 111 235 / 0.55);
+  --shadow-primary: 0 8px 18px -8px rgb(30 99 238 / 0.65);
 
   /* ---- Typography ---- */
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-jakarta), var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
   --text-xs: 0.75rem;
@@ -316,9 +321,19 @@
   --surface-mint: #12301F;
   --surface-teal: #0F3330;
 
-  --sidebar: #070F1F;
-  --sidebar-end: #0A1730;
+  --sidebar: #0E1729;
+  --sidebar-end: #0E1729;
+  --sidebar-foreground: #CBD5E1;
+  --sidebar-muted: #8191AD;
+  --sidebar-strong: #F1F5F9;
+  --sidebar-hover: rgb(255 255 255 / 0.06);
+  --sidebar-border: #1E2B45;
+  --sidebar-panel: #15213A;
   --sidebar-active: #2F7BF5;
+
+  --brand-band-from: #0F2A6B;
+  --brand-band-via: #1745B0;
+  --brand-band-to: #1F5FD6;
 
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.30);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.25), 0 2px 4px -1px rgb(0 0 0 / 0.15);
@@ -347,7 +362,7 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
+  font-family: var(--font-jakarta), var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
     BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
     "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
     "Segoe UI Symbol", "Noto Color Emoji";
@@ -580,7 +595,7 @@ a {
 }
 
 .hris-nav-active {
-  background: var(--sidebar-active);
+  background: linear-gradient(135deg, #2F7BF6 0%, #1E5EEB 55%, #1A4FD6 100%);
   color: #FFFFFF;
   box-shadow: var(--sidebar-active-shadow);
 }
@@ -608,4 +623,118 @@ a {
 }
 .no-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+/* ==========================================================
+   v6 — HRIS LITE ENTERPRISE v2.0
+   White navigation rail, vivid blue header band with greeting hero,
+   building illustration, soft blue-tinted cards.
+   ========================================================== */
+
+/* Blue band shared by the top bar and the greeting hero. */
+.hris-band {
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgb(255 255 255 / 0.10) 0%, transparent 45%),
+    linear-gradient(115deg, var(--brand-band-from) 0%, var(--brand-band-via) 48%, var(--brand-band-to) 100%);
+  color: #FFFFFF;
+}
+
+/* Sidebar brand block: blue gradient with a soft curved bottom edge. */
+.hris-sidebar-brand {
+  background: linear-gradient(135deg, var(--brand-band-from) 0%, var(--brand-band-via) 60%, var(--brand-band-to) 100%);
+  border-bottom-right-radius: 2.25rem;
+  border-bottom-left-radius: 2.25rem 0.75rem;
+  color: #FFFFFF;
+}
+
+/* Wave that closes the blue band. Filled with the page background. */
+.hris-wave {
+  display: block;
+  width: 100%;
+  color: var(--background);
+}
+
+/* Glassy search field on the blue band. */
+.hris-band-search {
+  background: rgb(255 255 255 / 0.12);
+  border: 1px solid rgb(255 255 255 / 0.28);
+  color: #FFFFFF;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+.hris-band-search:hover,
+.hris-band-search:focus-within {
+  background: rgb(255 255 255 / 0.18);
+  border-color: rgb(255 255 255 / 0.45);
+}
+
+.hris-kbd {
+  display: inline-flex;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  background: rgb(255 255 255 / 0.18);
+  padding: 0 0.375rem;
+  font-family: inherit;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #FFFFFF;
+}
+
+/* Pastel icon tiles (quick access, quick menu, stat cards). */
+.hris-chip-blue   { background: #E8F0FF; color: #1E63EE; }
+.hris-chip-green  { background: #E3F7EC; color: #16A34A; }
+.hris-chip-violet { background: #F1EAFF; color: #7C3AED; }
+.hris-chip-amber  { background: #FFF2DE; color: #EA8A0C; }
+.hris-chip-rose   { background: #FFE8EC; color: #E11D48; }
+.hris-chip-teal   { background: #DDF6F1; color: #0D9488; }
+.hris-chip-indigo { background: #ECEBFF; color: #4F46E5; }
+.hris-chip-sky    { background: #E0F2FE; color: #0284C7; }
+.hris-chip-slate  { background: #EEF2F7; color: #475569; }
+.dark .hris-chip-blue   { background: #1A2B4D; color: #8CB6FF; }
+.dark .hris-chip-green  { background: #12301F; color: #4ADE80; }
+.dark .hris-chip-violet { background: #2C2450; color: #C4B5FD; }
+.dark .hris-chip-amber  { background: #33270A; color: #FBBF24; }
+.dark .hris-chip-rose   { background: #3A1618; color: #FDA4AF; }
+.dark .hris-chip-teal   { background: #0F3330; color: #5EEAD4; }
+.dark .hris-chip-indigo { background: #252A55; color: #A5B4FC; }
+.dark .hris-chip-sky    { background: #0F2C40; color: #7DD3FC; }
+.dark .hris-chip-slate  { background: #1E293B; color: #CBD5E1; }
+
+/* Whole-tile pastel surfaces (mobile quick menu). */
+.hris-tint-blue   { background: #F1F6FF; }
+.hris-tint-green  { background: #EFFAF3; }
+.hris-tint-violet { background: #F7F2FF; }
+.hris-tint-amber  { background: #FFF7EC; }
+.hris-tint-rose   { background: #FFF1F3; }
+.hris-tint-teal   { background: #EEFAF8; }
+.hris-tint-indigo { background: #F3F3FF; }
+.hris-tint-sky    { background: #EEF8FE; }
+.hris-tint-slate  { background: #F5F7FA; }
+.dark [class*="hris-tint-"] { background: var(--card); }
+
+/* Attention callout (amber). */
+.hris-attention {
+  background: linear-gradient(180deg, #FFF6E8 0%, #FFFBF4 100%);
+  border: 1px solid #FBE3BF;
+}
+.dark .hris-attention {
+  background: #2A2110;
+  border-color: #4A3812;
+}
+
+/* Raised centre action in the mobile bottom navigation. */
+.hris-fab {
+  background: linear-gradient(135deg, #3B82F6 0%, #1E5EEB 60%, #1A4FD6 100%);
+  box-shadow: 0 12px 24px -10px rgb(30 94 235 / 0.8), 0 0 0 6px var(--card);
+}
+
+/* Page titles everywhere inside the app shell share one voice. */
+@layer base {
+  .hris-main h1 {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--foreground);
+  }
 }

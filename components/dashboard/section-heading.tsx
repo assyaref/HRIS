@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-/** Section heading with an optional trailing action (e.g. "View all"). */
+/** Section heading with an optional trailing action (e.g. "Lihat semua"). */
 export function SectionHeading({
   title,
   description,
@@ -13,7 +13,7 @@ export function SectionHeading({
   return (
     <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1.5">
       <div className="min-w-0">
-        <h2 className="text-section-title text-foreground">
+        <h2 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
           {title}
         </h2>
         {description ? (

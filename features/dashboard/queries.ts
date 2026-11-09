@@ -29,6 +29,7 @@ import {
   dateStringInTimeZone,
   parseAttendanceDate,
 } from "@/lib/attendance/time";
+import { APP_TIME_ZONE } from "@/lib/utils/greeting";
 import type { PayrollPeriodStatus } from "@/features/payroll/constants";
 
 /**
@@ -460,4 +461,166 @@ export async function getMonthAttendanceSummary(
   }
   const total = present + completed + incomplete + rejected;
   return { present, completed, incomplete, rejected, total };
+}
+// ---------------------------------------------------------------------------
+// Monthly recap — "Ringkasan Bulan Ini" (HRIS Lite v2 dashboards)
+// ---------------------------------------------------------------------------
+
+export interface MonthlyRecap {
+  /** "2026-11" */
+  monthKey: string;
+  /** Days with an attendance record (present, completed or incomplete). */
+  hadir: number;
+  /** Working days covered by approved permission (izin) requests. */
+  izin: number;
+  /** Working days covered by approved leave (cuti) requests. */
+  cuti: number;
+  /** Elapsed working days with no attendance, leave or permission. */
+  alpha: number;
+  /** hadir / (hadir + izin + cuti + alpha), 0–100. */
+  percentage: number;
+}
+
+/** Month keys "YYYY-MM" for the current month and the `count - 1` before it. */
+export function recentMonthKeys(count = 6, now: Date = new Date()): string[] {
+  const today = dateStringInTimeZone(now, APP_TIME_ZONE);
+  const [year, month] = today.split("-").map((part) => Number.parseInt(part, 10));
+  const keys: string[] = [];
+  for (let offset = 0; offset < count; offset += 1) {
+    const date = new Date(Date.UTC(year, month - 1 - offset, 1));
+    keys.push(
+      `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`
+    );
+  }
+  return keys;
+}
+
+/** Validates a "YYYY-MM" search param against the selectable months. */
+export function normalizeMonthKey(value: string | null | undefined): string {
+  const keys = recentMonthKeys(12);
+  return value && keys.includes(value) ? value : keys[0];
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Mon–Fri dates (UTC midnight, as "YYYY-MM-DD") in [from, to). */
+function weekdayKeys(from: Date, to: Date): string[] {
+  const out: string[] = [];
+  for (let t = from.getTime(); t < to.getTime(); t += DAY_MS) {
+    const day = new Date(t);
+    const weekday = day.getUTCDay();
+    if (weekday !== 0 && weekday !== 6) out.push(day.toISOString().slice(0, 10));
+  }
+  return out;
+}
+
+/**
+ * One employee's attendance recap for a calendar month.
+ *
+ * Working days are Monday–Friday (public holidays are not modelled yet).
+ * Days are counted once with precedence hadir → cuti → izin; every elapsed
+ * working day (from the hire date, up to today) left uncovered is "alpha".
+ */
+export async function getMonthlyRecap(
+  organizationId: string,
+  employeeId: string,
+  monthKey: string,
+  hireDate: Date | null = null
+): Promise<MonthlyRecap> {
+  const [year, month] = monthKey.split("-").map((part) => Number.parseInt(part, 10));
+  const start = new Date(Date.UTC(year, month - 1, 1));
+  const end = new Date(Date.UTC(year, month, 1));
+  const today = parseAttendanceDate(dateStringInTimeZone(new Date(), APP_TIME_ZONE));
+
+  const [attendanceRows, leaveRows, permissionRows] = await Promise.all([
+    db
+      .select({
+        date: attendanceRecords.attendanceDate,
+        status: attendanceRecords.status,
+      })
+      .from(attendanceRecords)
+      .where(
+        and(
+          eq(attendanceRecords.organizationId, organizationId),
+          eq(attendanceRecords.employeeId, employeeId),
+          gte(attendanceRecords.attendanceDate, start),
+          lt(attendanceRecords.attendanceDate, end)
+        )
+      ),
+    db
+      .select({ startDate: leaveRequests.startDate, endDate: leaveRequests.endDate })
+      .from(leaveRequests)
+      .where(
+        and(
+          eq(leaveRequests.organizationId, organizationId),
+          eq(leaveRequests.employeeId, employeeId),
+          eq(leaveRequests.status, "approved"),
+          lt(leaveRequests.startDate, end),
+          gte(leaveRequests.endDate, start)
+        )
+      ),
+    db
+      .select({ startAt: permissionRequests.startAt, endAt: permissionRequests.endAt })
+      .from(permissionRequests)
+      .where(
+        and(
+          eq(permissionRequests.organizationId, organizationId),
+          eq(permissionRequests.employeeId, employeeId),
+          eq(permissionRequests.status, "approved"),
+          lt(permissionRequests.startAt, end),
+          gte(permissionRequests.endAt, start)
+        )
+      ),
+  ]);
+
+  const hadirDays = new Set<string>();
+  for (const row of attendanceRows) {
+    if (row.status === "rejected") continue;
+    hadirDays.add(new Date(row.date).toISOString().slice(0, 10));
+  }
+
+  const cutiDays = new Set<string>();
+  for (const row of leaveRows) {
+    const from = new Date(Math.max(new Date(row.startDate).getTime(), start.getTime()));
+    const to = new Date(Math.min(new Date(row.endDate).getTime() + DAY_MS, end.getTime()));
+    for (const key of weekdayKeys(from, to)) {
+      if (!hadirDays.has(key)) cutiDays.add(key);
+    }
+  }
+
+  const izinDays = new Set<string>();
+  for (const row of permissionRows) {
+    const from = parseAttendanceDate(dateStringInTimeZone(row.startAt, APP_TIME_ZONE));
+    const last = parseAttendanceDate(dateStringInTimeZone(row.endAt, APP_TIME_ZONE));
+    const clippedFrom = new Date(Math.max(from.getTime(), start.getTime()));
+    const clippedTo = new Date(Math.min(last.getTime() + DAY_MS, end.getTime()));
+    for (const key of weekdayKeys(clippedFrom, clippedTo)) {
+      if (!hadirDays.has(key) && !cutiDays.has(key)) izinDays.add(key);
+    }
+  }
+
+  // Elapsed working days: from max(month start, hire date) up to yesterday;
+  // today only counts once something was recorded for it.
+  const firstDay = hireDate && hireDate.getTime() > start.getTime() ? hireDate : start;
+  const elapsedEnd = new Date(Math.min(today.getTime(), end.getTime()));
+  const todayKey = today.toISOString().slice(0, 10);
+  let alpha = 0;
+  for (const key of weekdayKeys(firstDay, elapsedEnd)) {
+    if (key === todayKey) continue;
+    if (!hadirDays.has(key) && !cutiDays.has(key) && !izinDays.has(key)) alpha += 1;
+  }
+
+  const hadir = hadirDays.size;
+  const cuti = cutiDays.size;
+  const izin = izinDays.size;
+  const total = hadir + izin + cuti + alpha;
+
+  return {
+    monthKey,
+    hadir,
+    izin,
+    cuti,
+    alpha,
+    percentage: total > 0 ? Math.round((hadir / total) * 100) : 0,
+  };
 }

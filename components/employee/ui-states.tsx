@@ -21,7 +21,7 @@ export function EmployeeEmptyState({
     <div className="hris-card flex flex-col items-center justify-center px-6 py-10 text-center">
       <span
         aria-hidden="true"
-        className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground"
+        className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-surface-primary text-primary"
       >
         <HrisIcon name={icon} className="size-6" />
       </span>

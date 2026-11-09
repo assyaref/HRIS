@@ -27,12 +27,28 @@ export type NavIconKey =
   | "test-data"
   | "settings"
   | "profile"
-  | "bell";
+  | "bell"
+  | "home"
+  | "user"
+  | "plane"
+  | "clipboard"
+  | "wallet"
+  | "megaphone"
+  | "network"
+  | "layers"
+  | "users-cog"
+  | "map-pin"
+  | "calendar-check"
+  | "bar-chart"
+  | "link"
+  | "edit";
 
 export interface NavItem {
   title: string;
   href: string;
   permission?: Permission;
+  /** Shown when the user holds ANY of these permissions. */
+  anyPermission?: Permission[];
   /**
    * System-level (Super Administrator only) item. Unlike `permission`, this
    * is decided by the SUPERADMIN role directly (`authorization.isSuperAdmin`),
@@ -42,6 +58,14 @@ export interface NavItem {
   superadminOnly?: boolean;
   /** Icon shown beside the label in the sidebar / drawer. */
   icon?: NavIconKey;
+  /** Live counter rendered as a red pill next to the label. */
+  badge?: "notifications";
+  /**
+   * Collapsible group. A group has no page of its own: `href` only keys the
+   * group and marks it active when the current route is under it. Children
+   * are permission-filtered like top-level items; an empty group is dropped.
+   */
+  children?: NavItem[];
 }
 
 /** A group of navigation items with an optional section heading. */

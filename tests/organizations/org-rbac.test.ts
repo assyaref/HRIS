@@ -192,18 +192,18 @@ describe("pages: direct URL access is denied for non-superadmins", () => {
   });
 });
 
-describe("navigation: Settings → Organizations is SUPERADMIN-only", () => {
-  it("declares the Organizations item in the settings section", () => {
-    const settingsSectionStart = navigationSource.indexOf("settingsNavigation");
+describe("navigation: Manajemen → Organisasi is SUPERADMIN-only", () => {
+  it("declares the Organizations item in the management section", () => {
+    const settingsSectionStart = navigationSource.indexOf("managementNavigation");
     assert.notEqual(settingsSectionStart, -1);
     const section = navigationSource.slice(settingsSectionStart);
     assert.equal(section.includes('href: "/settings/organizations"'), true);
-    assert.equal(section.includes('title: "Organizations"'), true);
-    assert.equal(section.includes('icon: "organizations"'), true);
+    assert.equal(section.includes('title: "Organisasi"'), true);
+    assert.equal(section.includes('icon: "network"'), true);
   });
 
   it("marks it superadminOnly (decided by the role, not a permission code)", () => {
-    const settingsSectionStart = navigationSource.indexOf("settingsNavigation");
+    const settingsSectionStart = navigationSource.indexOf("managementNavigation");
     const section = navigationSource.slice(settingsSectionStart);
     const itemStart = section.indexOf('href: "/settings/organizations"');
     const item = section.slice(itemStart, itemStart + 400);

@@ -119,7 +119,7 @@ describe("ABSEN wiring in the authenticated shell", () => {
 
   it("hands desktop users to the existing sidebar attendance entry", () => {
     const navigation = readRepoFile("components/layout/navigation.ts");
-    assert.equal(navigation.includes('title: "Attendance"'), true);
+    assert.equal(navigation.includes('title: "Absensi Saya"'), true);
     assert.equal(navigation.includes('href: "/attendance"'), true);
     // The mobile bottom bar intentionally yields to the desktop shell.
     assert.equal(bottomNav.includes("lg:hidden"), true);

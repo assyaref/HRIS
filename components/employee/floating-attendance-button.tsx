@@ -6,9 +6,10 @@ import { HrisIcon } from "@/components/layout/icons";
 import { cn } from "@/lib/utils/cn";
 
 /**
- * Elevated "ABSEN" action with the Face Scan icon. It is the centre element
- * of the employee bottom navigation (mobile) and links into the EXISTING
- * attendance flow — no new check-in logic is introduced here.
+ * Raised round "ABSEN" action (scan glyph) at the centre of the bottom
+ * navigation. Links into the EXISTING attendance flow — no new check-in
+ * logic is introduced here. The visible label is screen-reader only to keep
+ * the button a clean circle, as in the HRIS Lite v2 design.
  */
 export function FloatingAttendanceButton({
   href = "/attendance",
@@ -23,14 +24,15 @@ export function FloatingAttendanceButton({
     <Link
       href={href}
       aria-label="ABSEN"
+      aria-current={active ? "page" : undefined}
       className={cn(
-        "emp-gradient -mt-7 flex size-16 flex-col items-center justify-center gap-0.5 self-center rounded-full border-4 border-white text-white shadow-[0_14px_30px_-10px_rgba(22,119,232,0.85)] ring-1 ring-cyan-200/80 transition-transform focus-visible:ring-2 focus-visible:ring-[#1677e8] focus-visible:ring-offset-2 focus-visible:outline-none active:scale-95",
-        active && "ring-2 ring-cyan-300",
+        "hris-fab -mt-9 flex size-[68px] items-center justify-center self-center rounded-full text-white transition-transform focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none active:scale-95",
+        active && "brightness-110",
         className
       )}
     >
-      <HrisIcon name="face" className="size-7" />
-      <span className="text-[10px] font-semibold tracking-wide">ABSEN</span>
+      <HrisIcon name="qr-scan" className="size-8" />
+      <span className="sr-only">ABSEN</span>
     </Link>
   );
 }

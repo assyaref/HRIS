@@ -2,136 +2,188 @@ import { PERMISSIONS } from "@/lib/auth/permissions";
 import type { NavItem, NavSection } from "@/types/navigation";
 
 /**
- * Application shell navigation.
+ * Application shell navigation (HRIS Lite Enterprise v2.0).
  *
  * Items are pure data (safe for client imports). Items with a `permission`
  * are filtered server-side by `getAuthorizedSections` before being rendered,
- * so the client never decides what to show based on stored roles.
+ * so the client never decides what to show based on stored roles. Groups
+ * (`children`) collapse in the sidebar; a group the user can only see one
+ * child of is flattened into that child.
  */
 export const primaryNavigation: NavItem[] = [
-  { title: "Dashboard", href: "/dashboard", icon: "dashboard" },
-  { title: "Notifikasi", href: "/notifications", icon: "bell" },
-  { title: "Face ID", href: "/face-id", icon: "face" },
+  { title: "Beranda", href: "/dashboard", icon: "home" },
   {
-    title: "Employees",
+    title: "Notifikasi",
+    href: "/notifications",
+    icon: "bell",
+    badge: "notifications",
+  },
+  {
+    title: "Karyawan",
     href: "/employees",
     permission: PERMISSIONS.EMPLOYEES_VIEW,
-    icon: "employees",
+    icon: "user",
   },
   {
-    title: "Attendance",
-    href: "/attendance",
-    permission: PERMISSIONS.ATTENDANCE_VIEW,
-    icon: "attendance",
+    title: "Absensi",
+    href: "#absensi",
+    icon: "calendar-check",
+    children: [
+      {
+        title: "Absensi Saya",
+        href: "/attendance",
+        permission: PERMISSIONS.ATTENDANCE_VIEW,
+        icon: "calendar-check",
+      },
+      { title: "Face ID", href: "/face-id", icon: "face" },
+      {
+        title: "Kelola Absensi",
+        href: "/attendance/management",
+        permission: PERMISSIONS.ATTENDANCE_MANAGE,
+        icon: "attendance",
+      },
+      {
+        title: "Rekap Absensi",
+        href: "/attendance/recap",
+        permission: PERMISSIONS.ATTENDANCE_MANAGE,
+        icon: "bar-chart",
+      },
+    ],
   },
   {
-    title: "Leave",
-    href: "/leave",
-    permission: PERMISSIONS.LEAVE_VIEW,
-    icon: "leave",
+    title: "Cuti & Izin",
+    href: "#cuti-izin",
+    icon: "plane",
+    children: [
+      {
+        title: "Pengajuan Cuti",
+        href: "/leave",
+        permission: PERMISSIONS.LEAVE_VIEW,
+        icon: "plane",
+      },
+      {
+        title: "Izin Kegiatan",
+        href: "/permission",
+        permission: PERMISSIONS.PERMISSION_VIEW,
+        icon: "clipboard",
+      },
+      {
+        title: "Persetujuan Cuti",
+        href: "/leave/management",
+        anyPermission: [PERMISSIONS.LEAVE_APPROVE, PERMISSIONS.LEAVE_MANAGE],
+        icon: "plane",
+      },
+      {
+        title: "Persetujuan Izin",
+        href: "/permission/management",
+        anyPermission: [
+          PERMISSIONS.PERMISSION_APPROVE,
+          PERMISSIONS.PERMISSION_MANAGE,
+        ],
+        icon: "clipboard",
+      },
+    ],
   },
   {
-    title: "Permission",
-    href: "/permission",
-    permission: PERMISSIONS.PERMISSION_VIEW,
-    icon: "permission",
+    title: "Penggajian",
+    href: "#penggajian",
+    icon: "wallet",
+    children: [
+      {
+        title: "Periode Payroll",
+        href: "/payroll",
+        permission: PERMISSIONS.PAYROLL_VIEW,
+        icon: "wallet",
+      },
+      {
+        title: "Slip Gaji Saya",
+        href: "/payslip",
+        permission: PERMISSIONS.PAYSLIP_VIEW,
+        icon: "payslip",
+      },
+    ],
   },
-  {
-    title: "Payroll",
-    href: "/payroll",
-    permission: PERMISSIONS.PAYROLL_VIEW,
-    icon: "payroll",
-  },
-  {
-    title: "Payslip",
-    href: "/payslip",
-    permission: PERMISSIONS.PAYSLIP_VIEW,
-    icon: "payslip",
-  },
-  {
-    title: "Announcements",
-    href: "/announcements",
-    icon: "announcements",
-  },
+  { title: "Pengumuman", href: "/announcements", icon: "megaphone" },
 ];
 
-export const supportNavigation: NavItem[] = [
+export const managementNavigation: NavItem[] = [
   {
-    title: "Announcements",
-    href: "/announcements/management",
-    permission: PERMISSIONS.ANNOUNCEMENTS_VIEW,
-    icon: "announcements",
-  },
-  {
-    title: "Projects",
-    href: "/projects",
-    icon: "projects",
-    // SUPERADMIN-only (like Organizations, R19): decided by the
-    // system-level role, not by the projects.* permission codes. The page
-    // and every project server action re-verify requireSuperAdmin.
-    superadminOnly: true,
-  },
-  {
-    title: "Attendance Recap",
-    href: "/attendance/recap",
-    permission: PERMISSIONS.ATTENDANCE_MANAGE,
-    icon: "attendance",
-  },
-];
-
-export const settingsNavigation: NavItem[] = [
-  {
-    title: "Users",
-    href: "/settings/users",
-    permission: PERMISSIONS.USERS_VIEW,
-    icon: "users",
-  },
-  {
-    title: "Organizations",
+    title: "Organisasi",
     href: "/settings/organizations",
-    icon: "organizations",
+    icon: "network",
     // SUPERADMIN-only (R19): decided by the system-level role, not by the
     // organizations.* permission codes seeded to the Super Administrator.
     superadminOnly: true,
   },
   {
-    title: "Roles",
-    href: "/settings/roles",
-    permission: PERMISSIONS.ROLES_VIEW,
-    icon: "roles",
-  },
-  {
-    title: "Permissions",
-    href: "/settings/permissions",
-    permission: PERMISSIONS.PERMISSIONS_VIEW,
-    icon: "permissions",
-  },
-  {
-    title: "Work Locations",
-    href: "/settings/work-locations",
-    permission: PERMISSIONS.WORK_LOCATIONS_VIEW,
-    icon: "work-locations",
-  },
-  {
-    title: "Employee Fields",
-    href: "/settings/employee-fields",
-    permission: PERMISSIONS.EMPLOYEE_FIELDS_VIEW,
-    icon: "employee-fields",
-  },
-  {
-    title: "Test Data",
-    href: "/settings/test-data",
-    icon: "test-data",
-    // SUPERADMIN-only, alongside Organizations: the purge needs
-    // `employees.test_data_purge` AND the system-level SUPERADMIN role. The
-    // page and its server action enforce both; this only keeps the link out of
-    // a tenant sidebar.
+    title: "Proyek",
+    href: "/projects",
+    icon: "layers",
+    // SUPERADMIN-only: the page and every project server action re-verify
+    // requireSuperAdmin.
     superadminOnly: true,
   },
   {
-    title: "Account",
-    href: "/settings/account",
-    icon: "profile",
+    title: "Kelola Pengumuman",
+    href: "/announcements/management",
+    permission: PERMISSIONS.ANNOUNCEMENTS_VIEW,
+    icon: "megaphone",
+  },
+];
+
+export const settingsNavigation: NavItem[] = [
+  {
+    title: "Pengaturan",
+    href: "#pengaturan",
+    icon: "settings",
+    children: [
+      {
+        title: "Lokasi Kerja",
+        href: "/settings/work-locations",
+        permission: PERMISSIONS.WORK_LOCATIONS_VIEW,
+        icon: "map-pin",
+      },
+      {
+        title: "Field Karyawan",
+        href: "/settings/employee-fields",
+        permission: PERMISSIONS.EMPLOYEE_FIELDS_VIEW,
+        icon: "employee-fields",
+      },
+      {
+        title: "Data Uji",
+        href: "/settings/test-data",
+        icon: "test-data",
+        // SUPERADMIN-only, alongside Organizations: the purge needs
+        // `employees.test_data_purge` AND the system-level SUPERADMIN role.
+        superadminOnly: true,
+      },
+      { title: "Akun Saya", href: "/settings/account", icon: "profile" },
+    ],
+  },
+  {
+    title: "Pengguna & Role",
+    href: "#pengguna-role",
+    icon: "users-cog",
+    children: [
+      {
+        title: "Pengguna",
+        href: "/settings/users",
+        permission: PERMISSIONS.USERS_VIEW,
+        icon: "users",
+      },
+      {
+        title: "Role",
+        href: "/settings/roles",
+        permission: PERMISSIONS.ROLES_VIEW,
+        icon: "roles",
+      },
+      {
+        title: "Hak Akses",
+        href: "/settings/permissions",
+        permission: PERMISSIONS.PERMISSIONS_VIEW,
+        icon: "permissions",
+      },
+    ],
   },
 ];
 
@@ -144,7 +196,40 @@ export const settingsNavigation: NavItem[] = [
  * modules and an admin always keeps full access to the authorized set.
  */
 export const navigationSections: NavSection[] = [
-  { items: primaryNavigation },
-  { title: "Insights", items: supportNavigation },
-  { title: "Settings", items: settingsNavigation },
+  { title: "Menu Utama", items: primaryNavigation },
+  { title: "Manajemen", items: managementNavigation },
+  { title: "Pengaturan", items: settingsNavigation },
 ];
+
+/** Every concrete (linkable) href in the given sections, groups flattened. */
+export function flattenNavHrefs(sections: NavSection[]): string[] {
+  const out: string[] = [];
+  const walk = (items: NavItem[]) => {
+    for (const item of items) {
+      if (item.children) walk(item.children);
+      else out.push(item.href);
+    }
+  };
+  for (const section of sections) walk(section.items);
+  return out;
+}
+
+/**
+ * The single href that should render as active for `pathname`: the longest
+ * authorized href that equals the path or is a parent segment of it. Keeps
+ * "/announcements" inactive while "/announcements/management" is open.
+ */
+export function resolveActiveHref(
+  pathname: string,
+  hrefs: string[]
+): string | null {
+  let best: string | null = null;
+  for (const href of hrefs) {
+    const match =
+      href === "/dashboard"
+        ? pathname === "/dashboard" || pathname === "/"
+        : pathname === href || pathname.startsWith(`${href}/`);
+    if (match && (!best || href.length > best.length)) best = href;
+  }
+  return best;
+}

@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils/cn";
 
 export function Table({ className, ...props }: ComponentProps<"table">) {
   return (
-    <div className="relative w-full overflow-x-auto rounded-2xl border border-[var(--card-border)] bg-card shadow-[var(--shadow-card)]">
+    <div className="relative w-full overflow-x-auto rounded-[18px] border border-[var(--card-border)] bg-card shadow-[var(--shadow-card)]">
       <table
         className={cn("w-full caption-bottom text-sm", className)}
         {...props}
@@ -14,7 +14,7 @@ export function Table({ className, ...props }: ComponentProps<"table">) {
 
 export function TableHeader({ className, ...props }: ComponentProps<"thead">) {
   return (
-    <thead className={cn("bg-muted/70 [&_tr]:border-b [&_tr]:border-border [&_tr]:hover:bg-transparent", className)} {...props} />
+    <thead className={cn("bg-[#F6F9FF] dark:bg-muted/70 [&_tr]:border-b [&_tr]:border-border [&_tr]:hover:bg-transparent", className)} {...props} />
   );
 }
 
@@ -50,7 +50,7 @@ export function TableHead({ className, ...props }: ComponentProps<"th">) {
     <th
       scope="col"
       className={cn(
-        "h-11 px-4 text-left align-middle text-xs font-semibold whitespace-nowrap text-foreground/75",
+        "h-11 px-4 text-left align-middle text-[11px] font-semibold tracking-wide whitespace-nowrap text-muted-foreground uppercase",
         className
       )}
       {...props}
@@ -106,7 +106,7 @@ export function TableStatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex w-fit items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] leading-4 font-semibold whitespace-nowrap",
+        "inline-flex w-fit items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] leading-4 font-semibold whitespace-nowrap",
         variantClasses[variant],
         className
       )}

@@ -1,16 +1,12 @@
 import Link from "next/link";
 
-import {
-  type AttendanceCardState,
-} from "@/components/employee/attendance-status-card";
+import type { AttendanceCardState } from "@/components/employee/attendance-status-card";
+import { AnnouncementCarousel } from "@/components/employee/announcement-carousel";
 import { SectionHeader } from "@/components/employee/section-header";
-import { EmployeeHeader } from "@/components/employee/employee-header";
-import { QuickServiceGrid } from "@/components/employee/quick-service-grid";
-import type { QuickServiceItem } from "@/components/employee/quick-service-card";
 import { StatusBadge, statusTone } from "@/components/employee/status-badge";
 import { EmployeeEmptyState } from "@/components/employee/ui-states";
-import { AnnouncementCarousel } from "@/components/employee/announcement-carousel";
-import { HrisIcon } from "@/components/layout/icons";
+import { MonthlyRecapCard } from "@/components/dashboard/monthly-recap-card";
+import { HrisIcon, type HrisIconName } from "@/components/layout/icons";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { PERMISSIONS, type Permission } from "@/lib/auth/permissions";
@@ -20,6 +16,7 @@ import {
   dateStringInTimeZone,
   parseAttendanceDate,
 } from "@/lib/attendance/time";
+import { APP_TIME_ZONE } from "@/lib/utils/greeting";
 import { cn } from "@/lib/utils/cn";
 
 import { ANNOUNCEMENT_PRIORITY_LABELS } from "@/features/announcements/constants";
@@ -27,10 +24,6 @@ import {
   countMyUnreadAnnouncements,
   listMyAnnouncements,
 } from "@/features/announcements/queries";
-import {
-  ATTENDANCE_STATUS_LABELS,
-  type AttendanceStatus,
-} from "@/features/attendance/constants";
 import { formatTime } from "@/features/attendance/format";
 import {
   findAttendanceForDate,
@@ -41,221 +34,130 @@ import {
   LEAVE_REQUEST_STATUS_LABELS,
   type LeaveRequestStatus,
 } from "@/features/leave/constants";
+import { listMyLeaveRequests } from "@/features/leave/queries";
 import {
-  listLeaveBalances,
-  listMyLeaveRequests,
-} from "@/features/leave/queries";
-import { PERMISSION_TYPE_LABELS, PERMISSION_REQUEST_STATUS_LABELS, type PermissionRequestStatus } from "@/features/permission/constants";
+  PERMISSION_TYPE_LABELS,
+  PERMISSION_REQUEST_STATUS_LABELS,
+  type PermissionRequestStatus,
+} from "@/features/permission/constants";
 import { listMyPermissionRequests } from "@/features/permission/queries";
-import { listMyPublishedPayslips } from "@/features/payroll/queries";
 
-import { getMonthAttendanceSummary } from "./queries";
+import { getMonthlyRecap, recentMonthKeys } from "./queries";
 
 interface EmployeeDashboardProps {
   user: CurrentUser;
   authorization: UserAuthorization;
   organizationName: string | null;
   roleLabel: string | null;
+  /** Selected recap month ("YYYY-MM", from `?bulan=`). */
+  monthKey: string;
 }
 
-function greeting(hour: number): string {
-  if (hour < 11) return "Selamat pagi";
-  if (hour < 15) return "Selamat siang";
-  if (hour < 19) return "Selamat sore";
-  return "Selamat malam";
-}
+type ChipTone = "blue" | "green" | "violet" | "amber" | "rose" | "teal" | "sky";
 
-/** Circular progress visualization (inline SVG) — MD3 Soft Blue. */
-function CircularProgress({
-  percentage,
-  size = 88,
-  stroke = 8,
-}: {
-  percentage: number;
-  size?: number;
-  stroke?: number;
-}) {
-  const radius = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (percentage / 100) * circumference;
-
-  return (
-    <svg
-      width={size}
-      height={size}
-      className="transform -rotate-90"
-      aria-label="Kehadiran bulan ini"
-      role="img"
-    >
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={radius}
-        fill="none"
-        stroke="var(--muted)"
-        strokeWidth={stroke}
-        strokeLinecap="round"
-      />
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={radius}
-        fill="none"
-        stroke="var(--primary)"
-        strokeWidth={stroke}
-        strokeLinecap="round"
-        strokeDasharray={circumference}
-        strokeDashoffset={offset}
-        className="transition-all duration-700 ease-out"
-      />
-      <text
-        x={size / 2}
-        y={size / 2 + size * 0.06}
-        textAnchor="middle"
-        fontSize={size * 0.32}
-        fontWeight="700"
-        fill="var(--foreground)"
-        letterSpacing="-0.02em"
-      >
-        {percentage}%
-      </text>
-    </svg>
-  );
-}
-
-/** A single stat tile inside the monthly summary. */
-function SummaryStat({ label, value, tone }: { label: string; value: string | number; tone: "success" | "info" | "warning" | "danger" }) {
-  const toneClass = {
-    success: "text-success hris-surface-success",
-    info: "text-info hris-surface-info",
-    warning: "text-warning hris-surface-warning",
-    danger: "text-danger hris-surface-danger",
-  }[tone];
-  return (
-    <div className="flex flex-col items-center gap-1 p-3 rounded-[16px] border border-border bg-card hris-card-hover">
-      <span className={cn("inline-flex items-center justify-center rounded-md px-2 py-0.5 text-[10px] font-semibold", toneClass)}>
-        {label}
-      </span>
-      <p className="text-lg font-semibold tracking-tight text-foreground">
-        {value}
-      </p>
-    </div>
-  );
-}
-
-/** A single attendance info card (2-column grid). */
-function InfoCard({
+/** Small info tile (2×2 grid): icon well, muted label, bold value. */
+function InfoTile({
   label,
-  value,
-  sub,
   icon,
-  tone = "primary",
+  tone,
+  children,
 }: {
   label: string;
-  value: string;
-  sub?: string;
-  icon: Parameters<typeof HrisIcon>[0]["name"];
-  tone?: "primary" | "success" | "info" | "warning" | "danger";
+  icon: HrisIconName;
+  tone: ChipTone;
+  children: React.ReactNode;
 }) {
-  const toneClass = {
-    primary: "hris-surface-primary text-primary",
-    success: "hris-surface-mint text-info",
-    info: "hris-surface-info text-info",
-    warning: "hris-surface-warning text-warning",
-    danger: "hris-surface-danger text-danger",
-  }[tone];
   return (
-    <div className="hris-card p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            {label}
-          </p>
-          <p className="mt-0.5 text-sm font-semibold text-foreground truncate">
-            {value}
-          </p>
-          {sub ? (
-            <p className="mt-0.5 text-[10px] text-muted-foreground">
-              {sub}
-            </p>
-          ) : null}
+    <div className="flex min-h-[86px] items-center gap-2.5 rounded-[18px] border border-[var(--card-border)] bg-card px-3 py-3 hris-card sm:gap-4 sm:px-4">
+      <span
+        aria-hidden="true"
+        className={cn(
+          `hris-chip-${tone}`,
+          "flex size-11 shrink-0 items-center justify-center rounded-2xl sm:size-12"
+        )}
+      >
+        <HrisIcon name={icon} className="size-6" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[13px] text-muted-foreground">{label}</p>
+        <div className="mt-0.5 text-base leading-snug font-bold tracking-tight text-foreground sm:text-[17px]">
+          {children}
         </div>
-        <span
-          aria-hidden="true"
-          className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-[16px]",
-            toneClass
-          )}
-        >
-          <HrisIcon name={icon} className="size-4.5" />
-        </span>
       </div>
     </div>
   );
 }
 
-/** A single quick menu item (3-column grid). */
-function QuickMenuItem({
+/** One "Menu Cepat" tile: tinted tile, round coloured icon, bold label. */
+function QuickMenuTile({
   href,
   icon,
   label,
+  tone,
   badge,
-  tone = "blue",
 }: {
   href: string;
-  icon: Parameters<typeof HrisIcon>[0]["name"];
+  icon: HrisIconName;
   label: string;
-  badge?: string | number | null;
-  tone?: "blue" | "cyan" | "green" | "amber" | "violet" | "rose" | "slate";
+  tone: ChipTone;
+  badge?: number | null;
 }) {
-  const toneClasses: Record<string, string> = {
-    blue: "hris-surface-soft-blue text-primary",
-    cyan: "hris-surface-info text-info",
-    green: "hris-surface-mint text-info",
-    amber: "hris-surface-amber text-warning",
-    violet: "hris-surface-indigo text-primary",
-    rose: "hris-surface-pink text-danger",
-    slate: "bg-muted text-muted-foreground",
-  };
   return (
     <Link
       href={href}
       className={cn(
-        "hris-card emp-card-tap group flex min-h-[5.5rem] flex-col items-center justify-center gap-2 px-2 py-3 text-center focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none border-transparent",
-        badge ? "group-hover:border-primary/50" : ""
+        `hris-tint-${tone}`,
+        "group flex min-h-[112px] flex-col items-center justify-center gap-2.5 rounded-[18px] px-2 py-4 text-center transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       )}
     >
       <span
         aria-hidden="true"
         className={cn(
-          "relative flex size-11 items-center justify-center rounded-2xl mb-1",
-          toneClasses[tone]
+          `hris-chip-${tone}`,
+          "relative flex size-12 items-center justify-center rounded-full"
         )}
       >
-        <HrisIcon name={icon} className="size-5.5" />
+        <HrisIcon name={icon} className="size-6" />
         {badge ? (
-          <span className="absolute -top-1.5 -right-1.5 flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
-            {badge}
+          <span className="absolute -top-1.5 -right-2 flex min-w-6 items-center justify-center rounded-full bg-[#EF4444] px-1.5 py-0.5 text-[11px] font-bold text-white ring-2 ring-card">
+            {badge > 99 ? "99+" : badge}
           </span>
         ) : null}
       </span>
-      <span className="text-xs leading-tight font-medium text-foreground truncate">
+      <span className="text-[15px] leading-tight font-semibold text-foreground">
         {label}
       </span>
     </Link>
   );
 }
 
+const STATE_PILL: Record<
+  AttendanceCardState,
+  { label: string; className: string }
+> = {
+  CHECKED_IN: { label: "Bekerja", className: "bg-[#D9F5E3] text-[#15803D]" },
+  CHECKED_OUT: { label: "Selesai", className: "bg-surface-primary text-primary" },
+  NOT_CHECKED_IN: { label: "Belum Absen", className: "bg-[#FFEFD2] text-[#B45309]" },
+  ON_LEAVE: { label: "Cuti", className: "bg-[#EFE7FF] text-[#6D28D9]" },
+  WEEKEND: { label: "Libur", className: "bg-muted text-muted-foreground" },
+  HOLIDAY: { label: "Libur", className: "bg-muted text-muted-foreground" },
+  REJECTED: { label: "Ditolak", className: "bg-surface-danger text-danger" },
+  UNAVAILABLE: { label: "Nonaktif", className: "bg-muted text-muted-foreground" },
+};
+
 /**
- * The employee's self-service dashboard — mobile-first HRIS Lite home, rebuilt
- * on the MD3 Soft Blue design system. All values are dynamic and resolved
- * server-side for the signed-in employee — nothing is hard-coded.
+ * The employee's self-service home (HRIS Lite Enterprise v2.0).
+ *
+ * The greeting hero lives in the shell's blue band; this page renders the
+ * day at a glance (check-in, check-out, location, status), the big
+ * "Absensi Sekarang" action, the monthly recap, quick menu, announcements
+ * and recent requests. All values are resolved server-side for the
+ * signed-in employee — nothing is hard-coded.
  */
 export async function EmployeeDashboard({
   user,
   authorization,
-  organizationName,
-  roleLabel,
+  monthKey,
 }: EmployeeDashboardProps) {
   const organizationId = user.organizationId as string;
   const granted = new Set(authorization.permissionCodes);
@@ -265,10 +167,8 @@ export async function EmployeeDashboard({
   const employee = await getEmployeeSelfProfile(user.id, organizationId);
   if (!employee) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          Beranda
-        </h1>
+      <div className="space-y-6 pt-2">
+        <h1 className="text-xl tracking-tight">Beranda</h1>
         <EmployeeEmptyState
           icon="profile"
           title="Profil karyawan belum tertaut"
@@ -278,25 +178,23 @@ export async function EmployeeDashboard({
     );
   }
 
-  const today = parseAttendanceDate(dateStringInTimeZone(new Date(), null));
+  const today = parseAttendanceDate(
+    dateStringInTimeZone(new Date(), APP_TIME_ZONE)
+  );
   const [
     openAttendance,
     todayRecord,
-    monthSummary,
-    leaveBalances,
+    recap,
     myLeave,
     myPermissions,
-    myPayslips,
     latestAnnouncements,
     unreadAnnouncements,
   ] = await Promise.all([
     findOpenAttendance(organizationId, employee.id),
     findAttendanceForDate(organizationId, employee.id, today),
-    getMonthAttendanceSummary(organizationId, employee.id),
-    listLeaveBalances(organizationId, employee.id),
+    getMonthlyRecap(organizationId, employee.id, monthKey, employee.hireDate),
     listMyLeaveRequests(organizationId, employee.id),
     listMyPermissionRequests(organizationId, employee.id),
-    listMyPublishedPayslips(organizationId, employee.id),
     listMyAnnouncements({ organizationId, employeeId: employee.id, limit: 5 }),
     countMyUnreadAnnouncements({
       organizationId,
@@ -341,57 +239,56 @@ export async function EmployeeDashboard({
     : null;
 
   const canCheckIn = can(P.ATTENDANCE_CHECK_IN);
+  const canCheckOut = can(P.ATTENDANCE_CHECK_OUT);
   const canAttendance = can(P.ATTENDANCE_VIEW);
   const canLeave = can(P.LEAVE_VIEW);
   const canPermission = can(P.PERMISSION_VIEW);
   const canPayslip = can(P.PAYSLIP_VIEW);
 
-  const currentYear = String(new Date().getFullYear());
-  const annualBalances = leaveBalances.filter((b) => b.year === currentYear);
-  const availableLeave = annualBalances.reduce((sum, b) => sum + b.available, 0);
+  const locationName =
+    activeRecord?.workLocationName ?? employee.workLocationName ?? null;
 
-  const pendingLeave = myLeave.filter((r) => r.status === "pending").length;
-  const pendingPermission = myPermissions.filter(
-    (r) => r.status === "pending"
-  ).length;
+  const ctaEnabled =
+    canAttendance &&
+    ((state === "NOT_CHECKED_IN" && canCheckIn) ||
+      (state === "CHECKED_IN" && canCheckOut));
+  const ctaSubtitle =
+    state === "CHECKED_IN"
+      ? `Masuk ${checkInLabel ?? "—"} · Check-out`
+      : state === "CHECKED_OUT"
+        ? "Absensi hari ini sudah selesai"
+        : state === "ON_LEAVE"
+          ? "Anda sedang cuti hari ini"
+          : state === "WEEKEND"
+            ? "Hari ini akhir pekan"
+            : state === "REJECTED"
+              ? "Absensi hari ini ditolak — hubungi HR"
+              : state === "UNAVAILABLE"
+                ? "Absensi tidak tersedia untuk profil Anda"
+                : "Check-in / Check-out";
 
-  const serviceCandidates: Array<QuickServiceItem | false> = [
-    canAttendance && {
-      href: "/attendance",
-      icon: "attendance",
-      label: "Absensi",
-      tone: "blue",
-    },
-    canLeave && { href: "/leave", icon: "leave", label: "Pengajuan Cuti", tone: "amber" },
-    canPermission && {
-      href: "/permission",
-      icon: "permission",
-      label: "Izin Kegiatan",
-      tone: "cyan",
-    },
-    canPayslip && {
-      href: "/payslip",
-      icon: "payslip",
-      label: "Payslip",
-      tone: "violet",
-    },
-    {
-      href: "/settings/account",
-      icon: "profile",
-      label: "Profil Saya",
-      tone: "blue",
-    },
+  const services: Array<{
+    href: string;
+    icon: HrisIconName;
+    label: string;
+    tone: ChipTone;
+    badge?: number | null;
+    show: boolean;
+  }> = [
+    { href: "/attendance", icon: "calendar-check", label: "Absensi", tone: "blue", show: canAttendance },
+    { href: "/leave", icon: "plane", label: "Pengajuan Cuti", tone: "violet", show: canLeave },
+    { href: "/permission", icon: "clipboard", label: "Izin Kegiatan", tone: "amber", show: canPermission },
+    { href: "/payslip", icon: "wallet", label: "Payslip", tone: "green", show: canPayslip },
+    { href: "/settings/account", icon: "user", label: "Profil Saya", tone: "sky", show: true },
     {
       href: "/notifications",
       icon: "bell",
       label: "Notifikasi",
       tone: "rose",
       badge: unreadAnnouncements > 0 ? unreadAnnouncements : null,
+      show: true,
     },
   ];
-  const services = serviceCandidates.filter(
-    (service): service is QuickServiceItem => Boolean(service)
-  );
 
   const carouselItems = latestAnnouncements.map((item) => ({
     id: item.id,
@@ -408,8 +305,7 @@ export async function EmployeeDashboard({
           year: "numeric",
         }).format(item.publishedAt)
       : null,
-    badgeLabel:
-      ANNOUNCEMENT_PRIORITY_LABELS[item.priority] ?? "Pengumuman",
+    badgeLabel: ANNOUNCEMENT_PRIORITY_LABELS[item.priority] ?? "Pengumuman",
     badgeTone:
       item.priority === "urgent"
         ? ("danger" as const)
@@ -426,8 +322,7 @@ export async function EmployeeDashboard({
       title: `Cuti ${r.leaveTypeName}`,
       status: r.status as string,
       statusLabel:
-        LEAVE_REQUEST_STATUS_LABELS[r.status as LeaveRequestStatus] ??
-        r.status,
+        LEAVE_REQUEST_STATUS_LABELS[r.status as LeaveRequestStatus] ?? r.status,
       on: r.submittedAt,
     })),
     ...myPermissions.slice(0, 5).map((r) => ({
@@ -440,294 +335,219 @@ export async function EmployeeDashboard({
       }`,
       status: r.status as string,
       statusLabel:
-        PERMISSION_REQUEST_STATUS_LABELS[
-          r.status as PermissionRequestStatus
-        ] ?? r.status,
+        PERMISSION_REQUEST_STATUS_LABELS[r.status as PermissionRequestStatus] ??
+        r.status,
       on: r.submittedAt,
     })),
   ]
     .sort((a, b) => b.on.getTime() - a.on.getTime())
     .slice(0, 4);
 
-  const totalDays = monthSummary.present + monthSummary.completed + monthSummary.incomplete + monthSummary.rejected;
-  const attendancePct = totalDays > 0 ? Math.round(((monthSummary.present + monthSummary.completed) / totalDays) * 100) : 0;
-
-  const monthLabel = new Intl.DateTimeFormat("id-ID", {
-    month: "long",
-    year: "numeric",
-  }).format(new Date());
-
-  const todayLabel = new Intl.DateTimeFormat("id-ID", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  }).format(new Date());
+  const pill = STATE_PILL[state];
 
   return (
-    <div className="space-y-4">
-      {/* Welcome Section */}
-      <EmployeeHeader
-        profile={{
-          firstName: employee.firstName,
-          lastName: employee.lastName,
-          employeeNumber: employee.employeeNumber,
-          position: employee.position,
-          department: employee.department,
-          division: employee.division,
-          workLocationName: employee.workLocationName,
-          profilePhotoUrl: employee.profilePhotoUrl,
-        }}
-        greeting={greeting(new Date().getHours())}
-        organizationName={organizationName}
-        roleLabel={roleLabel}
-        todayLabel={todayLabel}
-        statusLabel={
-          employee.employmentStatus === "active" ? "Aktif" : "Tidak Aktif"
-        }
-      />
-
-      {/* Attendance Info Cards (2-column) */}
-      {canAttendance ? (
-        <section className="grid grid-cols-2 gap-3">
-          <InfoCard
-            label="Hadir Hari Ini"
-            value={String(monthSummary.present)}
-            sub={new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long" })}
-            icon="calendar-check"
-            tone="success"
-          />
-          <InfoCard
-            label="Jadwal Kerja"
-            value={activeRecord?.projectName ?? "—"}
-            sub={activeRecord?.workLocationName ?? "Belum ditetapkan"}
-            icon="briefcase"
-            tone="info"
-          />
-          <InfoCard
-            label="Lokasi Kerja"
-            value={activeRecord?.workLocationName ?? "—"}
-            sub={activeRecord?.projectName ?? "—"}
-            icon="map-pin"
-            tone="primary"
-          />
-          <InfoCard
-            label="Status Kehadiran"
-            value={
-              todayRecord
-                ? ATTENDANCE_STATUS_LABELS[
-                    todayRecord.status as AttendanceStatus
-                  ] ?? todayRecord.status
-                : "Belum absensi"
-            }
-            sub={checkInLabel ? `Masuk ${checkInLabel}` : "Belum check-in"}
-            icon="clock"
-            tone={
-              todayRecord?.status === "present" || todayRecord?.status === "completed"
-                ? "success"
-                : todayRecord?.status === "rejected"
-                  ? "danger"
-                  : "info"
-            }
-          />
-        </section>
-      ) : null}
-
-      {/* Primary Attendance Action */}
-      <section className="hris-card rounded-[20px] overflow-hidden relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
-        <div className="relative p-5">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
+    <div className="grid gap-5 pt-1 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-6">
+      <div className="min-w-0 space-y-5">
+        {/* Day at a glance */}
+        <section aria-label="Ringkasan hari ini" className="grid grid-cols-2 gap-3 sm:gap-4">
+          <InfoTile label="Hadir Hari Ini" icon="calendar-check" tone="green">
+            {checkInLabel ?? "--:--"}
+          </InfoTile>
+          <InfoTile label="Jam Pulang" icon="clock" tone="violet">
+            {checkOutLabel ?? "--:--"}
+          </InfoTile>
+          <InfoTile label="Lokasi" icon="map-pin" tone="sky">
+            <span className="flex min-w-0 items-start gap-1.5">
               <span
                 aria-hidden="true"
-                className="flex size-14 shrink-0 items-center justify-center rounded-[20px] hris-surface-soft-blue text-primary shadow-card"
-              >
-                <HrisIcon name="scan" className="size-6" />
+                className={cn(
+                  "mt-[0.45em] size-2 shrink-0 rounded-full",
+                  locationName ? "bg-[#22C55E]" : "bg-muted-foreground/50"
+                )}
+              />
+              <span className="line-clamp-2">{locationName ?? "Belum diatur"}</span>
+            </span>
+          </InfoTile>
+          <InfoTile label="Status" icon="target" tone="teal">
+            <span
+              className={cn(
+                "mt-0.5 inline-flex rounded-full px-3 py-0.5 text-sm font-bold",
+                pill.className
+              )}
+            >
+              {pill.label}
+            </span>
+          </InfoTile>
+        </section>
+
+        {/* Primary attendance action */}
+        {canAttendance ? (
+          ctaEnabled ? (
+            <Link
+              href="/attendance"
+              className="hris-band group flex items-center gap-4 rounded-[20px] px-5 py-4 shadow-[0_18px_34px_-18px_rgb(30_94_235/0.9)] transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+            >
+              <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/25">
+                <HrisIcon name="fingerprint" className="size-8" />
               </span>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-foreground">
-                  Absensi Sekarang
-                </p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Check-in / Check-out
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <StatusBadge
-                tone={
-                  state === "CHECKED_IN" || state === "CHECKED_OUT"
-                    ? "success"
-                    : state === "NOT_CHECKED_IN"
-                      ? "warning"
-                      : "neutral"
-                }
+              <span className="min-w-0 flex-1">
+                <span className="block text-lg font-bold">Absensi Sekarang</span>
+                <span className="block truncate text-sm text-white/85">{ctaSubtitle}</span>
+              </span>
+              <HrisIcon
+                name="chevron-right"
+                className="size-7 shrink-0 transition-transform group-hover:translate-x-0.5"
+              />
+            </Link>
+          ) : (
+            <div className="flex items-center gap-4 rounded-[20px] border border-[var(--card-border)] bg-card px-5 py-4 hris-card">
+              <span className="hris-chip-blue flex size-14 shrink-0 items-center justify-center rounded-full">
+                <HrisIcon name="fingerprint" className="size-8" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-lg font-bold text-foreground">Absensi</span>
+                <span className="block text-sm text-muted-foreground">{ctaSubtitle}</span>
+              </span>
+              <Link
+                href="/attendance"
+                className="text-sm font-semibold text-primary hover:underline"
               >
-                {state === "CHECKED_IN"
-                  ? "Sudah Masuk"
-                  : state === "CHECKED_OUT"
-                    ? "Selesai"
-                    : state === "NOT_CHECKED_IN"
-                      ? "Belum Absen"
-                      : state}
-              </StatusBadge>
+                Riwayat
+              </Link>
             </div>
+          )
+        ) : null}
+
+        {/* Monthly recap — mobile position */}
+        <MonthlyRecapCard
+          recap={recap}
+          monthOptions={recentMonthKeys(6)}
+          className="lg:hidden"
+        />
+
+        {/* Quick menu */}
+        <section className="rounded-[20px] border border-[var(--card-border)] bg-card p-4 hris-card sm:p-5">
+          <h2 className="mb-4 text-lg font-bold tracking-tight text-foreground">
+            Menu Cepat
+          </h2>
+          <div className="grid grid-cols-3 gap-3 sm:gap-4">
+            {services
+              .filter((service) => service.show)
+              .map((service) => (
+                <QuickMenuTile
+                  key={service.href}
+                  href={service.href}
+                  icon={service.icon}
+                  label={service.label}
+                  tone={service.tone}
+                  badge={service.badge}
+                />
+              ))}
           </div>
+        </section>
 
-          {state === "NOT_CHECKED_IN" && canCheckIn ? (
-            <Link
-              href="/attendance"
-              className="mt-5 block min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
-            >
-              <HrisIcon name="scan" className="size-5" />
-              Check-in Sekarang
-            </Link>
-          ) : null}
+        {/* Announcements */}
+        {carouselItems.length > 0 ? (
+          <section className="space-y-3">
+            <SectionHeader
+              title="Pengumuman"
+              action={
+                <Link
+                  href="/announcements"
+                  className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:text-primary/85"
+                >
+                  {unreadAnnouncements > 0 ? (
+                    <Badge variant="destructive" className="mr-1 min-w-[1.5rem] justify-center text-[11px]">
+                      {unreadAnnouncements}
+                    </Badge>
+                  ) : null}
+                  Lihat semua
+                  <HrisIcon name="chevron-right" className="size-4" />
+                </Link>
+              }
+            />
+            <AnnouncementCarousel items={carouselItems} />
+          </section>
+        ) : null}
+      </div>
 
-          {state === "CHECKED_IN" && can(P.ATTENDANCE_CHECK_OUT) ? (
-            <Link
-              href="/attendance"
-              className="mt-5 block min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
-            >
-              <HrisIcon name="scan" className="size-5" />
-              Check-out Sekarang
-            </Link>
-          ) : null}
+      <aside className="min-w-0 space-y-5">
+        {/* Monthly recap — desktop position */}
+        <MonthlyRecapCard
+          recap={recap}
+          monthOptions={recentMonthKeys(6)}
+          header="band"
+          className="hidden lg:block"
+        />
 
-          {(state === "CHECKED_OUT" || state === "ON_LEAVE" || state === "WEEKEND" || state === "UNAVAILABLE") && (
-            <p className="mt-5 rounded-xl hris-surface-success px-4 py-3 text-sm text-success">
-              {state === "CHECKED_OUT"
-                ? "Anda sudah menyelesaikan absensi hari ini."
-                : state === "ON_LEAVE"
-                  ? "Anda sedang cuti. Tidak perlu absensi."
-                  : state === "WEEKEND"
-                    ? "Hari ini akhir pekan."
-                    : "Absensi tidak tersedia untuk profil Anda."}
-            </p>
-          )}
-        </div>
-      </section>
-
-      {/* Monthly Attendance Summary */}
-      <section className="hris-card rounded-[20px] p-5">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="min-w-0">
-            <h2 className="text-sm font-semibold tracking-tight text-foreground">
-              Rekap Kehadiran Bulan Ini
-            </h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {monthLabel} · {totalDays} catatan
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-5 flex items-center gap-6">
-          <CircularProgress percentage={attendancePct} size={96} stroke={9} />
-          <div className="min-w-0 flex-1">
-            <p className="text-3xl font-bold tracking-tight text-foreground">
-              {attendancePct}%
-            </p>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              Tingkat kehadiran bulan ini
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-5 grid gap-4 sm:grid-cols-4">
-          <SummaryStat label="Hadir" value={monthSummary.present + monthSummary.completed} tone="success" />
-          <SummaryStat label="Izin" value={monthSummary.incomplete} tone="warning" />
-          <SummaryStat label="Cuti" value={availableLeave} tone="info" />
-          <SummaryStat label="Alpa" value={monthSummary.rejected} tone="danger" />
-        </div>
-      </section>
-
-      {/* Announcements */}
-      {carouselItems.length > 0 ? (
+        {/* Recent requests */}
         <section className="space-y-3">
           <SectionHeader
-            title="Pengumuman"
+            title="Aktivitas Terbaru"
+            description="Pengajuan cuti dan izin Anda"
             action={
-              <Link
-                href="/announcements"
-                className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/90 dark:text-primary/90"
-              >
-                {unreadAnnouncements > 0 ? (
-                  <Badge variant="destructive" className="ml-2 min-w-[1.5rem] text-[11px]">
-                    {unreadAnnouncements}
-                  </Badge>
-                ) : null}
-                Lihat semua
-                <HrisIcon name="chevron-right" className="size-4" />
-              </Link>
+              canLeave ? (
+                <Link
+                  href="/leave"
+                  className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:text-primary/85"
+                >
+                  Semua
+                  <HrisIcon name="chevron-right" className="size-4" />
+                </Link>
+              ) : undefined
             }
           />
-          <AnnouncementCarousel items={carouselItems} />
+          {recentRequests.length === 0 ? (
+            <EmployeeEmptyState
+              icon="calendar"
+              title="Belum ada pengajuan"
+              description="Pengajuan cuti dan izin Anda akan tampil di sini."
+            />
+          ) : (
+            <Card className="divide-y divide-border overflow-hidden">
+              {recentRequests.map((request) => (
+                <Link
+                  key={`${request.kind}-${request.id}`}
+                  href={
+                    request.kind === "leave"
+                      ? `/leave/${request.id}`
+                      : `/permission/${request.id}`
+                  }
+                  className="flex items-center gap-3 p-4 transition-colors hover:bg-surface-primary/50"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      request.kind === "leave" ? "hris-chip-violet" : "hris-chip-amber",
+                      "flex size-10 shrink-0 items-center justify-center rounded-xl"
+                    )}
+                  >
+                    <HrisIcon
+                      name={request.kind === "leave" ? "plane" : "clipboard"}
+                      className="size-5"
+                    />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-foreground">
+                      {request.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Intl.DateTimeFormat("id-ID", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      }).format(request.on)}
+                    </p>
+                  </div>
+                  <StatusBadge tone={statusTone(request.status)}>
+                    {request.statusLabel}
+                  </StatusBadge>
+                </Link>
+              ))}
+            </Card>
+          )}
         </section>
-      ) : null}
-
-      {/* Quick Menu (3-column grid) */}
-      <section className="space-y-3">
-        <SectionHeader
-          title="Menu Cepat"
-          description="Akses langsung ke modul HRIS Anda"
-        />
-        <QuickServiceGrid items={services} />
-      </section>
-
-      {/* Recent Requests */}
-      <section className="space-y-3">
-        <SectionHeader
-          title="Aktivitas Terbaru"
-          description="Pengajuan cuti dan izin Anda"
-          action={
-            <Link
-              href="/leave"
-              className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/90 dark:text-primary/90"
-            >
-              Semua
-              <HrisIcon name="chevron-right" className="size-4" />
-            </Link>
-          }
-        />
-        {recentRequests.length === 0 ? (
-          <EmployeeEmptyState
-            icon="calendar"
-            title="Belum ada pengajuan"
-            description="Pengajuan cuti dan izin Anda akan tampil di sini."
-          />
-        ) : (
-          <Card className="hris-card divide-y divide-border">
-            {recentRequests.map((request) => (
-              <Link
-                key={`${request.kind}-${request.id}`}
-                href={
-                  request.kind === "leave"
-                    ? `/leave/${request.id}`
-                    : `/permission/${request.id}`
-                }
-                className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-accent/40 dark:hover:bg-muted/40"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground">
-                    {request.title}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {new Intl.DateTimeFormat("id-ID", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    }).format(request.on)}
-                  </p>
-                </div>
-                <StatusBadge tone={statusTone(request.status)}>
-                  {request.statusLabel}
-                </StatusBadge>
-              </Link>
-            ))}
-          </Card>
-        )}
-      </section>
+      </aside>
     </div>
   );
 }
