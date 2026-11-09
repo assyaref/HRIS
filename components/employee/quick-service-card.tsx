@@ -46,7 +46,7 @@ export function QuickServiceCard({ item }: { item: QuickServiceItem }) {
       <span
         aria-hidden="true"
         className={cn(
-          "relative flex size-11 items-center justify-center rounded-2xl mb-1",
+          "relative flex size-10 items-center justify-center rounded-[16px] mb-1",
           toneClasses[item.tone ?? "blue"]
         )}
       >

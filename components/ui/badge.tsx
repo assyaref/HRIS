@@ -35,7 +35,7 @@ export function badgeVariants({
   className,
 }: BadgeVariants = {}): string {
   return cn(
-    "inline-flex w-fit items-center gap-1 rounded-lg border px-2.5 py-0.5 text-[10px] font-medium whitespace-nowrap",
+    "inline-flex w-fit items-center gap-1 rounded-[10px] border border-border px-2.5 py-0.5 text-[10px] font-medium whitespace-nowrap transition-colors",
     badgeVariantClasses[variant],
     className
   );

@@ -26,17 +26,17 @@ export function Sidebar({
 } & SidebarUserInfo) {
   return (
     <aside
-      className="sticky top-0 hidden h-svh w-64 shrink-0 flex-col border-r border-border bg-card text-foreground lg:flex"
+      className="sticky top-0 hidden h-svh w-64 shrink-0 flex-col border-r border-[var(--card-border)] bg-card text-foreground lg:flex"
     >
-      <div className="flex h-16 shrink-0 items-center border-b border-border px-5">
+      <div className="flex h-14 shrink-0 items-center border-b border-[var(--card-border)] px-4">
         <Brand />
       </div>
-      <div className="flex-1 overflow-y-auto px-3 py-4">
+      <div className="flex-1 overflow-y-auto px-2 py-3">
         <NavLinks sections={sections} variant="light" />
       </div>
-      <div className="border-t border-border px-4 py-3">
-        <div className="flex items-center gap-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold select-none">
+      <div className="border-t border-[var(--card-border)] px-3 py-3">
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-soft-blue text-primary text-xs font-semibold select-none ring-1 ring-primary/20">
             {user.email.charAt(0).toUpperCase()}
           </span>
           <div className="min-w-0">

@@ -305,6 +305,71 @@ export async function getPayrollOverview(
 }
 
 /** Check-in attempts rejected today (anomalies worth attention). */
+/**
+ * Attendance trend for the trailing 7 days (real aggregates, org-scoped).
+ * Used by the dashboard trend chart. Nothing is fabricated — days without
+ * records resolve to zero.
+ */
+export interface AttendanceTrendPoint {
+  date: string;
+  label: string;
+  present: number;
+  completed: number;
+}
+
+export async function getAttendanceTrend(
+  organizationId: string
+): Promise<AttendanceTrendPoint[]> {
+  const today = parseAttendanceDate(dateStringInTimeZone(new Date(), null));
+  const start = new Date(today);
+  start.setDate(today.getDate() - 6);
+
+  const rows = await db
+    .select({
+      date: attendanceRecords.attendanceDate,
+      status: attendanceRecords.status,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(attendanceRecords)
+    .where(
+      and(
+        eq(attendanceRecords.organizationId, organizationId),
+        gte(attendanceRecords.attendanceDate, start),
+        lte(attendanceRecords.attendanceDate, today)
+      )
+    )
+    .groupBy(
+      attendanceRecords.attendanceDate,
+      attendanceRecords.status
+    );
+
+  const byDate = new Map<string, { present: number; completed: number }>();
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - 6 + i);
+    const key = d.toISOString().slice(0, 10);
+    byDate.set(key, { present: 0, completed: 0 });
+  }
+
+  for (const row of rows) {
+    const key = String(row.date);
+    const entry = byDate.get(key) ?? { present: 0, completed: 0 };
+    if (row.status === "present") entry.present = Number(row.count);
+    if (row.status === "completed") entry.completed = Number(row.count);
+    byDate.set(key, entry);
+  }
+
+  return [...byDate.entries()].map(([date, values]) => {
+    const d = new Date(`${date}T00:00:00`);
+    return {
+      date,
+      label: new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(d),
+      present: values.present,
+      completed: values.completed,
+    };
+  });
+}
+
 export async function countRejectedCheckInsToday(
   organizationId: string
 ): Promise<number> {

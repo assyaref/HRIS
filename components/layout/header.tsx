@@ -3,7 +3,6 @@
 import { Brand } from "./brand";
 import { MobileNav } from "./mobile-nav";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { logoutAction } from "@/features/auth/actions";
 import type { CurrentUser } from "@/lib/auth/types";
@@ -29,7 +28,7 @@ export function Header({
 }) {
   return (
     <header
-      className="sticky top-0 z-sticky flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background/90 px-4 backdrop-blur-md lg:h-16 lg:px-8"
+      className="sticky top-0 z-sticky flex h-14 shrink-0 items-center gap-2 border-b border-[var(--card-border)] bg-background/90 px-4 backdrop-blur-md lg:h-16 lg:px-8"
     >
       <MobileNav sections={sections} />
       <div className="min-w-0 lg:hidden">
@@ -39,7 +38,7 @@ export function Header({
       <div className="flex-1" />
 
       {roleLabel ? (
-        <span className="hidden rounded-lg border border-primary/20 bg-surface-primary px-2.5 py-1 text-[11px] font-medium whitespace-nowrap text-primary dark:border-primary/30 dark:bg-surface-primary dark:text-primary sm:inline-flex">
+        <span className="hidden rounded-[10px] border border-primary/20 bg-surface-primary px-2.5 py-1 text-[11px] font-medium whitespace-nowrap text-primary dark:border-primary/30 dark:bg-surface-primary dark:text-primary sm:inline-flex">
           {roleLabel}
         </span>
       ) : null}

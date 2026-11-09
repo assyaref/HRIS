@@ -11,9 +11,9 @@ export function SectionHeading({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
-      <div>
-        <h2 className="text-lg font-semibold tracking-tight text-foreground">
+    <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1.5">
+      <div className="min-w-0">
+        <h2 className="text-section-title text-foreground">
           {title}
         </h2>
         {description ? (

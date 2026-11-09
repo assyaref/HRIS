@@ -246,19 +246,19 @@ export default async function PayrollPage() {
           ====================================================== */}
       <section className="grid gap-4 sm:grid-cols-2">
 
-        <Card className="rounded-2xl border-slate-200/80 shadow-[0_4px_20px_rgba(15,23,42,0.035)]">
+        <Card className="hris-card-hover">
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
-              <span className="flex size-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 ring-1 ring-blue-100">
+              <span className="flex size-10 items-center justify-center rounded-xl bg-surface-soft-blue text-primary ring-1 ring-primary/20">
                 <PayrollIcon type="calendar" />
               </span>
 
               <div>
-                <p className="text-xs font-medium text-slate-500">
+                <p className="text-xs font-medium text-muted-foreground">
                   Payroll periods
                 </p>
 
-                <p className="mt-0.5 text-2xl font-bold text-slate-900">
+                <p className="mt-0.5 text-2xl font-semibold text-foreground">
                   {periods.length}
                 </p>
               </div>
@@ -270,19 +270,19 @@ export default async function PayrollPage() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-slate-200/80 shadow-[0_4px_20px_rgba(15,23,42,0.035)]">
+        <Card className="hris-card-hover">
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
-              <span className="flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100">
+              <span className="flex size-10 items-center justify-center rounded-xl bg-surface-mint text-success ring-1 ring-success/20">
                 <PayrollIcon type="wallet" />
               </span>
 
               <div className="min-w-0">
-                <p className="text-xs font-medium text-slate-500">
+                <p className="text-xs font-medium text-muted-foreground">
                   Latest period
                 </p>
 
-                <p className="mt-0.5 truncate text-lg font-bold text-slate-900">
+                <p className="mt-0.5 truncate text-lg font-semibold text-foreground">
                   {latestPeriod?.name ?? "No period"}
                 </p>
               </div>
@@ -337,10 +337,7 @@ export default async function PayrollPage() {
                 ================================================== */}
             <div className="space-y-3 lg:hidden">
               {periods.map((period) => (
-                <Card
-                  key={period.id}
-                  className="rounded-2xl border-slate-200/80 shadow-[0_3px_18px_rgba(15,23,42,0.035)]"
-                >
+                <Card key={period.id} className="hris-card-hover">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -356,31 +353,31 @@ export default async function PayrollPage() {
                       <PayrollPeriodStatusBadge status={period.status} />
                     </div>
 
-                    <div className="mt-4 grid grid-cols-2 gap-3">
-                      <div className="rounded-xl bg-slate-50 p-3">
-                        <p className="text-[10px] font-semibold tracking-wide text-slate-400 uppercase">
-                          Payroll window
-                        </p>
+            <div className="mt-4 grid grid-cols-2 gap-3 surface-group">
+              <div className="rounded-[16px] p-3">
+                <p className="text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
+                  Payroll window
+                </p>
 
-                        <p className="mt-1 text-xs font-medium leading-5 text-slate-700">
-                          {formatDate(period.periodStart)}
-                          <span className="mx-1 text-slate-400">→</span>
-                          {formatDate(period.periodEnd)}
-                        </p>
-                      </div>
+                <p className="mt-1 text-xs font-medium leading-5 text-foreground">
+                  {formatDate(period.periodStart)}
+                  <span className="mx-1 text-muted-foreground">→</span>
+                  {formatDate(period.periodEnd)}
+                </p>
+              </div>
 
-                      <div className="rounded-xl bg-slate-50 p-3">
-                        <p className="text-[10px] font-semibold tracking-wide text-slate-400 uppercase">
-                          Payment date
-                        </p>
+              <div className="rounded-[16px] p-3">
+                <p className="text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
+                  Payment date
+                </p>
 
-                        <p className="mt-1 text-xs font-medium text-slate-700">
-                          {formatDate(period.paymentDate)}
-                        </p>
-                      </div>
-                    </div>
+                <p className="mt-1 text-xs font-medium text-foreground">
+                  {formatDate(period.paymentDate)}
+                </p>
+              </div>
+            </div>
 
-<div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
+<div className="mt-4 flex items-center justify-between gap-3 border-t border-border pt-4">
                         <div>
                           <p className="text-[10px] font-semibold tracking-wide text-slate-400 uppercase">
                             Run
@@ -400,7 +397,7 @@ export default async function PayrollPage() {
                         <div className="flex items-center gap-1.5">
                           <Link
                             href={`/payroll/${period.id}`}
-                            className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-blue-50 px-3.5 py-2 text-xs font-semibold text-blue-700 ring-1 ring-blue-100 transition hover:bg-blue-100"
+                            className="inline-flex min-h-10 items-center gap-1.5 rounded-[10px] bg-surface-soft-blue px-3.5 py-2 text-xs font-semibold text-primary ring-1 ring-primary/20 transition hover:bg-surface-soft-blue/90"
                           >
                             Open
                             <PayrollIcon type="arrow" className="size-3.5" />
@@ -440,7 +437,7 @@ export default async function PayrollPage() {
             {/* ==================================================
                 DESKTOP TABLE
                 ================================================== */}
-            <div className="hidden overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_3px_18px_rgba(15,23,42,0.035)] lg:block">
+            <div className="hidden overflow-hidden hris-card lg:block">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
@@ -561,10 +558,10 @@ export default async function PayrollPage() {
       {/* ======================================================
           BUSINESS RULES
           ====================================================== */}
-      <Card className="rounded-2xl border-blue-100 bg-blue-50/50 shadow-none">
+      <Card className="hris-card-hover">
         <CardContent className="p-5 sm:p-6">
           <div className="flex items-start gap-3">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm ring-1 ring-blue-100">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-surface-soft-blue text-primary shadow-card ring-1 ring-primary/20">
               <PayrollIcon type="settings" className="size-[18px]" />
             </span>
 

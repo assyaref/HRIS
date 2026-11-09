@@ -65,25 +65,25 @@ export function StatCard({
   return (
     <div
       className={cn(
-        "flex items-center gap-4 rounded-xl border border-border bg-card p-4 shadow-sm hris-card-hover",
+        "flex items-center gap-3 rounded-[20px] border border-border bg-card p-4 hris-card-hover",
         className
       )}
     >
       <span
         aria-hidden="true"
         className={cn(
-          "flex size-10 shrink-0 items-center justify-center rounded-lg",
+          "flex size-9 shrink-0 items-center justify-center rounded-[12px]",
           iconToneClasses[tone]
         )}
       >
-        <HrisIcon name={icon} className="size-5" />
+        <HrisIcon name={icon} className="size-4.5" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-xs font-medium text-muted-foreground">
+        <p className="truncate text-[11px] font-medium text-muted-foreground uppercase tracking-[0.08em]">
           {label}
         </p>
         <div className="flex flex-wrap items-baseline gap-x-2">
-          <span className="text-xl font-semibold tracking-tight text-foreground">
+          <span className="text-lg font-semibold tracking-tight text-foreground">
             {value}
           </span>
           {hint ? (

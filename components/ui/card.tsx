@@ -5,7 +5,7 @@ export function Card({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        "rounded-xl border border-border bg-card text-card-foreground shadow-sm hris-card",
+        "rounded-[20px] border border-border bg-card text-card-foreground hris-card",
         className
       )}
       {...props}
@@ -15,7 +15,7 @@ export function Card({ className, ...props }: ComponentProps<"div">) {
 
 export function CardHeader({ className, ...props }: ComponentProps<"div">) {
   return (
-    <div className={cn("flex flex-col gap-1.5 p-6", className)} {...props} />
+    <div className={cn("flex flex-col gap-1.5 p-5", className)} {...props} />
   );
 }
 
@@ -23,7 +23,7 @@ export function CardTitle({ className, ...props }: ComponentProps<"h3">) {
   return (
     <h3
       className={cn(
-        "text-lg leading-6 font-semibold tracking-tight text-foreground",
+        "text-base font-semibold tracking-tight text-foreground",
         className
       )}
       {...props}
@@ -44,12 +44,25 @@ export function CardDescription({
 }
 
 export function CardContent({ className, ...props }: ComponentProps<"div">) {
-  return <div className={cn("p-6 pt-0", className)} {...props} />;
+  return <div className={cn("p-5 pt-0", className)} {...props} />;
 }
 
 export function CardFooter({ className, ...props }: ComponentProps<"div">) {
   return (
-    <div className={cn("flex items-center p-6 pt-0", className)} {...props} />
+    <div className={cn("flex items-center p-5 pt-0", className)} {...props} />
+  );
+}
+
+/** Nested content surface: tonal background, no heavy outline, 16px radius. */
+export function CardNested({ className, ...props }: ComponentProps<"div">) {
+  return (
+    <div
+      className={cn(
+        "rounded-[16px] border border-border bg-muted text-foreground hris-card-level-2",
+        className
+      )}
+      {...props}
+    />
   );
 }
 
@@ -97,7 +110,7 @@ export function CardTone({
   return (
     <div
       className={cn(
-        "rounded-xl border border-border shadow-sm hris-card-hover",
+        "rounded-[16px] border border-border hris-card-hover",
         toneClasses[tone ?? "primary"],
         className
       )}

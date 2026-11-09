@@ -106,7 +106,7 @@ export function AttendanceStatusCard({
   return (
     <section
       className={cn(
-        "hris-card relative overflow-hidden p-5",
+        "hris-card relative overflow-hidden p-5 rounded-[20px]",
         success && "ring-1 ring-inset ring-success/20"
       )}
     >

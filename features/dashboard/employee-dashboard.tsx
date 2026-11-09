@@ -132,7 +132,7 @@ function SummaryStat({ label, value, tone }: { label: string; value: string | nu
     danger: "text-danger hris-surface-danger",
   }[tone];
   return (
-    <div className="flex flex-col items-center gap-1 p-3 rounded-xl border border-border bg-card">
+    <div className="flex flex-col items-center gap-1 p-3 rounded-[16px] border border-border bg-card hris-card-hover">
       <span className={cn("inline-flex items-center justify-center rounded-md px-2 py-0.5 text-[10px] font-semibold", toneClass)}>
         {label}
       </span>
@@ -183,11 +183,11 @@ function InfoCard({
         <span
           aria-hidden="true"
           className={cn(
-            "flex size-10 shrink-0 items-center justify-center rounded-2xl",
+            "flex size-9 shrink-0 items-center justify-center rounded-[16px]",
             toneClass
           )}
         >
-          <HrisIcon name={icon} className="size-5" />
+          <HrisIcon name={icon} className="size-4.5" />
         </span>
       </div>
     </div>
@@ -533,14 +533,14 @@ export async function EmployeeDashboard({
       ) : null}
 
       {/* Primary Attendance Action */}
-      <section className="hris-card rounded-2xl overflow-hidden relative">
+      <section className="hris-card rounded-[20px] overflow-hidden relative">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
         <div className="relative p-5">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <span
                 aria-hidden="true"
-                className="flex size-14 shrink-0 items-center justify-center rounded-2xl hris-surface-soft-blue text-primary shadow-lg"
+                className="flex size-14 shrink-0 items-center justify-center rounded-[20px] hris-surface-soft-blue text-primary shadow-card"
               >
                 <HrisIcon name="scan" className="size-6" />
               </span>
@@ -610,7 +610,7 @@ export async function EmployeeDashboard({
       </section>
 
       {/* Monthly Attendance Summary */}
-      <section className="hris-card rounded-2xl p-5">
+      <section className="hris-card rounded-[20px] p-5">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="min-w-0">
             <h2 className="text-sm font-semibold tracking-tight text-foreground">
@@ -634,7 +634,7 @@ export async function EmployeeDashboard({
           </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="mt-5 grid gap-4 sm:grid-cols-4">
           <SummaryStat label="Hadir" value={monthSummary.present + monthSummary.completed} tone="success" />
           <SummaryStat label="Izin" value={monthSummary.incomplete} tone="warning" />
           <SummaryStat label="Cuti" value={availableLeave} tone="info" />

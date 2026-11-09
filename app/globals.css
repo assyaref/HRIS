@@ -65,15 +65,24 @@
   --surface-mint: #C8F0DC;
   --surface-teal: #BDECE8;
 
-  /* ---- Radius (MD3: 16–24px cards) ---- */
+  /* ---- Radius (MD3 Expressive surface hierarchy) ---- */
+  --radius-control: 0.75rem; /* 12px — interactive controls */
   --radius-sm: 0.5rem;
   --radius-md: 0.75rem;
   --radius-lg: 1rem;
+  --radius-card: 1.25rem;   /* 20px — main cards */
+  --radius-card-nested: 1rem; /* 16px — nested content */
   --radius-xl: 1.5rem;
   --radius-full: 9999px;
 
-  /* ---- Shadows (subtle tonal elevation) ---- */
-  --shadow-sm: 0 1px 2px 0 rgb(25 28 36 / 0.04);
+  /* ---- Card borders (tonal, subtle — never harsh) ---- */
+  --card-border: rgb(25 28 36 / 0.07);
+  --card-border-hover: rgb(82 111 174 / 0.18);
+  --card-border-level2: rgb(25 28 36 / 0.05);
+
+  /* ---- Shadows (soft, low-contrast tonal elevation) ---- */
+  --shadow-card: 0 1px 3px 0 rgb(25 28 36 / 0.05), 0 4px 16px 0 rgb(25 28 36 / 0.035);
+  --shadow-card-hover: 0 4px 10px 0 rgb(25 28 36 / 0.06), 0 12px 32px 0 rgb(82 111 174 / 0.07);
   --shadow-md: 0 4px 6px -1px rgb(25 28 36 / 0.05), 0 2px 4px -1px rgb(25 28 36 / 0.03);
   --shadow-lg: 0 10px 15px -3px rgb(25 28 36 / 0.06), 0 4px 6px -2px rgb(25 28 36 / 0.04);
   --shadow-xl: 0 20px 25px -5px rgb(25 28 36 / 0.07), 0 8px 10px -6px rgb(25 28 36 / 0.05);
@@ -178,7 +187,55 @@
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);
+  --radius-card: var(--radius-card);
+  --radius-card-nested: var(--radius-card-nested);
   --radius-xl: var(--radius-xl);
+}
+
+/* ---- Card surface levels (MD3 Expressive) ---- */
+@layer base {
+  /* Level 2 — main white card: subtle border, soft elevation, 20px radius. */
+  .hris-card {
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-card);
+    background: var(--card);
+    box-shadow: var(--shadow-card);
+  }
+
+  .dark .hris-card {
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Level 3 — nested content: tonal surface, no heavy outline, 16px radius. */
+  .hris-card-level-2 {
+    border: 1px solid var(--card-border-level2);
+    border-radius: var(--radius-card-nested);
+    background: var(--muted);
+    box-shadow: none;
+  }
+
+  .dark .hris-card-level-2 {
+    background: var(--muted);
+  }
+
+  /* Gentle hover lift for interactive cards. */
+  .hris-card-hover {
+    transition:
+      transform 160ms ease,
+      box-shadow 160ms ease,
+      border-color 160ms ease;
+  }
+
+  .hris-card-hover:hover {
+    transform: translateY(-1px);
+    border-color: var(--card-border-hover);
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  .dark .hris-card-hover:hover {
+    border-color: var(--card-border-hover);
+    box-shadow: var(--shadow-card-hover);
+  }
 }
 
 /* ==========================================================
@@ -239,6 +296,13 @@
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.25), 0 2px 4px -1px rgb(0 0 0 / 0.15);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.25), 0 4px 6px -2px rgb(0 0 0 / 0.15);
   --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.30), 0 8px 10px -6px rgb(0 0 0 / 0.20);
+
+  --card-border: rgb(255 255 255 / 0.08);
+  --card-border-hover: rgb(143 165 232 / 0.25);
+  --card-border-level2: rgb(255 255 255 / 0.05);
+
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.35), 0 4px 16px 0 rgb(0 0 0 / 0.25);
+  --shadow-card-hover: 0 4px 10px 0 rgb(0 0 0 / 0.30), 0 12px 32px 0 rgb(143 165 232 / 0.12);
 }
 
 /* ==========================================================
@@ -316,46 +380,6 @@ a {
 
 .dark *::-webkit-scrollbar-thumb:hover {
   background: #9AA3B8;
-}
-
-/* ==========================================================
-   COMPONENT SURFACE HELPERS (MD3)
-   ========================================================== */
-.hris-card {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--card);
-  box-shadow:
-    0 1px 2px rgb(25 28 36 / 0.04),
-    0 8px 24px rgb(25 28 36 / 0.04);
-}
-
-.dark .hris-card {
-  box-shadow:
-    0 1px 2px rgb(0 0 0 / 0.25),
-    0 8px 24px rgb(0 0 0 / 0.20);
-}
-
-.hris-card-hover {
-  transition:
-    transform 160ms ease,
-    box-shadow 160ms ease,
-    border-color 160ms ease;
-}
-
-.hris-card-hover:hover {
-  transform: translateY(-1px);
-  border-color: #8FA5E8;
-  box-shadow:
-    0 4px 6px rgb(25 28 36 / 0.05),
-    0 12px 32px rgb(82 111 174 / 0.08);
-}
-
-.dark .hris-card-hover:hover {
-  border-color: rgba(143 165 232 / 0.35);
-  box-shadow:
-    0 4px 6px rgb(0 0 0 / 0.12),
-    0 12px 32px rgb(82 111 174 / 0.12);
 }
 
 /* Pastel surface utilities */
@@ -445,4 +469,68 @@ a {
 
 .dark .emp-focus-ring:focus-visible {
   box-shadow: 0 0 0 3px rgb(143 165 232 / 0.5);
+}
+
+/* ==========================================================
+   MD3 EXPRESSIVE — TYPOGRAPHY & SPACING SCALE
+   ========================================================== */
+@layer utilities {
+  /* Section vertical rhythm */
+  .section-py { padding-top: 1rem; padding-bottom: 1rem; }
+  .section-lg-py { padding-top: 1.5rem; padding-bottom: 1.5rem; }
+
+  .space-section-y > * + * { margin-top: 1.5rem; }
+  .space-section-tight > * + * { margin-top: 1rem; }
+
+  /* Card inner padding scale */
+  .pad-card { padding: 1.25rem; }
+  .pad-card-sm { padding: 1rem; }
+  .pad-card-lg { padding: 1.5rem; }
+
+  /* Surface group — tonal background for related content blocks */
+  .surface-group {
+    border-radius: var(--radius-card-nested);
+    background: var(--muted);
+  }
+
+  .dark .surface-group {
+    background: var(--muted);
+  }
+
+  /* Muted decorative background for emphasis zones */
+  .soft-zone {
+    border-radius: var(--radius-card);
+    background: rgb(25 28 36 / 0.03);
+  }
+  .dark .soft-zone {
+    background: rgb(255 255 255 / 0.03);
+  }
+
+  /* Hierarchy text */
+  .text-page-title {
+    font-size: 1.875rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .text-section-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .text-metric {
+    font-size: 1.75rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .text-meta {
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+}
+
+/* Intersection-observer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .hris-card-hover:hover {
+    transform: none;
+  }
 }
