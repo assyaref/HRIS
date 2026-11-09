@@ -18,8 +18,8 @@ import {
 
 const INDICATOR_BADGE_CLASS: Record<RateIndicator, string> = {
   normal: "",
-  attention: "border-amber-200 bg-amber-50 text-amber-700",
-  warning: "border-rose-200 bg-rose-50 text-rose-700",
+  attention: "border-amber/20 bg-surface-amber text-warning",
+  warning: "border-rose/20 bg-surface-danger text-danger",
 };
 
 /** Attendance-rate value + performance indicator in one badge. */
@@ -37,10 +37,10 @@ export function AttendanceRateBadge({ rate }: { rate: number | null }) {
 }
 
 const DAY_BUCKET_BADGE_CLASS: Partial<Record<RecapDayBucket, string>> = {
-  absent: "border-rose-200 bg-rose-50 text-rose-700",
-  leave: "border-sky-200 bg-sky-50 text-sky-700",
-  sick: "border-violet-200 bg-violet-50 text-violet-700",
-  permission: "border-amber-200 bg-amber-50 text-amber-700",
+  absent: "border-danger/20 bg-surface-danger text-danger",
+  leave: "border-primary/20 bg-surface-soft-blue text-primary",
+  sick: "border-indigo/20 bg-surface-indigo text-primary",
+  permission: "border-amber/20 bg-surface-amber text-warning",
   extra: "text-muted-foreground",
   none: "text-muted-foreground",
 };
@@ -67,7 +67,7 @@ export function RecapDayStatusBadge({
     return (
       <Badge
         variant="secondary"
-        className="border-amber-200 bg-amber-50 text-amber-700"
+        className="border-amber/20 bg-surface-amber text-warning"
         title="Checked in after the work-start cutoff"
       >
         Late

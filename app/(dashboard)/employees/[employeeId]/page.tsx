@@ -640,7 +640,7 @@ export default async function EmployeeDetailPage({
       </div>
 
       {viewingOtherOrganization ? (
-        <div className="flex flex-col gap-2 rounded-md border border-sky-600/40 bg-sky-600/10 px-3 py-2 text-sm text-sky-800 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 rounded-xl border border-info/40 bg-surface-info px-4 py-3 text-sm text-info sm:flex-row sm:items-center sm:justify-between">
           <p>
             Anda sedang melihat karyawan organisasi{" "}
             <span className="font-semibold">

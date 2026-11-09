@@ -61,7 +61,7 @@ type PillTone = "emerald" | "sky" | "gray" | "destructive";
 
 const PILL_TONES: Record<PillTone, string> = {
   emerald: "bg-emerald-100 text-emerald-700",
-  sky: "bg-sky-100 text-sky-700",
+  sky: "bg-surface-soft-blue text-primary",
   gray: "bg-gray-100 text-gray-700",
   destructive: "bg-destructive/10 text-destructive",
 };
@@ -576,7 +576,7 @@ export function ImportExcelDialog({
                   <span className="font-medium">{result.createCount}</span> to
                   create
                 </span>
-                <span className="text-sky-700">
+                <span className="text-primary">
                   <span className="font-medium">{result.updateCount}</span> to
                   update
                 </span>
@@ -728,7 +728,7 @@ export function ImportExcelDialog({
                 />
               </div>
               {(result.summary?.accountsCreated ?? 0) > 0 ? (
-                <div className="rounded-md border border-sky-600/40 bg-sky-600/10 px-3 py-2 text-sm text-sky-700">
+                <div className="rounded-xl border border-info/40 bg-surface-info px-4 py-3 text-sm text-info">
                   Initial password is the Employee Number. The employee must
                   change it after first login.
                 </div>

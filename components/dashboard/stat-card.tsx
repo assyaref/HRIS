@@ -5,23 +5,45 @@ import { cn } from "@/lib/utils/cn";
 
 export type StatTone =
   | "primary"
+  | "soft-blue"
+  | "indigo"
+  | "lavender"
+  | "pink"
+  | "coral"
+  | "peach"
+  | "amber"
+  | "mint"
+  | "teal"
+  | "success"
+  | "warning"
+  | "danger"
+  | "info"
+  | "slate"
   | "blue"
   | "green"
-  | "amber"
   | "rose"
-  | "slate"
-  | "info"
   | "violet";
 
 const iconToneClasses: Record<StatTone, string> = {
-  primary: "bg-primary text-primary-foreground",
-  blue: "bg-surface-primary text-primary",
-  green: "bg-surface-success text-success",
-  amber: "bg-surface-warning text-warning",
-  rose: "bg-surface-danger text-danger",
-  slate: "bg-muted text-muted-foreground",
+  primary: "bg-surface-primary text-accent-foreground",
+  "soft-blue": "bg-surface-soft-blue text-accent-foreground",
+  indigo: "bg-surface-indigo text-accent-foreground",
+  lavender: "bg-surface-lavender text-accent-foreground",
+  pink: "bg-surface-pink text-accent-foreground",
+  coral: "bg-surface-coral text-accent-foreground",
+  peach: "bg-surface-peach text-accent-foreground",
+  amber: "bg-surface-amber text-accent-foreground",
+  mint: "bg-surface-mint text-accent-foreground",
+  teal: "bg-surface-teal text-accent-foreground",
+  success: "bg-surface-success text-success",
+  warning: "bg-surface-warning text-warning",
+  danger: "bg-surface-danger text-danger",
   info: "bg-surface-info text-info",
-  violet: "bg-surface-info text-info",
+  slate: "bg-muted text-muted-foreground",
+  blue: "bg-surface-soft-blue text-primary",
+  green: "bg-surface-mint text-info",
+  rose: "bg-surface-pink text-danger",
+  violet: "bg-surface-indigo text-primary",
 };
 
 /** A single aggregate metric card used across both dashboards. */
@@ -30,7 +52,7 @@ export function StatCard({
   label,
   value,
   hint,
-  tone = "blue",
+  tone = "soft-blue",
   className,
 }: {
   icon: HrisIconName;

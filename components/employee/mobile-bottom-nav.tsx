@@ -55,7 +55,7 @@ export function EmployeeMobileBottomNav({
   return (
     <nav
       aria-label="Navigasi utama"
-      className="emp-safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 px-2.5 pb-1 pt-1.5 shadow-[0_-10px_34px_-16px_rgba(16,42,86,0.12)] backdrop-blur-lg lg:hidden"
+      className="emp-safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 px-2.5 pb-1 pt-1.5 shadow-[0_-10px_34px_-16px_rgb(25,28,36,0.10)] backdrop-blur-md lg:hidden"
     >
       <div className="mx-auto grid max-w-md grid-cols-5 items-end">
         {destinations.map((destination) => {

@@ -26,14 +26,13 @@ function isActivePath(pathname: string, href: string) {
 }
 
 /**
- * Management mobile bottom navigation (BCS Enterprise v4.3).
+ * Management mobile bottom navigation — MD3 Soft Blue.
  *
  * Five destinations drawn from the permission-filtered sections: Dashboard ·
- * Attendance · Employees · Payroll · Payslip. Fixed bottom position · active
- * Royal Blue icon and label · consistent inactive states · safe-area inset
- * support · minimum 44px touch targets · hidden on `lg+` where the desktop
- * shell (navy sidebar + header) takes over. Reuses HrisIcon so the icon
- * vocabulary is shared with the sidebar, drawer and dashboards.
+ * Attendance · Employees · Payroll · Payslip. Fixed bottom position · white
+ * surface · soft rounded active indicator · pastel blue active icon · muted
+ * inactive icons · safe-area inset support · minimum 44px touch targets ·
+ * hidden on `lg+` where the desktop shell takes over.
  */
 export function MobileBottomNav({
   sections,
@@ -56,7 +55,7 @@ export function MobileBottomNav({
   return (
     <nav
       aria-label="Quick navigation"
-      className="emp-safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 px-2.5 pb-1 pt-1.5 shadow-[0_-10px_34px_-16px_rgba(16,42,86,0.12)] backdrop-blur-lg lg:hidden"
+      className="emp-safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 px-2.5 pb-1 pt-1.5 shadow-[0_-10px_34px_-16px_rgb(25,28,36,0.10)] backdrop-blur-md lg:hidden"
     >
       <div className="mx-auto grid max-w-lg grid-cols-5 items-end">
         {items.map((item) => {
@@ -69,10 +68,10 @@ export function MobileBottomNav({
               href={item.href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[10px] font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
+                "flex min-h-14 flex-col items-center justify-center gap-1.5 rounded-2xl px-1 text-[10px] font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
                 active
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-primary"
+                  ? "bg-surface-primary text-primary"
+                  : "text-muted-foreground hover:text-primary hover:bg-accent/40"
               )}
             >
               <HrisIcon

@@ -25,8 +25,8 @@ describe("buildWebManifest", () => {
     assert.equal(manifest.short_name, PWA_APP_SHORT_NAME);
     assert.equal(manifest.display, "standalone");
     assert.equal(manifest.start_url, "/");
-    assert.equal(manifest.theme_color, "#1687f8");
-    assert.equal(manifest.background_color, "#f7fafc");
+    assert.equal(manifest.theme_color, "#526FAE");
+    assert.equal(manifest.background_color, "#F8F9FF");
   });
 
   it("includes 192x192 and 512x512 icons", () => {

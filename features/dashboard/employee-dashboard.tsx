@@ -65,7 +65,7 @@ function greeting(hour: number): string {
   return "Selamat malam";
 }
 
-/** Circular progress visualization (inline SVG). */
+/** Circular progress visualization (inline SVG) — MD3 Soft Blue. */
 function CircularProgress({
   percentage,
   size = 88,
@@ -92,7 +92,7 @@ function CircularProgress({
         cy={size / 2}
         r={radius}
         fill="none"
-        stroke="#E7EAF0"
+        stroke="var(--muted)"
         strokeWidth={stroke}
         strokeLinecap="round"
       />
@@ -101,7 +101,7 @@ function CircularProgress({
         cy={size / 2}
         r={radius}
         fill="none"
-        stroke="#155EEF"
+        stroke="var(--primary)"
         strokeWidth={stroke}
         strokeLinecap="round"
         strokeDasharray={circumference}
@@ -114,7 +114,7 @@ function CircularProgress({
         textAnchor="middle"
         fontSize={size * 0.32}
         fontWeight="700"
-        fill="#172B4D"
+        fill="var(--foreground)"
         letterSpacing="-0.02em"
       >
         {percentage}%
@@ -159,7 +159,7 @@ function InfoCard({
 }) {
   const toneClass = {
     primary: "hris-surface-primary text-primary",
-    success: "hris-surface-success text-success",
+    success: "hris-surface-mint text-info",
     info: "hris-surface-info text-info",
     warning: "hris-surface-warning text-warning",
     danger: "hris-surface-danger text-danger",
@@ -209,20 +209,20 @@ function QuickMenuItem({
   tone?: "blue" | "cyan" | "green" | "amber" | "violet" | "rose" | "slate";
 }) {
   const toneClasses: Record<string, string> = {
-    blue: "hris-surface-primary text-primary",
+    blue: "hris-surface-soft-blue text-primary",
     cyan: "hris-surface-info text-info",
-    green: "hris-surface-success text-success",
-    amber: "hris-surface-warning text-warning",
-    violet: "hris-surface-info text-info",
-    rose: "hris-surface-danger text-danger",
+    green: "hris-surface-mint text-info",
+    amber: "hris-surface-amber text-warning",
+    violet: "hris-surface-indigo text-primary",
+    rose: "hris-surface-pink text-danger",
     slate: "bg-muted text-muted-foreground",
   };
   return (
     <Link
       href={href}
       className={cn(
-        "hris-card emp-card-tap group flex min-h-[5.5rem] flex-col items-center justify-center gap-2 px-2 py-3 text-center focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
-        badge ? "group-hover:border-primary/50" : "border-transparent"
+        "hris-card emp-card-tap group flex min-h-[5.5rem] flex-col items-center justify-center gap-2 px-2 py-3 text-center focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none border-transparent",
+        badge ? "group-hover:border-primary/50" : ""
       )}
     >
       <span
@@ -247,8 +247,8 @@ function QuickMenuItem({
 }
 
 /**
- * The employee's self-service dashboard — mobile-first HRIS home, rebuilt on
- * the BCS Enterprise v4.3 design system. All values are dynamic and resolved
+ * The employee's self-service dashboard — mobile-first HRIS Lite home, rebuilt
+ * on the MD3 Soft Blue design system. All values are dynamic and resolved
  * server-side for the signed-in employee — nothing is hard-coded.
  */
 export async function EmployeeDashboard({
@@ -540,7 +540,7 @@ export async function EmployeeDashboard({
             <div className="flex items-center gap-3">
               <span
                 aria-hidden="true"
-                className="flex size-14 shrink-0 items-center justify-center rounded-2xl hris-surface-primary text-primary shadow-lg"
+                className="flex size-14 shrink-0 items-center justify-center rounded-2xl hris-surface-soft-blue text-primary shadow-lg"
               >
                 <HrisIcon name="scan" className="size-6" />
               </span>
@@ -706,7 +706,7 @@ export async function EmployeeDashboard({
                     ? `/leave/${request.id}`
                     : `/permission/${request.id}`
                 }
-                className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-accent dark:hover:bg-muted/40"
+                className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-accent/40 dark:hover:bg-muted/40"
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-foreground">

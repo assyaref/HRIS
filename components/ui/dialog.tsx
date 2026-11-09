@@ -38,7 +38,8 @@ export interface DialogProps {
 
 /**
  * Accessible modal dialog foundation (focus trap, Esc to close, scroll lock,
- * `aria-modal`). Controlled via `open` / `onOpenChange`.
+ * `aria-modal`). MD3: 24px radius, soft elevation, responsive dimensions.
+ * Controlled via `open` / `onOpenChange`.
  */
 export function Dialog({ open, onOpenChange, children }: DialogProps) {
   const titleId = useId();
@@ -64,9 +65,7 @@ export function DialogContent({
   const { open, onOpenChange, titleId, descriptionId } = useDialogContext();
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // Keep the latest callback without re-running the focus effect on re-render.
   const onOpenChangeRef = useRef(onOpenChange);
-
   useEffect(() => {
     onOpenChangeRef.current = onOpenChange;
   });
@@ -110,11 +109,11 @@ export function DialogContent({
   if (!open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-6">
       <div
         aria-hidden="true"
         onClick={() => onOpenChange(false)}
-        className="absolute inset-0 bg-black/50"
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
       />
       <div
         ref={contentRef}
@@ -123,7 +122,7 @@ export function DialogContent({
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
         className={cn(
-          "relative z-10 flex max-h-[min(85vh,40rem)] w-full max-w-lg flex-col gap-4 overflow-y-auto rounded-xl border border-border bg-card p-6 text-card-foreground shadow-xl outline-none",
+          "relative z-10 flex max-h-[min(88vh,44rem)] w-full max-w-2xl flex-col gap-4 overflow-y-auto rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-xl outline-none sm:rounded-[24px]",
           className
         )}
         {...props}
@@ -132,7 +131,7 @@ export function DialogContent({
           type="button"
           onClick={() => onOpenChange(false)}
           aria-label="Close dialog"
-          className="absolute top-4 right-4 inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="absolute top-4 right-4 inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           <svg
             viewBox="0 0 24 24"
@@ -141,7 +140,7 @@ export function DialogContent({
             strokeWidth="2"
             strokeLinecap="round"
             aria-hidden="true"
-            className="size-4"
+            className="size-5"
           >
             <path d="M18 6 6 18" />
             <path d="m6 6 12 12" />
@@ -170,7 +169,7 @@ export function DialogFooter({
   return (
     <div
       className={cn(
-        "mt-2 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
+        "mt-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
         className
       )}
       {...props}

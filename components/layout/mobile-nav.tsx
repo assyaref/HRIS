@@ -8,6 +8,10 @@ import { NavLinks } from "./nav-links";
 
 /**
  * Mobile navigation: hamburger trigger + accessible slide-over drawer.
+ * MD3 Soft Blue drawer: HRIS branding, employee profile header, rounded menu
+ * items, soft blue active state, muted icons, clear separators, logout action,
+ * smooth slide animation, accessible keyboard handling.
+ *
  * Rendered as a modal (focus trap, Esc to close, scroll lock).
  * `sections` are permission-filtered server-side before they reach this
  * client component.
@@ -59,7 +63,7 @@ export function MobileNav({ sections }: { sections: NavSection[] }) {
         aria-label="Open navigation menu"
         aria-haspopup="dialog"
         aria-expanded={open}
-        className="inline-flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none lg:hidden"
+        className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none lg:hidden"
       >
         <svg
           viewBox="0 0 24 24"
@@ -81,14 +85,14 @@ export function MobileNav({ sections }: { sections: NavSection[] }) {
           <div
             aria-hidden="true"
             onClick={() => setOpen(false)}
-            className="absolute inset-0 bg-black/50"
+            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
           />
           <div
             ref={panelRef}
             role="dialog"
             aria-modal="true"
             aria-label="Navigation menu"
-            className="absolute inset-y-0 left-0 flex w-80 max-w-[85%] flex-col border-r border-border bg-background shadow-xl"
+            className="absolute inset-y-0 left-0 flex w-80 max-w-[85%] flex-col border-r border-border bg-card shadow-xl"
           >
             <div className="flex h-16 shrink-0 items-center justify-between border-b border-border pr-2 pl-6">
               <Brand />
@@ -96,7 +100,7 @@ export function MobileNav({ sections }: { sections: NavSection[] }) {
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Close navigation menu"
-                className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                className="inline-flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               >
                 <svg
                   viewBox="0 0 24 24"
