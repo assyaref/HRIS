@@ -127,11 +127,15 @@ describe("delete action: refusal behavior", () => {
     assert.equal(deleteBody.includes('"project.deleted"'), true);
   });
 
-  it("suggests Inactive instead of deleting referenced projects", () => {
+  it("deletes a referenced project only after the typed code confirmation", () => {
+    // Super Administrator decision (2026-11-10): referenced projects may be
+    // deleted, but only when the typed confirmation matches the project code.
+    assert.equal(deleteBody.includes("forceConfirmed"), true);
     assert.equal(
-      deleteBody.includes("Set the project to Inactive instead"),
+      deleteBody.includes("confirmation.trim().toUpperCase() === existing.code.toUpperCase()"),
       true
     );
+    assert.equal(deleteBody.includes('mode: "with_references"'), true);
   });
 });
 

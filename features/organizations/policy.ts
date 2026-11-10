@@ -194,3 +194,18 @@ export function allowsSystemFieldChange(
   if (targetCode !== SYSTEM_ORGANIZATION_CODE) return true;
   return field === "name";
 }
+
+/**
+ * Whether the typed confirmation matches the organization code (trimmed,
+ * case-insensitive). Required before deleting an organization with its data.
+ */
+export function isForceDeleteConfirmed(
+  organizationCode: string,
+  confirmation: unknown
+): boolean {
+  return (
+    typeof confirmation === "string" &&
+    confirmation.trim().length > 0 &&
+    confirmation.trim().toUpperCase() === organizationCode.trim().toUpperCase()
+  );
+}

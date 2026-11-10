@@ -115,7 +115,7 @@ export function OrganizationsManager({
                       <EditOrganizationDialog
                         organization={organization}
                       />
-                      {isSystem || dependencies > 0 ? null : (
+                      {isSystem ? null : (
                         <DeleteOrganizationDialog
                           organization={organization}
                           dependencyTotal={dependencies}
@@ -187,7 +187,7 @@ export function OrganizationsManager({
                   View
                 </Link>
                 <EditOrganizationDialog organization={organization} />
-                {isSystem || dependencies > 0 ? null : (
+                {isSystem ? null : (
                   <DeleteOrganizationDialog
                     organization={organization}
                     dependencyTotal={dependencies}

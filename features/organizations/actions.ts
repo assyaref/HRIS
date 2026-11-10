@@ -11,8 +11,10 @@ import { writeAuditLog } from "@/lib/auth/audit";
 import { requireSuperAdmin } from "@/lib/auth/rbac";
 import { SYSTEM_ORGANIZATION_CODE } from "@/lib/auth/roles";
 
+import { forceDeleteOrganizationData } from "./force-delete";
 import {
   evaluateOrganizationAction,
+  isForceDeleteConfirmed,
   isDuplicateOrganizationError,
   summarizeDependencies,
   type OrganizationDependencyCounts,
@@ -453,10 +455,88 @@ export async function deleteOrganizationAction(
     return errorState("The organization could not be deleted. Please try again.");
   }
 
-  await audit(organizationId, actor.userId, "organization.deleted", organizationId, {
+  // The organization row is gone, so the audit row cannot reference it (FK):
+  // it is recorded unscoped with the tenant id as the entity.
+  await audit(null, actor.userId, "organization.deleted", organizationId, {
     code: existing.code,
     name: existing.name,
   });
   revalidateOrganizations();
   return { status: "success", message: "Organization deleted." };
+}
+
+/**
+ * Delete an organization TOGETHER WITH all its data (SUPERADMIN only).
+ *
+ * Guard rails: SUPERADMIN re-verified in PostgreSQL, the reserved SYSTEM
+ * tenant is refused, the caller must type the organization code, and
+ * employees must already have been permanently deleted through the employee
+ * deletion flow (legal holds, document purge, per-employee audit). Audit logs
+ * are kept (detached). See `force-delete.ts`.
+ */
+export async function forceDeleteOrganizationAction(
+  organizationId: string,
+  confirmation: string
+): Promise<OrganizationActionState> {
+  const actor = await requireSuperAdminActor();
+
+  if (!isUuid(organizationId)) {
+    return errorState("Organisasi tidak valid.");
+  }
+  const existing = await loadOrganization(organizationId);
+  if (!existing) {
+    return errorState("Organisasi tidak ditemukan.");
+  }
+  if (existing.code === SYSTEM_ORGANIZATION_CODE) {
+    return errorState("Organisasi System dilindungi dan tidak dapat dihapus.");
+  }
+  if (!isForceDeleteConfirmed(existing.code, confirmation)) {
+    return errorState(
+      `Ketik kode organisasi (${existing.code}) untuk mengonfirmasi penghapusan.`
+    );
+  }
+
+  let result;
+  try {
+    result = await forceDeleteOrganizationData(organizationId);
+  } catch (unknownError) {
+    console.error("[organizations] force delete failed", unknownError);
+    return errorState(
+      "Organisasi gagal dihapus. Tidak ada data yang berubah; silakan coba lagi."
+    );
+  }
+
+  if (!result.ok) {
+    if (result.reason === "employees.present") {
+      return errorState(
+        `Organisasi masih memiliki ${result.employeeCount} karyawan. Hapus permanen karyawan tersebut terlebih dahulu di menu Karyawan (pilih semua → Permanent Delete), lalu ulangi.`
+      );
+    }
+    return errorState(
+      `Organisasi gagal dihapus karena data terkait tidak dapat diurutkan (${result.tables.join(", ")}). Tidak ada data yang berubah.`
+    );
+  }
+
+  const totalRows = Object.values(result.deletedRows).reduce(
+    (sum, value) => sum + value,
+    0
+  );
+  await audit(null, actor.userId, "organization.deleted", organizationId, {
+    code: existing.code,
+    name: existing.name,
+    mode: "with_data",
+    deletedRows: result.deletedRows,
+    detachedAuditLogs: result.detachedAuditLogs,
+    files: result.files,
+  });
+  revalidateOrganizations();
+  revalidatePath("/", "layout");
+  return {
+    status: "success",
+    message: `Organisasi ${existing.code} dihapus beserta ${totalRows} data terkait.${
+      result.files.failed > 0
+        ? ` ${result.files.failed} file gagal dihapus dari penyimpanan.`
+        : ""
+    }`,
+  };
 }

@@ -108,12 +108,10 @@ export default async function ProjectDetailPage({
             canChangeOrganization={!dependencySummary.hasAny}
           />
           <ProjectStatusDialog project={project} />
-          {!dependencySummary.hasAny ? (
-            <ProjectDeleteDialog
-              project={project}
-              dependencyTotal={dependencySummary.total}
-            />
-          ) : null}
+          <ProjectDeleteDialog
+            project={project}
+            dependencyTotal={dependencySummary.total}
+          />
         </div>
       </div>
 

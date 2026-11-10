@@ -124,13 +124,11 @@ export function ProjectTable({
                         canChangeOrganization={dependencyTotal === 0}
                         compact
                       />
-                      {dependencyTotal === 0 ? (
-                        <ProjectDeleteDialog
-                          project={project}
-                          dependencyTotal={dependencyTotal}
-                          compact
-                        />
-                      ) : null}
+                      <ProjectDeleteDialog
+                        project={project}
+                        dependencyTotal={dependencyTotal}
+                        compact
+                      />
                     </div>
                   </TableCell>
                 </TableRow>
@@ -176,7 +174,7 @@ export function ProjectTable({
               </dl>
               {dependencyTotal > 0 ? (
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Referenced by {dependencyTotal} record(s) — delete protected.
+                  Referenced by {dependencyTotal} record(s).
                 </p>
               ) : null}
               <div className="mt-3 flex justify-end gap-1">
@@ -189,13 +187,11 @@ export function ProjectTable({
                   canChangeOrganization={dependencyTotal === 0}
                   compact
                 />
-                {dependencyTotal === 0 ? (
-                  <ProjectDeleteDialog
-                    project={project}
-                    dependencyTotal={dependencyTotal}
-                    compact
-                  />
-                ) : null}
+                <ProjectDeleteDialog
+                  project={project}
+                  dependencyTotal={dependencyTotal}
+                  compact
+                />
               </div>
             </div>
           );

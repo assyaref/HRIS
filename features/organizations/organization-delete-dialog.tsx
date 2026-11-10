@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useState } from "react";
 
 import { notifier } from "@/lib/notifier";
 
@@ -14,7 +14,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-import { deleteOrganizationAction, type OrganizationActionState } from "./actions";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+import {
+  deleteOrganizationAction,
+  forceDeleteOrganizationAction,
+  type OrganizationActionState,
+} from "./actions";
 import type { OrganizationListItem } from "./queries";
 
 const initialState: OrganizationActionState = { status: "idle" };
@@ -38,13 +45,27 @@ export function DeleteOrganizationDialog({
   dependencyTotal,
 }: DeleteOrganizationDialogProps) {
   const [open, setOpen] = useState(false);
+  const [confirmation, setConfirmation] = useState("");
+  const withData = dependencyTotal > 0;
   const [state, formAction, isPending] = useActionState(
-    deleteOrganizationAction.bind(null, organization.id),
+    async (_previous: OrganizationActionState, typed: string) => {
+      const result = withData
+        ? await forceDeleteOrganizationAction(organization.id, typed)
+        : await deleteOrganizationAction(organization.id);
+      // Announce here: on success the row (and this dialog) unmounts as the
+      // list revalidates, so a render-time toast would never fire.
+      if (result.status === "success") {
+        notifier.success(result.message ?? "Organization deleted.");
+      }
+      return result;
+    },
     initialState
   );
+  const confirmed =
+    !withData ||
+    confirmation.trim().toUpperCase() === organization.code.toUpperCase();
 
   if (state.status === "success" && open) {
-    notifier.success(state.message ?? "Organization deleted.");
     setOpen(false);
   }
 
@@ -74,9 +95,9 @@ export function DeleteOrganizationDialog({
               Delete organization
             </DialogTitle>
             <DialogDescription>
-              This permanently removes the organization. Dependent records are
-              never cascaded — deletion is rejected unless the tenant is
-              completely empty.
+              {withData
+                ? "Organisasi ini masih memiliki data terkait. Menghapusnya akan menghapus PERMANEN semua user, role, proyek, lokasi kerja, cuti, izin, absensi, payroll, dan pengumuman milik organisasi ini. Riwayat audit tetap disimpan. Tindakan ini tidak dapat dibatalkan."
+                : "Organisasi ini kosong dan akan dihapus permanen."}
             </DialogDescription>
           </DialogHeader>
 
@@ -101,15 +122,32 @@ export function DeleteOrganizationDialog({
               <span className="font-medium tabular-nums">
                 {dependencyTotal === 0
                   ? "None — safe to delete"
-                  : `${dependencyTotal} record(s)`}
+                  : "Ada — semua ikut dihapus"}
               </span>
             </div>
-            {dependencyTotal > 0 ? (
+            {withData ? (
               <p className="text-xs text-muted-foreground">
-                Deletion will be rejected. Deactivate the organization instead.
+                Karyawan harus dihapus permanen lebih dulu lewat menu Karyawan.
+                Pertimbangkan menonaktifkan organisasi bila datanya masih
+                diperlukan.
               </p>
             ) : null}
           </div>
+
+          {withData ? (
+            <div className="space-y-2">
+              <Label htmlFor={`org-delete-confirm-${organization.id}`}>
+                Ketik <span className="font-mono font-semibold">{organization.code}</span> untuk konfirmasi
+              </Label>
+              <Input
+                id={`org-delete-confirm-${organization.id}`}
+                value={confirmation}
+                onChange={(event) => setConfirmation(event.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </div>
+          ) : null}
 
           <DialogFooter>
             <Button
@@ -123,10 +161,14 @@ export function DeleteOrganizationDialog({
             <Button
               type="button"
               variant="destructive"
-              disabled={isPending}
-              onClick={() => formAction()}
+              disabled={isPending || !confirmed}
+              onClick={() => startTransition(() => formAction(confirmation))}
             >
-              {isPending ? "Deleting..." : "Delete organization"}
+              {isPending
+                ? "Menghapus..."
+                : withData
+                  ? "Hapus beserta data"
+                  : "Delete organization"}
             </Button>
           </DialogFooter>
         </DialogContent>

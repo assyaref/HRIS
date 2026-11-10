@@ -110,3 +110,14 @@ test("balance guards protect consumed days", () => {
     false
   );
 });
+
+test("organization delete-with-data requires the typed organization code", async () => {
+  const { isForceDeleteConfirmed } = await import(
+    "../../features/organizations/policy.ts"
+  );
+  assert.equal(isForceDeleteConfirmed("SPC", "SPC"), true);
+  assert.equal(isForceDeleteConfirmed("SPC", " spc "), true);
+  assert.equal(isForceDeleteConfirmed("SPC", "SPCX"), false);
+  assert.equal(isForceDeleteConfirmed("SPC", ""), false);
+  assert.equal(isForceDeleteConfirmed("SPC", undefined), false);
+});

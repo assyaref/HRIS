@@ -463,7 +463,14 @@ export async function updateProjectStatusAction(
  * project (status change) is the sanctioned alternative.
  */
 export async function deleteProjectAction(
-  projectId: string
+  projectId: string,
+  /**
+   * Typed project code. Required only when the project is still referenced:
+   * the Super Administrator then deletes it anyway — its assignments are
+   * removed (FK cascade) and attendance records / work locations are detached
+   * (FK set null), so attendance history is preserved.
+   */
+  confirmation?: string
 ): Promise<ActionResult> {
   const user = await requireSuperAdminActor();
 
@@ -489,8 +496,13 @@ export async function deleteProjectAction(
     dependencyCounts,
   });
 
-  if (!decision.allowed) {
-    const summary = summarizeProjectDependencies(dependencyCounts);
+  const summary = summarizeProjectDependencies(dependencyCounts);
+  const forceConfirmed =
+    summary.hasAny &&
+    typeof confirmation === "string" &&
+    confirmation.trim().toUpperCase() === existing.code.toUpperCase();
+
+  if (!decision.allowed && !(decision.reason === "dependent.records" && forceConfirmed)) {
     if (decision.reason === "dependent.records" && summary.hasAny) {
       const details = summary.categories
         .map(
@@ -500,7 +512,7 @@ export async function deleteProjectAction(
         .join(", ");
       return {
         success: false,
-        message: `${decision.message} Dependent records: ${details}. Set the project to Inactive instead of deleting it.`,
+        message: `Proyek masih dirujuk (${details}). Ketik kode proyek ${existing.code} untuk menghapusnya beserta assignment-nya; riwayat absensi dan lokasi kerja tetap ada tanpa proyek.`,
       };
     }
     return {
@@ -528,6 +540,9 @@ export async function deleteProjectAction(
             name: existing.name,
             organizationCode: existing.organizationCode,
             organizationName: existing.organizationName,
+            ...(summary.hasAny
+              ? { mode: "with_references", references: dependencyCounts }
+              : {}),
           },
         },
         tx

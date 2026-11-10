@@ -15,6 +15,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
 import { deleteProjectAction } from "./actions";
 
 export type DeletableProject = {
@@ -51,12 +54,20 @@ export function ProjectDeleteDialog({
   const [message, setMessage] = useState("");
 
   const [pending, startTransition] = useTransition();
+  const [confirmation, setConfirmation] = useState("");
+  const withReferences = dependencyTotal > 0;
+  const confirmed =
+    !withReferences ||
+    confirmation.trim().toUpperCase() === project.code.toUpperCase();
 
   function confirmDelete() {
     setMessage("");
 
     startTransition(async () => {
-      const result = await deleteProjectAction(project.id);
+      const result = await deleteProjectAction(
+        project.id,
+        withReferences ? confirmation : undefined
+      );
 
       if (result.success) {
         notifier.success(result.message);
@@ -95,9 +106,9 @@ export function ProjectDeleteDialog({
               Delete project
             </DialogTitle>
             <DialogDescription>
-              This permanently removes the project. Projects referenced by
-              assignments, attendance records or work locations can never be
-              deleted — set them to Inactive instead.
+              {withReferences
+                ? "Proyek ini masih dirujuk. Menghapusnya akan menghapus assignment karyawan ke proyek ini; riwayat absensi dan lokasi kerja tetap disimpan tanpa proyek. Tindakan ini tidak dapat dibatalkan."
+                : "This permanently removes the project."}
             </DialogDescription>
           </DialogHeader>
 
@@ -129,6 +140,21 @@ export function ProjectDeleteDialog({
             </div>
           </div>
 
+          {withReferences ? (
+            <div className="space-y-2">
+              <Label htmlFor={`project-delete-confirm-${project.id}`}>
+                Ketik <span className="font-mono font-semibold">{project.code}</span> untuk konfirmasi
+              </Label>
+              <Input
+                id={`project-delete-confirm-${project.id}`}
+                value={confirmation}
+                onChange={(event) => setConfirmation(event.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </div>
+          ) : null}
+
           <DialogFooter>
             <Button
               type="button"
@@ -141,10 +167,14 @@ export function ProjectDeleteDialog({
             <Button
               type="button"
               variant="destructive"
-              disabled={pending}
+              disabled={pending || !confirmed}
               onClick={confirmDelete}
             >
-              {pending ? "Deleting..." : "Delete project"}
+              {pending
+                ? "Deleting..."
+                : withReferences
+                  ? "Hapus proyek"
+                  : "Delete project"}
             </Button>
           </DialogFooter>
         </DialogContent>
