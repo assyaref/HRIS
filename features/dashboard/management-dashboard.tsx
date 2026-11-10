@@ -148,11 +148,12 @@ function DistributionDonut({
   const cx = width / 2;
   const cy = height / 2;
   const outerR = Math.min(width, height) * 0.34;
-  const innerR = outerR * 0.62;
+  const innerR = outerR * 0.72;
 
   const arcs = series.reduce((acc, d) => {
     const startAngle = acc.angle;
-    const sweep = (d.value / total) * 360;
+    // A full 360° arc has identical start/end points and draws nothing.
+    const sweep = Math.min((d.value / total) * 360, 359.99);
     const endAngle = startAngle + sweep;
     const radStart = (startAngle * Math.PI) / 180;
     const radEnd = (endAngle * Math.PI) / 180;
@@ -161,7 +162,13 @@ function DistributionDonut({
     const x2 = cx + outerR * Math.cos(radEnd);
     const y2 = cy + outerR * Math.sin(radEnd);
     const largeArc = sweep > 180 ? 1 : 0;
-    const path = `M${x1},${y1}A${outerR},${outerR}0 ${largeArc}1 ${x2},${y2}L${cx + innerR * Math.cos(radEnd)},${cy + innerR * Math.sin(radEnd)}A${innerR},${innerR}0 ${largeArc}0 ${cx + innerR * Math.cos(radStart)},${cy + innerR * Math.sin(radStart)}Z`;
+    const path = [
+      `M ${x1} ${y1}`,
+      `A ${outerR} ${outerR} 0 ${largeArc} 1 ${x2} ${y2}`,
+      `L ${cx + innerR * Math.cos(radEnd)} ${cy + innerR * Math.sin(radEnd)}`,
+      `A ${innerR} ${innerR} 0 ${largeArc} 0 ${cx + innerR * Math.cos(radStart)} ${cy + innerR * Math.sin(radStart)}`,
+      "Z",
+    ].join(" ");
     return {
       arcs: [
         ...acc.arcs,
@@ -214,7 +221,7 @@ function DistributionDonut({
               y={cy + 21}
               textAnchor="middle"
               style={{ fill: "var(--muted-foreground)" }}
-              fontSize="11"
+              fontSize="10"
               fontFamily="var(--font-jakarta), sans-serif"
             >
               karyawan
@@ -272,6 +279,7 @@ const linkClass =
 export async function ManagementDashboard({
   user,
   authorization,
+  organizationName,
   roleLabel,
   monthKey,
 }: ManagementDashboardProps) {
@@ -306,7 +314,7 @@ export async function ManagementDashboard({
   const [recentAudit, recap] = await Promise.all([
     canViewAudit ? listRecentAuditActivity(organizationId, 6) : Promise.resolve([]),
     selfProfile
-      ? getMonthlyRecap(organizationId, selfProfile.id, monthKey, selfProfile.hireDate)
+      ? getMonthlyRecap(organizationId, selfProfile.id, monthKey)
       : Promise.resolve(null),
   ]);
 
@@ -351,7 +359,7 @@ export async function ManagementDashboard({
       <section className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
           <p className="text-xs font-bold tracking-[0.08em] text-primary uppercase">
-            Sistem
+            {organizationName ?? "Organisasi"}
           </p>
           <h1 className="mt-1 text-2xl tracking-tight sm:text-[28px]">
             {indonesianGreeting()} — ringkasan tim
@@ -617,7 +625,13 @@ export async function ManagementDashboard({
 
           <DistributionDonut
             series={[
-              { label: "Aktif", value: workforce.active, color: "#22C55E" },
+              // New hires are a subset of active: split them out so the
+              // slices sum to the headcount instead of double counting.
+              {
+                label: "Aktif",
+                value: Math.max(0, workforce.active - workforce.newLast30Days),
+                color: "#22C55E",
+              },
               { label: "Nonaktif", value: workforce.inactive, color: "#94A3B8" },
               { label: "Baru (30 hari)", value: workforce.newLast30Days, color: "#1E63EE" },
             ]}

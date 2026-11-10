@@ -145,7 +145,7 @@ export function MonthlyRecapCard({
             band ? "text-white" : "text-foreground"
           )}
         >
-          Ringkasan Bulan Ini
+          Ringkasan Kehadiran Saya
         </h2>
         <MonthSelect
           value={recap.monthKey}

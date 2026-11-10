@@ -6,6 +6,7 @@ import {
   eq,
   gte,
   isNotNull,
+  inArray,
   isNull,
   lt,
   lte,
@@ -19,6 +20,7 @@ import {
   auditLogs,
   employees,
   leaveRequests,
+  leaveTypes,
   payrollPeriods,
   payrollRuns,
   payslips,
@@ -31,6 +33,17 @@ import {
 } from "@/lib/attendance/time";
 import { APP_TIME_ZONE } from "@/lib/utils/greeting";
 import type { PayrollPeriodStatus } from "@/features/payroll/constants";
+import { isSickLeaveTypeCode } from "@/features/attendance/recap";
+
+import {
+  buildAttendanceTrend,
+  computeMonthlyRecap,
+  dateColumnKey,
+  eachDay,
+  monthBounds,
+  type AttendanceTrendPoint,
+  type MonthlyRecap,
+} from "./monthly-recap.ts";
 
 /**
  * Dashboard aggregates (read model) — server-only.
@@ -311,19 +324,14 @@ export async function getPayrollOverview(
  * Used by the dashboard trend chart. Nothing is fabricated — days without
  * records resolve to zero.
  */
-export interface AttendanceTrendPoint {
-  date: string;
-  label: string;
-  present: number;
-  completed: number;
-}
+export type { AttendanceTrendPoint } from "./monthly-recap.ts";
 
 export async function getAttendanceTrend(
   organizationId: string
 ): Promise<AttendanceTrendPoint[]> {
-  const today = parseAttendanceDate(dateStringInTimeZone(new Date(), null));
-  const start = new Date(today);
-  start.setDate(today.getDate() - 6);
+  const todayKey = dateStringInTimeZone(new Date(), APP_TIME_ZONE);
+  const today = parseAttendanceDate(todayKey);
+  const start = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
 
   const rows = await db
     .select({
@@ -344,31 +352,7 @@ export async function getAttendanceTrend(
       attendanceRecords.status
     );
 
-  const byDate = new Map<string, { present: number; completed: number }>();
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - 6 + i);
-    const key = d.toISOString().slice(0, 10);
-    byDate.set(key, { present: 0, completed: 0 });
-  }
-
-  for (const row of rows) {
-    const key = String(row.date);
-    const entry = byDate.get(key) ?? { present: 0, completed: 0 };
-    if (row.status === "present") entry.present = Number(row.count);
-    if (row.status === "completed") entry.completed = Number(row.count);
-    byDate.set(key, entry);
-  }
-
-  return [...byDate.entries()].map(([date, values]) => {
-    const d = new Date(`${date}T00:00:00`);
-    return {
-      date,
-      label: new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(d),
-      present: values.present,
-      completed: values.completed,
-    };
-  });
+  return buildAttendanceTrend(todayKey, rows);
 }
 
 export async function countRejectedCheckInsToday(
@@ -466,20 +450,7 @@ export async function getMonthAttendanceSummary(
 // Monthly recap — "Ringkasan Bulan Ini" (HRIS Lite v2 dashboards)
 // ---------------------------------------------------------------------------
 
-export interface MonthlyRecap {
-  /** "2026-11" */
-  monthKey: string;
-  /** Days with an attendance record (present, completed or incomplete). */
-  hadir: number;
-  /** Working days covered by approved permission (izin) requests. */
-  izin: number;
-  /** Working days covered by approved leave (cuti) requests. */
-  cuti: number;
-  /** Elapsed working days with no attendance, leave or permission. */
-  alpha: number;
-  /** hadir / (hadir + izin + cuti + alpha), 0–100. */
-  percentage: number;
-}
+export type { MonthlyRecap } from "./monthly-recap.ts";
 
 /** Month keys "YYYY-MM" for the current month and the `count - 1` before it. */
 export function recentMonthKeys(count = 6, now: Date = new Date()): string[] {
@@ -501,61 +472,56 @@ export function normalizeMonthKey(value: string | null | undefined): string {
   return value && keys.includes(value) ? value : keys[0];
 }
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-/** Mon–Fri dates (UTC midnight, as "YYYY-MM-DD") in [from, to). */
-function weekdayKeys(from: Date, to: Date): string[] {
-  const out: string[] = [];
-  for (let t = from.getTime(); t < to.getTime(); t += DAY_MS) {
-    const day = new Date(t);
-    const weekday = day.getUTCDay();
-    if (weekday !== 0 && weekday !== 6) out.push(day.toISOString().slice(0, 10));
-  }
-  return out;
-}
-
 /**
- * One employee's attendance recap for a calendar month.
- *
- * Working days are Monday–Friday (public holidays are not modelled yet).
- * Days are counted once with precedence hadir → cuti → izin; every elapsed
- * working day (from the hire date, up to today) left uncovered is "alpha".
+ * One employee's attendance recap for a calendar month, computed with the
+ * Attendance Recap module's rules (see `./monthly-recap.ts`). Every query is
+ * scoped to the caller's organization and to one employee.
  */
 export async function getMonthlyRecap(
   organizationId: string,
   employeeId: string,
-  monthKey: string,
-  hireDate: Date | null = null
+  monthKey: string
 ): Promise<MonthlyRecap> {
-  const [year, month] = monthKey.split("-").map((part) => Number.parseInt(part, 10));
-  const start = new Date(Date.UTC(year, month - 1, 1));
-  const end = new Date(Date.UTC(year, month, 1));
-  const today = parseAttendanceDate(dateStringInTimeZone(new Date(), APP_TIME_ZONE));
+  const { first, last } = monthBounds(monthKey);
+  const start = parseAttendanceDate(first);
+  const end = parseAttendanceDate(last);
 
-  const [attendanceRows, leaveRows, permissionRows] = await Promise.all([
+  const [employeeRows, attendanceRows, leaveRows, permissionRows] = await Promise.all([
     db
       .select({
-        date: attendanceRecords.attendanceDate,
-        status: attendanceRecords.status,
+        hireDate: employees.hireDate,
+        terminationDate: employees.terminationDate,
+        resignationDate: employees.resignationDate,
       })
+      .from(employees)
+      .where(and(eq(employees.organizationId, organizationId), eq(employees.id, employeeId)))
+      .limit(1),
+    db
+      .select({ date: attendanceRecords.attendanceDate })
       .from(attendanceRecords)
       .where(
         and(
           eq(attendanceRecords.organizationId, organizationId),
           eq(attendanceRecords.employeeId, employeeId),
+          inArray(attendanceRecords.status, ["present", "completed"]),
           gte(attendanceRecords.attendanceDate, start),
-          lt(attendanceRecords.attendanceDate, end)
+          lte(attendanceRecords.attendanceDate, end)
         )
       ),
     db
-      .select({ startDate: leaveRequests.startDate, endDate: leaveRequests.endDate })
+      .select({
+        startDate: leaveRequests.startDate,
+        endDate: leaveRequests.endDate,
+        code: leaveTypes.code,
+      })
       .from(leaveRequests)
+      .innerJoin(leaveTypes, eq(leaveTypes.id, leaveRequests.leaveTypeId))
       .where(
         and(
           eq(leaveRequests.organizationId, organizationId),
           eq(leaveRequests.employeeId, employeeId),
           eq(leaveRequests.status, "approved"),
-          lt(leaveRequests.startDate, end),
+          lte(leaveRequests.startDate, end),
           gte(leaveRequests.endDate, start)
         )
       ),
@@ -567,60 +533,47 @@ export async function getMonthlyRecap(
           eq(permissionRequests.organizationId, organizationId),
           eq(permissionRequests.employeeId, employeeId),
           eq(permissionRequests.status, "approved"),
-          lt(permissionRequests.startAt, end),
+          lt(permissionRequests.startAt, new Date(end.getTime() + 24 * 60 * 60 * 1000)),
           gte(permissionRequests.endAt, start)
         )
       ),
   ]);
 
-  const hadirDays = new Set<string>();
-  for (const row of attendanceRows) {
-    if (row.status === "rejected") continue;
-    hadirDays.add(new Date(row.date).toISOString().slice(0, 10));
-  }
+  const employee = employeeRows[0];
+  const toKey = (value: Date | null | undefined) => (value ? dateColumnKey(value) : null);
 
-  const cutiDays = new Set<string>();
+  const acceptedAttendanceDays = new Set(attendanceRows.map((row) => dateColumnKey(row.date)));
+
+  // Same rule as the recap SQL: a day counts as sick when ANY covering
+  // approved leave has a sick type.
+  const leaveDays = new Map<string, string | null>();
   for (const row of leaveRows) {
-    const from = new Date(Math.max(new Date(row.startDate).getTime(), start.getTime()));
-    const to = new Date(Math.min(new Date(row.endDate).getTime() + DAY_MS, end.getTime()));
-    for (const key of weekdayKeys(from, to)) {
-      if (!hadirDays.has(key)) cutiDays.add(key);
+    const from = dateColumnKey(row.startDate) < first ? first : dateColumnKey(row.startDate);
+    const to = dateColumnKey(row.endDate) > last ? last : dateColumnKey(row.endDate);
+    for (const day of from <= to ? eachDay(from, to) : []) {
+      const previous = leaveDays.get(day);
+      if (previous === undefined || !isSickLeaveTypeCode(previous)) leaveDays.set(day, row.code);
     }
   }
 
-  const izinDays = new Set<string>();
+  // Same rule as the recap SQL: permission dates are UTC calendar dates.
+  const permissionDays = new Set<string>();
   for (const row of permissionRows) {
-    const from = parseAttendanceDate(dateStringInTimeZone(row.startAt, APP_TIME_ZONE));
-    const last = parseAttendanceDate(dateStringInTimeZone(row.endAt, APP_TIME_ZONE));
-    const clippedFrom = new Date(Math.max(from.getTime(), start.getTime()));
-    const clippedTo = new Date(Math.min(last.getTime() + DAY_MS, end.getTime()));
-    for (const key of weekdayKeys(clippedFrom, clippedTo)) {
-      if (!hadirDays.has(key) && !cutiDays.has(key)) izinDays.add(key);
+    const from = row.startAt.toISOString().slice(0, 10);
+    const to = row.endAt.toISOString().slice(0, 10);
+    for (const day of eachDay(from < first ? first : from, to > last ? last : to)) {
+      permissionDays.add(day);
     }
   }
 
-  // Elapsed working days: from max(month start, hire date) up to yesterday;
-  // today only counts once something was recorded for it.
-  const firstDay = hireDate && hireDate.getTime() > start.getTime() ? hireDate : start;
-  const elapsedEnd = new Date(Math.min(today.getTime(), end.getTime()));
-  const todayKey = today.toISOString().slice(0, 10);
-  let alpha = 0;
-  for (const key of weekdayKeys(firstDay, elapsedEnd)) {
-    if (key === todayKey) continue;
-    if (!hadirDays.has(key) && !cutiDays.has(key) && !izinDays.has(key)) alpha += 1;
-  }
-
-  const hadir = hadirDays.size;
-  const cuti = cutiDays.size;
-  const izin = izinDays.size;
-  const total = hadir + izin + cuti + alpha;
-
-  return {
+  return computeMonthlyRecap({
     monthKey,
-    hadir,
-    izin,
-    cuti,
-    alpha,
-    percentage: total > 0 ? Math.round((hadir / total) * 100) : 0,
-  };
+    todayKey: dateStringInTimeZone(new Date(), APP_TIME_ZONE),
+    hireDate: toKey(employee?.hireDate),
+    terminationDate: toKey(employee?.terminationDate),
+    resignationDate: toKey(employee?.resignationDate),
+    acceptedAttendanceDays,
+    leaveDays,
+    permissionDays,
+  });
 }

@@ -192,7 +192,7 @@ export async function EmployeeDashboard({
   ] = await Promise.all([
     findOpenAttendance(organizationId, employee.id),
     findAttendanceForDate(organizationId, employee.id, today),
-    getMonthlyRecap(organizationId, employee.id, monthKey, employee.hireDate),
+    getMonthlyRecap(organizationId, employee.id, monthKey),
     listMyLeaveRequests(organizationId, employee.id),
     listMyPermissionRequests(organizationId, employee.id),
     listMyAnnouncements({ organizationId, employeeId: employee.id, limit: 5 }),
@@ -233,6 +233,11 @@ export async function EmployeeDashboard({
   const timeZone = activeRecord?.workLocationTimezone ?? null;
   const checkInLabel = activeRecord?.checkInAt
     ? formatTime(activeRecord.checkInAt, timeZone)
+    : null;
+  // "Hadir Hari Ini" only reflects today's record; an open session from an
+  // earlier day still drives the check-out action card, not this tile.
+  const todayCheckInLabel = todayRecord?.checkInAt
+    ? formatTime(todayRecord.checkInAt, todayRecord.workLocationTimezone ?? null)
     : null;
   const checkOutLabel = todayRecord?.checkOutAt
     ? formatTime(todayRecord.checkOutAt, timeZone)
@@ -352,7 +357,7 @@ export async function EmployeeDashboard({
         {/* Day at a glance */}
         <section aria-label="Ringkasan hari ini" className="grid grid-cols-2 gap-3 sm:gap-4">
           <InfoTile label="Hadir Hari Ini" icon="calendar-check" tone="green">
-            {checkInLabel ?? "--:--"}
+            {todayCheckInLabel ?? "--:--"}
           </InfoTile>
           <InfoTile label="Jam Pulang" icon="clock" tone="violet">
             {checkOutLabel ?? "--:--"}
