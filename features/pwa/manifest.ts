@@ -52,7 +52,15 @@ export const PWA_ICONS: readonly PwaIcon[] = [
     src: "/icons/icon-512.png",
     sizes: "512x512",
     type: "image/png",
-    purpose: "any maskable",
+    purpose: "any",
+  },
+  {
+    // Full-bleed symbol: survives Android's circular/squircle mask, unlike
+    // the rounded app icon whose "HRIS" wordmark sits near the edge.
+    src: "/icons/hris-mark-512.png",
+    sizes: "512x512",
+    type: "image/png",
+    purpose: "maskable",
   },
 ];
 
