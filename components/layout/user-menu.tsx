@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { useTheme } from "@/components/theme-provider";
 import { logoutAction } from "@/features/auth/actions";
@@ -57,13 +58,38 @@ export function Avatar({
  */
 export function UserMenu({ profile }: { profile: ShellProfile }) {
   const [open, setOpen] = useState(false);
+  const [anchor, setAnchor] = useState<{ top: number; right: number } | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const { theme, setTheme } = useTheme();
+
+  // The top bar lives in an overflow-hidden band, so the menu is portalled
+  // to <body> and pinned under the avatar with fixed positioning.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const rect = rootRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setAnchor({
+        top: rect.bottom + 10,
+        right: Math.max(12, window.innerWidth - rect.right),
+      });
+    };
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
     const onPointer = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (rootRef.current?.contains(target) || menuRef.current?.contains(target)) return;
+      setOpen(false);
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
@@ -98,13 +124,15 @@ export function UserMenu({ profile }: { profile: ShellProfile }) {
         />
       </button>
 
-      {open ? (
+      {open && anchor ? createPortal(
         <div
+          ref={menuRef}
           role="menu"
-          className="absolute top-full right-0 z-[60] mt-3 w-72 overflow-hidden rounded-2xl border border-border bg-card text-foreground shadow-[var(--shadow-xl)]"
+          style={{ top: anchor.top, right: anchor.right }}
+          className="fixed z-[70] max-h-[calc(100svh-6rem)] w-64 overflow-y-auto rounded-2xl border border-border bg-card text-foreground shadow-[var(--shadow-xl)]"
         >
-          <div className="flex items-center gap-3 border-b border-border p-4">
-            <Avatar profile={profile} size={44} />
+          <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+            <Avatar profile={profile} size={40} />
             <div className="min-w-0">
               <p className="truncate text-sm font-bold">{profile.displayName}</p>
               <p className="truncate text-xs text-muted-foreground">{profile.email}</p>
@@ -115,12 +143,12 @@ export function UserMenu({ profile }: { profile: ShellProfile }) {
               ) : null}
             </div>
           </div>
-          <div className="p-2">
+          <div className="p-1.5">
             <Link
               role="menuitem"
               href="/settings/account"
               onClick={() => setOpen(false)}
-              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-muted"
+              className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium hover:bg-muted"
             >
               <HrisIcon name="user" className="size-[18px] text-muted-foreground" />
               Profil &amp; Akun
@@ -129,7 +157,7 @@ export function UserMenu({ profile }: { profile: ShellProfile }) {
               role="menuitem"
               type="button"
               onClick={() => setTheme(dark ? "light" : "dark")}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium hover:bg-muted"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium hover:bg-muted"
             >
               <HrisIcon
                 name={dark ? "sun" : "moon"}
@@ -141,14 +169,15 @@ export function UserMenu({ profile }: { profile: ShellProfile }) {
               <button
                 role="menuitem"
                 type="submit"
-                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-danger hover:bg-surface-danger"
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-semibold text-danger hover:bg-surface-danger"
               >
                 <HrisIcon name="logout" className="size-[18px]" />
                 Keluar
               </button>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       ) : null}
     </div>
   );
