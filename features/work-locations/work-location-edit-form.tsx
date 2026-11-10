@@ -5,14 +5,7 @@ import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -20,10 +13,10 @@ import { Badge } from "@/components/ui/badge";
 import {
   updateWorkLocationAction,
   toggleWorkLocationStatusAction,
-  deleteWorkLocationAction,
   type WorkLocationActionState,
 } from "./actions";
 import type { WorkLocationListItem } from "./actions";
+import { WorkLocationDeleteDialog } from "./work-location-delete-dialog";
 import {
   WORK_LOCATION_STATUS_SUMMARY,
   collectWorkLocationWarnings,
@@ -49,11 +42,16 @@ interface WorkLocationEditFormProps {
   location: WorkLocationListItem;
   /** Active projects in the caller's organization (server-provided). */
   projects: WorkLocationProjectOption[];
+  /** SUPERADMIN only — the server action re-checks. */
+  canDelete?: boolean;
 }
 
-export function WorkLocationEditForm({ location, projects }: WorkLocationEditFormProps) {
+export function WorkLocationEditForm({
+  location,
+  projects,
+  canDelete = false,
+}: WorkLocationEditFormProps) {
   const router = useRouter();
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clientErrors, setClientErrors] = useState<Record<string, string>>({});
   const [toggleError, setToggleError] = useState<string | null>(null);
   // Draft status override. While the user edits the status <select>, that value
@@ -71,10 +69,6 @@ export function WorkLocationEditForm({ location, projects }: WorkLocationEditFor
     updateWorkLocationAction(location.id, _prevState, formData);
   const [updateState, updateFormAction] = useActionState(boundUpdateAction, initialState);
 
-  // Follow same project pattern as role-create-dialog.tsx
-  const boundDeleteAction = (_prevState: WorkLocationActionState, formData: FormData) =>
-    deleteWorkLocationAction(location.id, _prevState, formData);
-  const [deleteState, deleteFormAction] = useActionState(boundDeleteAction, initialState);
 
   /**
    * Operational warnings (Phase 9.5 step 6) computed from the server-loaded
@@ -131,11 +125,6 @@ export function WorkLocationEditForm({ location, projects }: WorkLocationEditFor
   const fieldErrors = { ...clientErrors, ...(updateState.fieldErrors ?? {}) };
   const savedIsActive = location.status === "active";
 
-  // Watch delete state to navigate after success
-  if (deleteState.status === "success") {
-    router.push("/settings/work-locations");
-  }
-
   return (
     <div className="space-y-6">
       {/* Header section with status and actions */}
@@ -159,13 +148,12 @@ export function WorkLocationEditForm({ location, projects }: WorkLocationEditFor
             {savedIsActive ? "Mark inactive" : "Mark active"}
           </Button>
         </div>
-        <Button
-          type="button"
-          variant="destructive"
-          onClick={() => setDeleteDialogOpen(true)}
-        >
-          Delete location
-        </Button>
+        {canDelete ? (
+          <WorkLocationDeleteDialog
+            location={location}
+            redirectTo="/settings/work-locations"
+          />
+        ) : null}
       </div>
 
       {toggleError ? (
@@ -407,43 +395,6 @@ export function WorkLocationEditForm({ location, projects }: WorkLocationEditFor
         </DialogFooter>
       </form>
 
-      {/* Delete confirmation dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete work location</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this work location? This action cannot be undone.
-              Locations that are still used by employees or attendance records cannot be deleted.
-            </DialogDescription>
-            {deleteState.message && deleteState.status === "error" ? (
-              <div
-                role="alert"
-                className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive mt-2"
-              >
-                {deleteState.message}
-              </div>
-            ) : null}
-          </DialogHeader>
-          <form action={deleteFormAction}>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setDeleteDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                variant="destructive"
-              >
-                Delete
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

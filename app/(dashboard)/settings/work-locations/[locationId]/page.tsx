@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/auth";
 import { PERMISSIONS } from "@/lib/auth/permissions";
-import { requirePermission } from "@/lib/auth/rbac";
+import { isSuperAdmin, requirePermission } from "@/lib/auth/rbac";
 import { getWorkLocationAction } from "@/features/work-locations/actions";
 import { listWorkLocationProjectOptions } from "@/features/work-locations/queries";
 import { WorkLocationEditForm } from "@/features/work-locations/work-location-edit-form";
@@ -42,6 +42,7 @@ export default async function EditWorkLocationPage({ params }: PageProps) {
   }
 
   const location = result.location;
+  const canDelete = await isSuperAdmin(user.id);
 
   // Active projects of the caller's organization, for the Edit form selector.
   // organizationId comes from the session, never the client.
@@ -90,7 +91,11 @@ export default async function EditWorkLocationPage({ params }: PageProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <WorkLocationEditForm location={location} projects={projects} />
+            <WorkLocationEditForm
+              location={location}
+              projects={projects}
+              canDelete={canDelete}
+            />
           </CardContent>
         </Card>
 

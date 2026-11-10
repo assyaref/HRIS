@@ -1,10 +1,11 @@
 "use server";
 
-import { and, eq, exists } from "drizzle-orm";
+import { and, count, eq, exists } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { workLocations, projects, employeeProjectAssignments, attendanceRecords } from "@/db/schema";
+import { workLocations, projects, employeeProjectAssignments, attendanceRecords, employees } from "@/db/schema";
 import { requireUser } from "@/lib/auth/auth";
-import { requirePermission } from "@/lib/auth/rbac";
+import { isSuperAdmin, requirePermission } from "@/lib/auth/rbac";
 import { writeAuditLog } from "@/lib/auth/audit";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { createWorkLocationSchema, updateWorkLocationSchema, type CreateWorkLocationInput, type UpdateWorkLocationInput } from "./schemas";
@@ -23,6 +24,8 @@ export type WorkLocationActionState = {
   message?: string;
   fieldErrors?: Record<string, string>;
   ok?: boolean;
+  /** Delete only: the location is in use and the name must be re-typed. */
+  requiresConfirmation?: boolean;
 };
 
 export interface WorkLocationListItem {
@@ -635,18 +638,30 @@ export async function toggleWorkLocationStatusAction(
 }
 
 /**
- * Delete a work location ONLY if it's not in use
- * Requires work_locations.manage permission
- * Delete safety: check for active usage before allowing deletion
+ * Delete a work location — SUPERADMIN only.
+ *
+ * Unused locations are deleted directly. A location that is still in use
+ * (attendance records, employees whose work location is this one, or a bound
+ * project with ACTIVE assignments) is deleted only when the Super
+ * Administrator re-types the location name in `formData.confirmation`. The
+ * schema then detaches that history (FK ON DELETE SET NULL on
+ * attendance_records, employees and employee_employment_history), so no
+ * attendance or employee row is ever removed.
  */
 export async function deleteWorkLocationAction(
   locationId: string,
   _prevState: WorkLocationActionState,
-  _formData: FormData
+  formData: FormData
 ): Promise<WorkLocationActionState> {
   try {
     const user = await requireUser();
-    await requirePermission(user.id, PERMISSIONS.WORK_LOCATIONS_MANAGE);
+
+    if (!(await isSuperAdmin(user.id))) {
+      return {
+        status: "error",
+        message: "Only a Super Administrator can delete work locations. Deactivate it instead.",
+      };
+    }
 
     if (!user.organizationId) {
       return {
@@ -655,48 +670,12 @@ export async function deleteWorkLocationAction(
       };
     }
 
-    // Verify location exists and belongs to org
+    // Verify location exists and belongs to the acting organization.
     const existing = await db
-      .select({ id: workLocations.id, name: workLocations.name })
-      .from(workLocations)
-      .where(
-        and(
-          eq(workLocations.id, locationId),
-          eq(workLocations.organizationId, user.organizationId)
-        )
-      )
-      .limit(1);
-
-    if (!existing[0]) {
-      return {
-        status: "error",
-        message: "Work location not found.",
-      };
-    }
-
-    // DELETE SAFETY: block deletion while the location is still in use.
-    // Direct usage: attendance records reference the location.
-    // Indirect usage: the location is bound to a project that still has ACTIVE
-    // employee assignments (employees may check in here via that assignment).
-    const [usage] = await db
       .select({
-        hasAttendance: exists(
-          db
-            .select()
-            .from(attendanceRecords)
-            .where(eq(attendanceRecords.workLocationId, locationId))
-        ),
-        hasActiveAssignments: exists(
-          db
-            .select()
-            .from(employeeProjectAssignments)
-            .where(
-              and(
-                eq(employeeProjectAssignments.projectId, workLocations.projectId),
-                eq(employeeProjectAssignments.active, true)
-              )
-            )
-        ),
+        id: workLocations.id,
+        name: workLocations.name,
+        projectId: workLocations.projectId,
       })
       .from(workLocations)
       .where(
@@ -707,39 +686,100 @@ export async function deleteWorkLocationAction(
       )
       .limit(1);
 
-    const locationInUse = usage?.hasAttendance || usage?.hasActiveAssignments;
-    if (locationInUse) {
+    const location = existing[0];
+    if (!location) {
       return {
         status: "error",
-        message: "Cannot delete location that is still used by employees or attendance records. Deactivate it instead.",
+        message: "Work location not found.",
       };
     }
 
-    // Safe to delete
-    await db
-      .delete(workLocations)
-      .where(
-        and(
-          eq(workLocations.id, locationId),
-          eq(workLocations.organizationId, user.organizationId)
-        )
-      );
+    const [[attendanceUsage], [employeeUsage], [assignmentUsage]] = await Promise.all([
+      db
+        .select({ total: count() })
+        .from(attendanceRecords)
+        .where(eq(attendanceRecords.workLocationId, locationId)),
+      db
+        .select({ total: count() })
+        .from(employees)
+        .where(eq(employees.workLocationId, locationId)),
+      location.projectId
+        ? db
+            .select({ total: count() })
+            .from(employeeProjectAssignments)
+            .where(
+              and(
+                eq(employeeProjectAssignments.organizationId, user.organizationId),
+                eq(employeeProjectAssignments.projectId, location.projectId),
+                eq(employeeProjectAssignments.active, true)
+              )
+            )
+        : Promise.resolve([{ total: 0 }]),
+    ]);
 
-    // Audit logging
-    await writeAuditLog({
-      organizationId: user.organizationId,
-      actorUserId: user.id,
-      action: "work_location.deleted",
-      entityType: "work_location",
-      entityId: locationId,
-      metadata: {
-        locationName: existing[0].name,
-      },
+    const usage = {
+      attendanceRecords: Number(attendanceUsage?.total ?? 0),
+      employees: Number(employeeUsage?.total ?? 0),
+      activeProjectAssignments: Number(assignmentUsage?.total ?? 0),
+    };
+    const inUse =
+      usage.attendanceRecords + usage.employees + usage.activeProjectAssignments > 0;
+
+    const confirmation = formData.get("confirmation")?.toString() ?? "";
+    const confirmed =
+      confirmation.trim().toLowerCase() === location.name.trim().toLowerCase();
+
+    if (inUse && !confirmed) {
+      const details = [
+        usage.attendanceRecords > 0 ? `${usage.attendanceRecords} catatan absensi` : null,
+        usage.employees > 0 ? `${usage.employees} karyawan` : null,
+        usage.activeProjectAssignments > 0
+          ? `${usage.activeProjectAssignments} assignment proyek aktif`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(", ");
+      return {
+        status: "error",
+        requiresConfirmation: true,
+        message: `Lokasi masih digunakan (${details}). Ketik nama lokasi untuk tetap menghapusnya; riwayat absensi dan data karyawan tetap disimpan tanpa lokasi kerja.`,
+      };
+    }
+
+    // Destructive: the delete and its audit row commit atomically.
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(workLocations)
+        .where(
+          and(
+            eq(workLocations.id, locationId),
+            eq(workLocations.organizationId, user.organizationId!)
+          )
+        );
+
+      await writeAuditLog(
+        {
+          organizationId: user.organizationId,
+          actorUserId: user.id,
+          action: "work_location.deleted",
+          entityType: "work_location",
+          entityId: locationId,
+          metadata: {
+            locationName: location.name,
+            projectId: location.projectId,
+            ...(inUse ? { mode: "with_references", references: usage } : {}),
+          },
+        },
+        tx
+      );
     });
+
+    revalidatePath("/settings/work-locations");
 
     return {
       status: "success",
-      message: "Work location deleted successfully.",
+      ok: true,
+      message: `Work location "${location.name}" deleted.`,
     };
   } catch (error) {
     console.error("[work-locations] delete error:", error);

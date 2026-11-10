@@ -14,6 +14,7 @@ import { requireUser } from "@/lib/auth/auth";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import {
   hasPermission,
+  isSuperAdmin,
   requirePermission,
 } from "@/lib/auth/rbac";
 
@@ -38,6 +39,9 @@ export default async function WorkLocationsPage() {
   await requirePermission(user.id, PERMISSIONS.WORK_LOCATIONS_VIEW);
 
   const canManage = await hasPermission(user.id, PERMISSIONS.WORK_LOCATIONS_MANAGE);
+  // Deleting a work location is reserved for the system-level SUPERADMIN
+  // (re-checked in deleteWorkLocationAction).
+  const canDelete = await isSuperAdmin(user.id);
 
   const result = await listWorkLocationsAction();
   const locations = result.ok ? result.locations : [];
@@ -158,6 +162,7 @@ export default async function WorkLocationsPage() {
                             status: location.status,
                             projectName: location.projectName,
                           }}
+                          canDelete={canDelete}
                         />
                       ) : null}
                     </TableCell>
