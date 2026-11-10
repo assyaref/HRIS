@@ -47,7 +47,7 @@ function AttendanceRing({
           <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
             <stop offset="0" stopColor="#22C55E" />
             <stop offset="0.55" stopColor="#1DB954" />
-            <stop offset="1" stopColor="#1E63EE" />
+            <stop offset="1" stopColor="#0B5CC5" />
           </linearGradient>
         </defs>
         <circle

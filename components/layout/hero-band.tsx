@@ -1,11 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils/cn";
 
+import { BrandMark } from "./brand";
 import { BuildingIllustration } from "./building-illustration";
 import { HrisIcon } from "./icons";
 import { useShell } from "./shell-context";
@@ -63,15 +63,8 @@ function TopBar() {
         className="flex min-w-0 items-center gap-2.5 lg:hidden"
         aria-label="HRIS Lite Enterprise — Beranda"
       >
-        <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white shadow-sm">
-          <Image
-            src="/brand/hris-logo.png"
-            alt=""
-            width={44}
-            height={44}
-            priority
-            className="size-11 object-contain p-1"
-          />
+        <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm">
+          <BrandMark size={34} priority />
         </span>
         <span className="min-w-0 leading-tight">
           <span className="block text-lg font-extrabold tracking-tight">HRIS</span>

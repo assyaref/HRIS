@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
@@ -10,6 +9,7 @@ import { createTabTrap, getFocusableElements } from "@/lib/utils/focus";
 import { cn } from "@/lib/utils/cn";
 import type { NavItem } from "@/types/navigation";
 
+import { BrandLogo } from "./brand";
 import { HrisIcon } from "./icons";
 import { resolveActiveHref } from "./navigation";
 import { useShell } from "./shell-context";
@@ -83,18 +83,13 @@ export function AppDrawer() {
         {/* Blue header */}
         <div className="hris-band relative shrink-0 px-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-10">
           <div className="flex items-center gap-3">
-            <span className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white shadow-sm">
-              <Image
-                src="/brand/hris-logo.png"
-                alt=""
-                width={56}
-                height={56}
-                className="size-14 object-contain p-1.5"
-              />
-            </span>
-            <span className="min-w-0 flex-1 leading-tight">
-              <span className="block text-2xl font-extrabold tracking-tight">HRIS</span>
-              <span className="block truncate text-sm text-white/85">Lite Enterprise v2.0</span>
+            <span className="min-w-0 flex-1">
+              <span className="hris-logo-plate inline-flex max-w-full rounded-2xl px-3 py-2 shadow-sm">
+                <BrandLogo height={46} />
+              </span>
+              <span className="mt-1.5 block truncate text-xs font-semibold tracking-wide text-white/85">
+                Lite Enterprise v2.0
+              </span>
             </span>
             <button
               type="button"

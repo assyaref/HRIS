@@ -23,13 +23,13 @@
   --muted-foreground: #64748B;
 
   --accent: #EAF1FF;
-  --accent-foreground: #1748B8;
+  --accent-foreground: #0A3F8F;
 
   --border: #E4EAF4;
   --input: #D5DCE6;
-  --ring: #1E63EE;
+  --ring: #0B5CC5;
 
-  --primary: #1E63EE;
+  --primary: #0B5CC5;
   --primary-foreground: #FFFFFF;
 
   --secondary: #475569;
@@ -75,13 +75,13 @@
   --sidebar-hover: #F1F5FD;
   --sidebar-border: #E8EDF6;
   --sidebar-panel: #F5F8FF;
-  --sidebar-active: #1E63EE;
-  --sidebar-active-shadow: 0 10px 20px -10px rgb(30 99 238 / 0.75);
+  --sidebar-active: #0B5CC5;
+  --sidebar-active-shadow: 0 10px 20px -10px rgb(11 92 197 / 0.75);
 
   /* ---- Brand blue band (header + hero) ---- */
-  --brand-band-from: #1747C9;
-  --brand-band-via: #1E5EEB;
-  --brand-band-to: #2F7BF6;
+  --brand-band-from: #01254F;
+  --brand-band-via: #0A3F8F;
+  --brand-band-to: #0B5CC5;
 
   /* ---- Radius ---- */
   --radius-control: 0.625rem; /* 10px — controls */
@@ -95,7 +95,7 @@
 
   /* ---- Card borders (hairline) ---- */
   --card-border: #E6ECF5;
-  --card-border-hover: rgb(30 99 238 / 0.25);
+  --card-border-hover: rgb(11 92 197 / 0.25);
   --card-border-level2: #EDF1F6;
 
   /* ---- Shadows (soft, cool-tinted) ---- */
@@ -104,7 +104,7 @@
   --shadow-md: 0 4px 6px -1px rgb(15 23 42 / 0.05), 0 2px 4px -1px rgb(15 23 42 / 0.03);
   --shadow-lg: 0 10px 15px -3px rgb(15 23 42 / 0.07), 0 4px 6px -2px rgb(15 23 42 / 0.04);
   --shadow-xl: 0 24px 48px -12px rgb(15 23 42 / 0.22);
-  --shadow-primary: 0 8px 18px -8px rgb(30 99 238 / 0.65);
+  --shadow-primary: 0 8px 18px -8px rgb(11 92 197 / 0.65);
 
   /* ---- Typography ---- */
   --font-sans: var(--font-jakarta), var(--font-geist-sans);
@@ -331,9 +331,9 @@
   --sidebar-panel: #15213A;
   --sidebar-active: #2F7BF5;
 
-  --brand-band-from: #0F2A6B;
-  --brand-band-via: #1745B0;
-  --brand-band-to: #1F5FD6;
+  --brand-band-from: #011A3A;
+  --brand-band-via: #062F6B;
+  --brand-band-to: #0A4BA3;
 
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.30);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.25), 0 2px 4px -1px rgb(0 0 0 / 0.15);
@@ -595,7 +595,7 @@ a {
 }
 
 .hris-nav-active {
-  background: linear-gradient(135deg, #2F7BF6 0%, #1E5EEB 55%, #1A4FD6 100%);
+  background: linear-gradient(135deg, #1C7FE0 0%, #0B5CC5 55%, #0A3F8F 100%);
   color: #FFFFFF;
   box-shadow: var(--sidebar-active-shadow);
 }
@@ -683,7 +683,7 @@ a {
 }
 
 /* Pastel icon tiles (quick access, quick menu, stat cards). */
-.hris-chip-blue   { background: #E8F0FF; color: #1E63EE; }
+.hris-chip-blue   { background: #E8F0FF; color: #0B5CC5; }
 .hris-chip-green  { background: #E3F7EC; color: #16A34A; }
 .hris-chip-violet { background: #F1EAFF; color: #7C3AED; }
 .hris-chip-amber  { background: #FFF2DE; color: #EA8A0C; }
@@ -726,8 +726,8 @@ a {
 
 /* Raised centre action in the mobile bottom navigation. */
 .hris-fab {
-  background: linear-gradient(135deg, #3B82F6 0%, #1E5EEB 60%, #1A4FD6 100%);
-  box-shadow: 0 12px 24px -10px rgb(30 94 235 / 0.8), 0 0 0 6px var(--card);
+  background: linear-gradient(135deg, #1C7FE0 0%, #0B5CC5 60%, #0A3F8F 100%);
+  box-shadow: 0 12px 24px -10px rgb(11 92 197 / 0.8), 0 0 0 6px var(--card);
 }
 
 /* Page titles everywhere inside the app shell share one voice. */
@@ -738,3 +738,54 @@ a {
     color: var(--foreground);
   }
 }
+
+/* ==========================================================
+   v7 — Brand lockup (HRIS logo: navy + blue hexagon, orange swoosh)
+   ========================================================== */
+:root {
+  --brand-navy: #01254F;
+  --brand-orange: #F7931E;
+}
+
+/* Sidebar brand block: white, like the logo's own background, closed by
+   the logo's blue-to-orange underline. */
+.hris-sidebar-brand {
+  background: var(--sidebar);
+  color: var(--sidebar-strong);
+  border-radius: 0;
+}
+.hris-sidebar-brand::after {
+  content: "";
+  position: absolute;
+  inset-inline: 1.25rem;
+  bottom: 0;
+  height: 3px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, var(--brand-navy) 0%, #0B5CC5 55%, #0388CB 75%, var(--brand-orange) 100%);
+  opacity: 0.9;
+}
+
+/* The logo is navy on transparent: it always sits on white. */
+.hris-logo-plate {
+  background: #FFFFFF;
+}
+.dark .hris-sidebar-brand .hris-logo-plate {
+  border-radius: 0.875rem;
+  padding: 0.375rem 0.625rem;
+}
+
+/* Logo's three slanted pills (blue, blue, orange) as a small accent. */
+.hris-brand-pills {
+  display: inline-flex;
+  gap: 4px;
+}
+.hris-brand-pills > span {
+  display: block;
+  width: 14px;
+  height: 6px;
+  border-radius: 9999px;
+  transform: skewX(-24deg);
+}
+.hris-brand-pills > span:nth-child(1) { background: #0B5CC5; }
+.hris-brand-pills > span:nth-child(2) { background: #0388CB; }
+.hris-brand-pills > span:nth-child(3) { background: var(--brand-orange); }

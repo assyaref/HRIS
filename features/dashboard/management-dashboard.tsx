@@ -633,7 +633,7 @@ export async function ManagementDashboard({
                 color: "#22C55E",
               },
               { label: "Nonaktif", value: workforce.inactive, color: "#94A3B8" },
-              { label: "Baru (30 hari)", value: workforce.newLast30Days, color: "#1E63EE" },
+              { label: "Baru (30 hari)", value: workforce.newLast30Days, color: "#0B5CC5" },
             ]}
           />
         </aside>

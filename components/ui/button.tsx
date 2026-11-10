@@ -23,7 +23,7 @@ const baseButtonClasses =
 
 const buttonVariantClasses: Record<ButtonVariant, string> = {
   primary:
-    "bg-gradient-to-br from-[#2F7BF6] to-primary text-primary-foreground hover:brightness-105 active:brightness-95 shadow-[var(--shadow-primary)] dark:from-primary dark:to-primary",
+    "bg-gradient-to-br from-[#1C7FE0] to-primary text-primary-foreground hover:brightness-105 active:brightness-95 shadow-[var(--shadow-primary)] dark:from-primary dark:to-primary",
   secondary:
     "bg-secondary text-secondary-foreground hover:bg-secondary/90 active:bg-secondary/80",
   tonal:

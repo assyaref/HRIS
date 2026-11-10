@@ -25,7 +25,7 @@ describe("buildWebManifest", () => {
     assert.equal(manifest.short_name, PWA_APP_SHORT_NAME);
     assert.equal(manifest.display, "standalone");
     assert.equal(manifest.start_url, "/");
-    assert.equal(manifest.theme_color, "#1E5EEB");
+    assert.equal(manifest.theme_color, "#0A3F8F");
     assert.equal(manifest.background_color, "#F8F9FF");
   });
 

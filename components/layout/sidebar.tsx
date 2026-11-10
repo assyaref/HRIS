@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 
 import { cn } from "@/lib/utils/cn";
 
+import { BrandLogo, BrandMark } from "./brand";
 import { HrisIcon } from "./icons";
 import { NavLinks } from "./nav-links";
 import { useShell } from "./shell-context";
@@ -30,34 +30,28 @@ export function Sidebar() {
       {/* Brand block */}
       <div
         className={cn(
-          "hris-sidebar-brand relative flex shrink-0 items-center gap-3 pt-5 pb-7",
-          collapsed ? "justify-center px-3" : "px-6"
+          "hris-sidebar-brand relative flex h-[116px] shrink-0 items-center gap-2 pb-1.5",
+          collapsed ? "justify-center px-3" : "pr-4 pl-5"
         )}
       >
         <Link
           href="/dashboard"
           aria-label="HRIS Lite Enterprise — Beranda"
-          className="flex min-w-0 items-center gap-3 rounded-2xl focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none"
+          className="flex min-w-0 flex-col items-start gap-1 rounded-2xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
-          <span className="flex size-[52px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-white shadow-[0_8px_18px_-10px_rgb(0_0_0/0.45)]">
-            <Image
-              src="/brand/hris-logo.png"
-              alt=""
-              width={52}
-              height={52}
-              priority
-              className="size-[52px] object-contain p-1.5"
-            />
-          </span>
-          {collapsed ? null : (
-            <span className="min-w-0 leading-tight">
-              <span className="block text-[22px] font-extrabold tracking-tight">
-                HRIS
+          {collapsed ? (
+            <span className="hris-logo-plate flex size-14 items-center justify-center rounded-2xl">
+              <BrandMark size={48} priority />
+            </span>
+          ) : (
+            <>
+              <span className="hris-logo-plate flex">
+                <BrandLogo height={60} priority />
               </span>
-              <span className="block truncate text-[13px] font-medium text-white/85">
+              <span className="pl-0.5 text-[11px] font-semibold tracking-[0.08em] text-sidebar-muted uppercase">
                 Lite Enterprise v2.0
               </span>
-            </span>
+            </>
           )}
         </Link>
         {collapsed ? null : (
@@ -65,7 +59,7 @@ export function Sidebar() {
             type="button"
             onClick={toggleCollapsed}
             aria-label="Ciutkan sidebar"
-            className="ml-auto flex size-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25 focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none"
+            className="ml-auto flex size-9 shrink-0 items-center justify-center self-start mt-6 rounded-full bg-sidebar-hover text-sidebar-muted transition-colors hover:bg-accent hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
             <HrisIcon name="chevron-left" className="size-[18px]" />
           </button>
