@@ -6,7 +6,7 @@ import { BuildingIllustration } from "./building-illustration";
 /**
  * Sign-in shell (HRIS Lite Enterprise v2.0).
  *
- * Desktop: blue brand panel with the office illustration on the left, the
+ * Desktop: blue brand panel (logo + office illustration) on the left, the
  * form on the right. Mobile: the blue band on top closing with a wave, the
  * form card below.
  */
@@ -16,17 +16,6 @@ export function AuthShell({ children }: { children: ReactNode }) {
       {/* Brand panel */}
       <section className="hris-band relative isolate overflow-hidden px-6 pt-8 pb-24 lg:flex lg:w-[46%] lg:flex-col lg:px-14 lg:py-12">
         <Brand tone="onBlue" size="lg" />
-        <div className="relative z-10 mt-8 max-w-md lg:mt-[12vh]">
-          <p className="text-sm font-semibold tracking-[0.12em] text-white/80 uppercase">
-            Human Resources Information System
-          </p>
-          <h1 className="mt-3 text-[28px] leading-tight font-extrabold tracking-tight lg:text-[38px]">
-            Kelola karyawan, absensi, cuti & gaji dalam satu tempat.
-          </h1>
-          <p className="mt-3 text-[15px] text-white/85 lg:text-base">
-            Masuk untuk melanjutkan ke dashboard HRIS organisasi Anda.
-          </p>
-        </div>
         <div
           aria-hidden="true"
           className="pointer-events-none absolute right-0 bottom-6 hidden h-[34vh] max-h-[300px] w-full lg:block"
