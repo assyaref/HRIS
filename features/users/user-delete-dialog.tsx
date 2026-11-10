@@ -1,10 +1,13 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 
 import { notifier } from "@/lib/notifier";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -18,10 +21,13 @@ import { deleteUserAction, type UserActionState } from "./actions";
 import type { UserAccountListItem } from "./queries";
 import { UserStatusBadge } from "./status-badge";
 
-const initialState: UserActionState = { status: "idle" };
-
 interface DeleteUserDialogProps {
   user: UserAccountListItem;
+  /**
+   * The account has protected history; only a Super Administrator sees this
+   * button, and must re-type the email (the server re-checks both).
+   */
+  requiresConfirmation?: boolean;
 }
 
 /**
@@ -32,19 +38,45 @@ interface DeleteUserDialogProps {
  * history) server-side. The button is hidden entirely when the server-side
  * requirements prevent deletion.
  */
-export function DeleteUserDialog({ user }: DeleteUserDialogProps) {
+export function DeleteUserDialog({
+  user,
+  requiresConfirmation = false,
+}: DeleteUserDialogProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [state, formAction, isPending] = useActionState(
-    deleteUserAction.bind(null, user.id),
-    initialState
-  );
+  const [state, setState] = useState<UserActionState>({ status: "idle" });
+  const [needsConfirmation, setNeedsConfirmation] =
+    useState(requiresConfirmation);
+  const [confirmation, setConfirmation] = useState("");
+  const [isPending, startTransition] = useTransition();
 
-  if (state.status === "success" && open) {
-    notifier.success(state.message ?? "User account deleted.");
-    setOpen(false);
+  const confirmed =
+    !needsConfirmation ||
+    confirmation.trim().toLowerCase() === user.email.trim().toLowerCase();
+
+  function confirmDelete() {
+    startTransition(async () => {
+      const result = await deleteUserAction(
+        user.id,
+        needsConfirmation ? confirmation : undefined
+      );
+      setState(result);
+      if (result.status === "success") {
+        notifier.success(result.message ?? "User account deleted.");
+        setOpen(false);
+        router.refresh();
+      } else if (result.requiresConfirmation) {
+        setNeedsConfirmation(true);
+      } else {
+        notifier.error(result.message ?? "Could not delete the user account.");
+      }
+    });
   }
 
   function openWithWarning() {
+    setState({ status: "idle" });
+    setConfirmation("");
+    setNeedsConfirmation(requiresConfirmation);
     notifier.warning(
       "Deleting this account is permanent and cannot be undone. Review the details and confirm."
     );
@@ -63,14 +95,21 @@ export function DeleteUserDialog({ user }: DeleteUserDialogProps) {
       >
         Delete
       </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog
+        open={open}
+        onOpenChange={(next) => {
+          if (!isPending) setOpen(next);
+        }}
+      >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-destructive">
               Delete user account
             </DialogTitle>
             <DialogDescription>
-              This permanently removes the account and cannot be undone.
+              {needsConfirmation
+                ? "Akun ini memiliki riwayat (audit log, approval, payroll, dll). Riwayat tetap disimpan tetapi tidak lagi terhubung ke akun ini. Tindakan ini tidak dapat dibatalkan."
+                : "This permanently removes the account and cannot be undone."}
             </DialogDescription>
           </DialogHeader>
 
@@ -107,6 +146,22 @@ export function DeleteUserDialog({ user }: DeleteUserDialogProps) {
             </p>
           </div>
 
+          {needsConfirmation ? (
+            <div className="space-y-2">
+              <Label htmlFor={`user-delete-confirm-${user.id}`}>
+                Ketik <span className="font-semibold">{user.email}</span> untuk
+                konfirmasi
+              </Label>
+              <Input
+                id={`user-delete-confirm-${user.id}`}
+                value={confirmation}
+                onChange={(event) => setConfirmation(event.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </div>
+          ) : null}
+
           <DialogFooter className="flex gap-2 sm:justify-end">
             <Button
               type="button"
@@ -119,8 +174,8 @@ export function DeleteUserDialog({ user }: DeleteUserDialogProps) {
             <Button
               type="button"
               variant="destructive"
-              disabled={isPending}
-              onClick={() => formAction()}
+              disabled={isPending || !confirmed}
+              onClick={confirmDelete}
             >
               {isPending ? "Deleting..." : "Yes, delete account"}
             </Button>

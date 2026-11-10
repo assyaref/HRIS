@@ -97,9 +97,10 @@ export default async function UsersSettingsPage({
         countActiveSuperAdminAccounts(),
       ]);
 
-    const canDeleteMap = await computeDeleteEligibility({
+    const { canDeleteMap, protectedHistoryMap } = await computeDeleteEligibility({
       users,
       actorUserId: user.id,
+      actorIsSuperAdmin: true,
       canDelete,
       activeSuperAdminCount,
     });
@@ -134,6 +135,7 @@ export default async function UsersSettingsPage({
           canUpdate={canUpdate}
           canReset={canReset}
           canDeleteMap={canDeleteMap}
+          protectedHistoryMap={protectedHistoryMap}
           actorIsSuperAdmin={true}
         />
       </div>
@@ -164,9 +166,10 @@ export default async function UsersSettingsPage({
     countActiveSuperAdminAccounts(),
   ]);
 
-  const canDeleteMap = await computeDeleteEligibility({
+  const { canDeleteMap, protectedHistoryMap } = await computeDeleteEligibility({
     users,
     actorUserId: user.id,
+    actorIsSuperAdmin: false,
     canDelete,
     activeSuperAdminCount,
   });
@@ -188,6 +191,7 @@ export default async function UsersSettingsPage({
         canUpdate={canUpdate}
         canReset={canReset}
         canDeleteMap={canDeleteMap}
+        protectedHistoryMap={protectedHistoryMap}
         actorIsSuperAdmin={false}
       />
     </div>
@@ -236,16 +240,22 @@ function PageHeader({
 async function computeDeleteEligibility({
   users,
   actorUserId,
+  actorIsSuperAdmin,
   canDelete,
   activeSuperAdminCount,
 }: {
   users: Array<{ id: string; roleCode: string | null }>;
   actorUserId: string;
+  actorIsSuperAdmin: boolean;
   canDelete: boolean;
   activeSuperAdminCount: number;
-}): Promise<Record<string, boolean>> {
-  const map: Record<string, boolean> = {};
-  if (!canDelete) return map;
+}): Promise<{
+  canDeleteMap: Record<string, boolean>;
+  protectedHistoryMap: Record<string, boolean>;
+}> {
+  const canDeleteMap: Record<string, boolean> = {};
+  const protectedHistoryMap: Record<string, boolean> = {};
+  if (!canDelete) return { canDeleteMap, protectedHistoryMap };
 
   await Promise.all(
     users.map(async (target) => {
@@ -255,9 +265,13 @@ async function computeDeleteEligibility({
       const protectedHistory = isOnlySuperAdmin
         ? false
         : await hasProtectedHistory(target.id);
-      map[target.id] = !isSelf && !isOnlySuperAdmin && !protectedHistory;
+      protectedHistoryMap[target.id] = protectedHistory;
+      // A Super Administrator may still delete accounts with protected
+      // history (after re-typing the email); everyone else may not.
+      canDeleteMap[target.id] =
+        !isSelf && !isOnlySuperAdmin && (actorIsSuperAdmin || !protectedHistory);
     })
   );
 
-  return map;
+  return { canDeleteMap, protectedHistoryMap };
 }

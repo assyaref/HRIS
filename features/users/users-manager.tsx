@@ -36,6 +36,8 @@ interface UsersManagerProps {
   canReset: boolean;
   /** Per-account delete eligibility (independent of the server's re-check). */
   canDeleteMap: Record<string, boolean>;
+  /** Accounts with protected history (SUPERADMIN must re-type the email). */
+  protectedHistoryMap?: Record<string, boolean>;
   actorIsSuperAdmin: boolean;
 }
 
@@ -52,6 +54,7 @@ export function UsersManager({
   canUpdate,
   canReset,
   canDeleteMap,
+  protectedHistoryMap = {},
   actorIsSuperAdmin,
 }: UsersManagerProps) {
   if (users.length === 0) {
@@ -129,7 +132,10 @@ export function UsersManager({
                         }}
                       />
                     ) : null}
-                    {canDeleteMap[user.id] ? <DeleteUserDialog user={user} /> : null}
+                    {canDeleteMap[user.id] ? <DeleteUserDialog
+                user={user}
+                requiresConfirmation={Boolean(protectedHistoryMap[user.id])}
+              /> : null}
                   </div>
                 </TableCell>
               </TableRow>
@@ -194,7 +200,10 @@ export function UsersManager({
                   }}
                 />
               ) : null}
-              {canDeleteMap[user.id] ? <DeleteUserDialog user={user} /> : null}
+              {canDeleteMap[user.id] ? <DeleteUserDialog
+                user={user}
+                requiresConfirmation={Boolean(protectedHistoryMap[user.id])}
+              /> : null}
             </div>
           </div>
         ))}

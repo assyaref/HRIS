@@ -82,6 +82,12 @@ export interface DeletePolicyInput {
   activeSuperAdminCount: number;
   /** Whether protected business history references the target account. */
   hasProtectedHistory: boolean;
+  /**
+   * A Super Administrator explicitly confirmed (re-typed the email) deleting
+   * an account with protected history. The history rows are kept; their
+   * user references are detached by the schema (FK ON DELETE SET NULL).
+   */
+  superAdminOverride?: boolean;
 }
 
 /**
@@ -111,7 +117,7 @@ export function evaluateUserDeletion(
     };
   }
 
-  if (input.hasProtectedHistory) {
+  if (input.hasProtectedHistory && !input.superAdminOverride) {
     return {
       allowed: false,
       code: "PROTECTED_HISTORY",

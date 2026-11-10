@@ -109,6 +109,39 @@ describe("user deletion policy", () => {
     }
   });
 
+  it("allows a confirmed Super Administrator override of protected history", () => {
+    const decision = evaluateUserDeletion({
+      actorUserId: ACTOR_ID,
+      targetUserId: TARGET_ID,
+      targetIsSuperAdmin: false,
+      activeSuperAdminCount: 1,
+      hasProtectedHistory: true,
+      superAdminOverride: true,
+    });
+    assert.deepEqual(decision, { allowed: true });
+  });
+
+  it("never lets the override bypass self-deletion or the last Super Administrator", () => {
+    const self = evaluateUserDeletion({
+      actorUserId: ACTOR_ID,
+      targetUserId: ACTOR_ID,
+      targetIsSuperAdmin: false,
+      activeSuperAdminCount: 2,
+      hasProtectedHistory: true,
+      superAdminOverride: true,
+    });
+    assert.equal(self.allowed, false);
+    const lastSuperAdmin = evaluateUserDeletion({
+      actorUserId: ACTOR_ID,
+      targetUserId: TARGET_ID,
+      targetIsSuperAdmin: true,
+      activeSuperAdminCount: 1,
+      hasProtectedHistory: true,
+      superAdminOverride: true,
+    });
+    assert.equal(lastSuperAdmin.allowed, false);
+  });
+
   it("prioritizes self-deletion over other rejection reasons", () => {
     const decision = evaluateUserDeletion({
       actorUserId: ACTOR_ID,

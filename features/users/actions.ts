@@ -64,6 +64,8 @@ export interface UserActionState {
   message?: string;
   fieldErrors?: Record<string, string>;
   temporaryPassword?: string;
+  /** Delete only: protected history exists and the email must be re-typed. */
+  requiresConfirmation?: boolean;
 }
 
 const DB_UNIQUE_VIOLATION = "23505";
@@ -624,7 +626,13 @@ export async function updateUserAction(
  * must be deactivated instead). All reads run org-scoped.
  */
 export async function deleteUserAction(
-  userId: string
+  userId: string,
+  /**
+   * Re-typed account email. A Super Administrator may delete an account that
+   * has protected history only when this matches; the history is kept and
+   * detached from the account (FK ON DELETE SET NULL).
+   */
+  confirmation?: string
 ): Promise<UserActionState> {
   const actor = await resolveActor();
   await requirePermission(actor.userId, PERMISSIONS.USERS_DELETE);
@@ -661,14 +669,29 @@ export async function deleteUserAction(
   const activeSuperAdminCount = await countActiveSuperAdminAccounts();
   const protectedHistory = await hasProtectedHistory(userId);
 
+  const superAdminOverride =
+    actor.isSuperAdmin &&
+    protectedHistory &&
+    typeof confirmation === "string" &&
+    confirmation.trim().toLowerCase() === target.email.trim().toLowerCase();
+
   const decision = evaluateUserDeletion({
     actorUserId: actor.userId,
     targetUserId: userId,
     targetIsSuperAdmin,
     activeSuperAdminCount,
     hasProtectedHistory: protectedHistory,
+    superAdminOverride,
   });
   if (!decision.allowed) {
+    if (decision.code === "PROTECTED_HISTORY" && actor.isSuperAdmin) {
+      return {
+        status: "error",
+        requiresConfirmation: true,
+        message:
+          "Akun ini memiliki riwayat (audit log, approval, payroll, dll). Ketik email akun untuk tetap menghapusnya; riwayat tetap disimpan tanpa referensi ke akun ini.",
+      };
+    }
     return error(decision.message);
   }
 
@@ -691,6 +714,7 @@ export async function deleteUserAction(
       role: primaryRoleCode,
       organizationId,
       outcome: "deleted",
+      ...(superAdminOverride ? { mode: "with_protected_history" } : {}),
     },
   });
 
