@@ -95,7 +95,14 @@ export type LeaveAuditAction =
   | "leave.created"
   | "leave.cancelled"
   | "leave.approved"
-  | "leave.rejected";
+  | "leave.rejected"
+  | "leave.type.created"
+  | "leave.type.updated"
+  | "leave.type.status_changed"
+  | "leave.type.deleted"
+  | "leave.balance.saved"
+  | "leave.balance.deleted"
+  | "leave.balance.generated";
 
 export type PermissionAuditAction =
   | "permission.created"
@@ -167,7 +174,8 @@ export type OrganizationAuditAction =
   | "organization.updated"
   | "organization.deleted"
   | "organization.activated"
-  | "organization.deactivated";
+  | "organization.deactivated"
+  | "organization.context_switched";
 
 export type AuditAction =
   | RbacAuditAction

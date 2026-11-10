@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils/cn";
 import { BrandLogo, BrandMark } from "./brand";
 import { HrisIcon } from "./icons";
 import { NavLinks } from "./nav-links";
+import { OrganizationSwitcher } from "./organization-switcher";
 import { useShell } from "./shell-context";
 
 /**
@@ -69,11 +70,20 @@ export function Sidebar() {
       {/* Organization chip */}
       {profile.organizationName ? (
         <div className={cn("shrink-0 pt-5 pb-2", collapsed ? "px-3" : "px-5")}>
-          <OrganizationChip
-            name={profile.organizationName}
-            collapsed={collapsed}
-            canSwitch={profile.isSuperAdmin}
-          />
+          {profile.isSuperAdmin && profile.organizationOptions?.length ? (
+            <OrganizationSwitcher
+              name={profile.organizationName}
+              activeOrganizationId={profile.activeOrganizationId ?? null}
+              options={profile.organizationOptions}
+              collapsed={collapsed}
+              className={cn(!collapsed && "border-b border-sidebar-border pb-4")}
+            />
+          ) : (
+            <OrganizationChip
+              name={profile.organizationName}
+              collapsed={collapsed}
+            />
+          )}
         </div>
       ) : null}
 
@@ -96,48 +106,26 @@ export function Sidebar() {
 function OrganizationChip({
   name,
   collapsed,
-  canSwitch,
 }: {
   name: string;
   collapsed: boolean;
-  canSwitch: boolean;
 }) {
-  const body = (
-    <>
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-3 border-b border-sidebar-border pb-4",
+        collapsed && "justify-center border-b-0 pb-0"
+      )}
+      title={collapsed ? name : undefined}
+    >
       <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-primary text-primary">
         <HrisIcon name="building" className="size-[18px]" />
       </span>
       {collapsed ? null : (
-        <>
-          <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-foreground">
-            {name}
-          </span>
-          {canSwitch ? (
-            <HrisIcon name="chevron-down" className="size-[18px] shrink-0 text-muted-foreground" />
-          ) : null}
-        </>
+        <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-foreground">
+          {name}
+        </span>
       )}
-    </>
-  );
-
-  const className = cn(
-    "flex items-center gap-3 border-b border-sidebar-border pb-4",
-    collapsed && "justify-center border-b-0 pb-0"
-  );
-
-  // Super administrators manage several organizations: the chip opens the
-  // organization directory. Everyone else sees a static label.
-  return canSwitch ? (
-    <Link
-      href="/settings/organizations"
-      title={collapsed ? name : "Kelola organisasi"}
-      className={cn(className, "rounded-lg transition-colors hover:text-primary")}
-    >
-      {body}
-    </Link>
-  ) : (
-    <div className={className} title={collapsed ? name : undefined}>
-      {body}
     </div>
   );
 }

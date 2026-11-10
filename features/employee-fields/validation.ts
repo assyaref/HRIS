@@ -1,3 +1,6 @@
+
+/** System-level role code that bypasses per-role field/tab restrictions. */
+const SUPERADMIN_ROLE = "SUPERADMIN";
 /**
  * Custom employee field validation (Employee Master Data 2.0).
  *
@@ -62,6 +65,8 @@ export function isFieldVisibleToRoles(
   visibilityConfig: readonly string[],
   roleCodes: readonly string[]
 ): boolean {
+  // The system-level Super Administrator sees and edits every field/tab.
+  if (roleCodes.includes(SUPERADMIN_ROLE)) return true;
   if (visibilityConfig.length === 0) return true;
   return visibilityConfig.some((code) => roleCodes.includes(code));
 }
@@ -71,6 +76,8 @@ export function isFieldEditableByRoles(
   editableByConfig: readonly string[],
   roleCodes: readonly string[]
 ): boolean {
+  // The system-level Super Administrator sees and edits every field/tab.
+  if (roleCodes.includes(SUPERADMIN_ROLE)) return true;
   if (editableByConfig.length === 0) return true;
   return editableByConfig.some((code) => roleCodes.includes(code));
 }

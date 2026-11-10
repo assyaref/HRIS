@@ -14,6 +14,14 @@ import type { NavSection } from "@/types/navigation";
 
 import { flattenNavHrefs } from "./navigation";
 
+/** An organization a Super Administrator may switch into. */
+export interface ShellOrganizationOption {
+  id: string;
+  name: string;
+  code: string;
+  isSystem: boolean;
+}
+
 /** Who is signed in, as shown by the shell (sidebar, top bar, hero, drawer). */
 export interface ShellProfile {
   displayName: string;
@@ -26,6 +34,10 @@ export interface ShellProfile {
   /** "Selamat Pagi" … computed server-side in the app time zone. */
   greeting: string;
   isSuperAdmin: boolean;
+  /** The organization this session operates in (acting org for SUPERADMIN). */
+  activeOrganizationId?: string | null;
+  /** Super Administrator only: organizations available in the switcher. */
+  organizationOptions?: ShellOrganizationOption[];
 }
 
 interface ShellContextValue {

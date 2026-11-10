@@ -163,9 +163,16 @@ describe("employee filter bar: organization + project selects", () => {
 
   it("resets the project selection when the organization changes", () => {
     const start = filtersSource.indexOf("function onOrganizationChange");
-    const block = filtersSource.slice(start, start + 400);
+    const end = filtersSource.indexOf("function onProjectChange");
+    const block = filtersSource.slice(start, end);
     assert.equal(block.includes('params.delete("projectId")'), true);
     assert.equal(block.includes('params.set("org", value)'), true);
+    // A Super Administrator switches the acting organization and lands on the
+    // bare list, so a project of the previous tenant is never carried over.
+    assert.equal(
+      block.includes('switchActingOrganizationAction(value, "/employees")'),
+      true
+    );
   });
 
   it("keeps the scope when only the project changes", () => {

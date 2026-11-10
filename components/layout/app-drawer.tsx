@@ -14,6 +14,7 @@ import { HrisIcon } from "./icons";
 import { resolveActiveHref } from "./navigation";
 import { useShell } from "./shell-context";
 import { Avatar } from "./user-menu";
+import { OrganizationSwitcher } from "./organization-switcher";
 
 /**
  * Mobile navigation drawer (below `lg`).
@@ -128,6 +129,18 @@ export function AppDrawer() {
             <path d="M0 26C90 6 190 0 280 12s90 18 120 10v18H0z" fill="currentColor" />
           </svg>
         </div>
+
+        {profile.isSuperAdmin &&
+        profile.organizationName &&
+        profile.organizationOptions?.length ? (
+          <div className="shrink-0 border-b border-border px-5 pt-1 pb-3">
+            <OrganizationSwitcher
+              name={profile.organizationName}
+              activeOrganizationId={profile.activeOrganizationId ?? null}
+              options={profile.organizationOptions}
+            />
+          </div>
+        ) : null}
 
         {/* Menu */}
         <nav aria-label="Menu navigasi" className="flex-1 overflow-y-auto px-4 pt-1 pb-3">

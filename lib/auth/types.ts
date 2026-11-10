@@ -20,7 +20,16 @@ export interface CurrentUser {
   id: string;
   email: string;
   status: UserStatus;
+  /**
+   * The organization this request operates in. For every user except a Super
+   * Administrator this is their own organization. A Super Administrator (who
+   * lives in the reserved SYSTEM organization) operates in the tenant they
+   * selected (see lib/auth/acting-organization.ts), so tenant modules read and
+   * write that tenant.
+   */
   organizationId: string | null;
+  /** The user's own organization (`users.organization_id`), never overridden. */
+  homeOrganizationId?: string | null;
   createdAt: Date;
   /**
    * Password lifecycle (0020): while true, the authenticated session may only

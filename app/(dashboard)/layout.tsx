@@ -6,6 +6,7 @@ import type { ShellProfile } from "@/components/layout/shell-context";
 import { EmployeeBottomNavigation } from "@/components/employee/employee-bottom-navigation";
 import { requireUser } from "@/lib/auth/auth";
 import { PERMISSIONS } from "@/lib/auth/permissions";
+import { listActingOrganizationOptions } from "@/lib/auth/acting-organization";
 import { getUserAuthorization } from "@/lib/auth/rbac";
 import { displayRoleLabel } from "@/lib/auth/roles";
 import { indonesianGreeting, initialsOf } from "@/lib/utils/greeting";
@@ -48,6 +49,10 @@ export default async function DashboardLayout({
       ])
     : [null, null, null];
 
+  const organizationOptions = authorization.isSuperAdmin
+    ? await listActingOrganizationOptions()
+    : undefined;
+
   const roleLabel = displayRoleLabel(authorization.roleCodes);
   const canAttendance = authorization.permissionCodes.includes(
     PERMISSIONS.ATTENDANCE_VIEW
@@ -67,6 +72,8 @@ export default async function DashboardLayout({
     organizationName,
     greeting: indonesianGreeting(),
     isSuperAdmin: authorization.isSuperAdmin,
+    activeOrganizationId: organizationId,
+    organizationOptions,
   };
 
   return (

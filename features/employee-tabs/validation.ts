@@ -1,3 +1,6 @@
+
+/** System-level role code that bypasses per-role field/tab restrictions. */
+const SUPERADMIN_ROLE = "SUPERADMIN";
 /**
  * Employee Custom Tab validation (Employee Custom Tabs 2.0).
  *
@@ -190,6 +193,8 @@ export function isTabVisibleToRoles(
   visibilityConfig: readonly string[],
   roleCodes: readonly string[]
 ): boolean {
+  // The system-level Super Administrator sees and edits every field/tab.
+  if (roleCodes.includes(SUPERADMIN_ROLE)) return true;
   if (visibilityConfig.length === 0) return true;
   return visibilityConfig.some((code) => roleCodes.includes(code));
 }

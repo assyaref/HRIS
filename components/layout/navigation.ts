@@ -82,6 +82,12 @@ export const primaryNavigation: NavItem[] = [
         ],
         icon: "clipboard",
       },
+      {
+        title: "Jenis & Saldo Cuti",
+        href: "/leave/types",
+        permission: PERMISSIONS.LEAVE_MANAGE,
+        icon: "plane",
+      },
     ],
   },
   {
@@ -94,6 +100,23 @@ export const primaryNavigation: NavItem[] = [
         href: "/payroll",
         permission: PERMISSIONS.PAYROLL_VIEW,
         icon: "wallet",
+      },
+      {
+        title: "Komponen Gaji",
+        href: "/payroll/components",
+        permission: PERMISSIONS.PAYROLL_MANAGE,
+        icon: "wallet",
+      },
+      {
+        title: "Kelola Slip Gaji",
+        href: "/payroll/payslips",
+        permission: PERMISSIONS.PAYROLL_VIEW,
+        anyPermission: [
+          PERMISSIONS.PAYSLIP_PUBLISH,
+          PERMISSIONS.PAYSLIP_MANAGE,
+          PERMISSIONS.PAYROLL_MANAGE,
+        ],
+        icon: "payslip",
       },
       {
         title: "Slip Gaji Saya",

@@ -2,6 +2,7 @@ import "server-only";
 
 import { eq, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 
 import { db } from "@/db";
 import { employees, users } from "@/db/schema";
@@ -12,6 +13,7 @@ import {
   revokeSession,
   validateSession,
 } from "./session";
+import { resolveActingOrganizationId } from "./acting-organization";
 import { verifyPassword, verifyPasswordTimingEqualizer } from "./password";
 import type {
   AuthenticateResult,
@@ -133,13 +135,28 @@ export async function authenticateUser(
  * (revocation, expiry, user status) against PostgreSQL and returns safe user
  * information only.
  */
-export async function getCurrentUser(): Promise<CurrentUser | null> {
-  const token = await getSessionCookieValue();
-  if (!token) return null;
+export const getCurrentUser = cache(
+  async (): Promise<CurrentUser | null> => {
+    const token = await getSessionCookieValue();
+    if (!token) return null;
 
-  const validated = await validateSession(hashSessionToken(token));
-  return validated?.user ?? null;
-}
+    const validated = await validateSession(hashSessionToken(token));
+    if (!validated) return null;
+
+    // A Super Administrator operates in the tenant they selected; everyone
+    // else stays in their own organization (see acting-organization.ts).
+    const homeOrganizationId = validated.user.organizationId;
+    const acting = await resolveActingOrganizationId(
+      validated.user.id,
+      homeOrganizationId
+    );
+    return {
+      ...validated.user,
+      organizationId: acting.organizationId,
+      homeOrganizationId,
+    };
+  }
+);
 
 /** Options for `requireUser`. */
 export interface RequireUserOptions {

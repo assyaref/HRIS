@@ -102,6 +102,7 @@ import {
   isFieldEditableByRoles,
   isFieldVisibleToRoles,
 } from "@/features/employee-fields/filtering";
+import { SwitchOrganizationButton } from "@/features/acting-organization/switch-button";
 
 export const metadata: Metadata = {
   title: "Employee profile",
@@ -646,14 +647,14 @@ export default async function EmployeeDetailPage({
             <span className="font-semibold">
               {organizationName ?? organizationId}
             </span>
-            . Tampilan ini hanya-baca.
+            . Untuk mengubah data, kelola di organisasi tersebut.
           </p>
-          <Link
-            href="/employees"
-            className={buttonVariants({ variant: "outline", size: "sm" })}
+          <SwitchOrganizationButton
+            organizationId={organizationId}
+            returnTo={`/employees/${employee.id}`}
           >
-            Kembali ke organisasi saya
-          </Link>
+            Kelola di organisasi ini
+          </SwitchOrganizationButton>
         </div>
       ) : null}
 

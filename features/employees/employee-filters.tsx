@@ -1,5 +1,7 @@
 "use client";
 
+import { useTransition } from "react";
+
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -8,6 +10,7 @@ import { Label } from "@/components/ui/label";
 
 import { CUSTOM_FILTER_PARAM_PREFIX } from "@/features/employee-fields/filtering";
 import type { CustomFieldFilterSpec } from "@/features/employee-fields/filtering";
+import { switchActingOrganizationAction } from "@/features/acting-organization/actions";
 
 /**
  * Employee list filter bar.
@@ -69,6 +72,7 @@ export function EmployeeFilters({
   selectedProjectId?: string;
 }) {
   const router = useRouter();
+  const [switching, startSwitch] = useTransition();
   const hasCustomFilters = customFieldSpecs.length > 0;
 
   function navigate(mutate: (params: URLSearchParams) => void) {
@@ -81,6 +85,15 @@ export function EmployeeFilters({
 
   function onOrganizationChange(event: React.ChangeEvent<HTMLSelectElement>) {
     const value = event.target.value;
+    if (canSwitchOrganization && value) {
+      // Super Administrator: switch the session's acting organization so the
+      // list AND every write action (create, edit, import, delete) run in the
+      // chosen tenant — not a read-only cross-tenant view.
+      startSwitch(async () => {
+        await switchActingOrganizationAction(value, "/employees");
+      });
+      return;
+    }
     navigate((params) => {
       if (value) params.set("org", value);
       else params.delete("org");
@@ -121,9 +134,9 @@ export function EmployeeFilters({
           {canSwitchOrganization ? (
             <select
               id="employee-org-filter"
-              name="org"
               value={selectedOrganizationId}
               onChange={onOrganizationChange}
+              disabled={switching}
               className={SELECT_CLASS}
             >
               {organizations.map((organization) => (

@@ -58,6 +58,7 @@ import {
   resolveEmployeeScope,
   resolveSelectedProjectId,
 } from "@/features/employees/scope";
+import { SwitchOrganizationButton } from "@/features/acting-organization/switch-button";
 
 export const metadata: Metadata = {
   title: "Employees",
@@ -407,14 +408,14 @@ export default async function EmployeesPage({
           <p>
             Anda sedang melihat karyawan organisasi{" "}
             <span className="font-semibold">{viewedOrganizationName}</span>.
-            Perubahan di sini berlaku untuk tenant tersebut.
+            Untuk menambah atau mengubah data, kelola di organisasi tersebut.
           </p>
-          <Link
-            href="/employees"
-            className={buttonVariants({ variant: "outline", size: "sm" })}
+          <SwitchOrganizationButton
+            organizationId={organizationId}
+            returnTo="/employees"
           >
-            Kembali ke organisasi saya
-          </Link>
+            Kelola di organisasi ini
+          </SwitchOrganizationButton>
         </div>
       ) : null}
 

@@ -1,24 +1,19 @@
-/** Client-notification helper (toast/notifier). */
+/**
+ * Client-notification helper (toast/notifier).
+ *
+ * Events are dispatched on `window`, which is where the global `Toaster`
+ * (components/ui/toaster.tsx) listens. (They used to be dispatched on
+ * `document` without bubbling, so no toast ever reached the Toaster.)
+ */
+function emit(name: NotifierEvent, message: string) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(name, { detail: { message } }));
+}
+
 export const notifier = {
-  success: (message: string) => {
-    // Trigger a success toast — the UI component handles the display
-    const event = new CustomEvent("notification:success", {
-      detail: { message },
-    });
-    document.dispatchEvent(event);
-  },
-  error: (message: string) => {
-    const event = new CustomEvent("notification:error", {
-      detail: { message },
-    });
-    document.dispatchEvent(event);
-  },
-  warning: (message: string) => {
-    const event = new CustomEvent("notification:warning", {
-      detail: { message },
-    });
-    document.dispatchEvent(event);
-  },
+  success: (message: string) => emit("notification:success", message),
+  error: (message: string) => emit("notification:error", message),
+  warning: (message: string) => emit("notification:warning", message),
 };
 
 export type NotifierEvent =
