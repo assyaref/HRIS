@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   Table,
@@ -23,6 +21,7 @@ import { listWorkLocationsAction } from "@/features/work-locations/actions";
 import { collectWorkLocationWarnings } from "@/features/work-locations/guardrails";
 import { listWorkLocationProjectOptions } from "@/features/work-locations/queries";
 import { CreateWorkLocationDialog } from "@/features/work-locations/work-location-create-dialog";
+import { WorkLocationRowActions } from "@/features/work-locations/work-location-row-actions";
 
 export const metadata: Metadata = {
   title: "Work Locations",
@@ -151,16 +150,16 @@ export default async function WorkLocationsPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      {canManage && (
-                        <div className="flex justify-end gap-2">
-                          <Link
-                            href={`/settings/work-locations/${location.id}`}
-                            className={buttonVariants({ variant: "secondary", size: "sm" })}
-                          >
-                            Edit
-                          </Link>
-                        </div>
-                      )}
+                      {canManage ? (
+                        <WorkLocationRowActions
+                          location={{
+                            id: location.id,
+                            name: location.name,
+                            status: location.status,
+                            projectName: location.projectName,
+                          }}
+                        />
+                      ) : null}
                     </TableCell>
                   </TableRow>
                 );
