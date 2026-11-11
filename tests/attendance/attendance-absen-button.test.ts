@@ -1,11 +1,15 @@
 /**
  * ABSEN button + attendance flow wiring tests (node:test, source-invariant).
  *
- * Repository convention for suites without a live browser: the button is a
- * Next.js `<Link>` (client navigation), so its contract is pinned from source.
- * Covers the bottom-navigation ABSEN action, permission gating, active state,
- * safe-area/stacking, desktop hand-off, and the check-in / check-out page
- * wiring (loading + error handling). No liveness detection is present.
+ * Repository convention for suites without a live browser: the contract is
+ * pinned from source. Inside the app shell the ABSEN button opens the
+ * face-attendance sheet (a client dialog over the EXISTING check-in /
+ * check-out server actions); outside the shell it degrades to a Next.js
+ * `<Link>` into the attendance page. Covers the bottom-navigation ABSEN
+ * action, permission gating, active state, safe-area/stacking, desktop
+ * hand-off, the sheet's server-authoritative wiring and the check-in /
+ * check-out page wiring (loading + error handling). No liveness detection is
+ * present.
  */
 
 import { readFileSync } from "node:fs";
@@ -28,13 +32,26 @@ const layout = readRepoFile("app/(dashboard)/layout.tsx");
 const page = readRepoFile("app/(dashboard)/attendance/page.tsx");
 const panel = readRepoFile("features/attendance/attendance-panel.tsx");
 const panelCode = stripComments(panel);
+const sheet = readRepoFile("features/attendance/attendance-sheet.tsx");
+const sheetCode = stripComments(sheet);
+const sheetAction = readRepoFile("features/attendance/sheet.actions.ts");
+const shell = readRepoFile("components/layout/app-shell.tsx");
 
 describe("ABSEN bottom-navigation button", () => {
-  it("is an interactive link to the attendance page", () => {
+  it("opens the face-attendance sheet inside the shell", () => {
+    assert.equal(button.includes("useOptionalShell"), true);
+    assert.equal(button.includes("<button"), true);
+    assert.equal(button.includes('type="button"'), true);
+    assert.equal(button.includes("onClick={shell.openAttendanceSheet}"), true);
+    assert.equal(button.includes('aria-haspopup="dialog"'), true);
+    assert.equal(button.includes('<HrisIcon name="face"'), true);
+    assert.equal(button.includes('"qr-scan"'), false);
+  });
+
+  it("degrades to a link to the attendance page outside the shell", () => {
     assert.equal(button.includes('from "next/link"'), true);
     assert.equal(button.includes("<Link"), true);
     assert.equal(button.includes('href = "/attendance"'), true);
-    assert.equal(button.includes("<Link"), true);
   });
 
   it("has an accessible name and a visible label", () => {
@@ -100,6 +117,68 @@ describe("ABSEN bottom-navigation button", () => {
     assert.match(bottomNav, /role="status"/);
     assert.match(bottomNav, /Hubungi administrator/);
     assert.match(bottomNav, /aria-expanded=\{absenNotice\}/);
+  });
+});
+
+describe("face-attendance sheet (ABSEN dialog)", () => {
+  it("is mounted once in the authenticated shell", () => {
+    assert.equal(shell.includes('from "@/features/attendance/attendance-sheet"'), true);
+    assert.equal(shell.includes("<AttendanceSheet />"), true);
+  });
+
+  it("is an accessible modal dialog with Escape and focus trap", () => {
+    assert.equal(sheet.includes('role="dialog"'), true);
+    assert.equal(sheet.includes('aria-modal="true"'), true);
+    assert.equal(sheet.includes('event.key === "Escape"'), true);
+    assert.equal(sheet.includes("createTabTrap("), true);
+  });
+
+  it("loads today's state and the eligible locations from the server", () => {
+    assert.equal(sheet.includes("loadAttendanceSheetAction()"), true);
+    assert.equal(sheetAction.startsWith('"use server"'), true);
+    for (const token of [
+      "requireUser()",
+      "PERMISSIONS.ATTENDANCE_VIEW",
+      "PERMISSIONS.ATTENDANCE_CHECK_IN",
+      "PERMISSIONS.ATTENDANCE_CHECK_OUT",
+      "getEmployeeForUser(",
+      "findOpenAttendance(",
+      "findAttendanceForDate(",
+      "listEligibleAttendanceOptions(",
+    ]) {
+      assert.equal(sheetAction.includes(token), true, `loader must call ${token}`);
+    }
+  });
+
+  it("submits through the server-authoritative actions only", () => {
+    assert.equal(sheetCode.includes("checkInAction("), true);
+    assert.equal(sheetCode.includes("checkOutAction("), true);
+    // Same FormData boundary as the attendance page: the photo is a file part.
+    assert.equal(sheetCode.includes('formData.append("photo", photo, ATTENDANCE_PHOTO_CAPTURE_FILENAME)'), true);
+    assert.equal(sheetCode.includes('formData.append("location", JSON.stringify(locationPayload))'), true);
+    assert.equal(/employeeId|organizationId|attendanceDate/.test(sheetCode.replace(/openLocationName/g, "")), false);
+  });
+
+  it("requires the live camera for check-in and only GPS for check-out", () => {
+    assert.equal(sheetCode.includes('(mode === "check_out" || camera === "active")'), true);
+    assert.equal(sheetCode.includes("await checkOutAction({ location: locationPayload })"), true);
+  });
+
+  it("guards against double submission and offline submits", () => {
+    assert.equal(sheetCode.includes("if (!mode || pending) return;"), true);
+    assert.equal(sheetCode.includes("useTransition"), true);
+    assert.equal(sheetCode.includes("isBrowserOffline(navigator.onLine)"), true);
+  });
+
+  it("stops the camera when hidden and on unmount, and never persists the frame", () => {
+    assert.equal(sheetCode.includes('document.addEventListener("visibilitychange"'), true);
+    assert.equal(sheetCode.includes("getTracks().forEach((track) => track.stop())"), true);
+    assert.equal(/toDataURL|createObjectURL|localStorage|sessionStorage/.test(sheetCode), false);
+  });
+
+  it("does not introduce liveness detection or claim identity verification", () => {
+    assert.equal(/liveness/i.test(sheet), false);
+    assert.equal(sheetCode.includes("verifyFaceAction"), false);
   });
 });
 

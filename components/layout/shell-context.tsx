@@ -30,6 +30,8 @@ export interface ShellProfile {
   initials: string;
   employeeNumber: string | null;
   roleLabel: string | null;
+  /** Job title from the employee record ("IT Support"); null when unlinked. */
+  position?: string | null;
   avatarUrl: string | null;
   organizationName: string | null;
   /** Authenticated URL of the organization's custom logo, when one is set. */
@@ -55,6 +57,10 @@ interface ShellContextValue {
   setDrawerOpen: (open: boolean) => void;
   paletteOpen: boolean;
   setPaletteOpen: (open: boolean) => void;
+  /** The face-attendance bottom sheet (ABSEN button / "Absen Sekarang"). */
+  attendanceSheetOpen: boolean;
+  openAttendanceSheet: () => void;
+  closeAttendanceSheet: () => void;
 }
 
 const ShellContext = createContext<ShellContextValue | null>(null);
@@ -63,7 +69,7 @@ const COLLAPSE_KEY = "hris-sidebar-collapsed";
 
 /**
  * Client state for the authenticated shell: sidebar collapse (persisted per
- * browser), mobile drawer and the search palette. Navigation data arrives
+ * browser), mobile drawer, the search palette and the attendance sheet. Navigation data arrives
  * already permission-filtered from the server layout.
  */
 export function ShellProvider({
@@ -80,6 +86,9 @@ export function ShellProvider({
   const [collapsed, setCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [attendanceSheetOpen, setAttendanceSheetOpen] = useState(false);
+  const openAttendanceSheet = useCallback(() => setAttendanceSheetOpen(true), []);
+  const closeAttendanceSheet = useCallback(() => setAttendanceSheetOpen(false), []);
 
   // Restore the persisted collapse preference after hydration (the server
   // always renders the expanded rail, so the first paint matches).
@@ -121,6 +130,9 @@ export function ShellProvider({
       setDrawerOpen,
       paletteOpen,
       setPaletteOpen,
+      attendanceSheetOpen,
+      openAttendanceSheet,
+      closeAttendanceSheet,
     }),
     [
       sections,
@@ -131,6 +143,9 @@ export function ShellProvider({
       toggleCollapsed,
       drawerOpen,
       paletteOpen,
+      attendanceSheetOpen,
+      openAttendanceSheet,
+      closeAttendanceSheet,
     ]
   );
 

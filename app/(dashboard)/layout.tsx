@@ -70,6 +70,7 @@ export default async function DashboardLayout({
     initials: initialsOf(displayName),
     employeeNumber: employee?.employeeNumber ?? null,
     roleLabel: roleLabel ?? (employee ? "Karyawan" : null),
+    position: employee?.position ?? null,
     avatarUrl: employee?.profilePhotoUrl ?? null,
     organizationName,
     organizationLogoUrl: logoUrl,

@@ -43,6 +43,12 @@ import {
 } from "@/features/permission/constants";
 import { listMyPermissionRequests } from "@/features/permission/queries";
 
+import {
+  AbsenNowCard,
+  QuickMenuMoreTile,
+  QuickMenuSeeAll,
+  QuickMenuTile,
+} from "./home-actions";
 import { getMonthlyRecap, recentMonthKeys } from "./queries";
 
 interface EmployeeDashboardProps {
@@ -89,49 +95,6 @@ function InfoTile({
   );
 }
 
-/** One "Menu Cepat" tile: tinted tile, round coloured icon, bold label. */
-function QuickMenuTile({
-  href,
-  icon,
-  label,
-  tone,
-  badge,
-}: {
-  href: string;
-  icon: HrisIconName;
-  label: string;
-  tone: ChipTone;
-  badge?: number | null;
-}) {
-  return (
-    <Link
-      href={href}
-      className={cn(
-        `hris-tint-${tone}`,
-        "group flex min-h-[112px] flex-col items-center justify-center gap-2.5 rounded-[18px] px-2 py-4 text-center transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-      )}
-    >
-      <span
-        aria-hidden="true"
-        className={cn(
-          `hris-chip-${tone}`,
-          "relative flex size-12 items-center justify-center rounded-full"
-        )}
-      >
-        <HrisIcon name={icon} className="size-6" />
-        {badge ? (
-          <span className="absolute -top-1.5 -right-2 flex min-w-6 items-center justify-center rounded-full bg-[#EF4444] px-1.5 py-0.5 text-[11px] font-bold text-white ring-2 ring-card">
-            {badge > 99 ? "99+" : badge}
-          </span>
-        ) : null}
-      </span>
-      <span className="text-[15px] leading-tight font-semibold text-foreground">
-        {label}
-      </span>
-    </Link>
-  );
-}
-
 const STATE_PILL: Record<
   AttendanceCardState,
   { label: string; className: string }
@@ -151,7 +114,8 @@ const STATE_PILL: Record<
  *
  * The greeting hero lives in the shell's blue band; this page renders the
  * day at a glance (check-in, check-out, location, status), the big
- * "Absensi Sekarang" action, the monthly recap, quick menu, announcements
+ * "Absen Sekarang" action (opens the face-attendance sheet), the monthly
+ * recap, quick menu, announcements
  * and recent requests. All values are resolved server-side for the
  * signed-in employee — nothing is hard-coded.
  */
@@ -282,7 +246,7 @@ export async function EmployeeDashboard({
       (state === "CHECKED_IN" && canCheckOut));
   const ctaSubtitle =
     state === "CHECKED_IN"
-      ? `Masuk ${checkInLabel ?? "—"} · Check-out`
+      ? `Masuk ${checkInLabel ?? "—"} · Lakukan absensi pulang`
       : state === "CHECKED_OUT"
         ? "Absensi hari ini sudah selesai"
         : state === "ON_LEAVE"
@@ -293,30 +257,22 @@ export async function EmployeeDashboard({
               ? "Absensi hari ini ditolak — hubungi HR"
               : state === "UNAVAILABLE"
                 ? "Absensi tidak tersedia untuk profil Anda"
-                : "Check-in / Check-out";
+                : "Lakukan absensi masuk atau pulang";
 
-  const services: Array<{
+  const quickMenuAll: Array<{
     href: string;
     icon: HrisIconName;
     label: string;
-    tone: ChipTone;
-    badge?: number | null;
     show: boolean;
   }> = [
-    { href: "/attendance", icon: "calendar-check", label: "Absensi", tone: "blue", show: canAttendance },
-    { href: "/leave", icon: "plane", label: "Pengajuan Cuti", tone: "violet", show: canLeave },
-    { href: "/permission", icon: "clipboard", label: "Izin Kegiatan", tone: "amber", show: canPermission },
-    { href: "/payslip", icon: "wallet", label: "Payslip", tone: "green", show: canPayslip },
-    { href: "/settings/account", icon: "user", label: "Profil Saya", tone: "sky", show: true },
-    {
-      href: "/notifications",
-      icon: "bell",
-      label: "Notifikasi",
-      tone: "rose",
-      badge: unreadAnnouncements > 0 ? unreadAnnouncements : null,
-      show: true,
-    },
+    { href: "/attendance", icon: "calendar-check", label: "Absensi", show: canAttendance },
+    { href: "/leave", icon: "plane", label: "Cuti", show: canLeave },
+    { href: "/permission", icon: "users", label: "Pengajuan", show: canPermission },
+    { href: "/attendance?tab=riwayat", icon: "document", label: "Riwayat", show: canAttendance },
+    { href: "/payslip", icon: "wallet", label: "Payslip", show: canPayslip },
   ];
+  // Four tiles + "Lainnya" (the drawer) — the reference five-up row.
+  const quickMenu = quickMenuAll.filter((item) => item.show).slice(0, 4);
 
   const carouselItems = latestAnnouncements.map((item) => ({
     id: item.id,
@@ -416,42 +372,9 @@ export async function EmployeeDashboard({
           </InfoTile>
         </section>
 
-        {/* Primary attendance action */}
+        {/* Primary attendance action — opens the face-attendance sheet */}
         {canAttendance ? (
-          ctaEnabled ? (
-            <Link
-              href="/attendance"
-              className="hris-band group flex items-center gap-4 rounded-[20px] px-5 py-4 shadow-[0_18px_34px_-18px_rgb(30_94_235/0.9)] transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
-            >
-              <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/25">
-                <HrisIcon name="fingerprint" className="size-8" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-lg font-bold">Absensi Sekarang</span>
-                <span className="block truncate text-sm text-white/85">{ctaSubtitle}</span>
-              </span>
-              <HrisIcon
-                name="chevron-right"
-                className="size-7 shrink-0 transition-transform group-hover:translate-x-0.5"
-              />
-            </Link>
-          ) : (
-            <div className="flex items-center gap-4 rounded-[20px] border border-[var(--card-border)] bg-card px-5 py-4 hris-card">
-              <span className="hris-chip-blue flex size-14 shrink-0 items-center justify-center rounded-full">
-                <HrisIcon name="fingerprint" className="size-8" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-lg font-bold text-foreground">Absensi</span>
-                <span className="block text-sm text-muted-foreground">{ctaSubtitle}</span>
-              </span>
-              <Link
-                href="/attendance"
-                className="text-sm font-semibold text-primary hover:underline"
-              >
-                Riwayat
-              </Link>
-            </div>
-          )
+          <AbsenNowCard enabled={ctaEnabled} subtitle={ctaSubtitle} />
         ) : null}
 
         {/* Monthly recap — mobile position */}
@@ -462,23 +385,21 @@ export async function EmployeeDashboard({
         />
 
         {/* Quick menu */}
-        <section className="rounded-[20px] border border-[var(--card-border)] bg-card p-4 hris-card sm:p-5">
-          <h2 className="mb-4 text-lg font-bold tracking-tight text-foreground">
-            Menu Cepat
-          </h2>
-          <div className="grid grid-cols-3 gap-3 sm:gap-4">
-            {services
-              .filter((service) => service.show)
-              .map((service) => (
+        <section aria-label="Menu cepat" className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-[22px] font-bold tracking-tight text-foreground">Menu Cepat</h2>
+            <QuickMenuSeeAll />
+          </div>
+          <div className="grid grid-cols-5 gap-2 sm:gap-3">
+            {quickMenu.map((item) => (
                 <QuickMenuTile
-                  key={service.href}
-                  href={service.href}
-                  icon={service.icon}
-                  label={service.label}
-                  tone={service.tone}
-                  badge={service.badge}
+                  key={item.href}
+                  href={item.href}
+                  icon={item.icon}
+                  label={item.label}
                 />
-              ))}
+            ))}
+            <QuickMenuMoreTile />
           </div>
         </section>
 

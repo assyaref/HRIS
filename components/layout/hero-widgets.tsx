@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import { cn } from "@/lib/utils/cn";
 
+import { HrisIcon } from "./icons";
+
 /**
- * Hero widgets: live clock, local weather and the day's prayer schedule.
- *
- * Replaces the office illustration on the blue band. Everything runs in the
- * browser and follows the DEVICE: the clock uses the device time zone, and the
+ * Home widgets: live clock, local weather and the day's prayer schedule, as
+ * three cards right below the blue band. Everything runs in the browser and
+ * follows the DEVICE: the clock uses the device time zone, and the
  * weather / prayer times use the device position (Geolocation API, asked once
  * after an explicit mount with `geolocate`). When the position is denied or
  * unavailable the widgets fall back to the last known position stored in this
@@ -320,6 +321,25 @@ export function HeroWidgets({
     };
   }, [prayer, now]);
 
+  // Explicit re-request of the device position (the gear on the prayer card).
+  const refreshPosition = useCallback(() => {
+    if (!("geolocation" in navigator)) return;
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setCoords({
+          latitude: Number(position.coords.latitude.toFixed(4)),
+          longitude: Number(position.coords.longitude.toFixed(4)),
+          label: null,
+          source: "device",
+        });
+      },
+      () => {
+        setCoords((current) => current ?? DEFAULT_COORDS);
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 0 }
+    );
+  }, []);
+
   const dateLabel = now
     ? new Intl.DateTimeFormat("id-ID", {
         weekday: "long",
@@ -343,116 +363,200 @@ export function HeroWidgets({
           : "Mencari lokasi…");
   const placeNote =
     coords?.source === "default"
-      ? "lokasi perangkat tidak tersedia — menampilkan Jakarta"
+      ? "Lokasi perangkat tidak tersedia — menampilkan Jakarta"
       : coords?.source === "cached"
-        ? "lokasi tersimpan di perangkat ini"
+        ? "Lokasi tersimpan di perangkat ini"
         : null;
+  const visibleTimings = prayer
+    ? prayer.timings.filter((entry) => entry.key !== "Sunrise")
+    : [];
 
   return (
     <div
       className={cn(
-        "hris-widgets flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1 md:grid md:snap-none md:grid-cols-3 md:overflow-visible md:pb-0",
+        "grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-[1fr_1fr_1.7fr]",
         className
       )}
       aria-label="Jam, cuaca dan jadwal shalat"
     >
-      {/* Clock */}
-      <section className="hris-widget snap-start" aria-label="Jam">
-        <p className="hris-widget-title">Jam</p>
+      {/* Clock — blue card */}
+      <section
+        className="hris-clock-card relative overflow-hidden rounded-[22px] px-4 py-4 text-white sm:px-5"
+        aria-label="Jam saat ini"
+      >
+        <p className="flex items-center gap-2 text-[15px] font-medium text-white/90">
+          <HrisIcon name="clock" className="size-5 shrink-0" />
+          Jam Saat Ini
+        </p>
         <p
-          className="font-mono text-[28px] leading-none font-extrabold tracking-tight tabular-nums lg:text-[32px]"
+          className="mt-3 text-[28px] leading-none font-extrabold tracking-wide tabular-nums min-[400px]:text-[32px] lg:text-[36px]"
           suppressHydrationWarning
         >
           {clockLabel}
         </p>
-        <p className="mt-1.5 text-[13px] leading-snug text-white/90" suppressHydrationWarning>
-          {dateLabel || " "}
+        <p
+          className="mt-3 flex items-center gap-2 text-[13px] leading-snug text-white/90"
+          suppressHydrationWarning
+        >
+          <HrisIcon name="calendar" className="size-4 shrink-0" />
+          <span className="min-w-0">{dateLabel || "\u00a0"}</span>
         </p>
-        {timeZone ? (
-          <p className="mt-0.5 truncate text-[11px] text-white/70">{timeZone}</p>
-        ) : null}
+        {timeZone ? <span className="sr-only">{timeZone}</span> : null}
       </section>
 
-      {/* Weather */}
-      <section className="hris-widget snap-start" aria-label="Cuaca">
-        <p className="hris-widget-title">Cuaca</p>
+      {/* Weather — white card */}
+      <section
+        className="hris-card flex flex-col rounded-[22px] px-4 py-4 sm:px-5"
+        aria-label="Cuaca saat ini"
+      >
         {weather && weatherText ? (
           <>
             <div className="flex items-center gap-2">
-              <span className="text-[30px] leading-none" aria-hidden="true">
+              <span className="text-[40px] leading-none" aria-hidden="true">
                 {weatherText.glyph}
               </span>
-              <span className="text-[28px] leading-none font-extrabold tracking-tight tabular-nums lg:text-[32px]">
-                {weather.temperature}°C
-              </span>
+              <div className="min-w-0 flex-1 text-center">
+                <p className="text-[13px] text-muted-foreground">Cuaca Saat Ini</p>
+                <p className="text-[28px] leading-none font-extrabold tracking-tight text-foreground tabular-nums">
+                  {weather.temperature}
+                  <span className="text-xl align-top">°C</span>
+                </p>
+              </div>
             </div>
-            <p className="mt-1.5 text-[13px] leading-snug font-medium text-white/95">
+            <p className="mt-1.5 text-center text-[15px] font-bold text-foreground">
               {weatherText.label}
-              <span className="font-normal text-white/75">
-                {" "}· terasa {weather.apparent}°C
-              </span>
             </p>
-            <p className="mt-0.5 text-[11px] text-white/70">
-              Kelembapan {weather.humidity}% · Angin {weather.windSpeed} km/j
-            </p>
+            <ul className="mt-2 space-y-1 text-[13px] text-foreground/85">
+              <li className="flex items-center gap-2">
+                <HrisIcon name="droplet" className="size-4 shrink-0 text-primary" />
+                <span className="min-w-0 truncate">Kelembapan {weather.humidity}%</span>
+              </li>
+              <li className="flex items-center gap-2" title={placeNote ?? undefined}>
+                <HrisIcon name="map-pin" className="size-4 shrink-0 text-primary" />
+                <span className="min-w-0 truncate">Lokasi: {placeLabel}</span>
+              </li>
+            </ul>
           </>
         ) : (
-          <p className="text-[13px] text-white/80">
-            {weatherError ? "Data cuaca tidak tersedia." : "Memuat cuaca…"}
-          </p>
+          <>
+            <p className="text-[13px] text-muted-foreground">Cuaca Saat Ini</p>
+            <p className="mt-2 text-sm text-foreground/80">
+              {weatherError ? "Data cuaca tidak tersedia." : "Memuat cuaca…"}
+            </p>
+            <p className="mt-auto flex items-center gap-2 pt-2 text-[13px] text-foreground/85">
+              <HrisIcon name="map-pin" className="size-4 shrink-0 text-primary" />
+              <span className="min-w-0 truncate">Lokasi: {placeLabel}</span>
+            </p>
+          </>
         )}
-        <p className="mt-1.5 truncate text-[11px] text-white/75" title={placeNote ?? undefined}>
-          📍 {placeLabel}
-        </p>
       </section>
 
-      {/* Prayer times */}
-      <section className="hris-widget snap-start" aria-label="Jadwal shalat">
-        <p className="hris-widget-title">Jadwal Shalat</p>
-        {prayer ? (
-          <>
-            {nextPrayer ? (
-              <p className="text-[13px] leading-snug text-white/95">
-                Berikutnya{" "}
-                <span className="font-bold">{nextPrayer.label}</span>{" "}
-                <span className="font-mono font-bold tabular-nums">{nextPrayer.time}</span>
-                <span className="text-white/75">
-                  {" "}
-                  ·{" "}
-                  {nextPrayer.inMinutes >= 60
-                    ? `${Math.floor(nextPrayer.inMinutes / 60)} j ${nextPrayer.inMinutes % 60} m lagi`
-                    : `${nextPrayer.inMinutes} m lagi`}
-                </span>
+      {/* Prayer schedule — full-width card */}
+      <section
+        className="hris-card col-span-2 flex items-stretch gap-3 overflow-hidden rounded-[22px] lg:col-span-1"
+        aria-label="Jadwal shalat"
+      >
+        <MosqueArt />
+        <div className="min-w-0 flex-1 py-3 pr-2.5 min-[400px]:pr-3">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="flex items-center gap-2 text-[17px] leading-tight font-bold text-primary">
+                <HrisIcon name="mosque" className="size-5 shrink-0 text-[#0D9488]" />
+                Jadwal Shalat
               </p>
-            ) : null}
-            <ul className="mt-1.5 grid grid-cols-3 gap-x-2 gap-y-1 text-[12px]">
-              {prayer.timings
-                .filter((entry) => entry.key !== "Sunrise")
-                .map((entry) => (
+              <p className="mt-0.5 truncate text-[13px] text-muted-foreground" suppressHydrationWarning>
+                {dateLabel || "\u00a0"}
+              </p>
+              {prayer?.hijri ? <span className="sr-only">{prayer.hijri} (Kemenag)</span> : null}
+            </div>
+            <button
+              type="button"
+              onClick={refreshPosition}
+              aria-label="Perbarui lokasi perangkat untuk jadwal shalat dan cuaca"
+              title={placeNote ?? `Lokasi: ${placeLabel}`}
+              className="flex size-8 shrink-0 items-center justify-center rounded-full text-primary transition-colors hover:bg-surface-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            >
+              <HrisIcon name="settings" className="size-5" />
+            </button>
+          </div>
+          {prayer ? (
+            <ul className="mt-2 grid grid-cols-5 gap-1 min-[400px]:gap-1.5">
+              {visibleTimings.map((entry) => {
+                const isNext = nextPrayer?.key === entry.key;
+                return (
                   <li
                     key={entry.key}
                     className={cn(
-                      "flex items-baseline justify-between gap-1 rounded-md px-1.5 py-0.5",
-                      nextPrayer?.key === entry.key && "bg-white/15 font-bold"
+                      "rounded-xl px-0.5 py-1.5 text-center min-[400px]:px-1",
+                      isNext
+                        ? "bg-primary text-white shadow-[0_8px_18px_-10px_rgb(11_92_197/0.9)]"
+                        : "bg-[#EEF3FB] text-foreground dark:bg-muted"
                     )}
+                    aria-current={isNext ? "time" : undefined}
                   >
-                    <span className="text-white/80">{entry.label}</span>
-                    <span className="font-mono tabular-nums">{entry.time}</span>
+                    <span
+                      className={cn(
+                        "block whitespace-nowrap text-[10px] leading-tight font-semibold min-[400px]:text-[11px]",
+                        isNext ? "text-[#FFD54F]" : "text-muted-foreground"
+                      )}
+                    >
+                      {entry.label}
+                    </span>
+                    <span className="mt-0.5 block text-[13px] leading-tight font-extrabold tabular-nums min-[400px]:text-[15px]">
+                      {entry.time}
+                    </span>
                   </li>
-                ))}
+                );
+              })}
             </ul>
-            {prayer.hijri ? (
-              <p className="mt-1 truncate text-[11px] text-white/70">
-                {prayer.hijri} · Kemenag
-              </p>
-            ) : null}
-          </>
-        ) : (
-          <p className="text-[13px] text-white/80">
-            {prayerError ? "Jadwal shalat tidak tersedia." : "Memuat jadwal shalat…"}
-          </p>
-        )}
+          ) : (
+            <p className="mt-3 text-sm text-foreground/80">
+              {prayerError ? "Jadwal shalat tidak tersedia." : "Memuat jadwal shalat…"}
+            </p>
+          )}
+        </div>
       </section>
     </div>
+  );
+}
+
+/** Soft mosque illustration on the left of the prayer card (decorative). */
+function MosqueArt() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 96 112"
+      className="hris-prayer-art h-auto w-[64px] shrink-0 self-stretch min-[400px]:w-[84px] sm:w-[96px]"
+      preserveAspectRatio="xMidYMax slice"
+    >
+      <defs>
+        <linearGradient id="hris-mosque-sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#CFE3FF" />
+          <stop offset="1" stopColor="#EEF5FF" />
+        </linearGradient>
+        <linearGradient id="hris-mosque-dome" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#2F86E8" />
+          <stop offset="1" stopColor="#0B5CC5" />
+        </linearGradient>
+      </defs>
+      <rect width="96" height="112" fill="url(#hris-mosque-sky)" />
+      {/* crescent */}
+      <circle cx="70" cy="22" r="9" fill="#FFD54F" />
+      <circle cx="74" cy="19" r="8" fill="#DCEBFF" />
+      {/* minaret */}
+      <rect x="16" y="40" width="9" height="56" rx="2" fill="#FFFFFF" />
+      <path d="M14 42h13l-6.5-9z" fill="#2F86E8" />
+      <rect x="18" y="58" width="5" height="7" rx="1.5" fill="#0B5CC5" />
+      {/* hall */}
+      <rect x="28" y="66" width="56" height="30" rx="3" fill="#FFFFFF" />
+      <path d="M32 66c0-14 8-22 24-24 16 2 24 10 24 24z" fill="url(#hris-mosque-dome)" />
+      <rect x="55" y="36" width="2" height="7" fill="#FFD54F" />
+      <path d="M50 96v-13a6 6 0 0 1 12 0v13z" fill="#0B5CC5" />
+      <path d="M36 96v-9a4 4 0 0 1 8 0v9zM68 96v-9a4 4 0 0 1 8 0v9z" fill="#BFD9FF" />
+      {/* greenery + ground */}
+      <ellipse cx="12" cy="98" rx="12" ry="7" fill="#7CC97F" />
+      <ellipse cx="86" cy="99" rx="12" ry="7" fill="#9AD69C" />
+      <rect x="0" y="100" width="96" height="12" fill="#D4E6FF" />
+    </svg>
   );
 }

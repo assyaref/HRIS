@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 
+import { AttendanceSheet } from "@/features/attendance/attendance-sheet";
 import type { NavSection } from "@/types/navigation";
 
 import { AppDrawer } from "./app-drawer";
@@ -15,7 +16,9 @@ import { Sidebar } from "./sidebar";
  *
  * Desktop: white sidebar + blue header band (greeting hero on Beranda).
  * Mobile: the same band with a drawer, and the bottom navigation passed in
- * by the server layout. Children are server-rendered pages.
+ * by the server layout. The face-attendance sheet is mounted once here so the
+ * ABSEN button and the home "Absen Sekarang" card open the same flow.
+ * Children are server-rendered pages.
  */
 export function AppShell({
   sections,
@@ -47,6 +50,7 @@ export function AppShell({
       </div>
       <AppDrawer />
       {bottomNav}
+      <AttendanceSheet />
       <CommandPalette />
     </ShellProvider>
   );

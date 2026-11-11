@@ -63,7 +63,12 @@ export type HrisIconName =
   | "user"
   | "sun"
   | "moon"
-  | "sparkles";
+  | "sparkles"
+  // v3 additions (mobile home + face attendance sheet)
+  | "droplet"
+  | "grid"
+  | "mosque"
+  | "camera";
 
 interface IconPathProps {
   name: HrisIconName;
@@ -361,6 +366,37 @@ function paths(name: HrisIconName) {
           <rect x="13" y="7" width="4" height="4" rx=".6" />
           <rect x="7" y="13" width="4" height="4" rx=".6" />
           <path d="M13 13h1.5v1.5M17 13v.01M13 17h4v-2" />
+        </>
+      );
+    case "droplet":
+      return (
+        <path d="M12 3.5c-2.6 3.1-6 7-6 10.4a6 6 0 0 0 12 0c0-3.4-3.4-7.3-6-10.4Z" />
+      );
+    case "grid":
+      return (
+        <>
+          <rect x="3.5" y="3.5" width="7" height="7" rx="1.8" />
+          <rect x="13.5" y="3.5" width="7" height="7" rx="1.8" />
+          <rect x="3.5" y="13.5" width="7" height="7" rx="1.8" />
+          <rect x="13.5" y="13.5" width="7" height="7" rx="1.8" />
+        </>
+      );
+    case "mosque":
+      return (
+        <>
+          <path d="M3.5 20.5h17" />
+          <path d="M5 20.5v-7.5M19 20.5v-7.5" />
+          <path d="M5 13h14" />
+          <path d="M7.5 13a4.5 4.5 0 0 1 9 0" />
+          <path d="M12 8.5V6.5M11 5.5h2" />
+          <path d="M10 20.5V17a2 2 0 0 1 4 0v3.5" />
+        </>
+      );
+    case "camera":
+      return (
+        <>
+          <path d="M4 8.8A1.8 1.8 0 0 1 5.8 7H8l1.3-2h5.4L16 7h2.2A1.8 1.8 0 0 1 20 8.8v8.4a1.8 1.8 0 0 1-1.8 1.8H5.8A1.8 1.8 0 0 1 4 17.2z" />
+          <circle cx="12" cy="13" r="3.4" />
         </>
       );
     case "fingerprint":

@@ -76,8 +76,8 @@ function NavButton({ entry, active }: { entry: NavEntry; active: boolean }) {
 /**
  * Bottom navigation for every signed-in user on mobile / PWA (HRIS Lite v2).
  *
- * Beranda · Absensi · [ABSEN scan] · Cuti · Profil — the centre action is the
- * raised round scan button. "Cuti" falls back to "Notifikasi" for accounts
+ * Beranda · Absensi · [ABSEN face] · Cuti · Profil — the centre action is the
+ * raised round face button that opens the attendance sheet. "Cuti" falls back to "Notifikasi" for accounts
  * without the leave module. Fixed, safe-area aware and hidden on `lg+` where
  * the desktop sidebar takes over.
  */
@@ -123,7 +123,7 @@ export function EmployeeBottomNavigation({
                 onClick={() => setAbsenNotice((visible) => !visible)}
                 className="hris-fab -mt-9 flex size-[68px] items-center justify-center self-center rounded-full text-white opacity-50 transition-transform focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none active:scale-95"
               >
-                <HrisIcon name="qr-scan" className="size-8" />
+                <HrisIcon name="face" className="size-9" />
               </button>
               {absenNotice ? (
                 <p
