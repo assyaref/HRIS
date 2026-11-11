@@ -18,14 +18,49 @@ import type { ShellOrganizationOption } from "./shell-context";
  * server action then reads and writes that organization. It never decides
  * access itself: the action re-checks SUPERADMIN against PostgreSQL.
  */
+/** Organization avatar: the custom logo when one is set, else the building icon. */
+export function OrganizationMark({
+  name,
+  logoUrl,
+  className,
+}: {
+  name: string;
+  logoUrl: string | null;
+  className?: string;
+}) {
+  return logoUrl ? (
+    <span
+      className={cn(
+        "flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white ring-1 ring-border",
+        className
+      )}
+    >
+      {/* Authenticated image route; next/image cannot optimise it. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={logoUrl} alt={`Logo ${name}`} className="size-full object-contain p-0.5" />
+    </span>
+  ) : (
+    <span
+      className={cn(
+        "flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-primary text-primary",
+        className
+      )}
+    >
+      <HrisIcon name="building" className="size-[18px]" />
+    </span>
+  );
+}
+
 export function OrganizationSwitcher({
   name,
+  logoUrl = null,
   activeOrganizationId,
   options,
   collapsed = false,
   className,
 }: {
   name: string;
+  logoUrl?: string | null;
   activeOrganizationId: string | null;
   options: readonly ShellOrganizationOption[];
   collapsed?: boolean;
@@ -81,9 +116,7 @@ export function OrganizationSwitcher({
           collapsed && "justify-center"
         )}
       >
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-primary text-primary">
-          <HrisIcon name="building" className="size-[18px]" />
-        </span>
+        <OrganizationMark name={name} logoUrl={logoUrl} />
         {collapsed ? null : (
           <>
             <span className="min-w-0 flex-1">

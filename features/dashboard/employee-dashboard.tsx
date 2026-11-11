@@ -301,7 +301,7 @@ export async function EmployeeDashboard({
     excerpt: item.content,
     href: `/announcements/${item.id}`,
     imageUrl: item.coverAttachmentId
-      ? `/api/announcements/${item.coverAttachmentId}/download`
+      ? `/api/announcements/${item.coverAttachmentId}/download?inline=1`
       : null,
     dateLabel: item.publishedAt
       ? new Intl.DateTimeFormat("id-ID", {

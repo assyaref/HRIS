@@ -30,6 +30,7 @@ import {
   selfFaceEnrollmentInputSchema,
 } from "./face-enrollment";
 import { getFaceEnrollmentSummaryInOrganization } from "./face-enrollment.queries";
+import { saveProfilePhotoIfMissing } from "./face-enrollment.persist";
 
 /**
  * Face enrollment server action (Phase 10.1 + 10.2) — server-authoritative.
@@ -255,6 +256,9 @@ export async function enrollFaceAction(
     } catch (auditError) {
       console.error("[face-enrollment] audit write failed", auditError);
     }
+
+    // A camera enrollment doubles as the profile photo when none exists.
+    await saveProfilePhotoIfMissing(organizationId, employee.id, imageBuffer);
 
     revalidatePath("/employees");
     revalidatePath(`/employees/${employee.id}`);
@@ -483,6 +487,8 @@ export async function selfEnrollFaceAction(
       // No plaintext template, embedding, score or ciphertext is ever logged.
       console.error("[face-enrollment] audit write failed", auditError);
     }
+
+    await saveProfilePhotoIfMissing(organizationId, employee.id, imageBuffer);
 
     revalidatePath("/face-id");
     revalidatePath(`/employees/${employee.id}`);

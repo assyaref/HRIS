@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { requireUser } from "@/lib/auth/auth";
 import { PERMISSIONS } from "@/lib/auth/permissions";
-import { hasAnyPermission, requirePermission } from "@/lib/auth/rbac";
+import { hasAnyPermission, isSuperAdmin, requirePermission } from "@/lib/auth/rbac";
 
 import { getEmployeeByUserId } from "@/features/employees/queries";
 import {
@@ -36,6 +36,7 @@ import { PayrollRunActions } from "@/features/payroll/payroll-run-actions";
 import { PayslipDocumentUpload } from "@/features/payroll/payslip-document-upload";
 import { PayslipPublishButton } from "@/features/payroll/payslip-publish-button";
 import { PayslipRevocationDialog } from "@/features/payroll/payslip-revocation-dialog";
+import { PayslipDeleteDialog } from "@/features/payroll/payslip-delete-dialog";
 import {
   getPayrollPeriodInOrganization,
   listMyPublishedPayslips,
@@ -149,6 +150,7 @@ export default async function PayrollPeriodDetailPage({
     canGeneratePayslips,
     canPublishPayslips,
     canRevokePayslips,
+    actorIsSuperAdmin,
     events,
     linkedEmployee,
   ] = await Promise.all([
@@ -189,6 +191,7 @@ export default async function PayrollPeriodDetailPage({
       PERMISSIONS.PAYSLIP_MANAGE,
       PERMISSIONS.PAYROLL_MANAGE,
     ]),
+    isSuperAdmin(user.id),
     listPayrollEvents(organizationId, periodId),
     getEmployeeByUserId(user.id, organizationId),
   ]);
@@ -667,6 +670,15 @@ export default async function PayrollPeriodDetailPage({
                         />
                       </div>
                     ) : null}
+                    {actorIsSuperAdmin && payslip.status === "revoked" ? (
+                      <div className="mt-4">
+                        <PayslipDeleteDialog
+                          payslipId={payslip.id}
+                          payslipNumber={payslip.payslipNumber}
+                          triggerClassName="w-full"
+                        />
+                      </div>
+                    ) : null}
                   </div>
                 ))}
               </div>
@@ -732,6 +744,12 @@ export default async function PayrollPeriodDetailPage({
                           ) : canRevokePayslips &&
                             payslip.status === "published" ? (
                             <PayslipRevocationDialog
+                              payslipId={payslip.id}
+                              payslipNumber={payslip.payslipNumber}
+                            />
+                          ) : actorIsSuperAdmin &&
+                            payslip.status === "revoked" ? (
+                            <PayslipDeleteDialog
                               payslipId={payslip.id}
                               payslipNumber={payslip.payslipNumber}
                             />

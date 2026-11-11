@@ -31,6 +31,8 @@ export interface ShellProfile {
   roleLabel: string | null;
   avatarUrl: string | null;
   organizationName: string | null;
+  /** Authenticated URL of the organization's custom logo, when one is set. */
+  organizationLogoUrl?: string | null;
   /** "Selamat Pagi" … computed server-side in the app time zone. */
   greeting: string;
   isSuperAdmin: boolean;

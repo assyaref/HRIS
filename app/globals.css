@@ -628,7 +628,7 @@ a {
 /* ==========================================================
    v6 — HRIS LITE ENTERPRISE v2.0
    White navigation rail, vivid blue header band with greeting hero,
-   building illustration, soft blue-tinted cards.
+   clock / weather / prayer widgets, soft blue-tinted cards.
    ========================================================== */
 
 /* Blue band shared by the top bar and the greeting hero. */
@@ -646,6 +646,32 @@ a {
   border-bottom-left-radius: 2.25rem 0.75rem;
   color: #FFFFFF;
 }
+
+/* Glass cards on the blue band (clock / weather / prayer schedule). */
+.hris-widget {
+  min-width: 15.5rem;
+  flex: 0 0 auto;
+  border-radius: 1rem;
+  border: 1px solid rgb(255 255 255 / 0.22);
+  background: rgb(255 255 255 / 0.12);
+  padding: 0.875rem 1rem;
+  color: #FFFFFF;
+  box-shadow: 0 18px 40px -24px rgb(0 0 0 / 0.55);
+  backdrop-filter: blur(6px);
+}
+@media (min-width: 768px) {
+  .hris-widget { min-width: 0; }
+}
+.hris-widget-title {
+  margin-bottom: 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.72);
+}
+.hris-widgets::-webkit-scrollbar { display: none; }
+.hris-widgets { scrollbar-width: none; }
 
 /* Wave that closes the blue band. Filled with the page background. */
 .hris-wave {

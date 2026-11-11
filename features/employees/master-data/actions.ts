@@ -120,6 +120,8 @@ async function audit(
     | "employee.document.uploaded"
     | "employee.document.deleted"
     | "employee.employment_history.created"
+    | "employee.employment_history.deleted"
+    | "employee.employment_history.cleared"
     | "employee.status_changed"
     | "employee_custom_data.updated"
     | "employee_custom_data.deleted",
@@ -1515,6 +1517,89 @@ export async function deleteEmployeeCustomDataAction(
     );
     revalidate(employeeId);
     return toSuccess("Custom value cleared.");
+  } catch (error) {
+    return handle(error);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Employment history — Super Administrator clean-up                   */
+/* ------------------------------------------------------------------ */
+
+async function requireSuperAdminEmployeeScope(employeeId: string) {
+  const user = await requireUser();
+  const authorization = await getUserAuthorization(user.id);
+  if (!authorization.isSuperAdmin) {
+    throw new ActionError(
+      "Hanya Super Administrator yang dapat menghapus riwayat kepegawaian."
+    );
+  }
+  const scope = await requireEmployeeScope(employeeId);
+  return { user, ...scope };
+}
+
+/** Delete ONE employment-history snapshot (matches the `ActionButton` shape). */
+export async function deleteEmploymentHistoryEntryAction(
+  employeeId: string,
+  historyId: string
+): Promise<EmployeeSectionActionState> {
+  try {
+    const { user, organizationId, employee } =
+      await requireSuperAdminEmployeeScope(employeeId);
+    const removed = await db
+      .delete(employeeEmploymentHistory)
+      .where(
+        and(
+          eq(employeeEmploymentHistory.id, historyId),
+          eq(employeeEmploymentHistory.organizationId, organizationId),
+          eq(employeeEmploymentHistory.employeeId, employeeId)
+        )
+      )
+      .returning({ id: employeeEmploymentHistory.id });
+    if (removed.length === 0) {
+      return toStateError("Catatan riwayat tidak ditemukan.");
+    }
+    await audit(
+      organizationId,
+      user.id,
+      "employee.employment_history.deleted",
+      "employee",
+      employeeId,
+      { employeeNumber: employee.employeeNumber, historyId }
+    );
+    revalidate(employeeId);
+    return toSuccess("Catatan riwayat dihapus.");
+  } catch (error) {
+    return handle(error);
+  }
+}
+
+/** Delete EVERY employment-history snapshot of the employee. */
+export async function clearEmploymentHistoryAction(
+  employeeId: string
+): Promise<EmployeeSectionActionState> {
+  try {
+    const { user, organizationId, employee } =
+      await requireSuperAdminEmployeeScope(employeeId);
+    const removed = await db
+      .delete(employeeEmploymentHistory)
+      .where(
+        and(
+          eq(employeeEmploymentHistory.organizationId, organizationId),
+          eq(employeeEmploymentHistory.employeeId, employeeId)
+        )
+      )
+      .returning({ id: employeeEmploymentHistory.id });
+    await audit(
+      organizationId,
+      user.id,
+      "employee.employment_history.cleared",
+      "employee",
+      employeeId,
+      { employeeNumber: employee.employeeNumber, count: removed.length }
+    );
+    revalidate(employeeId);
+    return toSuccess(`${removed.length} catatan riwayat dibersihkan.`);
   } catch (error) {
     return handle(error);
   }

@@ -116,7 +116,7 @@ async function requireAnnouncementContext() {
   const perms = resolveAnnouncementPermissions(
     authorization.permissionCodes
   );
-  return { user, perms };
+  return { user, perms, isSuperAdmin: authorization.isSuperAdmin };
 }
 
 async function loadAnnouncementForOrganization(opts: {
@@ -335,8 +335,17 @@ export async function createAnnouncementAction(
         attachments: uploaded.attachments,
       });
     }
-  } catch {
+  } catch (error) {
+    // Keep the cause in the server log (storage permission / disk problems
+    // are otherwise invisible); the browser only sees the generic message.
+    console.error("[announcements] attachment/recipient persistence failed", error);
     await deleteAnnouncementStorage(announcementId);
+    // Roll the half-created announcement back so a failed upload never leaves
+    // an orphaned (attachment-less) row behind in the management list.
+    await db
+      .delete(announcementRecipients)
+      .where(eq(announcementRecipients.announcementId, announcementId));
+    await db.delete(announcements).where(eq(announcements.id, announcementId));
     throw new Error("Failed to save the announcement. Please try again.");
   }
 
@@ -625,7 +634,7 @@ export async function unpublishAnnouncementAction(input: {
 export async function deleteAnnouncementAction(input: {
   announcementId: string;
 }): Promise<AnnouncementFormState> {
-  const { user, perms } = await requireAnnouncementContext();
+  const { user, perms, isSuperAdmin } = await requireAnnouncementContext();
   if (!user.organizationId) return formError("Your account has no organization.");
 
   const row = await loadAnnouncementForOrganization({
@@ -639,12 +648,20 @@ export async function deleteAnnouncementAction(input: {
     hasReads: row.readCount > 0,
     canDelete: perms.canDelete,
     canPublish: perms.canPublish,
+    isSuperAdmin,
   });
   if (!decision.allowed) {
+    const messages: Record<string, string> = {
+      "blocked.reads":
+        "Pengumuman ini sudah dibaca karyawan dan tidak dapat dihapus.",
+      "requires.unpublish":
+        "Pengumuman yang terbit harus di-unpublish terlebih dahulu sebelum dihapus.",
+      "superadmin.required":
+        "Pengumuman yang sudah di-unpublish hanya dapat dihapus oleh Super Administrator.",
+    };
     return formError(
-      decision.reason === "blocked.reads"
-        ? "This announcement has already been read by employees and cannot be deleted."
-        : "You do not have permission to delete announcements."
+      messages[decision.reason] ??
+        "You do not have permission to delete announcements."
     );
   }
 

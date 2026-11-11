@@ -77,6 +77,13 @@ export default async function AnnouncementDetailPage({
     notFound();
   }
 
+  const imageAttachments = detail.attachments.filter((attachment) =>
+    attachment.mimeType.startsWith("image/")
+  );
+  const fileAttachments = detail.attachments.filter(
+    (attachment) => !attachment.mimeType.startsWith("image/")
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -135,6 +142,7 @@ export default async function AnnouncementDetailPage({
               readCount={detail.readCount}
               canPublish={perms.canPublish}
               canDelete={perms.canDelete}
+              isSuperAdmin={authorization.isSuperAdmin}
             />
           ) : detail.status === "published" && !detail.myReadAt ? (
             <MarkAnnouncementReadButton announcementId={detail.id} />
@@ -165,13 +173,46 @@ export default async function AnnouncementDetailPage({
         </CardContent>
       </Card>
 
-      {detail.attachments.length > 0 ? (
+      {imageAttachments.length > 0 ? (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Attachments</CardTitle>
+            <CardTitle className="text-base">Gambar</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {imageAttachments.map((attachment) => (
+                <a
+                  key={attachment.id}
+                  href={`/api/announcements/${attachment.id}/download?inline=1`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="group block overflow-hidden rounded-xl border border-border bg-muted/30"
+                >
+                  {/* Authenticated image route; next/image cannot optimise it. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`/api/announcements/${attachment.id}/download?inline=1`}
+                    alt={attachment.originalFilename}
+                    className="aspect-[16/10] w-full object-cover transition-transform group-hover:scale-[1.02]"
+                    loading="lazy"
+                  />
+                  <span className="block truncate px-3 py-2 text-xs text-muted-foreground">
+                    {attachment.originalFilename}
+                  </span>
+                </a>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {fileAttachments.length > 0 ? (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Lampiran</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {detail.attachments.map((attachment) => (
+            {fileAttachments.map((attachment) => (
               <div
                 key={attachment.id}
                 className="flex items-center justify-between gap-3 rounded-lg border border-border p-3"

@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 
 import {
   createPayrollComponentAction,
+  deletePayrollComponentAction,
   setPayrollComponentActiveAction,
   updatePayrollComponentAction,
 } from "./actions";
@@ -216,8 +217,11 @@ function ComponentFormDialog({
 
 export function PayrollComponentManager({
   components,
+  canDelete = false,
 }: {
   components: PayrollComponentRow[];
+  /** Super Administrator only: permanent delete (server re-checks). */
+  canDelete?: boolean;
 }) {
   const router = useRouter();
   const [createOpen, setCreateOpen] = useState(false);
@@ -235,6 +239,22 @@ export function PayrollComponentManager({
         component.id,
         component.active !== "true"
       );
+      setMessage({ tone: result.ok ? "success" : "error", text: result.message });
+      router.refresh();
+    });
+  }
+
+  function remove(component: PayrollComponentRow) {
+    if (
+      !window.confirm(
+        `Hapus komponen ${component.code} (${component.name}) secara permanen? Penugasan karyawan untuk komponen ini ikut dihapus; riwayat perhitungan lama tetap tersimpan.`
+      )
+    ) {
+      return;
+    }
+    setMessage(null);
+    startTransition(async () => {
+      const result = await deletePayrollComponentAction(component.id);
       setMessage({ tone: result.ok ? "success" : "error", text: result.message });
       router.refresh();
     });
@@ -355,6 +375,18 @@ export function PayrollComponentManager({
                       >
                         {component.active === "true" ? "Deactivate" : "Activate"}
                       </Button>
+                      {canDelete ? (
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => remove(component)}
+                          disabled={pending}
+                          title="Hapus permanen (Super Administrator)"
+                        >
+                          Hapus
+                        </Button>
+                      ) : null}
                     </div>
                   </td>
                 </tr>

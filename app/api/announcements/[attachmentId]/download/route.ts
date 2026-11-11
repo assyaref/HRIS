@@ -223,12 +223,18 @@ export async function GET(
     attachment.storageKey
   );
 
+  // `?inline=1` lets the detail page and the dashboard carousel render image
+  // attachments in place. Only the image kinds the classifier accepts (PNG /
+  // JPEG) may be inlined; every other type stays a download.
+  const inline =
+    search.get("inline") === "1" && attachment.mimeType.startsWith("image/");
+
   return new Response(new Uint8Array(bytes), {
     status: 200,
     headers: {
       "Content-Type": attachment.mimeType,
       "Content-Length": String(bytes.length),
-      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${filename}"`,
       "Cache-Control": "private, no-store",
       "X-Content-Type-Options": "nosniff",
       "Content-Security-Policy":

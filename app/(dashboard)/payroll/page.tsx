@@ -156,10 +156,6 @@ export default async function PayrollPage() {
           ====================================================== */}
       <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-semibold text-primary">
-            HRIS Lite Enterprise
-          </p>
-
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             Penggajian
           </h1>

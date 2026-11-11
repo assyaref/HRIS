@@ -5,7 +5,7 @@ import { forbidden } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth/auth";
 import { PERMISSIONS } from "@/lib/auth/permissions";
-import { requireAnyPermission } from "@/lib/auth/rbac";
+import { isSuperAdmin, requireAnyPermission } from "@/lib/auth/rbac";
 
 import { PayrollComponentManager } from "@/features/payroll/payroll-component-manager";
 import { listAllPayrollComponents } from "@/features/payroll/queries";
@@ -21,7 +21,10 @@ export default async function PayrollComponentsPage() {
   ]);
   if (!user.organizationId) forbidden();
 
-  const components = await listAllPayrollComponents(user.organizationId);
+  const [components, canDelete] = await Promise.all([
+    listAllPayrollComponents(user.organizationId),
+    isSuperAdmin(user.id),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -42,7 +45,7 @@ export default async function PayrollComponentsPage() {
         </Link>
       </div>
 
-      <PayrollComponentManager components={components} />
+      <PayrollComponentManager components={components} canDelete={canDelete} />
     </div>
   );
 }

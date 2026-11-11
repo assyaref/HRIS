@@ -73,6 +73,10 @@ export type EmployeeMasterDataAuditAction =
   | "employee.document.deleted"
   | "employee.document.downloaded"
   | "employee.employment_history.created"
+  | "employee.employment_history.deleted"
+  | "employee.employment_history.cleared"
+  | "employee.photo.updated"
+  | "employee.photo.removed"
   | "employee_field.created"
   | "employee_field.updated"
   | "employee_field.status_changed"
@@ -89,7 +93,8 @@ export type AttendanceAuditAction =
   | "attendance.check_in_rejected"
   | "attendance.check_out"
   | "attendance.check_out_rejected"
-  | "attendance.recap.exported";
+  | "attendance.recap.exported"
+  | "attendance.record.deleted";
 
 export type LeaveAuditAction =
   | "leave.created"
@@ -127,6 +132,8 @@ export type PayrollAuditAction =
   | "payslip.document.viewed"
   | "payslip.document.replaced"
   | "payslip.revoked"
+  | "payslip.deleted"
+  | "payroll.component.deleted"
   | "payroll.employee_component.created"
   | "payroll.employee_component.updated"
   | "payroll.employee_component.ended";
@@ -175,7 +182,9 @@ export type OrganizationAuditAction =
   | "organization.deleted"
   | "organization.activated"
   | "organization.deactivated"
-  | "organization.context_switched";
+  | "organization.context_switched"
+  | "organization.logo.updated"
+  | "organization.logo.removed";
 
 export type AuditAction =
   | RbacAuditAction

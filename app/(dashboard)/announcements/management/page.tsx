@@ -31,6 +31,7 @@ import {
   isAnnouncementStatus,
 } from "@/features/announcements/constants";
 import { resolveAnnouncementPermissions } from "@/features/announcements/permissions";
+import { ManageAnnouncementActions } from "@/features/announcements/manage-actions";
 import { formatDate } from "@/features/payroll/format";
 
 export const metadata: Metadata = {
@@ -189,15 +190,37 @@ export default async function AnnouncementManagementPage({
                             : "—"}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Link
-                          href={`/announcements/${announcement.id}`}
-                          className={buttonVariants({
-                            variant: "outline",
-                            size: "sm",
-                          })}
-                        >
-                          Manage
-                        </Link>
+                        <div className="flex flex-wrap items-center justify-end gap-1.5">
+                          <Link
+                            href={`/announcements/${announcement.id}`}
+                            className={buttonVariants({
+                              variant: "outline",
+                              size: "sm",
+                            })}
+                          >
+                            Lihat
+                          </Link>
+                          {perms.canUpdate ? (
+                            <Link
+                              href={`/announcements/management/${announcement.id}/edit`}
+                              className={buttonVariants({
+                                variant: "outline",
+                                size: "sm",
+                              })}
+                            >
+                              Edit
+                            </Link>
+                          ) : null}
+                          <ManageAnnouncementActions
+                            announcementId={announcement.id}
+                            status={announcement.status}
+                            readCount={announcement.readCount}
+                            canPublish={perms.canPublish}
+                            canDelete={perms.canDelete}
+                            isSuperAdmin={authorization.isSuperAdmin}
+                            compact
+                          />
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

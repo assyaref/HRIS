@@ -26,6 +26,8 @@ import {
 import { OrganizationStatusBadge } from "@/features/organizations/organization-status-badge";
 import { EditOrganizationDialog } from "@/features/organizations/organization-edit-dialog";
 import { DeleteOrganizationDialog } from "@/features/organizations/organization-delete-dialog";
+import { OrganizationLogoCard } from "@/features/organizations/organization-logo-card";
+import { organizationLogoUrl } from "@/lib/organizations/logo-storage";
 
 export const metadata: Metadata = {
   title: "Organization",
@@ -60,9 +62,10 @@ export default async function OrganizationDetailPage({
     notFound();
   }
 
-  const dependencyCounts = await detectOrganizationDependencies(
-    organization.id
-  );
+  const [dependencyCounts, logoUrl] = await Promise.all([
+    detectOrganizationDependencies(organization.id),
+    organizationLogoUrl(organization.id),
+  ]);
   const summary = summarizeDependencies(dependencyCounts);
   const isSystem = organization.code === SYSTEM_ORGANIZATION_CODE;
 
@@ -88,6 +91,14 @@ export default async function OrganizationDetailPage({
             ← All organizations
           </Link>
           <h1 className="mt-2 flex flex-wrap items-center gap-3 text-2xl font-semibold tracking-tight sm:text-3xl">
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={logoUrl}
+                alt=""
+                className="size-10 rounded-xl border border-border bg-white object-contain p-1"
+              />
+            ) : null}
             <span className="min-w-0 truncate">{organization.name}</span>
             <span className="font-mono text-base font-normal text-muted-foreground">
               {organization.code}
@@ -120,6 +131,12 @@ export default async function OrganizationDetailPage({
           </Link>
         </div>
       </div>
+
+      <OrganizationLogoCard
+        organizationId={organization.id}
+        organizationName={organization.name}
+        logoUrl={logoUrl}
+      />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard icon="users" label="Users" value={organization.userCount} />

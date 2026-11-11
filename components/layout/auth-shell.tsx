@@ -1,14 +1,15 @@
 import type { ReactNode } from "react";
 
 import { Brand } from "./brand";
-import { BuildingIllustration } from "./building-illustration";
+import { HeroWidgets } from "./hero-widgets";
 
 /**
- * Sign-in shell (HRIS Lite Enterprise v2.0).
+ * Sign-in shell.
  *
- * Desktop: blue brand panel (logo + office illustration) on the left, the
- * form on the right. Mobile: the blue band on top closing with a wave, the
- * form card below.
+ * Desktop: blue brand panel (logo + clock / weather / prayer schedule) on the
+ * left, the form on the right. Mobile: the blue band on top closing with a
+ * wave, the form card below. The widgets never prompt for the device position
+ * here — they reuse the position this browser already shared, or Jakarta.
  */
 export function AuthShell({ children }: { children: ReactNode }) {
   return (
@@ -16,11 +17,8 @@ export function AuthShell({ children }: { children: ReactNode }) {
       {/* Brand panel */}
       <section className="hris-band relative isolate overflow-hidden px-6 pt-8 pb-24 lg:flex lg:w-[46%] lg:flex-col lg:px-14 lg:py-12">
         <Brand tone="onBlue" size="lg" />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute right-0 bottom-6 hidden h-[34vh] max-h-[300px] w-full lg:block"
-        >
-          <BuildingIllustration variant="band" idPrefix="auth" className="size-full" />
+        <div className="mt-10 hidden lg:mt-auto lg:block">
+          <HeroWidgets geolocate={false} className="lg:grid-cols-1 xl:grid-cols-3" />
         </div>
         <svg
           aria-hidden="true"

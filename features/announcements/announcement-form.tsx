@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useActionState } from "react";
+import { useEffect, useMemo, useState, useActionState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -67,6 +67,24 @@ export function AnnouncementForm({
   const [targetType, setTargetType] = useState<AnnouncementTargetType>(
     initial?.targetType ?? "all_employees"
   );
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  // Object URLs for image previews, derived from the selection and revoked
+  // once a newer selection replaces them.
+  const previews = useMemo(
+    () =>
+      selectedFiles.map((file) => ({
+        name: file.name,
+        size: file.size,
+        url: file.type.startsWith("image/") ? URL.createObjectURL(file) : null,
+      })),
+    [selectedFiles]
+  );
+  useEffect(() => {
+    return () => {
+      for (const item of previews) if (item.url) URL.revokeObjectURL(item.url);
+    };
+  }, [previews]);
+  const tooMany = selectedFiles.length > ANNOUNCEMENT_MAX_ATTACHMENTS;
 
   useEffect(() => {
     if (!state.ok) return;
@@ -220,12 +238,47 @@ export function AnnouncementForm({
           name="attachments"
           type="file"
           multiple
-          accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx"
+          accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,image/png,image/jpeg,application/pdf"
+          onChange={(event) =>
+            setSelectedFiles(Array.from(event.target.files ?? []))
+          }
         />
         <p className="text-xs text-muted-foreground">
-          Up to {ANNOUNCEMENT_MAX_ATTACHMENTS} files, 10 MB each — PDF, PNG,
-          JPG, DOC/DOCX or XLS/XLSX.
+          Maks. {ANNOUNCEMENT_MAX_ATTACHMENTS} file, 10 MB per file — PDF, PNG,
+          JPG, DOC/DOCX atau XLS/XLSX. Gambar (PNG/JPG) tampil langsung di
+          pengumuman.
         </p>
+        {previews.length > 0 ? (
+          <ul className="grid gap-2 sm:grid-cols-3">
+            {previews.map((item) => (
+              <li
+                key={`${item.name}-${item.size}`}
+                className="overflow-hidden rounded-lg border border-border bg-muted/30 text-xs"
+              >
+                {item.url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={item.url}
+                    alt=""
+                    className="aspect-[16/10] w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex aspect-[16/10] items-center justify-center text-muted-foreground">
+                    Dokumen
+                  </div>
+                )}
+                <span className="block truncate px-2 py-1.5">
+                  {item.name} · {(item.size / 1024).toFixed(0)} KB
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {tooMany ? (
+          <p role="alert" className="text-destructive text-xs">
+            Maksimal {ANNOUNCEMENT_MAX_ATTACHMENTS} file per pengumuman.
+          </p>
+        ) : null}
       </div>
 
       {state.message && !state.ok ? (
@@ -243,7 +296,7 @@ export function AnnouncementForm({
         >
           Cancel
         </Button>
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" disabled={pending || tooMany}>
           {pending
             ? mode === "create"
               ? "Creating…"

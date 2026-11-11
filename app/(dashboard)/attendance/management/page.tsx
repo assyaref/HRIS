@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/table";
 import { requireUser } from "@/lib/auth/auth";
 import { PERMISSIONS } from "@/lib/auth/permissions";
-import { requirePermission } from "@/lib/auth/rbac";
+import { isSuperAdmin, requirePermission } from "@/lib/auth/rbac";
 
 import {
   AttendanceStatusBadge,
@@ -26,6 +26,7 @@ import {
   listOrganizationProjects,
 } from "@/features/attendance/queries";
 import { attendanceFilterSchema } from "@/features/attendance/schemas";
+import { AttendanceDeleteButton } from "@/features/attendance/attendance-delete-button";
 
 export const metadata: Metadata = {
   title: "Attendance management",
@@ -61,9 +62,10 @@ export default async function AttendanceManagementPage({
   if (!user.organizationId) forbidden();
   const organizationId = user.organizationId;
 
-  const [result, projects] = await Promise.all([
+  const [result, projects, canDelete] = await Promise.all([
     listOrganizationAttendance(organizationId, filters),
     listOrganizationProjects(organizationId),
+    isSuperAdmin(user.id),
   ]);
   const { items, total, page, totalPages } = result;
 
@@ -226,15 +228,23 @@ export default async function AttendanceManagementPage({
                       />
                     </TableCell>
                     <TableCell className="text-right">
-                      <Link
-                        href={`/attendance/${record.id}`}
-                        className={buttonVariants({
-                          variant: "ghost",
-                          size: "sm",
-                        })}
-                      >
-                        Details
-                      </Link>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Link
+                          href={`/attendance/${record.id}`}
+                          className={buttonVariants({
+                            variant: "ghost",
+                            size: "sm",
+                          })}
+                        >
+                          Details
+                        </Link>
+                        {canDelete ? (
+                          <AttendanceDeleteButton
+                            attendanceId={record.id}
+                            summary={`${record.employeeName} · ${formatDate(record.attendanceDate)}`}
+                          />
+                        ) : null}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

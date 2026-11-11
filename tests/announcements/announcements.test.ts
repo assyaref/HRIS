@@ -403,17 +403,44 @@ describe("R18 case 8: action policy — permission matrix", () => {
   });
 });
 
-describe("R18 case 9: deletion policy — reads are append-only", () => {
-  it("blocks deletion once ANY employee has read the announcement", () => {
+describe("R18 case 9: deletion policy — unpublish first, Super Administrator deletes", () => {
+  it("never deletes a published announcement in place", () => {
     assert.deepEqual(
       buildAnnouncementDeletionDecision({
         status: "published",
+        hasReads: false,
+        canDelete: true,
+        canPublish: true,
+        isSuperAdmin: true,
+      }),
+      { allowed: false, reason: "requires.unpublish" }
+    );
+  });
+
+  it("lets only a Super Administrator delete an unpublished announcement, reads included", () => {
+    assert.deepEqual(
+      buildAnnouncementDeletionDecision({
+        status: "unpublished",
         hasReads: true,
         canDelete: true,
         canPublish: true,
+        isSuperAdmin: false,
       }),
-      { allowed: false, reason: "blocked.reads" }
+      { allowed: false, reason: "superadmin.required" }
     );
+    assert.deepEqual(
+      buildAnnouncementDeletionDecision({
+        status: "unpublished",
+        hasReads: true,
+        canDelete: false,
+        canPublish: false,
+        isSuperAdmin: true,
+      }),
+      { allowed: true }
+    );
+  });
+
+  it("deletes drafts with the delete permission and keeps read drafts protected", () => {
     assert.deepEqual(
       buildAnnouncementDeletionDecision({
         status: "draft",
@@ -425,12 +452,12 @@ describe("R18 case 9: deletion policy — reads are append-only", () => {
     );
     assert.deepEqual(
       buildAnnouncementDeletionDecision({
-        status: "published",
-        hasReads: false,
+        status: "draft",
+        hasReads: true,
         canDelete: true,
-        canPublish: false,
+        canPublish: true,
       }),
-      { allowed: false, reason: "requires.publish" }
+      { allowed: false, reason: "blocked.reads" }
     );
     assert.deepEqual(
       buildAnnouncementDeletionDecision({

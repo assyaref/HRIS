@@ -36,6 +36,7 @@ import { getActiveOrganization } from "@/features/projects/queries";
 import { isFaceRecognitionConfigured } from "@/lib/attendance/face-recognition";
 import { FaceEnrollmentPanel } from "@/features/employees/face-enrollment-panel";
 import { FaceVerificationPanel } from "@/features/employees/face-verification-panel";
+import { ProfilePhotoCard } from "@/features/employees/profile-photo-card";
 import { getFaceEnrollmentSummaryInOrganization } from "@/features/employees/face-enrollment.queries";
 import {
   listEmployeeProjectAssignments,
@@ -411,7 +412,6 @@ export default async function EmployeeDetailPage({
     family: familyView,
     education: educationView,
     documents: documentView,
-    custom: customDataView,
     attendance: attendanceView,
     leave: leaveView,
     payroll: payslipView,
@@ -454,7 +454,20 @@ export default async function EmployeeDetailPage({
               linkableUsers={linkableUsers}
               faceEnrollmentSummary={faceEnrollmentSummary}
               faceEngineConfigured={faceEngineConfigured}
+              profilePhotoUrl={masterData.profilePhotoUrl}
             />
+            {/* Custom fields that are NOT placed on a visible custom tab. The
+                dedicated "Custom Fields" tab was retired (tabs and fields are
+                configured under Settings → Employee Fields), so the fallback
+                bucket renders here and no field is ever dropped. */}
+            {customDataView && fallbackSpecs.length > 0 ? (
+              <CustomFieldsSection
+                employeeId={employeeId}
+                specs={fallbackSpecs}
+                title="Data tambahan"
+                description="Field kustom organisasi yang belum ditempatkan pada tab kustom."
+              />
+            ) : null}
           </div>
         );
       case "personal":
@@ -526,15 +539,6 @@ export default async function EmployeeDetailPage({
             canDelete={canEditInScope(documentDelete)}
           />
         );
-      case "custom":
-        // Built-in tab shows only the fields NOT placed on a visible custom tab,
-        // so a field is never rendered in two places.
-        return (
-          <CustomFieldsSection
-            employeeId={employeeId}
-            specs={fallbackSpecs}
-          />
-        );
       case "attendance":
         return (
           <AttendanceTab
@@ -551,7 +555,13 @@ export default async function EmployeeDetailPage({
           />
         );
       case "history":
-        return <HistorySection history={history} />;
+        return (
+          <HistorySection
+            employeeId={employeeId}
+            history={history}
+            canClear={canWrite && authorization.isSuperAdmin}
+          />
+        );
       default: {
         // A custom tab (`custom:<tabKey>`): rendered by the SAME generic
         // definition-driven form as the built-in tab, with the tab's own
@@ -747,6 +757,7 @@ function FaceIdentityCards({
   linkableUsers,
   faceEnrollmentSummary,
   faceEngineConfigured,
+  profilePhotoUrl,
 }: {
   employee: Awaited<ReturnType<typeof getEmployeeInOrganization>>;
   displayName: string;
@@ -755,11 +766,21 @@ function FaceIdentityCards({
   linkableUsers: Awaited<ReturnType<typeof listLinkableUsers>>;
   faceEnrollmentSummary: Awaited<ReturnType<typeof getFaceEnrollmentSummaryInOrganization>>;
   faceEngineConfigured: boolean;
+  profilePhotoUrl: string | null;
 }) {
   if (!employee) return null;
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      <div>
+      <div className="space-y-6">
+        <ProfilePhotoCard
+          employeeId={employee.id}
+          displayName={displayName}
+          photoUrl={profilePhotoUrl}
+          canEdit={canUpdate}
+          faceStatus={faceEnrollmentSummary.status}
+          engineConfigured={faceEngineConfigured}
+          employeeActive={employee.employmentStatus === "active"}
+        />
         {canUpdate ? (
           <EmployeeEditor
             employeeId={employee.id}

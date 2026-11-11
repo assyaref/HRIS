@@ -18,12 +18,18 @@ export interface ManageAnnouncementActionsProps {
   readCount: number;
   canPublish: boolean;
   canDelete: boolean;
+  /** System-level Super Administrator: may delete UNPUBLISHED announcements. */
+  isSuperAdmin?: boolean;
+  /** Compact layout for table rows. */
+  compact?: boolean;
 }
 
 /**
  * Publish / unpublish / delete controls for the management listing and detail
- * views. Deletion is disabled client-side once the announcement has been read
- * (the server enforces the same rule).
+ * views. The delete affordance mirrors `buildAnnouncementDeletionDecision`:
+ * drafts need `announcements.delete` (and no reads), unpublished posts are
+ * Super Administrator only, published posts must be unpublished first. The
+ * server re-checks every rule.
  */
 export function ManageAnnouncementActions({
   announcementId,
@@ -31,6 +37,8 @@ export function ManageAnnouncementActions({
   readCount,
   canPublish,
   canDelete,
+  isSuperAdmin = false,
+  compact = false,
 }: ManageAnnouncementActionsProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -50,10 +58,30 @@ export function ManageAnnouncementActions({
     });
   }
 
-  const deletable = canDelete && readCount === 0;
+  const deletable =
+    status === "draft"
+      ? canDelete && readCount === 0
+      : status === "unpublished"
+        ? isSuperAdmin
+        : false;
+  const deleteHint =
+    status === "published"
+      ? "Unpublish dulu sebelum menghapus."
+      : status === "unpublished" && !isSuperAdmin
+        ? "Hanya Super Administrator yang dapat menghapus pengumuman yang di-unpublish."
+        : readCount > 0
+          ? "Sudah dibaca karyawan — tidak dapat dihapus."
+          : "Hapus pengumuman ini";
+  const showDelete = canDelete || isSuperAdmin;
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div
+      className={
+        compact
+          ? "flex flex-wrap items-center justify-end gap-1.5"
+          : "flex flex-wrap items-center gap-2"
+      }
+    >
       {canPublish && status === "published" ? (
         <Button
           type="button"
@@ -81,22 +109,27 @@ export function ManageAnnouncementActions({
         </Button>
       ) : null}
 
-      <Button
-        type="button"
-        variant="destructive"
-        size="sm"
-        disabled={pending || !deletable}
-        title={
-          readCount > 0
-            ? "Already read by employees — cannot be deleted."
-            : "Delete this announcement"
-        }
-        onClick={() =>
-          run(() => deleteAnnouncementAction({ announcementId }))
-        }
-      >
-        Delete
-      </Button>
+      {showDelete ? (
+        <Button
+          type="button"
+          variant="destructive"
+          size="sm"
+          disabled={pending || !deletable}
+          title={deleteHint}
+          onClick={() => {
+            if (
+              !window.confirm(
+                "Hapus pengumuman ini beserta lampiran dan catatan bacanya? Tindakan ini tidak dapat dibatalkan."
+              )
+            ) {
+              return;
+            }
+            run(() => deleteAnnouncementAction({ announcementId }));
+          }}
+        >
+          {compact ? "Hapus" : "Delete"}
+        </Button>
+      ) : null}
 
       {message ? (
         <span

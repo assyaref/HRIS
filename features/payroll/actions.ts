@@ -22,6 +22,7 @@ import { requireUser } from "@/lib/auth/auth";
 import { writeAuditLog, type AuditAction } from "@/lib/auth/audit";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import {
+  isSuperAdmin,
   requireAnyPermission,
   requirePermission,
 } from "@/lib/auth/rbac";
@@ -2509,3 +2510,275 @@ export async function revokePayslipAction(
   }
 }
 
+/* ------------------------------------------------------------------ */
+/* Super Administrator deletes                                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Permanently delete ONE revoked payslip — Super Administrator only.
+ *
+ * Only a payslip whose status is `revoked` qualifies; generated and published
+ * payslips are refused (revoke first). The document / version chain is removed
+ * in RESTRICT-aware order inside one transaction, the payroll event trail
+ * keeps a `payslip.deleted` row, and the stored PDFs are purged after commit
+ * (a purge failure is audited, never silently dropped). The acting
+ * organization always comes from the session.
+ */
+export async function deleteRevokedPayslipAction(
+  payslipId: string
+): Promise<PayrollActionResult> {
+  const user = await requireUser();
+  if (!(await isSuperAdmin(user.id))) {
+    return {
+      ok: false,
+      message: "Hanya Super Administrator yang dapat menghapus slip gaji.",
+    };
+  }
+  if (!user.organizationId) {
+    return { ok: false, message: "Your account is not assigned to an organization." };
+  }
+  const organizationId = user.organizationId;
+  if (!isPayslipUuid(payslipId)) {
+    return { ok: false, message: "Invalid payslip identifier." };
+  }
+
+  let outcome:
+    | { kind: "error"; message: string }
+    | {
+        kind: "success";
+        payslipNumber: string;
+        periodId: string | null;
+        storageKeys: string[];
+      };
+  try {
+    outcome = await db.transaction(async (tx) => {
+      const lockedRows = await tx
+        .select({
+          id: payslips.id,
+          status: payslips.status,
+          payslipNumber: payslips.payslipNumber,
+          payrollPeriodId: payslips.payrollPeriodId,
+          payrollItemId: payslips.payrollItemId,
+        })
+        .from(payslips)
+        .where(
+          and(eq(payslips.id, payslipId), eq(payslips.organizationId, organizationId))
+        )
+        .for("update")
+        .limit(1);
+      const payslip = lockedRows[0];
+      if (!payslip) return { kind: "error" as const, message: "Payslip not found." };
+      if (payslip.status !== "revoked") {
+        return {
+          kind: "error" as const,
+          message:
+            "Hanya slip gaji berstatus revoked yang dapat dihapus. Revoke slip ini terlebih dahulu.",
+        };
+      }
+
+      let periodId = payslip.payrollPeriodId;
+      if (!periodId && payslip.payrollItemId) {
+        const runRows = await tx
+          .select({ periodId: payrollRuns.payrollPeriodId })
+          .from(payrollItems)
+          .innerJoin(payrollRuns, eq(payrollRuns.id, payrollItems.payrollRunId))
+          .where(eq(payrollItems.id, payslip.payrollItemId))
+          .limit(1);
+        periodId = runRows[0]?.periodId ?? null;
+      }
+
+      const documentRows = await tx
+        .select({ id: payslipDocuments.id, storageKey: payslipDocuments.storageKey })
+        .from(payslipDocuments)
+        .where(
+          and(
+            eq(payslipDocuments.organizationId, organizationId),
+            eq(payslipDocuments.payslipId, payslipId)
+          )
+        );
+      const storageKeys = documentRows.map((row) => row.storageKey);
+      const documentIds = documentRows.map((row) => row.id);
+      if (documentIds.length) {
+        const versionRows = await tx
+          .select({ storageKey: payslipDocumentVersions.storageKey })
+          .from(payslipDocumentVersions)
+          .where(
+            and(
+              eq(payslipDocumentVersions.organizationId, organizationId),
+              inArray(payslipDocumentVersions.payslipDocumentId, documentIds)
+            )
+          );
+        storageKeys.push(...versionRows.map((row) => row.storageKey));
+        await tx
+          .delete(payslipDocumentVersions)
+          .where(
+            and(
+              eq(payslipDocumentVersions.organizationId, organizationId),
+              inArray(payslipDocumentVersions.payslipDocumentId, documentIds)
+            )
+          );
+        await tx
+          .delete(payslipDocuments)
+          .where(
+            and(
+              eq(payslipDocuments.organizationId, organizationId),
+              inArray(payslipDocuments.id, documentIds)
+            )
+          );
+      }
+      await tx
+        .delete(payslips)
+        .where(
+          and(eq(payslips.id, payslipId), eq(payslips.organizationId, organizationId))
+        );
+
+      if (periodId) {
+        await tx.insert(payrollEvents).values({
+          organizationId,
+          payrollPeriodId: periodId,
+          actorUserId: user.id,
+          eventType: "payslip.deleted",
+          fromStatus: "revoked",
+          toStatus: null,
+          reason: `Slip ${payslip.payslipNumber} dihapus permanen oleh Super Administrator.`,
+        });
+      }
+
+      return {
+        kind: "success" as const,
+        payslipNumber: payslip.payslipNumber,
+        periodId,
+        storageKeys: [...new Set(storageKeys)],
+      };
+    });
+  } catch (error) {
+    console.error("[payroll] payslip delete failed", error);
+    return { ok: false, message: "Slip gaji tidak dapat dihapus. Coba lagi." };
+  }
+  if (outcome.kind === "error") return { ok: false, message: outcome.message };
+
+  const purgeFailures: string[] = [];
+  for (const storageKey of outcome.storageKeys) {
+    try {
+      await removeStoredPayslipPdf(storageKey);
+    } catch (error) {
+      purgeFailures.push(
+        `${storageKey}: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+  try {
+    await writeAuditLog({
+      organizationId,
+      actorUserId: user.id,
+      action: "payslip.deleted",
+      entityType: "payslip",
+      entityId: payslipId,
+      metadata: {
+        payslipNumber: outcome.payslipNumber,
+        periodId: outcome.periodId,
+        fileCount: outcome.storageKeys.length,
+        purgeFailures,
+      },
+    });
+  } catch {
+    // Audit is best-effort.
+  }
+  return {
+    ok: true,
+    message:
+      purgeFailures.length > 0
+        ? `Slip ${outcome.payslipNumber} dihapus; ${purgeFailures.length} berkas PDF perlu dibersihkan manual.`
+        : `Slip ${outcome.payslipNumber} dihapus permanen.`,
+  };
+}
+
+/**
+ * Permanently delete a payroll component — Super Administrator only.
+ *
+ * Employee assignments of the component are removed with it; historical
+ * payroll item lines keep their code/name/amount snapshots (the FK is
+ * `ON DELETE SET NULL`), so past calculations stay intact.
+ */
+export async function deletePayrollComponentAction(
+  componentId: string
+): Promise<PayrollActionResult> {
+  const user = await requireUser();
+  if (!(await isSuperAdmin(user.id))) {
+    return {
+      ok: false,
+      message: "Hanya Super Administrator yang dapat menghapus komponen gaji.",
+    };
+  }
+  if (!user.organizationId) {
+    return { ok: false, message: "Your account is not assigned to an organization." };
+  }
+  const organizationId = user.organizationId;
+  if (!isPayslipUuid(componentId)) {
+    return { ok: false, message: "Invalid component identifier." };
+  }
+
+  const existing = await db
+    .select({
+      id: payrollComponents.id,
+      code: payrollComponents.code,
+      name: payrollComponents.name,
+    })
+    .from(payrollComponents)
+    .where(
+      and(
+        eq(payrollComponents.id, componentId),
+        eq(payrollComponents.organizationId, organizationId)
+      )
+    )
+    .limit(1);
+  const component = existing[0];
+  if (!component) return { ok: false, message: "Component not found." };
+
+  let assignmentCount = 0;
+  try {
+    await db.transaction(async (tx) => {
+      const removed = await tx
+        .delete(employeePayrollComponents)
+        .where(
+          and(
+            eq(employeePayrollComponents.organizationId, organizationId),
+            eq(employeePayrollComponents.componentId, componentId)
+          )
+        )
+        .returning({ id: employeePayrollComponents.id });
+      assignmentCount = removed.length;
+      await tx
+        .delete(payrollComponents)
+        .where(
+          and(
+            eq(payrollComponents.id, componentId),
+            eq(payrollComponents.organizationId, organizationId)
+          )
+        );
+    });
+  } catch (error) {
+    console.error("[payroll] component delete failed", error);
+    return { ok: false, message: "Komponen gaji tidak dapat dihapus. Coba lagi." };
+  }
+
+  try {
+    await writeAuditLog({
+      organizationId,
+      actorUserId: user.id,
+      action: "payroll.component.deleted",
+      entityType: "payroll_component",
+      entityId: componentId,
+      metadata: { code: component.code, name: component.name, assignmentCount },
+    });
+  } catch {
+    // Audit is best-effort.
+  }
+  return {
+    ok: true,
+    message:
+      assignmentCount > 0
+        ? `Komponen ${component.code} dihapus beserta ${assignmentCount} penugasan karyawan.`
+        : `Komponen ${component.code} dihapus.`,
+  };
+}

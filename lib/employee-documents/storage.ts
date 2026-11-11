@@ -19,7 +19,12 @@ import path from "node:path";
  * documents/[documentId]/download/route.ts`).
  */
 
-const PRIVATE_ROOT = "/opt/hris-private/employee-documents";
+// `HRIS_PRIVATE_ROOT` lets a staging/QA instance keep its files elsewhere;
+// production keeps the fixed default.
+const PRIVATE_ROOT = path.join(
+  process.env.HRIS_PRIVATE_ROOT?.trim() || "/opt/hris-private",
+  "employee-documents"
+);
 
 function resolveWithinRoot(root: string, relativePath: string): string {
   const resolved = path.resolve(root, relativePath);

@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils/cn";
 import { BrandLogo, BrandMark } from "./brand";
 import { HrisIcon } from "./icons";
 import { NavLinks } from "./nav-links";
-import { OrganizationSwitcher } from "./organization-switcher";
+import { OrganizationMark, OrganizationSwitcher } from "./organization-switcher";
 import { useShell } from "./shell-context";
 
 /**
@@ -37,7 +37,7 @@ export function Sidebar() {
       >
         <Link
           href="/dashboard"
-          aria-label="HRIS Lite Enterprise — Beranda"
+          aria-label="HRIS — Beranda"
           className="flex min-w-0 flex-col items-start gap-1 rounded-2xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           {collapsed ? (
@@ -45,14 +45,9 @@ export function Sidebar() {
               <BrandMark size={48} priority />
             </span>
           ) : (
-            <>
-              <span className="hris-logo-plate flex">
-                <BrandLogo height={60} priority />
-              </span>
-              <span className="pl-0.5 text-[11px] font-semibold tracking-[0.08em] text-sidebar-muted uppercase">
-                Lite Enterprise v2.0
-              </span>
-            </>
+            <span className="hris-logo-plate flex">
+              <BrandLogo height={60} priority />
+            </span>
           )}
         </Link>
         {collapsed ? null : (
@@ -73,6 +68,7 @@ export function Sidebar() {
           {profile.isSuperAdmin && profile.organizationOptions?.length ? (
             <OrganizationSwitcher
               name={profile.organizationName}
+              logoUrl={profile.organizationLogoUrl ?? null}
               activeOrganizationId={profile.activeOrganizationId ?? null}
               options={profile.organizationOptions}
               collapsed={collapsed}
@@ -81,6 +77,7 @@ export function Sidebar() {
           ) : (
             <OrganizationChip
               name={profile.organizationName}
+              logoUrl={profile.organizationLogoUrl ?? null}
               collapsed={collapsed}
             />
           )}
@@ -105,9 +102,11 @@ export function Sidebar() {
 
 function OrganizationChip({
   name,
+  logoUrl,
   collapsed,
 }: {
   name: string;
+  logoUrl: string | null;
   collapsed: boolean;
 }) {
   return (
@@ -118,9 +117,7 @@ function OrganizationChip({
       )}
       title={collapsed ? name : undefined}
     >
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-primary text-primary">
-        <HrisIcon name="building" className="size-[18px]" />
-      </span>
+      <OrganizationMark name={name} logoUrl={logoUrl} />
       {collapsed ? null : (
         <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-foreground">
           {name}

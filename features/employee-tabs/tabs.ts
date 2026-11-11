@@ -45,7 +45,9 @@ export const SYSTEM_TABS: readonly SystemTabSpec[] = [
   { key: "family", label: "Family", displayOrder: 90 },
   { key: "education", label: "Education", displayOrder: 100 },
   { key: "documents", label: "Documents", displayOrder: 110 },
-  { key: "custom", label: "Custom Fields", displayOrder: 120 },
+  // The built-in "Custom Fields" tab was retired: tabs and fields are
+  // configured in Settings → Employee Fields / Tabs. Fields not placed on a
+  // custom tab render on the Overview tab instead (see the profile page).
   { key: "attendance", label: "Attendance", displayOrder: 130 },
   { key: "leave", label: "Leave", displayOrder: 140 },
   { key: "payroll", label: "Payroll", displayOrder: 150 },

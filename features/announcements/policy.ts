@@ -26,6 +26,8 @@ export type AnnouncementPolicyReason =
   | "requires.publish"
   | "invalid.transition"
   | "blocked.reads"
+  | "requires.unpublish"
+  | "superadmin.required"
   | "attachment.not.found"
   | "attachment.belongs.elsewhere"
   | "employee.unlinked";
@@ -66,6 +68,8 @@ export interface AnnouncementActionContext {
   canUpdate: boolean;
   canDelete: boolean;
   canPublish: boolean;
+  /** System-level Super Administrator (DB-verified by the caller). */
+  isSuperAdmin?: boolean;
 }
 
 /**
@@ -122,6 +126,7 @@ export function buildAnnouncementActionDecision(
         hasReads: Boolean(context.hasReads),
         canDelete: context.canDelete,
         canPublish: context.canPublish,
+        isSuperAdmin: Boolean(context.isSuperAdmin),
       });
   }
 }
@@ -131,20 +136,29 @@ export interface AnnouncementDeletionContext {
   hasReads: boolean;
   canDelete: boolean;
   canPublish: boolean;
+  /** System-level Super Administrator (DB-verified by the caller). */
+  isSuperAdmin?: boolean;
 }
 
 /**
- * Deletion guard. An announcement that has been read by even one employee is
- * append-only and can never be removed — the read record would be lost.
+ * Deletion guard.
+ *
+ *  - PUBLISHED announcements are never deleted in place: unpublish first.
+ *  - UNPUBLISHED announcements may be deleted by a Super Administrator only.
+ *    Employees may already have read them; those read records are removed
+ *    together with the announcement (the Super Administrator owns that call).
+ *  - DRAFTS were never visible, so they carry no reads; `announcements.delete`
+ *    is enough. A draft that somehow has reads stays protected.
  */
 export function buildAnnouncementDeletionDecision(
   context: AnnouncementDeletionContext
 ): AnnouncementDecision {
+  if (context.status === "published") return deny("requires.unpublish");
+  if (context.status === "unpublished") {
+    return context.isSuperAdmin ? allow() : deny("superadmin.required");
+  }
   if (context.hasReads) return deny("blocked.reads");
   if (!context.canDelete) return deny("permission.missing");
-  if (context.status === "published" && !context.canPublish) {
-    return deny("requires.publish");
-  }
   return allow();
 }
 

@@ -88,9 +88,6 @@ export function AppDrawer() {
               <span className="hris-logo-plate inline-flex max-w-full rounded-2xl px-3 py-2 shadow-sm">
                 <BrandLogo height={46} />
               </span>
-              <span className="mt-1.5 block truncate text-xs font-semibold tracking-wide text-white/85">
-                Lite Enterprise v2.0
-              </span>
             </span>
             <button
               type="button"
@@ -136,6 +133,7 @@ export function AppDrawer() {
           <div className="shrink-0 border-b border-border px-5 pt-1 pb-3">
             <OrganizationSwitcher
               name={profile.organizationName}
+              logoUrl={profile.organizationLogoUrl ?? null}
               activeOrganizationId={profile.activeOrganizationId ?? null}
               options={profile.organizationOptions}
             />

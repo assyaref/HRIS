@@ -13,6 +13,7 @@ import { indonesianGreeting, initialsOf } from "@/lib/utils/greeting";
 import { getOrganizationName } from "@/features/employees/queries";
 import { getEmployeeSelfProfile } from "@/features/employees/queries";
 import { listMyNotifications } from "@/features/notifications/queries";
+import { organizationLogoUrl } from "@/lib/organizations/logo-storage";
 
 /**
  * Authenticated application shell (route group `(dashboard)`).
@@ -41,13 +42,14 @@ export default async function DashboardLayout({
   ]);
 
   const organizationId = currentUser.organizationId;
-  const [organizationName, employee, notifications] = organizationId
+  const [organizationName, employee, notifications, logoUrl] = organizationId
     ? await Promise.all([
         getOrganizationName(organizationId),
         getEmployeeSelfProfile(currentUser.id, organizationId),
         listMyNotifications(currentUser.id, organizationId),
+        organizationLogoUrl(organizationId),
       ])
-    : [null, null, null];
+    : [null, null, null, null];
 
   const organizationOptions = authorization.isSuperAdmin
     ? await listActingOrganizationOptions()
@@ -70,6 +72,7 @@ export default async function DashboardLayout({
     roleLabel: roleLabel ?? (employee ? "Karyawan" : null),
     avatarUrl: employee?.profilePhotoUrl ?? null,
     organizationName,
+    organizationLogoUrl: logoUrl,
     greeting: indonesianGreeting(),
     isSuperAdmin: authorization.isSuperAdmin,
     activeOrganizationId: organizationId,

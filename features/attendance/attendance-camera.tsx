@@ -48,12 +48,17 @@ export function AttendanceCamera() {
     setState({ kind: "requesting" });
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment", width: { ideal: 640 } },
+        video: { facingMode: "user", width: { ideal: 640 } },
         audio: false,
       });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+      // The <video> stays mounted (hidden while idle) so the stream can be
+      // attached here; attaching before the element exists left a black box.
+      // play() covers mobile browsers that ignore autoPlay for a late stream.
+      const video = videoRef.current;
+      if (video) {
+        video.srcObject = stream;
+        void video.play().catch(() => {});
       }
       setState({ kind: "active" });
     } catch (error) {
@@ -122,15 +127,13 @@ export function AttendanceCamera() {
         {statusLabel}
       </div>
 
-      {state.kind === "active" ? (
-        <video
+      <video
           ref={videoRef}
           autoPlay
           playsInline
           muted
-          className="aspect-video w-full max-w-sm rounded-md border border-border bg-black"
+          className={`aspect-video w-full max-w-sm rounded-md border border-border bg-black${state.kind === "active" ? "" : " hidden"}`}
         />
-      ) : null}
 
       {state.kind !== "active" ? (
         <Button

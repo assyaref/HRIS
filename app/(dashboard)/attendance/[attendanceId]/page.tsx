@@ -22,6 +22,7 @@ import { requireUser } from "@/lib/auth/auth";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import {
   hasPermission,
+  isSuperAdmin,
   requirePermission,
 } from "@/lib/auth/rbac";
 
@@ -38,6 +39,7 @@ import {
 } from "@/features/attendance/format";
 import { getAttendanceDetail } from "@/features/attendance/queries";
 import { AttendancePhotoView } from "@/features/attendance/attendance-photo-view";
+import { AttendanceDeleteButton } from "@/features/attendance/attendance-delete-button";
 
 export const metadata: Metadata = {
   title: "Attendance details",
@@ -75,6 +77,7 @@ export default async function AttendanceDetailPage({
 
   const record = detail.attendance;
   const timeZone = record.workLocationTimezone;
+  const canDelete = isManager && (await isSuperAdmin(user.id));
 
   return (
     <div className="space-y-6">
@@ -87,12 +90,21 @@ export default async function AttendanceDetailPage({
             {record.employeeName} · {record.employeeNumber}
           </p>
         </div>
-        <Link
-          href={isManager ? "/attendance/management" : "/attendance"}
-          className={buttonVariants({ variant: "outline", size: "sm" })}
-        >
-          Back
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          {canDelete ? (
+            <AttendanceDeleteButton
+              attendanceId={record.id}
+              summary={`${record.employeeName} · ${record.employeeNumber}`}
+              redirectTo="/attendance/management"
+            />
+          ) : null}
+          <Link
+            href={isManager ? "/attendance/management" : "/attendance"}
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            Back
+          </Link>
+        </div>
       </div>
 
       <Card>

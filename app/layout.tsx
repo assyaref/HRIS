@@ -31,7 +31,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: {
     default: PWA_APP_NAME,
-    template: "%s | HRIS Lite Enterprise",
+    template: "%s | HRIS",
   },
   description: PWA_APP_DESCRIPTION,
   applicationName: PWA_APP_NAME,

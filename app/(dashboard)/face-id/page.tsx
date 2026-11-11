@@ -5,6 +5,8 @@ import {
 } from "@/features/employees/face-enrollment";
 import { getFaceEnrollmentSummaryInOrganization } from "@/features/employees/face-enrollment.queries";
 import { SelfFaceEnrollmentPanel } from "@/features/employees/face-enrollment-self-panel";
+import { ProfilePhotoCard } from "@/features/employees/profile-photo-card";
+import { getEmployeeSelfProfile } from "@/features/employees/queries";
 import { isFaceRecognitionConfigured } from "@/lib/attendance/face-recognition";
 
 /**
@@ -55,15 +57,27 @@ export default async function FaceIdPage() {
     );
 
   const faceEngineConfigured = isFaceRecognitionConfigured();
+  const selfProfile = await getEmployeeSelfProfile(user.id, organizationId);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Face ID</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Pendaftaran wajah untuk absensi.
+          Pendaftaran wajah untuk absensi — lewat kamera, atau dari foto profil.
         </p>
       </div>
+
+      <ProfilePhotoCard
+        employeeId={null}
+        displayName={`${employee.firstName} ${employee.lastName}`.trim()}
+        photoUrl={selfProfile?.profilePhotoUrl ?? null}
+        canEdit
+        faceStatus={faceEnrollmentSummary.status}
+        engineConfigured={faceEngineConfigured}
+        employeeActive={employee.employmentStatus === "active"}
+        selfService
+      />
 
       <SelfFaceEnrollmentPanel
         employeeName={`${employee.firstName} ${employee.lastName}`.trim()}

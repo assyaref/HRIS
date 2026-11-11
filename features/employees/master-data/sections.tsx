@@ -11,13 +11,13 @@ import {
 import { Label } from "@/components/ui/label";
 
 import type { EmployeeMasterData } from "./queries";
-import type { EmployeeSectionActionState } from "./actions";
 import {
   deleteAddressAction,
   deleteBankAccountAction,
   deleteDependentAction,
   deleteEducationAction,
   deleteEmployeeDocumentAction,
+  deleteEmploymentHistoryEntryAction,
   saveAddressAction,
   saveBankAccountAction,
   saveDependentAction,
@@ -38,6 +38,7 @@ import {
   SelectRow,
 } from "./forms";
 import { CustomFieldsSection, type CustomFieldSpec } from "./custom-fields-section";
+import { HistoryClearButton } from "./history-clear-button";
 import {
   formatBankAccount,
   formatNik,
@@ -461,10 +462,10 @@ function AddressEditor({
   type: "ktp" | "domicile";
   existing: EmployeeAddress | null;
 }) {
-  const action = (
-    prevState: EmployeeSectionActionState,
-    formData: FormData
-  ) => saveAddressAction(employeeId, existing?.id ?? null, prevState, formData);
+  // Bound server action: the bound arguments are serialized with the server
+  // reference, so a Client Component can receive it (an inline closure is NOT
+  // a server reference and makes React throw while rendering the tab).
+  const action = saveAddressAction.bind(null, employeeId, existing?.id ?? null);
   return (
     <SectionForm
       title={type === "ktp" ? "KTP address" : "Domicile address"}
@@ -629,10 +630,7 @@ function BankEditor({
   reveal: boolean;
   existing?: EmployeeBankAccount | null;
 }) {
-  const action = (
-    prevState: EmployeeSectionActionState,
-    formData: FormData
-  ) => saveBankAccountAction(employeeId, existing?.id ?? null, prevState, formData);
+  const action = saveBankAccountAction.bind(null, employeeId, existing?.id ?? null);
   return (
     <SectionForm
       title={existing ? `Edit ${existing.bankName}` : "Add bank account"}
@@ -753,10 +751,7 @@ function DependentEditor({
   reveal: boolean;
   existing?: EmployeeDependent | null;
 }) {
-  const action = (
-    prevState: EmployeeSectionActionState,
-    formData: FormData
-  ) => saveDependentAction(employeeId, existing?.id ?? null, prevState, formData);
+  const action = saveDependentAction.bind(null, employeeId, existing?.id ?? null);
   return (
     <SectionForm
       title={existing ? `Edit ${existing.name}` : "Add family member"}
@@ -857,10 +852,7 @@ export function EducationSection({
 }
 
 function EducationEditor({ employeeId }: { employeeId: string }) {
-  const action = (
-    prevState: EmployeeSectionActionState,
-    formData: FormData
-  ) => saveEducationAction(employeeId, null, prevState, formData);
+  const action = saveEducationAction.bind(null, employeeId, null);
   return (
     <SectionForm title="Add education" action={action} submitLabel="Add education">
       <div className="grid gap-4 sm:grid-cols-2">
@@ -994,12 +986,25 @@ export function DocumentsSection({
 /* ------------------------------------------------------------------ */
 
 export function HistorySection({
+  employeeId,
   history,
+  canClear = false,
 }: {
+  employeeId: string;
   history: EmploymentHistoryRow[];
+  /** Super Administrator only: delete entries / clear the whole history. */
+  canClear?: boolean;
 }) {
   return (
-    <ListSection title="Employment history" description="Append-only snapshots of employment changes.">
+    <ListSection
+      title="Employment history"
+      description="Append-only snapshots of employment changes."
+      footer={
+        canClear ? (
+          <HistoryClearButton employeeId={employeeId} count={history.length} />
+        ) : null
+      }
+    >
       {history.length === 0 ? (
         <p className="text-sm text-muted-foreground">No history recorded yet.</p>
       ) : (
@@ -1024,6 +1029,17 @@ export function HistorySection({
               </p>
               {entry.notes ? (
                 <p className="mt-1 text-muted-foreground">{entry.notes}</p>
+              ) : null}
+              {canClear ? (
+                <div className="mt-2">
+                  <ActionButton
+                    label="Hapus"
+                    action={deleteEmploymentHistoryEntryAction}
+                    employeeId={employeeId}
+                    rowId={entry.id}
+                    variant="outline"
+                  />
+                </div>
               ) : null}
             </li>
           ))}

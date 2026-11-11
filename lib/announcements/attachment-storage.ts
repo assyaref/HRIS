@@ -20,7 +20,12 @@ import path from "node:path";
  * are never exposed except through the authenticated download route.
  */
 
-const PRIVATE_ROOT = "/opt/hris-private/announcements";
+// `HRIS_PRIVATE_ROOT` lets a staging/QA instance keep its files elsewhere;
+// production keeps the fixed default.
+const PRIVATE_ROOT = path.join(
+  process.env.HRIS_PRIVATE_ROOT?.trim() || "/opt/hris-private",
+  "announcements"
+);
 
 function resolveWithinRoot(root: string, relativePath: string): string {
   const resolved = path.resolve(root, relativePath);

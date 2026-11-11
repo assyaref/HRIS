@@ -57,7 +57,7 @@ export function BrandMark({
 }
 
 /**
- * Sign-in brand: the logo on a white plate, with the edition line and the
+ * Sign-in brand: the logo on a white plate, with the tagline and the
  * logo's three-pill accent. `tone="onBlue"` for the blue band.
  */
 export function Brand({
@@ -71,7 +71,7 @@ export function Brand({
   return (
     <Link
       href="/"
-      aria-label="HRIS Lite Enterprise"
+      aria-label="HRIS"
       className="group inline-flex max-w-full min-w-0 flex-col items-start gap-3 rounded-2xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
     >
       <span
@@ -96,7 +96,7 @@ export function Brand({
           <span />
           <span />
         </span>
-        Lite Enterprise v2.0
+        Human Resource Information System
       </span>
     </Link>
   );

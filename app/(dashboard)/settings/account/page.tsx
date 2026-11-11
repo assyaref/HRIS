@@ -9,6 +9,9 @@ import { displayRoleLabel } from "@/lib/auth/roles";
 
 import { getEmployeeSelfProfile } from "@/features/employees/queries";
 import { ChangePasswordForm } from "@/features/account/change-password-form";
+import { ProfilePhotoCard } from "@/features/employees/profile-photo-card";
+import { getFaceEnrollmentSummaryInOrganization } from "@/features/employees/face-enrollment.queries";
+import { isFaceRecognitionConfigured } from "@/lib/attendance/face-recognition";
 
 export const metadata: Metadata = {
   title: "Profil Saya",
@@ -36,6 +39,9 @@ export default async function AccountSettingsPage() {
 
   const profile = user.organizationId
     ? await getEmployeeSelfProfile(user.id, user.organizationId)
+    : null;
+  const faceSummary = profile
+    ? await getFaceEnrollmentSummaryInOrganization(profile.organizationId, profile.id)
     : null;
 
   return (
@@ -87,6 +93,19 @@ export default async function AccountSettingsPage() {
           </CardHeader>
         </Card>
       )}
+
+      {profile && faceSummary ? (
+        <ProfilePhotoCard
+          employeeId={null}
+          displayName={`${profile.firstName} ${profile.lastName}`.trim()}
+          photoUrl={profile.profilePhotoUrl}
+          canEdit
+          faceStatus={faceSummary.status}
+          engineConfigured={isFaceRecognitionConfigured()}
+          employeeActive={profile.employmentStatus === "active"}
+          selfService
+        />
+      ) : null}
 
       <section className="space-y-3">
         <SectionHeader
