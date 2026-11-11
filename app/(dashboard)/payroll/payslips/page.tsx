@@ -21,10 +21,15 @@ import {
 } from "@/components/ui/table";
 import { requireUser } from "@/lib/auth/auth";
 import { PERMISSIONS } from "@/lib/auth/permissions";
-import { hasAnyPermission, requirePermission } from "@/lib/auth/rbac";
+import {
+  hasAnyPermission,
+  isSuperAdmin,
+  requirePermission,
+} from "@/lib/auth/rbac";
 
 import { formatDateTime } from "@/features/payroll/format";
 import { PayslipStatusBadge } from "@/features/payroll/payroll-badges";
+import { PayslipDeleteDialog } from "@/features/payroll/payslip-delete-dialog";
 import {
   listRecentPayslips,
   RECENT_PAYSLIPS_LIMIT,
@@ -40,13 +45,16 @@ export default async function PayslipsOverviewPage() {
   if (!user.organizationId) forbidden();
   const organizationId = user.organizationId;
 
-  const [payslips, canUpload] = await Promise.all([
+  // Permanent delete of a revoked payslip is reserved for the system-level
+  // SUPERADMIN (re-checked in deleteRevokedPayslipAction).
+  const [payslips, canUpload, actorIsSuperAdmin] = await Promise.all([
     listRecentPayslips(organizationId),
     hasAnyPermission(user.id, [
       PERMISSIONS.PAYSLIP_PUBLISH,
       PERMISSIONS.PAYSLIP_MANAGE,
       PERMISSIONS.PAYROLL_MANAGE,
     ]),
+    isSuperAdmin(user.id),
   ]);
 
   return (
@@ -112,6 +120,9 @@ export default async function PayslipsOverviewPage() {
                     <TableHead>Period</TableHead>
                     <TableHead>Issued</TableHead>
                     <TableHead>Status</TableHead>
+                    {actorIsSuperAdmin ? (
+                      <TableHead className="text-right">Actions</TableHead>
+                    ) : null}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -151,6 +162,18 @@ export default async function PayslipsOverviewPage() {
                       <TableCell>
                         <PayslipStatusBadge status={payslip.status} />
                       </TableCell>
+                      {actorIsSuperAdmin ? (
+                        <TableCell className="text-right">
+                          {payslip.status === "revoked" ? (
+                            <PayslipDeleteDialog
+                              payslipId={payslip.id}
+                              payslipNumber={payslip.payslipNumber}
+                            />
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                      ) : null}
                     </TableRow>
                   ))}
                 </TableBody>
