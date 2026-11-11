@@ -464,7 +464,9 @@ export async function updateEmployeeAction(
   const parsed = updateEmployeeSchema.safeParse({
     employeeNumber: field(formData, "employeeNumber"),
     firstName: field(formData, "firstName"),
-    lastName: field(formData, "lastName"),
+    lastName: formData.has("lastName")
+      ? field(formData, "lastName")
+      : undefined,
     email: optionalField(formData, "email"),
     phone: optionalField(formData, "phone"),
     hireDate: optionalField(formData, "hireDate"),
@@ -507,7 +509,9 @@ export async function updateEmployeeAction(
   const nextValues = {
     employeeNumber: parsed.data.employeeNumber,
     firstName: parsed.data.firstName,
-    lastName: parsed.data.lastName,
+    // When Last Name is not submitted (empty), preserve the existing value so
+    // an import or edit that omits the column never wipes an existing lastName.
+    lastName: parsed.data.lastName || existing.lastName,
     email: parsed.data.email ?? null,
     phone: parsed.data.phone ?? null,
     hireDate: toDateValue(parsed.data.hireDate),

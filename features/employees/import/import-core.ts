@@ -78,6 +78,7 @@ export interface ImportRow {
 export interface ImportedEmployee {
   employeeNumber: string;
   firstName: string;
+  /** Last name is optional — defaults to empty string when absent. */
   lastName: string;
   email: string | null;
   /** `YYYY-MM-DD`. */
@@ -150,11 +151,14 @@ export function validateNormalizedEmployee(input: {
   if (!EMPLOYEE_NUMBER_PATTERN.test(input.employeeNumber)) {
     return { valid: false, error: "Invalid employee number format." };
   }
-  if (!input.firstName || !input.lastName) {
-    return { valid: false, error: "Name is required." };
+  if (!input.firstName) {
+    return { valid: false, error: "First name is required." };
   }
-  if (input.firstName.length > 100 || input.lastName.length > 100) {
-    return { valid: false, error: "Name must be 100 characters or fewer." };
+  if (input.firstName.length > 100) {
+    return { valid: false, error: "First name must be 100 characters or fewer." };
+  }
+  if (input.lastName && input.lastName.length > 100) {
+    return { valid: false, error: "Last name must be 100 characters or fewer." };
   }
   if (input.email && !IMPORT_EMAIL_PATTERN.test(input.email)) {
     return { valid: false, error: "Invalid email address." };
@@ -283,7 +287,6 @@ export function validRowsToImportedEmployees(
       row.validationStatus !== "valid" ||
       !row.employeeNumber ||
       !row.firstName ||
-      !row.lastName ||
       !row.status
     ) {
       continue;
@@ -291,7 +294,7 @@ export function validRowsToImportedEmployees(
     employees.push({
       employeeNumber: row.employeeNumber,
       firstName: row.firstName,
-      lastName: row.lastName,
+      lastName: row.lastName ?? "",
       email: row.email,
       hireDate: row.hireDate,
       status: row.status,

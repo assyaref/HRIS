@@ -58,6 +58,14 @@ const nameSchema = z
   .min(1, "Enter a name.")
   .max(100, "Name must be 100 characters or fewer.");
 
+/** Last name may be empty (optional). Only length is capped when present. */
+const lastNameSchema = z
+  .string()
+  .trim()
+  .max(100, "Name must be 100 characters or fewer.")
+  .optional()
+  .default("");
+
 const optionalEmailSchema = z
   .email("Enter a valid email address.")
   .max(254, "Email must be 254 characters or fewer.");
@@ -93,7 +101,8 @@ const optionalBirthDateSchema = z
 const employeeFieldsSchema = z.object({
   employeeNumber: employeeNumberSchema,
   firstName: nameSchema,
-  lastName: nameSchema,
+  /** Last Name is optional — defaults to empty string when absent. */
+  lastName: lastNameSchema,
   email: optionalEmailSchema.optional(),
   phone: optionalPhoneSchema.optional(),
   hireDate: optionalDateSchema.optional(),

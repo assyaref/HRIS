@@ -44,11 +44,11 @@ import {
 
 export const EXCEL_IMPORT_MAX_ROWS = 500;
 
-/** Required Employees-tab columns (status optional, defaults to active). */
+/** Required Employees-tab columns (status optional, defaults to active).
+ * Last Name is optional — only Employee No. and First Name are required. */
 export const REQUIRED_EXCEL_EMPLOYEE_COLUMNS = [
   "employee number",
   "first name",
-  "last name",
 ] as const;
 
 export type ImportStatus = (typeof EMPLOYEE_STATUSES)[number];
@@ -411,7 +411,16 @@ function getCell(
 ): string {
   const column = headerMap[key];
   if (column === undefined) return "";
-  return cellText(row.getCell(column).value);
+  const cell = row.getCell(column);
+  // Preserve leading zeros for text-formatted cells (e.g. Employee No. "03235").
+  // When a cell has the Excel text number format (`@`), ExcelJS stores the value
+  // as a string, so `cell.value` already preserves leading zeros. If for some
+  // reason ExcelJS returns a number on a text-formatted cell, fall back to the
+  // formatted display text which preserves the original characters.
+  if (cell.numFmt === "@" && typeof cell.value === "number") {
+    return String(cell.text ?? cell.value);
+  }
+  return cellText(cell.value);
 }
 
 function validateSecondaryRow(
@@ -796,7 +805,7 @@ function buildEmployeeRow(
     rowNumber,
     employeeNumber,
     firstName: firstName || null,
-    lastName: lastName || null,
+    lastName: lastName ?? "",
     email: email || null,
     hireDate: hireDate || null,
     status: null,

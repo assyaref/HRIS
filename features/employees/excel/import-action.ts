@@ -881,6 +881,13 @@ export async function confirmExcelImportAction(
             write.resignationDate = dateOrNull(cells["resignation date"]);
             write.terminationDate = dateOrNull(cells["termination date"]);
           }
+        } else {
+          // Updates: only overwrite firstName/lastName when the cell is
+          // non-empty, so an omitted or blank Last Name keeps the stored value.
+          const firstNameCell = (cells["first name"] ?? "").trim();
+          const lastNameCell = (cells["last name"] ?? "").trim();
+          if (firstNameCell) write.firstName = firstNameCell.slice(0, 100);
+          if (lastNameCell) write.lastName = lastNameCell.slice(0, 100);
         }
         if (permissions.employment && cells["work location"]) {
           const resolved = locationByName.get(cells["work location"]);
