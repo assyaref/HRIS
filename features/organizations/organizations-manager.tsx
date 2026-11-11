@@ -74,13 +74,17 @@ export function OrganizationsManager({
                     <Link
                       href={`/settings/organizations/${organization.id}`}
                       className="block min-w-0 hover:underline"
-                      aria-label={organization.name}
                     >
                       <OrganizationIdentity
                         name={organization.name}
                         logoUrl={organization.logoUrl ?? null}
                         imgClassName="h-8 max-w-[12rem]"
                       />
+                      {organization.logoUrl ? (
+                        <span className="mt-1 block truncate text-xs font-normal text-muted-foreground">
+                          {organization.name}
+                        </span>
+                      ) : null}
                     </Link>
                   </TableCell>
                   <TableCell>
@@ -160,6 +164,11 @@ export function OrganizationsManager({
                     imgClassName="h-8 max-w-[12rem]"
                     textClassName="font-medium"
                   />
+                  {organization.logoUrl ? (
+                    <p className="mt-1 truncate text-xs text-muted-foreground">
+                      {organization.name}
+                    </p>
+                  ) : null}
                   <p className="truncate text-sm text-muted-foreground">
                     <span className="font-mono">{organization.code}</span>
                   </p>
