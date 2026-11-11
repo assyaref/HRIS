@@ -7,7 +7,11 @@ import { cn } from "@/lib/utils/cn";
 import { BrandLogo, BrandMark } from "./brand";
 import { HrisIcon } from "./icons";
 import { NavLinks } from "./nav-links";
-import { OrganizationMark, OrganizationSwitcher } from "./organization-switcher";
+import {
+  OrganizationIdentity,
+  OrganizationInitial,
+  OrganizationSwitcher,
+} from "./organization-switcher";
 import { useShell } from "./shell-context";
 
 /**
@@ -117,11 +121,16 @@ function OrganizationChip({
       )}
       title={collapsed ? name : undefined}
     >
-      <OrganizationMark name={name} logoUrl={logoUrl} />
-      {collapsed ? null : (
-        <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-foreground">
-          {name}
-        </span>
+      {collapsed ? (
+        <OrganizationInitial name={name} logoUrl={logoUrl} />
+      ) : (
+        <OrganizationIdentity
+          name={name}
+          logoUrl={logoUrl}
+          className="flex-1"
+          imgClassName="h-10"
+          textClassName="text-[15px] font-semibold text-foreground"
+        />
       )}
     </div>
   );

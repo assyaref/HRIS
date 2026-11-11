@@ -95,11 +95,13 @@ export default async function OrganizationDetailPage({
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={logoUrl}
-                alt=""
-                className="size-10 rounded-xl border border-border bg-white object-contain p-1"
+                alt={organization.name}
+                title={organization.name}
+                className="h-12 w-auto max-w-[16rem] rounded-xl border border-border bg-white object-contain p-1"
               />
-            ) : null}
-            <span className="min-w-0 truncate">{organization.name}</span>
+            ) : (
+              <span className="min-w-0 truncate">{organization.name}</span>
+            )}
             <span className="font-mono text-base font-normal text-muted-foreground">
               {organization.code}
             </span>

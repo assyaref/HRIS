@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils/cn";
 import { BrandMark } from "./brand";
 import { HeroWidgets } from "./hero-widgets";
 import { HrisIcon } from "./icons";
+import { OrganizationIdentity } from "./organization-switcher";
 import { useShell } from "./shell-context";
 import { Avatar, UserMenu } from "./user-menu";
 
@@ -69,9 +70,14 @@ function TopBar() {
         <span className="min-w-0 leading-tight">
           <span className="block text-lg font-extrabold tracking-tight">HRIS</span>
           {profile.organizationName ? (
-            <span className="block max-w-[40vw] truncate text-xs text-white/85">
-              {profile.organizationName}
-            </span>
+            <OrganizationIdentity
+              name={profile.organizationName}
+              logoUrl={profile.organizationLogoUrl ?? null}
+              plate
+              className="mt-0.5 max-w-[40vw] rounded-md px-1 py-0.5"
+              imgClassName="h-4"
+              textClassName="max-w-[40vw] text-xs text-white/85"
+            />
           ) : null}
         </span>
       </Link>
@@ -144,22 +150,13 @@ function Greeting() {
                 "mt-4 flex items-center gap-3 border-t border-white/20 pt-4 text-[15px] font-semibold text-white md:border-t-0 md:pt-0 lg:text-base"
               )}
             >
-              {profile.organizationLogoUrl ? (
-                <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1 shadow-sm">
-                  {/* Authenticated image route; next/image cannot optimise it. */}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={profile.organizationLogoUrl}
-                    alt=""
-                    className="size-full object-contain"
-                  />
-                </span>
-              ) : (
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/15">
-                  <HrisIcon name="building" className="size-[18px]" />
-                </span>
-              )}
-              <span className="truncate">{profile.organizationName}</span>
+              <OrganizationIdentity
+                name={profile.organizationName}
+                logoUrl={profile.organizationLogoUrl ?? null}
+                plate
+                imgClassName="h-10 max-w-[14rem]"
+                textClassName="truncate"
+              />
             </p>
           ) : null}
         </div>

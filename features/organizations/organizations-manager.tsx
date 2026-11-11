@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-import { OrganizationMark } from "@/components/layout/organization-switcher";
+import { OrganizationIdentity } from "@/components/layout/organization-switcher";
 import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
@@ -71,18 +71,17 @@ export function OrganizationsManager({
               return (
                 <TableRow key={organization.id}>
                   <TableCell className="max-w-[20rem] font-medium">
-                    <span className="flex min-w-0 items-center gap-3">
-                      <OrganizationMark
+                    <Link
+                      href={`/settings/organizations/${organization.id}`}
+                      className="block min-w-0 hover:underline"
+                      aria-label={organization.name}
+                    >
+                      <OrganizationIdentity
                         name={organization.name}
                         logoUrl={organization.logoUrl ?? null}
+                        imgClassName="h-8 max-w-[12rem]"
                       />
-                      <Link
-                        href={`/settings/organizations/${organization.id}`}
-                        className="block min-w-0 truncate hover:underline"
-                      >
-                        {organization.name}
-                      </Link>
-                    </span>
+                    </Link>
                   </TableCell>
                   <TableCell>
                     <span className="font-mono text-sm">
@@ -154,14 +153,13 @@ export function OrganizationsManager({
               className="rounded-lg border border-border bg-card p-4"
             >
               <div className="flex items-start justify-between gap-3">
-                <OrganizationMark
-                  name={organization.name}
-                  logoUrl={organization.logoUrl ?? null}
-                />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">
-                    {organization.name}
-                  </p>
+                  <OrganizationIdentity
+                    name={organization.name}
+                    logoUrl={organization.logoUrl ?? null}
+                    imgClassName="h-8 max-w-[12rem]"
+                    textClassName="font-medium"
+                  />
                   <p className="truncate text-sm text-muted-foreground">
                     <span className="font-mono">{organization.code}</span>
                   </p>

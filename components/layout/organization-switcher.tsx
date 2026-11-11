@@ -18,35 +18,69 @@ import type { ShellOrganizationOption } from "./shell-context";
  * server action then reads and writes that organization. It never decides
  * access itself: the action re-checks SUPERADMIN against PostgreSQL.
  */
-/** Organization avatar: the custom logo when one is set, else the building icon. */
-export function OrganizationMark({
+/**
+ * Organization identity: the uploaded logo stands in for the organization's
+ * name wherever the name would be printed; without a logo the name is shown
+ * as text. `plate` puts the logo on a white tile (for dark backgrounds).
+ */
+export function OrganizationIdentity({
   name,
   logoUrl,
+  plate = false,
+  imgClassName,
+  textClassName,
   className,
 }: {
   name: string;
   logoUrl: string | null;
+  plate?: boolean;
+  imgClassName?: string;
+  textClassName?: string;
   className?: string;
 }) {
-  return logoUrl ? (
+  if (!logoUrl) {
+    return (
+      <span className={cn("block min-w-0 truncate", textClassName, className)}>
+        {name}
+      </span>
+    );
+  }
+  return (
     <span
       className={cn(
-        "flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white ring-1 ring-border",
+        "inline-flex max-w-full min-w-0 items-center",
+        plate && "rounded-xl bg-white px-2 py-1 shadow-sm",
         className
       )}
+      title={name}
     >
       {/* Authenticated image route; next/image cannot optimise it. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={logoUrl} alt={`Logo ${name}`} className="size-full object-contain p-0.5" />
+      <img
+        src={logoUrl}
+        alt={name}
+        className={cn("h-9 w-auto max-w-full object-contain object-left", imgClassName)}
+      />
+    </span>
+  );
+}
+
+/** Compact identity for the collapsed sidebar: the logo, else the initial. */
+export function OrganizationInitial({
+  name,
+  logoUrl,
+}: {
+  name: string;
+  logoUrl: string | null;
+}) {
+  return logoUrl ? (
+    <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-border">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={logoUrl} alt={name} className="size-full object-contain p-1" />
     </span>
   ) : (
-    <span
-      className={cn(
-        "flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-primary text-primary",
-        className
-      )}
-    >
-      <HrisIcon name="building" className="size-1/2" />
+    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-surface-primary text-base font-bold text-primary">
+      {name.trim().charAt(0).toUpperCase()}
     </span>
   );
 }
@@ -116,16 +150,21 @@ export function OrganizationSwitcher({
           collapsed && "justify-center"
         )}
       >
-        <OrganizationMark name={name} logoUrl={logoUrl} />
-        {collapsed ? null : (
+        {collapsed ? (
+          <OrganizationInitial name={name} logoUrl={logoUrl} />
+        ) : (
           <>
             <span className="min-w-0 flex-1">
               <span className="block text-[11px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
                 {pending ? "Mengganti…" : "Organisasi aktif"}
               </span>
-              <span className="block truncate text-[15px] font-semibold text-foreground">
-                {name}
-              </span>
+              <OrganizationIdentity
+                name={name}
+                logoUrl={logoUrl}
+                className="mt-1"
+                imgClassName="h-10"
+                textClassName="text-[15px] font-semibold text-foreground"
+              />
             </span>
             <HrisIcon
               name="chevron-down"
@@ -164,14 +203,13 @@ export function OrganizationSwitcher({
                       selected && "font-semibold text-primary"
                     )}
                   >
-                    <OrganizationMark
-                      name={option.name}
-                      logoUrl={option.logoUrl ?? null}
-                      className="size-7"
-                    />
-                    <span className="min-w-0 flex-1 truncate">
-                      {option.name}
-                      <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                    <span className="flex min-w-0 flex-1 items-center gap-2">
+                      <OrganizationIdentity
+                        name={option.name}
+                        logoUrl={option.logoUrl ?? null}
+                        imgClassName="h-7"
+                      />
+                      <span className="shrink-0 text-xs font-normal text-muted-foreground">
                         {option.isSystem ? "Sistem" : option.code}
                       </span>
                     </span>
