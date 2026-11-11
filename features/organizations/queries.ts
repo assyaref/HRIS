@@ -59,6 +59,8 @@ export interface OrganizationListItem {
   userCount: number;
   createdAt: Date;
   updatedAt: Date;
+  /** Authenticated logo URL, resolved by the page from private storage. */
+  logoUrl?: string | null;
 }
 
 export interface OrganizationListFilters {

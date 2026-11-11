@@ -20,6 +20,7 @@ export interface ShellOrganizationOption {
   name: string;
   code: string;
   isSystem: boolean;
+  logoUrl?: string | null;
 }
 
 /** Who is signed in, as shown by the shell (sidebar, top bar, hero, drawer). */

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { OrganizationMark } from "@/components/layout/organization-switcher";
 import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
@@ -16,6 +17,7 @@ import {
 import { formatDate } from "@/features/payroll/format";
 import { DeleteOrganizationDialog } from "./organization-delete-dialog";
 import { EditOrganizationDialog } from "./organization-edit-dialog";
+import { OrganizationLogoDialog } from "./organization-logo-dialog";
 import { OrganizationStatusBadge } from "./organization-status-badge";
 import type { OrganizationListItem } from "./queries";
 
@@ -68,13 +70,19 @@ export function OrganizationsManager({
                 organization.employeeCount + organization.userCount;
               return (
                 <TableRow key={organization.id}>
-                  <TableCell className="max-w-[18rem] font-medium">
-                    <Link
-                      href={`/settings/organizations/${organization.id}`}
-                      className="block truncate hover:underline"
-                    >
-                      {organization.name}
-                    </Link>
+                  <TableCell className="max-w-[20rem] font-medium">
+                    <span className="flex min-w-0 items-center gap-3">
+                      <OrganizationMark
+                        name={organization.name}
+                        logoUrl={organization.logoUrl ?? null}
+                      />
+                      <Link
+                        href={`/settings/organizations/${organization.id}`}
+                        className="block min-w-0 truncate hover:underline"
+                      >
+                        {organization.name}
+                      </Link>
+                    </span>
                   </TableCell>
                   <TableCell>
                     <span className="font-mono text-sm">
@@ -112,6 +120,11 @@ export function OrganizationsManager({
                       >
                         View
                       </Link>
+                      <OrganizationLogoDialog
+                        organizationId={organization.id}
+                        organizationName={organization.name}
+                        logoUrl={organization.logoUrl ?? null}
+                      />
                       <EditOrganizationDialog
                         organization={organization}
                       />
@@ -141,7 +154,11 @@ export function OrganizationsManager({
               className="rounded-lg border border-border bg-card p-4"
             >
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
+                <OrganizationMark
+                  name={organization.name}
+                  logoUrl={organization.logoUrl ?? null}
+                />
+                <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">
                     {organization.name}
                   </p>
@@ -186,6 +203,11 @@ export function OrganizationsManager({
                 >
                   View
                 </Link>
+                <OrganizationLogoDialog
+                  organizationId={organization.id}
+                  organizationName={organization.name}
+                  logoUrl={organization.logoUrl ?? null}
+                />
                 <EditOrganizationDialog organization={organization} />
                 {isSystem ? null : (
                   <DeleteOrganizationDialog

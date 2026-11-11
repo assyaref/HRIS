@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { requireUser } from "@/lib/auth/auth";
 import { isSuperAdmin } from "@/lib/auth/rbac";
 import { SYSTEM_ORGANIZATION_CODE } from "@/lib/auth/roles";
+import { organizationLogoUrl } from "@/lib/organizations/logo-storage";
 
 import { listOrganizations } from "@/features/organizations/queries";
 import {
@@ -53,7 +54,15 @@ export default async function OrganizationsSettingsPage({
   const status =
     statusParam && isOrganizationStatus(statusParam) ? statusParam : null;
 
-  const organizations = await listOrganizations({ search, status });
+  const rows = await listOrganizations({ search, status });
+  // Logos live on the private volume (presence = setting); resolve the
+  // authenticated URL per row so the list can show each tenant's mark.
+  const organizations = await Promise.all(
+    rows.map(async (row) => ({
+      ...row,
+      logoUrl: await organizationLogoUrl(row.id),
+    }))
+  );
 
   return (
     <div className="space-y-6">

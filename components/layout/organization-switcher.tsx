@@ -46,7 +46,7 @@ export function OrganizationMark({
         className
       )}
     >
-      <HrisIcon name="building" className="size-[18px]" />
+      <HrisIcon name="building" className="size-1/2" />
     </span>
   );
 }
@@ -164,6 +164,11 @@ export function OrganizationSwitcher({
                       selected && "font-semibold text-primary"
                     )}
                   >
+                    <OrganizationMark
+                      name={option.name}
+                      logoUrl={option.logoUrl ?? null}
+                      className="size-7"
+                    />
                     <span className="min-w-0 flex-1 truncate">
                       {option.name}
                       <span className="ml-1.5 text-xs font-normal text-muted-foreground">

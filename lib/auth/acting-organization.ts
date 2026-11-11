@@ -6,6 +6,7 @@ import { cookies } from "next/headers";
 import { db } from "@/db";
 import { organizations, roles, userRoles } from "@/db/schema";
 import { isProduction } from "@/lib/config/env";
+import { organizationLogoUrl } from "@/lib/organizations/logo-storage";
 import { SUPERADMIN_ROLE_CODE, SYSTEM_ORGANIZATION_CODE } from "./roles";
 
 /**
@@ -42,6 +43,8 @@ export interface ActingOrganizationOption {
   name: string;
   code: string;
   isSystem: boolean;
+  /** Authenticated logo URL (null when the tenant has no custom logo). */
+  logoUrl: string | null;
 }
 
 /** Whether `userId` holds SUPERADMIN inside `homeOrganizationId`. */
@@ -77,16 +80,18 @@ export async function listActingOrganizationOptions(): Promise<
     })
     .from(organizations)
     .orderBy(asc(organizations.name));
-  return rows
-    .filter(
-      (row) => row.status === "active" || row.code === SYSTEM_ORGANIZATION_CODE
-    )
-    .map((row) => ({
+  const eligible = rows.filter(
+    (row) => row.status === "active" || row.code === SYSTEM_ORGANIZATION_CODE
+  );
+  return Promise.all(
+    eligible.map(async (row) => ({
       id: row.id,
       name: row.name,
       code: row.code,
       isSystem: row.code === SYSTEM_ORGANIZATION_CODE,
-    }));
+      logoUrl: await organizationLogoUrl(row.id),
+    }))
+  );
 }
 
 /** Whether `organizationId` is a valid acting target. */
