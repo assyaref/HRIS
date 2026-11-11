@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils/cn";
 
 import { BrandMark } from "./brand";
 import { HeroWidgets } from "./hero-widgets";
-import { HrisIcon } from "./icons";
+import { HrisIcon, type HrisIconName } from "./icons";
 import { OrganizationIdentity } from "./organization-switcher";
 import { useShell } from "./shell-context";
 import { Avatar, UserMenu } from "./user-menu";
@@ -24,12 +24,19 @@ import { Avatar, UserMenu } from "./user-menu";
 export function HeroBand() {
   const pathname = usePathname();
   const isHome = pathname === "/dashboard" || pathname === "/";
+  const pageHero = PAGE_HEROES[pathname];
 
   return (
     <>
       <div className="hris-band relative isolate overflow-hidden">
         <TopBar />
-        {isHome ? <Greeting /> : <div className="h-7 lg:h-9" />}
+        {isHome ? (
+          <Greeting />
+        ) : pageHero ? (
+          <PageHero {...pageHero} />
+        ) : (
+          <div className="h-7 lg:h-9" />
+        )}
         <Wave />
       </div>
       {isHome ? (
@@ -38,6 +45,48 @@ export function HeroBand() {
         </div>
       ) : null}
     </>
+  );
+}
+
+/**
+ * Pages whose title lives in the blue band (icon + title + one-line
+ * description, reference "Absensi" layout). The page's first card overlaps the
+ * wave through `hris-band-overlap`. Keyed by the exact pathname.
+ */
+const PAGE_HEROES: Record<
+  string,
+  { icon: HrisIconName; title: string; description: string }
+> = {
+  "/attendance": {
+    icon: "calendar-check",
+    title: "Absensi",
+    description: "Lihat riwayat dan rekap kehadiran Anda.",
+  },
+};
+
+function PageHero({
+  icon,
+  title,
+  description,
+}: {
+  icon: HrisIconName;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="relative px-4 pt-1 pb-16 sm:px-8 lg:px-14 lg:pb-16">
+      <div className="mx-auto flex w-full max-w-[1400px] items-center gap-4 lg:px-0">
+        <HrisIcon name={icon} className="size-14 shrink-0 text-white lg:size-16" />
+        <div className="min-w-0">
+          <h1 className="text-[32px] leading-tight font-extrabold tracking-tight text-white lg:text-[36px]">
+            {title}
+          </h1>
+          <p className="mt-0.5 text-[17px] font-medium text-white/90 lg:text-lg">
+            {description}
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
 

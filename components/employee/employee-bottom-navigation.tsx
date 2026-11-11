@@ -50,9 +50,10 @@ function isEntryActive(pathname: string, entry: NavEntry): boolean {
     return pathname === "/dashboard" || pathname === "/";
   }
   if (entry.href === "/attendance") {
-    // The centre ABSEN button owns the exact /attendance route; the
-    // "Absensi" tab owns attendance sub-pages (e.g. a record detail).
-    return pathname.startsWith("/attendance/");
+    // The "Absensi" tab owns the attendance page (Riwayat / Rekap) and its
+    // sub-pages (e.g. a record detail). The centre ABSEN button opens the
+    // face-attendance sheet and never navigates.
+    return pathname === "/attendance" || pathname.startsWith("/attendance/");
   }
   return pathname === entry.href || pathname.startsWith(`${entry.href}/`);
 }
