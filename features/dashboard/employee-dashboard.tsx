@@ -28,6 +28,7 @@ import { formatTime } from "@/features/attendance/format";
 import {
   findAttendanceForDate,
   findOpenAttendance,
+  listEligibleAttendanceOptions,
 } from "@/features/attendance/queries";
 import { getEmployeeSelfProfile } from "@/features/employees/queries";
 import {
@@ -189,6 +190,7 @@ export async function EmployeeDashboard({
     myPermissions,
     latestAnnouncements,
     unreadAnnouncements,
+    attendanceOptions,
   ] = await Promise.all([
     findOpenAttendance(organizationId, employee.id),
     findAttendanceForDate(organizationId, employee.id, today),
@@ -200,6 +202,7 @@ export async function EmployeeDashboard({
       organizationId,
       employeeId: employee.id,
     }),
+    listEligibleAttendanceOptions(organizationId, employee.id),
   ]);
 
   const employeeActive = employee.employmentStatus === "active";
@@ -250,8 +253,28 @@ export async function EmployeeDashboard({
   const canPermission = can(P.PERMISSION_VIEW);
   const canPayslip = can(P.PAYSLIP_VIEW);
 
+  // Location resolution order: where the employee is checked in right now,
+  // then the fixed work location on the profile, then the work location(s)
+  // of their ACTIVE project assignments (the sites they may attend).
+  const assignedLocationNames = [
+    ...new Set(attendanceOptions.map((option) => option.workLocationName)),
+  ];
+  const assignedLocationName =
+    assignedLocationNames.length === 0
+      ? null
+      : assignedLocationNames.length === 1
+        ? assignedLocationNames[0]
+        : `${assignedLocationNames[0]} +${assignedLocationNames.length - 1} lokasi lain`;
   const locationName =
-    activeRecord?.workLocationName ?? employee.workLocationName ?? null;
+    activeRecord?.workLocationName ??
+    employee.workLocationName ??
+    assignedLocationName;
+  const locationProjectName =
+    !activeRecord?.workLocationName &&
+    !employee.workLocationName &&
+    attendanceOptions.length > 0
+      ? [...new Set(attendanceOptions.map((option) => option.projectName))].join(", ")
+      : null;
 
   const ctaEnabled =
     canAttendance &&
@@ -371,7 +394,14 @@ export async function EmployeeDashboard({
                   locationName ? "bg-[#22C55E]" : "bg-muted-foreground/50"
                 )}
               />
-              <span className="line-clamp-2">{locationName ?? "Belum diatur"}</span>
+              <span className="min-w-0">
+                <span className="line-clamp-2">{locationName ?? "Belum diatur"}</span>
+                {locationProjectName ? (
+                  <span className="line-clamp-1 text-xs font-normal text-muted-foreground">
+                    {locationProjectName}
+                  </span>
+                ) : null}
+              </span>
             </span>
           </InfoTile>
           <InfoTile label="Status" icon="target" tone="teal">
