@@ -105,18 +105,8 @@ export function EmployeeBulkDeleteDialog({
 
   return (
     <>
-      <Button
-        type="button"
-        variant="destructive"
-        size="sm"
-        className="text-destructive hover:bg-destructive/10"
-        onClick={reset}
-        aria-label="Delete selected employees"
-        disabled={isPending}
-      >
-        Delete Selected Employees
-      </Button>
-
+      {/* Opened from the selection bar in EmployeeTable, which only appears
+          once employees are checked — no standalone trigger here. */}
       <Dialog
         open={open}
         onOpenChange={(nextOpen) => {

@@ -86,9 +86,11 @@ function readPage(value: string | undefined): number {
 /**
  * Employee attendance self-service page ("Absensi").
  *
- * Reference mobile layout: identity card overlapping the blue band, a
- * Riwayat / Rekap toggle, then the history card (period selector, one row per
- * day with Masuk / Pulang times and the status) or the monthly recap. The
+ * Mobile layout: no page title or identity card — the page opens straight on
+ * the Riwayat / Rekap toggle, then (Riwayat) a compact month summary and the
+ * history card (period selector, one row per day with Masuk / Pulang times and
+ * the status), or (Rekap) the monthly recap. Sized to stay stable down to a
+ * 360px-wide phone; employee accounts never get `sm:`+ variants. The
  * legacy "Presensi" tab (today's status + the check-in / check-out panels)
  * stays reachable for the desktop shell, where the ABSEN sheet is not in the
  * bottom navigation.
@@ -166,13 +168,7 @@ export default async function AttendancePage({
   const employee = await getEmployeeSelfProfile(user.id, organizationId);
   if (!employee) {
     return (
-      <div className="space-y-5">
-        <IdentityCard
-          name={user.email.split("@")[0]}
-          employeeNumber={null}
-          position={null}
-          photoUrl={null}
-        />
+      <div className="space-y-4">
         <EmployeeEmptyState
           icon="profile"
           title="Profil karyawan belum tertaut"
@@ -265,18 +261,12 @@ export default async function AttendancePage({
         : null;
 
   return (
-    <div className="space-y-4 lg:space-y-5">
-      <IdentityCard
-        name={`${employee.firstName} ${employee.lastName}`.trim()}
-        employeeNumber={employee.employeeNumber}
-        position={employee.position}
-        photoUrl={employee.profilePhotoUrl}
-      />
-
+    <div className="space-y-3 lg:space-y-5">
+      <h1 className="sr-only">Absensi</h1>
       <div
         role="tablist"
         aria-label="Bagian absensi"
-        className="grid grid-cols-2 gap-3 lg:grid-cols-3"
+        className="grid grid-cols-2 gap-2.5 lg:grid-cols-3 lg:gap-3"
       >
         <SegmentTab
           href="/attendance"
@@ -301,33 +291,52 @@ export default async function AttendancePage({
 
       {tab === "riwayat" ? (
         <section
-          aria-labelledby="riwayat-title"
-          className="hris-card rounded-[26px] p-4 sm:p-5"
+          aria-labelledby="ringkasan-title"
+          className="hris-card rounded-[22px] p-3 min-[400px]:p-4"
         >
-          <div className="flex items-start gap-3">
-            <span
-              aria-hidden="true"
-              className="flex size-12 shrink-0 items-center justify-center rounded-2xl hris-surface-primary text-primary"
+          <div className="flex items-center justify-between gap-2 px-0.5">
+            <h2
+              id="ringkasan-title"
+              className="text-[15px] leading-tight font-bold text-foreground"
             >
-              <HrisIcon name="calendar-check" className="size-7" />
-            </span>
-            <div className="min-w-0 flex-1">
+              Ringkasan Bulan Ini
+            </h2>
+            <p className="shrink-0 text-[12px] font-medium text-muted-foreground tabular-nums">
+              {monthSummary.total} catatan
+            </p>
+          </div>
+          <div className="mt-2.5 grid grid-cols-4 gap-1.5 min-[400px]:gap-2">
+            <CompactStat label="Hadir" value={monthSummary.present} tone="success" />
+            <CompactStat label="Selesai" value={monthSummary.completed} tone="info" />
+            <CompactStat label="Belum Lengkap" value={monthSummary.incomplete} tone="warning" />
+            <CompactStat label="Ditolak" value={monthSummary.rejected} tone="danger" />
+          </div>
+        </section>
+      ) : null}
+
+      {tab === "riwayat" ? (
+        <section
+          aria-labelledby="riwayat-title"
+          aria-describedby="riwayat-desc"
+          className="hris-card rounded-[22px] p-3 min-[400px]:p-4"
+        >
+          <div className="flex flex-col gap-2.5 min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between">
+            <div className="min-w-0 px-0.5">
               <h2
                 id="riwayat-title"
-                className="text-[21px] leading-tight font-extrabold tracking-tight text-foreground"
+                className="text-[17px] leading-tight font-extrabold tracking-tight text-foreground"
               >
                 Riwayat Absensi
               </h2>
-              <p className="mt-1 text-[15px] text-muted-foreground">
+              <p id="riwayat-desc" className="sr-only">
                 {HISTORY_RANGES[range].description}
               </p>
             </div>
-            <div className="hidden min-[480px]:block">
-              <HistoryRangeSelect value={range} options={rangeOptions} />
-            </div>
-          </div>
-          <div className="mt-3 min-[480px]:hidden">
-            <HistoryRangeSelect value={range} options={rangeOptions} className="w-full" />
+            <HistoryRangeSelect
+              value={range}
+              options={rangeOptions}
+              className="h-10 w-full text-[14px] min-[400px]:w-auto"
+            />
           </div>
 
           {range === "all" ? (
@@ -391,7 +400,7 @@ export default async function AttendancePage({
               </p>
             </div>
           ) : (
-            <ul className="mt-4 space-y-3">
+            <ul className="mt-3 space-y-2">
               {history.items.map((record) => (
                 <li key={record.id}>
                   <HistoryRow record={record} />
@@ -404,7 +413,7 @@ export default async function AttendancePage({
             history.totalPages > 1 ? (
               <nav
                 aria-label="Halaman riwayat"
-                className="mt-4 flex items-center justify-between gap-3"
+                className="mt-3 flex items-center justify-between gap-2"
               >
                 <PagerLink
                   href={riwayatHref({
@@ -416,7 +425,7 @@ export default async function AttendancePage({
                   disabled={history.page <= 1}
                   label="Sebelumnya"
                 />
-                <p className="text-xs font-medium text-muted-foreground">
+                <p className="min-w-0 text-center text-xs font-medium text-muted-foreground">
                   Halaman {history.page} dari {history.totalPages}
                 </p>
                 <PagerLink
@@ -434,7 +443,7 @@ export default async function AttendancePage({
           ) : (
             <Link
               href={riwayatHref({ range: "all" })}
-              className="mt-4 flex min-h-11 items-center justify-center gap-2 rounded-2xl text-[17px] font-bold text-primary transition-colors hover:bg-surface-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              className="mt-3 flex min-h-11 items-center justify-center gap-2 rounded-2xl text-[15px] font-bold text-primary transition-colors hover:bg-surface-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
               Lihat Semua Riwayat
               <HrisIcon name="arrow-right" className="size-5" />
@@ -574,68 +583,6 @@ export default async function AttendancePage({
   );
 }
 
-/**
- * Who the page is about: photo, name, "ID: <employee number>" and the job
- * title. Pulled up over the band's wave (`-mt-*`) like the reference layout.
- */
-function IdentityCard({
-  name,
-  employeeNumber,
-  position,
-  photoUrl,
-}: {
-  name: string;
-  employeeNumber: string | null;
-  position: string | null;
-  photoUrl: string | null;
-}) {
-  const initials =
-    name
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part.charAt(0).toUpperCase())
-      .join("") || "?";
-  return (
-    <section
-      aria-label="Identitas karyawan"
-      className="hris-card relative z-10 -mt-14 flex items-center gap-3 rounded-[26px] p-4 shadow-[0_18px_40px_-20px_rgb(11_92_197/0.45)] sm:gap-4 lg:-mt-12 lg:p-5"
-    >
-      {photoUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={photoUrl}
-          alt={name}
-          className="size-[72px] shrink-0 rounded-full object-cover ring-4 ring-primary/15 sm:size-[88px] lg:size-24"
-        />
-      ) : (
-        <span
-          aria-hidden="true"
-          className="flex size-[72px] shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#3B8BFF] to-[#1D5FE6] text-2xl font-bold text-white ring-4 ring-primary/15 sm:size-[88px] sm:text-3xl lg:size-24"
-        >
-          {initials}
-        </span>
-      )}
-      <div className="min-w-0 flex-1">
-        <h2 className="line-clamp-2 text-[20px] leading-tight font-extrabold tracking-tight text-foreground sm:text-[22px] lg:text-2xl">
-          {name}
-        </h2>
-        {employeeNumber ? (
-          <p className="mt-1.5 inline-flex max-w-full rounded-full bg-surface-primary px-3 py-1 text-[14px] font-semibold whitespace-nowrap text-accent-foreground">
-            ID: {employeeNumber}
-          </p>
-        ) : null}
-      </div>
-      {position ? (
-        <p className="hidden max-w-[38%] shrink-0 items-center gap-1.5 rounded-2xl border border-primary/20 bg-surface-primary/60 px-3 py-2 text-[14px] font-semibold text-accent-foreground min-[380px]:flex sm:text-[15px]">
-          <HrisIcon name="briefcase" className="size-5 shrink-0 text-primary" />
-          <span className="truncate">{position}</span>
-        </p>
-      ) : null}
-    </section>
-  );
-}
-
 function SegmentTab({
   href,
   icon,
@@ -655,15 +602,15 @@ function SegmentTab({
       role="tab"
       aria-selected={active}
       className={cn(
-        "flex min-h-[60px] items-center justify-center gap-2.5 rounded-full text-[19px] font-bold transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+        "flex min-h-12 min-w-0 items-center justify-center gap-2 rounded-full px-3 text-[16px] font-bold transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
         active
           ? "bg-gradient-to-r from-[#0B5CC5] to-[#0A3F8F] text-white shadow-[0_12px_24px_-12px_rgb(11_92_197/0.9)]"
           : "border border-border bg-card text-foreground/80 shadow-sm hover:bg-muted",
         className
       )}
     >
-      <HrisIcon name={icon} className="size-7" />
-      {label}
+      <HrisIcon name={icon} className="size-6 shrink-0" />
+      <span className="truncate">{label}</span>
     </Link>
   );
 }
@@ -692,15 +639,15 @@ function HistoryRow({ record }: { record: AttendanceRow }) {
     <Link
       href={`/attendance/${record.id}`}
       aria-label={`${fullDate}: masuk ${formatTime(record.checkInAt, record.workLocationTimezone)}, pulang ${formatTime(record.checkOutAt, record.workLocationTimezone)}, ${label}`}
-      className="flex items-center gap-2 rounded-2xl border border-[var(--card-border-level2)] bg-card p-2 shadow-[0_6px_16px_-10px_rgb(30_64_175/0.35)] transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:gap-4 sm:p-3"
+      className="grid grid-cols-[56px_minmax(0,1fr)] items-center gap-x-2.5 gap-y-1.5 rounded-2xl border border-[var(--card-border-level2)] bg-card p-2 shadow-[0_6px_16px_-10px_rgb(30_64_175/0.35)] transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none min-[400px]:grid-cols-[60px_minmax(0,1fr)_auto] min-[400px]:gap-x-3 sm:p-3"
     >
-      <span className="flex w-[62px] shrink-0 flex-col items-center justify-center rounded-xl bg-[#EEF3FB] py-2 text-center sm:w-[74px] dark:bg-muted">
-        <span className="text-[15px] leading-tight font-bold text-foreground sm:text-[17px]">{weekday}</span>
-        <span className="text-[13px] leading-tight font-bold text-accent-foreground sm:text-[15px]">
+      <span className="row-span-2 flex h-full flex-col items-center justify-center rounded-xl bg-[#EEF3FB] py-2 text-center min-[400px]:row-span-1 dark:bg-muted">
+        <span className="text-[14px] leading-tight font-bold text-foreground">{weekday}</span>
+        <span className="text-[12px] leading-tight font-bold whitespace-nowrap text-accent-foreground">
           {dayMonth}
         </span>
       </span>
-      <span className="grid min-w-0 flex-1 grid-cols-2 items-center gap-1">
+      <span className="grid min-w-0 grid-cols-2 items-center gap-1">
         <TimeCell
           icon="check-in"
           label="Masuk"
@@ -717,7 +664,7 @@ function HistoryRow({ record }: { record: AttendanceRow }) {
       <StatusBadge
         tone={statusTone(record.status)}
         icon={<HrisIcon name={STATUS_ICONS[record.status]} className="size-4" />}
-        className="shrink-0 px-2.5 py-1 text-[13px] sm:px-3 sm:py-1.5 sm:text-[15px]"
+        className="shrink-0 px-2 py-0.5 text-[12px] whitespace-nowrap min-[400px]:px-2.5 min-[400px]:py-1 min-[400px]:text-[13px]"
       >
         {label}
       </StatusBadge>
@@ -737,17 +684,17 @@ function TimeCell({
   tone: "in" | "out";
 }) {
   return (
-    <span className="flex min-w-0 items-center gap-1 sm:gap-1.5">
+    <span className="flex min-w-0 items-center gap-1">
       <HrisIcon
         name={icon}
         className={cn(
-          "size-6 shrink-0 sm:size-7",
+          "size-5 shrink-0 min-[400px]:size-6",
           tone === "in" ? "text-[#16A34A]" : "text-[#EF4444]"
         )}
       />
       <span className="min-w-0 leading-tight">
-        <span className="block text-[12px] text-muted-foreground sm:text-[13px]">{label}</span>
-        <span className="block text-[15px] font-extrabold text-foreground tabular-nums sm:text-[17px]">
+        <span className="block text-[11px] text-muted-foreground min-[400px]:text-[12px]">{label}</span>
+        <span className="block text-[15px] font-extrabold text-foreground tabular-nums">
           {value}
         </span>
       </span>
@@ -768,7 +715,7 @@ function PagerLink({
     return (
       <span
         aria-disabled="true"
-        className="inline-flex min-h-10 items-center rounded-xl border border-border px-4 text-sm font-semibold text-muted-foreground/60"
+        className="inline-flex min-h-10 shrink-0 items-center rounded-xl border border-border px-3 text-[13px] font-semibold text-muted-foreground/60"
       >
         {label}
       </span>
@@ -777,7 +724,7 @@ function PagerLink({
   return (
     <Link
       href={href}
-      className="inline-flex min-h-10 items-center rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+      className="inline-flex min-h-10 shrink-0 items-center rounded-xl border border-border bg-card px-3 text-[13px] font-semibold text-foreground transition-colors hover:bg-muted"
     >
       {label}
     </Link>
@@ -865,6 +812,38 @@ function FilterChip({
     >
       {label}
     </Link>
+  );
+}
+
+/** Month-summary cell on the Riwayat tab: count over a two-line-safe label. */
+function CompactStat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: "success" | "info" | "warning" | "danger";
+}) {
+  const toneClass = {
+    success: "hris-surface-success text-success",
+    info: "hris-surface-info text-info",
+    warning: "hris-surface-warning text-warning",
+    danger: "hris-surface-danger text-danger",
+  }[tone];
+  return (
+    <div
+      className={cn(
+        "flex min-w-0 flex-col items-center justify-center rounded-2xl px-1 py-2 text-center",
+        toneClass
+      )}
+    >
+      <p className="text-[20px] leading-none font-extrabold tabular-nums">{value}</p>
+      {/* Two lines tall for every label so the counts line up. */}
+      <p className="mt-1 flex min-h-[2.5em] items-center text-[11px] leading-tight font-semibold">
+        {label}
+      </p>
+    </div>
   );
 }
 
