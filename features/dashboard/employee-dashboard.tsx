@@ -165,13 +165,12 @@ export async function EmployeeDashboard({
   }> = [
     { href: "/attendance", icon: "calendar-check", label: "Absensi", show: canAttendance },
     { href: "/leave", icon: "plane", label: "Cuti", show: can(P.LEAVE_VIEW) },
-    { href: "/permission", icon: "users", label: "Pengajuan", show: can(P.PERMISSION_VIEW) },
-    { href: "/attendance?range=all", icon: "document", label: "Riwayat", show: canAttendance },
-    { href: "/payslip", icon: "wallet", label: "Slip Gaji", show: can(P.PAYSLIP_VIEW) },
+    { href: "/payslip", icon: "wallet", label: "Slip Gaji Saya", show: can(P.PAYSLIP_VIEW) },
     {
       href: "/announcements",
       icon: "megaphone",
-      label: "Pengumuman",
+      // Soft hyphen: breaks as "Pengu-muman" only when the tile is too narrow.
+      label: "Pengu\u00ADmuman",
       dot: unreadAnnouncements > 0,
       show: true,
     },
@@ -277,7 +276,7 @@ export async function EmployeeDashboard({
           </h2>
           <QuickMenuSeeAll />
         </div>
-        <nav aria-label="Menu cepat" className="grid grid-cols-5 gap-2">
+        <nav aria-label="Menu cepat" className="grid grid-cols-5 gap-1.5">
           {visibleMenu.map((item) => (
             <QuickMenuTile
               key={item.href}

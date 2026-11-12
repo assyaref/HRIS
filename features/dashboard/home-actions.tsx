@@ -18,7 +18,7 @@ const QUICK_TILE_CLASS =
   "relative flex min-h-[74px] flex-col items-center justify-center gap-1.5 rounded-2xl border border-[var(--card-border)] bg-card px-0.5 py-2.5 text-center hris-card transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-[0.97]";
 
 const QUICK_LABEL_CLASS =
-  "w-full overflow-hidden text-[clamp(10px,2.6cqw,12.5px)] leading-tight font-semibold tracking-tight whitespace-nowrap text-foreground";
+  "line-clamp-2 w-full text-[clamp(9.5px,2.6cqw,12.5px)] leading-tight font-semibold tracking-[-0.02em] text-balance text-foreground";
 
 export function QuickMenuTile({
   href,
