@@ -34,11 +34,10 @@ import {
   QuickMenuMoreTile,
   QuickMenuSeeAll,
   QuickMenuTile,
-  TODAY_STATUS,
   TodayTile,
-  type TodayState,
 } from "./home-actions";
 import { getMonthlyRecap, recentMonthKeys } from "./queries";
+import { TODAY_STATUS, type TodayState } from "./today-status";
 
 interface EmployeeDashboardProps {
   user: CurrentUser;
