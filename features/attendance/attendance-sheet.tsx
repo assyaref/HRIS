@@ -542,7 +542,7 @@ function AttendanceSheetDialog({
         aria-modal="true"
         aria-labelledby="attendance-sheet-title"
         aria-describedby="attendance-sheet-description"
-        className="absolute inset-x-0 bottom-0 flex max-h-[94svh] flex-col rounded-t-[30px] bg-background shadow-[0_-24px_60px_-30px_rgb(2_6_23/0.6)] outline-none sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[30px]"
+        className="emp-frame-x absolute inset-x-0 bottom-0 flex max-h-[94svh] flex-col rounded-t-[30px] bg-background shadow-[0_-24px_60px_-30px_rgb(2_6_23/0.6)] outline-none sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[30px]"
       >
         <span aria-hidden="true" className="mx-auto mt-2.5 h-1.5 w-12 shrink-0 rounded-full bg-slate-300/80 sm:hidden" />
 

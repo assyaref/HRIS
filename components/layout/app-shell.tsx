@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 
 import { AttendanceSheet } from "@/features/attendance/attendance-sheet";
+import { cn } from "@/lib/utils/cn";
 import type { NavSection } from "@/types/navigation";
 
 import { AppDrawer } from "./app-drawer";
@@ -25,12 +26,19 @@ export function AppShell({
   profile,
   notificationCount,
   bottomNav,
+  employeeFrame = false,
   children,
 }: {
   sections: NavSection[];
   profile: ShellProfile;
   notificationCount: number;
   bottomNav: ReactNode;
+  /**
+   * Self-service accounts: no sidebar, and the whole app is one phone-width
+   * column centred on wide screens (`.emp-frame`, see globals.css). Purely
+   * presentational — route guards stay server-side.
+   */
+  employeeFrame?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -39,8 +47,13 @@ export function AppShell({
       profile={profile}
       notificationCount={notificationCount}
     >
-      <div className="flex min-h-svh bg-background font-sans text-foreground">
-        <Sidebar />
+      <div
+        className={cn(
+          "flex min-h-svh bg-background font-sans text-foreground",
+          employeeFrame && "emp-frame"
+        )}
+      >
+        {employeeFrame ? null : <Sidebar />}
         <div className="flex min-w-0 flex-1 flex-col">
           <HeroBand />
           <main className="hris-main mx-auto w-full max-w-[1400px] flex-1 px-4 pt-2 pb-32 sm:px-6 lg:px-10 lg:pt-1 lg:pb-10">

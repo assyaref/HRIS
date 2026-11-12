@@ -12,6 +12,7 @@ import { displayRoleLabel } from "@/lib/auth/roles";
 import { indonesianGreeting, initialsOf } from "@/lib/utils/greeting";
 import { getOrganizationName } from "@/features/employees/queries";
 import { getEmployeeSelfProfile } from "@/features/employees/queries";
+import { hasManagementDashboard } from "@/features/dashboard/access";
 import { listMyNotifications } from "@/features/notifications/queries";
 import { organizationLogoUrl } from "@/lib/organizations/logo-storage";
 
@@ -85,6 +86,7 @@ export default async function DashboardLayout({
       sections={sections}
       profile={profile}
       notificationCount={notifications?.unreadCount ?? 0}
+      employeeFrame={!hasManagementDashboard(authorization.permissionCodes)}
       bottomNav={<EmployeeBottomNavigation canAttendance={canAttendance} />}
     >
       {children}

@@ -79,7 +79,7 @@ export function AppDrawer() {
         role="dialog"
         aria-modal="true"
         aria-label="Menu navigasi"
-        className="absolute inset-y-0 left-0 flex w-[86%] max-w-[360px] flex-col overflow-hidden rounded-r-[28px] bg-card shadow-2xl"
+        className="emp-frame-left absolute inset-y-0 left-0 flex w-[86%] max-w-[360px] flex-col overflow-hidden rounded-r-[28px] bg-card shadow-2xl"
       >
         {/* Blue header */}
         <div className="hris-band relative shrink-0 px-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-10">

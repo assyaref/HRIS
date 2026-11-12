@@ -4,6 +4,16 @@
    (tailwind.config.ts `darkMode: "class"` is not loaded under Tailwind v4). */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Employee shell = one phone-sized column at every viewport width.
+   When the page holds `.emp-frame` (self-service accounts, see AppShell) the
+   responsive breakpoints switch off, so pages keep their mobile layout inside
+   the centred frame on desktop instead of reflowing to the admin layout. */
+@custom-variant sm { @media (width >= 40rem) { &:where(html:not(:has(.emp-frame)) *) { @slot; } } }
+@custom-variant md { @media (width >= 48rem) { &:where(html:not(:has(.emp-frame)) *) { @slot; } } }
+@custom-variant lg { @media (width >= 64rem) { &:where(html:not(:has(.emp-frame)) *) { @slot; } } }
+@custom-variant xl { @media (width >= 80rem) { &:where(html:not(:has(.emp-frame)) *) { @slot; } } }
+@custom-variant 2xl { @media (width >= 96rem) { &:where(html:not(:has(.emp-frame)) *) { @slot; } } }
+
 /* ==========================================================
    HRIS — MD3 EXPRESSIVE · ENTERPRISE BLUE (v5)
    Visual language: deep navy navigation rail, vivid blue primary,
@@ -472,6 +482,46 @@ a {
 /* ==========================================================
    EMPLOYEE MOBILE SHELL UTILITIES
    ========================================================== */
+/* Desktop / tablet: the employee app sits in a centred phone-width frame
+   (reference: ideas.appsradiant.com). Fixed chrome — bottom navigation,
+   attendance sheet, drawer, toasts — is pinned to the frame, not the window. */
+:root {
+  --emp-frame-width: 480px;
+  --emp-frame-canvas: #E4EAF4;
+}
+.dark {
+  --emp-frame-canvas: #050B18;
+}
+
+html:has(.emp-frame) body {
+  font-size: 0.9375rem;
+}
+html:has(.emp-frame) :is(input, select, textarea, button) {
+  min-height: 44px;
+}
+
+@media (min-width: 520px) {
+  html:has(.emp-frame) body {
+    background: var(--emp-frame-canvas);
+  }
+  .emp-frame {
+    width: 100%;
+    max-width: var(--emp-frame-width);
+    margin-inline: auto;
+    box-shadow: 0 0 0 1px rgb(15 23 42 / 0.06), 0 30px 80px -30px rgb(15 23 42 / 0.35);
+  }
+  html:has(.emp-frame) .emp-frame-x {
+    left: calc(50% - var(--emp-frame-width) / 2);
+    right: calc(50% - var(--emp-frame-width) / 2);
+  }
+  html:has(.emp-frame) .emp-frame-left {
+    left: calc(50% - var(--emp-frame-width) / 2);
+  }
+  html:has(.emp-frame) .emp-frame-right {
+    right: calc(50% - var(--emp-frame-width) / 2 + 1rem);
+  }
+}
+
 .emp-safe-bottom {
   padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
 }

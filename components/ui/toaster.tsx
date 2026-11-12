@@ -87,7 +87,7 @@ export function Toaster() {
     <div
       aria-live="polite"
       aria-atomic="false"
-      className="fixed top-4 right-4 z-[60] flex w-full max-w-sm flex-col gap-2"
+      className="emp-frame-right fixed top-4 right-4 z-[60] flex w-full max-w-sm flex-col gap-2"
     >
       {toasts.map((toast) => (
         <div

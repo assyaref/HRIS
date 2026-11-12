@@ -99,7 +99,7 @@ export function EmployeeBottomNavigation({
   return (
     <nav
       aria-label="Navigasi utama"
-      className="emp-safe-bottom fixed inset-x-0 bottom-0 z-40 rounded-t-[26px] border-t border-border/70 bg-card px-3 pt-1 shadow-[0_-12px_32px_-18px_rgb(30_64_175/0.35)] lg:hidden"
+      className="emp-safe-bottom emp-frame-x fixed inset-x-0 bottom-0 z-40 rounded-t-[26px] border-t border-border/70 bg-card px-3 pt-1 shadow-[0_-12px_32px_-18px_rgb(30_64_175/0.35)] lg:hidden"
     >
       <div className="mx-auto grid max-w-lg grid-cols-5 items-end">
         {LEFT.map((entry) => (
