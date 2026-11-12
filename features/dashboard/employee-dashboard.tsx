@@ -19,6 +19,7 @@ import { formatTime } from "@/features/attendance/format";
 import {
   findAttendanceForDate,
   findOpenAttendance,
+  listEligibleAttendanceOptions,
 } from "@/features/attendance/queries";
 import { getEmployeeSelfProfile } from "@/features/employees/queries";
 import { listMyLeaveRequests } from "@/features/leave/queries";
@@ -30,9 +31,12 @@ import { APP_TIME_ZONE } from "@/lib/utils/greeting";
 
 import {
   AbsenNowCard,
-  HomeMenuMoreTile,
-  HomeMenuTile,
-  type HomeMenuTone,
+  QuickMenuMoreTile,
+  QuickMenuSeeAll,
+  QuickMenuTile,
+  TODAY_STATUS,
+  TodayTile,
+  type TodayState,
 } from "./home-actions";
 import { getMonthlyRecap, recentMonthKeys } from "./queries";
 
@@ -49,12 +53,14 @@ interface EmployeeDashboardProps {
  * The employee's self-service home (reference mobile layout).
  *
  * The greeting lives in the shell's blue band; this page renders, in order:
- * the 3×2 colour menu grid overlapping the band's wave, the clock / weather
- * cards with the prayer schedule, "Ringkasan Kehadiran Saya", and the
- * announcement feed. Attendance itself is the centre face button of the
- * bottom navigation. Menu tiles are filtered by the employee's permissions
- * (the server route guards stay the authority); "Lainnya" fills the grid
- * with the full navigation drawer.
+ * the compact clock / weather cards overlapping the band's wave, the prayer
+ * schedule, four "today" tiles (Hadir Hari Ini, Jam Pulang, Lokasi, Status),
+ * the "Absen Sekarang" card, the one-row "Menu Cepat", "Ringkasan Kehadiran
+ * Saya" and the announcement feed. The column is an `@container`: sizes
+ * scale with its width instead of switching at viewport breakpoints, so the
+ * layout stays fixed on every phone. Menu tiles are filtered by the
+ * employee's permissions (the server route guards stay the authority);
+ * "Lainnya" / "Lihat Semua" open the full navigation drawer.
  */
 export async function EmployeeDashboard({
   user,
@@ -92,6 +98,7 @@ export async function EmployeeDashboard({
     openAttendance,
     todayRecord,
     myLeave,
+    attendanceOptions,
   ] = await Promise.all([
     getMonthlyRecap(organizationId, employee.id, monthKey),
     listMyAnnouncements({ organizationId, employeeId: employee.id, limit: 5 }),
@@ -99,6 +106,7 @@ export async function EmployeeDashboard({
     findOpenAttendance(organizationId, employee.id),
     findAttendanceForDate(organizationId, employee.id, today),
     listMyLeaveRequests(organizationId, employee.id),
+    listEligibleAttendanceOptions(organizationId, employee.id),
   ]);
 
   // Today's attendance state drives the "Absen Sekarang" card: it opens the
@@ -110,7 +118,7 @@ export async function EmployeeDashboard({
       request.endDate.getTime() >= today.getTime()
   );
   const isWeekend = today.getUTCDay() === 0 || today.getUTCDay() === 6;
-  const state = employee.employmentStatus !== "active"
+  const state: TodayState = employee.employmentStatus !== "active"
     ? "UNAVAILABLE"
     : openAttendance
       ? "CHECKED_IN"
@@ -127,6 +135,13 @@ export async function EmployeeDashboard({
   const checkInLabel = activeRecord?.checkInAt
     ? formatTime(activeRecord.checkInAt, activeRecord.workLocationTimezone ?? null)
     : null;
+  const checkOutLabel =
+    todayRecord?.checkOutAt && !openAttendance
+      ? formatTime(todayRecord.checkOutAt, todayRecord.workLocationTimezone ?? null)
+      : null;
+  const locationName =
+    activeRecord?.workLocationName ?? attendanceOptions[0]?.workLocationName ?? null;
+  const status = TODAY_STATUS[state];
   const canAttendance = can(P.ATTENDANCE_VIEW);
   const absenEnabled =
     canAttendance &&
@@ -146,24 +161,23 @@ export async function EmployeeDashboard({
     href: string;
     icon: HrisIconName;
     label: string;
-    tone: HomeMenuTone;
     dot?: boolean;
     show: boolean;
   }> = [
-    { href: "/attendance", icon: "calendar-check", label: "Absensi Saya", tone: "blue", show: canAttendance },
-    { href: "/leave", icon: "calendar", label: "Pengajuan Cuti", tone: "violet", show: can(P.LEAVE_VIEW) },
-    { href: "/permission", icon: "clipboard", label: "Izin Kegiatan", tone: "teal", show: can(P.PERMISSION_VIEW) },
-    { href: "/payslip", icon: "wallet", label: "Slip Gaji", tone: "green", show: can(P.PAYSLIP_VIEW) },
+    { href: "/attendance", icon: "calendar-check", label: "Absensi", show: canAttendance },
+    { href: "/leave", icon: "plane", label: "Cuti", show: can(P.LEAVE_VIEW) },
+    { href: "/permission", icon: "users", label: "Pengajuan", show: can(P.PERMISSION_VIEW) },
+    { href: "/attendance?range=all", icon: "document", label: "Riwayat", show: canAttendance },
+    { href: "/payslip", icon: "wallet", label: "Slip Gaji", show: can(P.PAYSLIP_VIEW) },
     {
       href: "/announcements",
       icon: "megaphone",
       label: "Pengumuman",
-      tone: "purple",
       dot: unreadAnnouncements > 0,
       show: true,
     },
   ];
-  const visibleMenu = menu.filter((item) => item.show);
+  const visibleMenu = menu.filter((item) => item.show).slice(0, 4);
 
   const carouselItems = latestAnnouncements.map((item) => ({
     id: item.id,
@@ -191,37 +205,95 @@ export async function EmployeeDashboard({
   }));
 
   return (
-    <div className="space-y-4">
+    <div className="@container space-y-3">
       <h1 className="sr-only">Beranda</h1>
 
-      {/* Menu grid — overlaps the band's wave */}
-      <nav
-        aria-label="Menu karyawan"
-        className="relative z-10 -mt-12 grid grid-cols-3 gap-3"
-      >
-        {visibleMenu.map((item) => (
-          <HomeMenuTile
-            key={item.href}
-            href={item.href}
-            icon={item.icon}
-            label={item.label}
-            tone={item.tone}
-            dot={item.dot}
-            dotLabel={item.dot ? `${unreadAnnouncements} belum dibaca` : undefined}
-          />
-        ))}
-        <HomeMenuMoreTile />
-      </nav>
+      {/* Clock · weather · prayer schedule — the first row overlaps the wave */}
+      <HeroWidgets compact className="relative z-10 -mt-9" />
+
+      {/* Today at a glance */}
+      {canAttendance ? (
+        <section aria-label="Kehadiran hari ini" className="grid grid-cols-2 gap-2.5">
+          <TodayTile
+            icon="calendar-check"
+            chip="bg-[#E3F6E8] text-[#16A34A] dark:bg-[#16301C] dark:text-[#86EFAC]"
+            label="Hadir Hari Ini"
+          >
+            <p className="text-[18px] leading-tight font-extrabold tracking-wide text-foreground tabular-nums">
+              {checkInLabel ?? "--:--"}
+            </p>
+          </TodayTile>
+          <TodayTile
+            icon="clock"
+            chip="bg-[#EEE8FF] text-[#7C3AED] dark:bg-[#251E45] dark:text-[#C4B5FD]"
+            label="Jam Pulang"
+          >
+            <p className="text-[18px] leading-tight font-extrabold tracking-wide text-foreground tabular-nums">
+              {checkOutLabel ?? "--:--"}
+            </p>
+          </TodayTile>
+          <TodayTile
+            icon="map-pin"
+            chip="bg-[#E0EEFF] text-[#1D6FE0] dark:bg-[#16264A] dark:text-[#93C5FD]"
+            label="Lokasi"
+          >
+            <p className="flex min-w-0 items-center gap-1.5 text-[15px] leading-tight font-extrabold text-foreground">
+              <span
+                aria-hidden="true"
+                className={
+                  locationName
+                    ? "size-2 shrink-0 rounded-full bg-[#22C55E]"
+                    : "size-2 shrink-0 rounded-full bg-muted-foreground/50"
+                }
+              />
+              <span className="min-w-0 truncate" title={locationName ?? undefined}>
+                {locationName ?? "Belum diatur"}
+              </span>
+            </p>
+          </TodayTile>
+          <TodayTile
+            icon="target"
+            chip="bg-[#DDF5EE] text-[#0D9488] dark:bg-[#112E28] dark:text-[#5EEAD4]"
+            label="Status"
+          >
+            <span
+              className={`inline-flex max-w-full rounded-full px-2.5 py-0.5 text-[12.5px] font-bold ${status.pill}`}
+            >
+              <span className="truncate">{status.label}</span>
+            </span>
+          </TodayTile>
+        </section>
+      ) : null}
 
       {/* Primary attendance action — opens the face-attendance sheet */}
       {canAttendance ? (
         <AbsenNowCard enabled={absenEnabled} subtitle={absenSubtitle} />
       ) : null}
 
-      {/* Clock · weather · prayer schedule (device time and position) */}
-      <HeroWidgets />
+      {/* Menu Cepat — one row: up to four modules + "Lainnya" */}
+      <section aria-labelledby="menu-cepat" className="space-y-2 pt-1">
+        <div className="flex items-center justify-between gap-3">
+          <h2 id="menu-cepat" className="text-[17px] font-bold tracking-tight text-foreground">
+            Menu Cepat
+          </h2>
+          <QuickMenuSeeAll />
+        </div>
+        <nav aria-label="Menu cepat" className="grid grid-cols-5 gap-2">
+          {visibleMenu.map((item) => (
+            <QuickMenuTile
+              key={item.href}
+              href={item.href}
+              icon={item.icon}
+              label={item.label}
+              dot={item.dot}
+              dotLabel={item.dot ? `${unreadAnnouncements} belum dibaca` : undefined}
+            />
+          ))}
+          <QuickMenuMoreTile />
+        </nav>
+      </section>
 
-      <MonthlyRecapCard recap={recap} monthOptions={recentMonthKeys(6)} />
+      <MonthlyRecapCard compact recap={recap} monthOptions={recentMonthKeys(6)} />
 
       {carouselItems.length > 0 ? (
         <section className="space-y-3 pt-1">

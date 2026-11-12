@@ -129,10 +129,17 @@ function minutesOf(time: string): number {
 
 export function HeroWidgets({
   geolocate = true,
+  compact = false,
   className,
 }: {
   /** Ask the device for its position (false = cached/default only). */
   geolocate?: boolean;
+  /**
+   * Smaller cards for the self-service home. Sizes follow the width of the
+   * nearest `@container` (cqw) instead of viewport breakpoints, so the cards
+   * keep the same arrangement on every phone.
+   */
+  compact?: boolean;
   className?: string;
 }) {
   // Live clock (device time zone): a 1 s external tick; the server snapshot is
@@ -374,59 +381,105 @@ export function HeroWidgets({
   return (
     <div
       className={cn(
-        "grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-[1fr_1fr_1.7fr]",
+        compact
+          ? "grid grid-cols-2 gap-2.5"
+          : "grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-[1fr_1fr_1.7fr]",
         className
       )}
       aria-label="Jam, cuaca dan jadwal shalat"
     >
       {/* Clock — blue card */}
       <section
-        className="hris-clock-card relative overflow-hidden rounded-[22px] px-4 py-4 text-white sm:px-5"
+        className={cn(
+          "hris-clock-card relative overflow-hidden text-white",
+          compact ? "rounded-[18px] px-3.5 py-3" : "rounded-[22px] px-4 py-4 sm:px-5"
+        )}
         aria-label="Jam saat ini"
       >
-        <p className="flex items-center gap-2 text-[15px] font-medium text-white/90">
-          <HrisIcon name="clock" className="size-5 shrink-0" />
+        <p
+          className={cn(
+            "flex items-center font-medium text-white/90",
+            compact ? "gap-1.5 text-[12.5px]" : "gap-2 text-[15px]"
+          )}
+        >
+          <HrisIcon name="clock" className={cn("shrink-0", compact ? "size-4" : "size-5")} />
           Jam Saat Ini
         </p>
         <p
-          className="mt-3 text-[28px] leading-none font-extrabold tracking-wide tabular-nums min-[400px]:text-[32px] lg:text-[36px]"
+          className={cn(
+            "leading-none font-extrabold tracking-wide tabular-nums",
+            compact
+              ? "mt-2 text-[clamp(21px,6.2cqw,27px)]"
+              : "mt-3 text-[28px] min-[400px]:text-[32px] lg:text-[36px]"
+          )}
           suppressHydrationWarning
         >
           {clockLabel}
         </p>
         <p
-          className="mt-3 flex items-center gap-2 text-[13px] leading-snug text-white/90"
+          className={cn(
+            "flex items-center leading-snug text-white/90",
+            compact ? "mt-2 gap-1.5 text-[11px]" : "mt-3 gap-2 text-[13px]"
+          )}
           suppressHydrationWarning
         >
-          <HrisIcon name="calendar" className="size-4 shrink-0" />
-          <span className="min-w-0">{dateLabel || "\u00a0"}</span>
+          <HrisIcon name="calendar" className={cn("shrink-0", compact ? "size-3.5" : "size-4")} />
+          <span className={cn("min-w-0", compact && "truncate")}>{dateLabel || "\u00a0"}</span>
         </p>
         {timeZone ? <span className="sr-only">{timeZone}</span> : null}
       </section>
 
       {/* Weather — white card */}
       <section
-        className="hris-card flex flex-col rounded-[22px] px-4 py-4 sm:px-5"
+        className={cn(
+          "hris-card flex min-w-0 flex-col",
+          compact ? "rounded-[18px] px-3 py-2.5" : "rounded-[22px] px-4 py-4 sm:px-5"
+        )}
         aria-label="Cuaca saat ini"
       >
         {weather && weatherText ? (
           <>
             <div className="flex items-center gap-2">
-              <span className="text-[40px] leading-none" aria-hidden="true">
+              <span
+                className={cn("leading-none", compact ? "text-[30px]" : "text-[40px]")}
+                aria-hidden="true"
+              >
                 {weatherText.glyph}
               </span>
               <div className="min-w-0 flex-1 text-center">
-                <p className="text-[13px] text-muted-foreground">Cuaca Saat Ini</p>
-                <p className="text-[28px] leading-none font-extrabold tracking-tight text-foreground tabular-nums">
+                <p
+                  className={cn(
+                    "text-muted-foreground",
+                    compact ? "truncate text-[11px]" : "text-[13px]"
+                  )}
+                >
+                  Cuaca Saat Ini
+                </p>
+                <p
+                  className={cn(
+                    "leading-none font-extrabold tracking-tight text-foreground tabular-nums",
+                    compact ? "mt-0.5 text-[22px]" : "text-[28px]"
+                  )}
+                >
                   {weather.temperature}
-                  <span className="text-xl align-top">°C</span>
+                  <span className={cn("align-top", compact ? "text-sm" : "text-xl")}>°C</span>
                 </p>
               </div>
             </div>
-            <p className="mt-1.5 text-center text-[15px] font-bold text-foreground">
+            <p
+              className={cn(
+                "text-center font-bold text-foreground",
+                compact ? "mt-1 truncate text-[13px]" : "mt-1.5 text-[15px]"
+              )}
+            >
               {weatherText.label}
             </p>
-            <ul className="mt-2 space-y-1 text-[13px] text-foreground/85">
+            <ul
+              className={cn(
+                "text-foreground/85",
+                compact ? "mt-1 space-y-0.5 text-[11px]" : "mt-2 space-y-1 text-[13px]"
+              )}
+            >
               <li className="flex items-center gap-2">
                 <HrisIcon name="droplet" className="size-4 shrink-0 text-primary" />
                 <span className="min-w-0 truncate">Kelembapan {weather.humidity}%</span>
@@ -453,18 +506,40 @@ export function HeroWidgets({
 
       {/* Prayer schedule — full-width card */}
       <section
-        className="hris-card col-span-2 flex items-stretch gap-3 overflow-hidden rounded-[22px] lg:col-span-1"
+        className={cn(
+          "hris-card col-span-2 flex items-stretch overflow-hidden",
+          compact ? "gap-2.5 rounded-[18px]" : "gap-3 rounded-[22px] lg:col-span-1"
+        )}
         aria-label="Jadwal shalat"
       >
-        <MosqueArt />
-        <div className="min-w-0 flex-1 py-3 pr-2.5 min-[400px]:pr-3">
+        <MosqueArt compact={compact} />
+        <div
+          className={cn(
+            "min-w-0 flex-1",
+            compact ? "py-2 pr-2.5" : "py-3 pr-2.5 min-[400px]:pr-3"
+          )}
+        >
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="flex items-center gap-2 text-[17px] leading-tight font-bold text-primary">
-                <HrisIcon name="mosque" className="size-5 shrink-0 text-[#0D9488]" />
+              <p
+                className={cn(
+                  "flex items-center leading-tight font-bold text-primary",
+                  compact ? "gap-1.5 text-[14px]" : "gap-2 text-[17px]"
+                )}
+              >
+                <HrisIcon
+                  name="mosque"
+                  className={cn("shrink-0 text-[#0D9488]", compact ? "size-4" : "size-5")}
+                />
                 Jadwal Shalat
               </p>
-              <p className="mt-0.5 truncate text-[13px] text-muted-foreground" suppressHydrationWarning>
+              <p
+                className={cn(
+                  "mt-0.5 truncate text-muted-foreground",
+                  compact ? "text-[11px]" : "text-[13px]"
+                )}
+                suppressHydrationWarning
+              >
                 {dateLabel || "\u00a0"}
               </p>
               {prayer?.hijri ? <span className="sr-only">{prayer.hijri} (Kemenag)</span> : null}
@@ -480,14 +555,22 @@ export function HeroWidgets({
             </button>
           </div>
           {prayer ? (
-            <ul className="mt-2 grid grid-cols-5 gap-1 min-[400px]:gap-1.5">
+            <ul
+              className={cn(
+                "grid grid-cols-5",
+                compact ? "mt-1.5 gap-1" : "mt-2 gap-1 min-[400px]:gap-1.5"
+              )}
+            >
               {visibleTimings.map((entry) => {
                 const isNext = nextPrayer?.key === entry.key;
                 return (
                   <li
                     key={entry.key}
                     className={cn(
-                      "rounded-xl px-0.5 py-1.5 text-center min-[400px]:px-1",
+                      "text-center",
+                      compact
+                        ? "rounded-lg px-0.5 py-1"
+                        : "rounded-xl px-0.5 py-1.5 min-[400px]:px-1",
                       isNext
                         ? "bg-primary text-white shadow-[0_8px_18px_-10px_rgb(11_92_197/0.9)]"
                         : "bg-[#EEF3FB] text-foreground dark:bg-muted"
@@ -496,13 +579,23 @@ export function HeroWidgets({
                   >
                     <span
                       className={cn(
-                        "block whitespace-nowrap text-[10px] leading-tight font-semibold min-[400px]:text-[11px]",
+                        "block whitespace-nowrap leading-tight font-semibold",
+                        compact
+                          ? "text-[clamp(9px,2.3cqw,10.5px)]"
+                          : "text-[10px] min-[400px]:text-[11px]",
                         isNext ? "text-[#FFD54F]" : "text-muted-foreground"
                       )}
                     >
                       {entry.label}
                     </span>
-                    <span className="mt-0.5 block text-[13px] leading-tight font-extrabold tabular-nums min-[400px]:text-[15px]">
+                    <span
+                      className={cn(
+                        "mt-0.5 block leading-tight font-extrabold tabular-nums",
+                        compact
+                          ? "text-[clamp(11.5px,3cqw,13.5px)]"
+                          : "text-[13px] min-[400px]:text-[15px]"
+                      )}
+                    >
                       {entry.time}
                     </span>
                   </li>
@@ -510,7 +603,7 @@ export function HeroWidgets({
               })}
             </ul>
           ) : (
-            <p className="mt-3 text-sm text-foreground/80">
+            <p className={cn("text-foreground/80", compact ? "mt-2 text-[13px]" : "mt-3 text-sm")}>
               {prayerError ? "Jadwal shalat tidak tersedia." : "Memuat jadwal shalat…"}
             </p>
           )}
@@ -521,12 +614,15 @@ export function HeroWidgets({
 }
 
 /** Soft mosque illustration on the left of the prayer card (decorative). */
-function MosqueArt() {
+function MosqueArt({ compact = false }: { compact?: boolean }) {
   return (
     <svg
       aria-hidden="true"
       viewBox="0 0 96 112"
-      className="hris-prayer-art h-auto w-[64px] shrink-0 self-stretch min-[400px]:w-[84px] sm:w-[96px]"
+      className={cn(
+        "hris-prayer-art h-auto shrink-0 self-stretch",
+        compact ? "w-[clamp(52px,15cqw,72px)]" : "w-[64px] min-[400px]:w-[84px] sm:w-[96px]"
+      )}
       preserveAspectRatio="xMidYMax slice"
     >
       <defs>

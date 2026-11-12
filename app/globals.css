@@ -499,6 +499,23 @@ html:has(.emp-frame) body {
 html:has(.emp-frame) :is(input, select, textarea, button) {
   min-height: 44px;
 }
+/* Keep the self-service layout fixed on phones: no sideways scrolling, no
+   double-tap zoom, no automatic text inflation in landscape, and form fields
+   at 16px on touch screens so iOS does not zoom the page when one is focused. */
+html:has(.emp-frame) {
+  overflow-x: clip;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+html:has(.emp-frame) body {
+  overflow-x: clip;
+  touch-action: manipulation;
+}
+@media (pointer: coarse) {
+  html:has(.emp-frame) :is(input, select, textarea) {
+    font-size: max(16px, 1em);
+  }
+}
 
 @media (min-width: 520px) {
   html:has(.emp-frame) body {

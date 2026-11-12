@@ -28,10 +28,12 @@ function AttendanceRing({
   percentage,
   size,
   idPrefix,
+  compact = false,
 }: {
   percentage: number;
   size: number;
   idPrefix: string;
+  compact?: boolean;
 }) {
   const stroke = Math.round(size * 0.1);
   const radius = (size - stroke) / 2;
@@ -79,7 +81,12 @@ function AttendanceRing({
         >
           {pct}%
         </span>
-        <span className="text-xs font-medium text-muted-foreground sm:text-[13px]">
+        <span
+          className={cn(
+            "font-medium text-muted-foreground",
+            compact ? "text-[10.5px]" : "text-xs sm:text-[13px]"
+          )}
+        >
           Kehadiran
         </span>
       </div>
@@ -103,16 +110,19 @@ const LEGEND: Array<{
  * a percentage ring and a Hadir / Izin / Cuti / Alpha legend, with a month
  * picker. `header="band"` draws the blue title bar used on the desktop
  * management dashboard; `header="plain"` is the mobile/employee card.
+ * `compact` is the smaller variant used on the self-service home.
  */
 export function MonthlyRecapCard({
   recap,
   monthOptions,
   header = "plain",
+  compact = false,
   className,
 }: {
   recap: MonthlyRecapView;
   monthOptions: string[];
   header?: "band" | "plain";
+  compact?: boolean;
   className?: string;
 }) {
   const options = monthOptions.map((value) => ({
@@ -135,13 +145,15 @@ export function MonthlyRecapCard({
           "flex items-center justify-between gap-3",
           band
             ? "hris-band m-1.5 rounded-2xl px-4 py-3"
-            : "px-5 pt-5"
+            : compact
+              ? "px-4 pt-3.5"
+              : "px-5 pt-5"
         )}
       >
         <h2
           id={headingId}
           className={cn(
-            "text-[17px] font-bold tracking-tight",
+            compact ? "text-[15px] font-bold tracking-tight" : "text-[17px] font-bold tracking-tight",
             band ? "text-white" : "text-foreground"
           )}
         >
@@ -154,20 +166,39 @@ export function MonthlyRecapCard({
         />
       </div>
 
-      <div className="flex items-center gap-5 px-5 pt-4 pb-5 sm:gap-6">
+      <div
+        className={cn(
+          "flex items-center",
+          compact ? "gap-4 px-4 pt-2.5 pb-3.5" : "gap-5 px-5 pt-4 pb-5 sm:gap-6"
+        )}
+      >
         <AttendanceRing
           percentage={recap.percentage}
-          size={band ? 132 : 140}
+          size={compact ? 100 : band ? 132 : 140}
           idPrefix={band ? "recap-band" : "recap"}
+          compact={compact}
         />
         <dl className="min-w-0 flex-1 divide-y divide-border">
           {LEGEND.map((item) => (
-            <div key={item.key} className="flex items-center gap-2.5 py-2">
+            <div
+              key={item.key}
+              className={cn("flex items-center gap-2.5", compact ? "py-1.5" : "py-2")}
+            >
               <span aria-hidden="true" className={cn("size-2.5 shrink-0 rounded-full", item.dot)} />
-              <dt className="min-w-0 flex-1 truncate text-[15px] text-muted-foreground">
+              <dt
+                className={cn(
+                  "min-w-0 flex-1 truncate text-muted-foreground",
+                  compact ? "text-[13.5px]" : "text-[15px]"
+                )}
+              >
                 {item.label}
               </dt>
-              <dd className="text-[15px] font-bold text-foreground tabular-nums">
+              <dd
+                className={cn(
+                  "font-bold text-foreground tabular-nums",
+                  compact ? "text-[13.5px]" : "text-[15px]"
+                )}
+              >
                 {recap[item.key]} hari
               </dd>
             </div>
