@@ -355,6 +355,15 @@ export function HeroWidgets({
         year: "numeric",
       }).format(now)
     : "";
+  // Compact clock card: "Kam, 12 Nov 2026" so the date fits on one line.
+  const shortDateLabel = now
+    ? new Intl.DateTimeFormat("id-ID", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      }).format(now)
+    : "";
   const clockLabel = now
     ? `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`
     : "--:--:--";
@@ -424,7 +433,9 @@ export function HeroWidgets({
           suppressHydrationWarning
         >
           <HrisIcon name="calendar" className={cn("shrink-0", compact ? "size-3.5" : "size-4")} />
-          <span className={cn("min-w-0", compact && "truncate")}>{dateLabel || "\u00a0"}</span>
+          <span className={cn("min-w-0", compact && "truncate")}>
+            {(compact ? shortDateLabel : dateLabel) || "\u00a0"}
+          </span>
         </p>
         {timeZone ? <span className="sr-only">{timeZone}</span> : null}
       </section>

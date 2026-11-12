@@ -153,7 +153,9 @@ export function MonthlyRecapCard({
         <h2
           id={headingId}
           className={cn(
-            compact ? "text-[15px] font-bold tracking-tight" : "text-[17px] font-bold tracking-tight",
+            compact
+              ? "min-w-0 truncate text-[clamp(13.5px,4cqw,15px)] font-bold tracking-tight"
+              : "text-[17px] font-bold tracking-tight",
             band ? "text-white" : "text-foreground"
           )}
         >

@@ -256,9 +256,9 @@ export async function EmployeeDashboard({
             label="Status"
           >
             <span
-              className={`inline-flex max-w-full rounded-full px-2.5 py-0.5 text-[12.5px] font-bold ${status.pill}`}
+              className={`inline-flex max-w-full rounded-full px-2 py-0.5 text-[clamp(11px,3cqw,12.5px)] font-bold whitespace-nowrap ${status.pill}`}
             >
-              <span className="truncate">{status.label}</span>
+              {status.label}
             </span>
           </TodayTile>
         </section>

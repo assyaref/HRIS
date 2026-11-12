@@ -15,10 +15,10 @@ import { cn } from "@/lib/utils/cn";
  */
 
 const QUICK_TILE_CLASS =
-  "relative flex min-h-[74px] flex-col items-center justify-center gap-1.5 rounded-2xl border border-[var(--card-border)] bg-card px-1 py-2.5 text-center hris-card transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-[0.97]";
+  "relative flex min-h-[74px] flex-col items-center justify-center gap-1.5 rounded-2xl border border-[var(--card-border)] bg-card px-0.5 py-2.5 text-center hris-card transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-[0.97]";
 
 const QUICK_LABEL_CLASS =
-  "w-full truncate text-[clamp(10.5px,2.7cqw,12.5px)] leading-tight font-semibold text-foreground";
+  "w-full overflow-hidden text-[clamp(10px,2.6cqw,12.5px)] leading-tight font-semibold tracking-tight whitespace-nowrap text-foreground";
 
 export function QuickMenuTile({
   href,
@@ -155,9 +155,9 @@ export function TodayTile({
   children: ReactNode;
 }) {
   return (
-    <div className="flex min-w-0 items-center gap-2.5 rounded-2xl border border-[var(--card-border)] bg-card px-3 py-2.5 hris-card">
-      <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", chip)}>
-        <HrisIcon name={icon} className="size-[22px]" />
+    <div className="flex min-w-0 items-center gap-2 rounded-2xl border border-[var(--card-border)] bg-card px-2.5 py-2.5 hris-card">
+      <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl", chip)}>
+        <HrisIcon name={icon} className="size-5" />
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-[12px] font-semibold text-foreground/85">{label}</p>
