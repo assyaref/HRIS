@@ -14,10 +14,10 @@ export const LEAVE_REQUEST_STATUS_LABELS: Record<
   LeaveRequestStatus,
   string
 > = {
-  pending: "Pending",
-  approved: "Approved",
-  rejected: "Rejected",
-  cancelled: "Cancelled",
+  pending: "Menunggu",
+  approved: "Disetujui",
+  rejected: "Ditolak",
+  cancelled: "Dibatalkan",
 };
 
 /** Default number of rows shown in leave lists. */

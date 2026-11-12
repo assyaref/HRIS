@@ -51,13 +51,13 @@ async function resolveEmployeeContext(user: CurrentUser): Promise<{
   employee?: LinkedEmployee;
 }> {
   if (!user.organizationId) {
-    return { ok: false, message: "Your account is not assigned to an organization." };
+    return { ok: false, message: "Akun Anda belum terhubung ke organisasi." };
   }
   const employee = await getEmployeeByUserId(user.id, user.organizationId);
   if (!employee) {
     return {
       ok: false,
-      message: "No employee profile is linked to your account.",
+      message: "Akun Anda belum ditautkan ke data karyawan.",
     };
   }
   return { ok: true, organizationId: user.organizationId, employee };
@@ -109,7 +109,7 @@ export async function createLeaveRequestAction(
   await requirePermission(user.id, PERMISSIONS.LEAVE_CREATE);
   const resolved = await resolveEmployeeContext(user);
   if (!resolved.ok || !resolved.organizationId || !resolved.employee) {
-    return { ok: false, message: resolved.message ?? "Request failed." };
+    return { ok: false, message: resolved.message ?? "Permintaan gagal." };
   }
   const organizationId = resolved.organizationId;
   const employee = resolved.employee;
@@ -118,7 +118,7 @@ export async function createLeaveRequestAction(
   if (!parsed.success) {
     return {
       ok: false,
-      message: parsed.error.issues[0]?.message ?? "Invalid request.",
+      message: parsed.error.issues[0]?.message ?? "Data pengajuan tidak valid.",
     };
   }
   const { leaveTypeId, startDate, endDate, reason } = parsed.data;
@@ -126,12 +126,12 @@ export async function createLeaveRequestAction(
   if (endDate < startDate) {
     return {
       ok: false,
-      message: "End date must not be before the start date.",
+      message: "Tanggal selesai tidak boleh sebelum tanggal mulai.",
     };
   }
   const totalDays = inclusiveDayCount(startDate, endDate);
   if (totalDays === null) {
-    return { ok: false, message: "The requested date range is invalid." };
+    return { ok: false, message: "Rentang tanggal tidak valid." };
   }
   const year = startDate.slice(0, 4);
   const startDateValue = dateOnlyToDate(startDate);
@@ -156,7 +156,7 @@ export async function createLeaveRequestAction(
         .limit(1);
       const leaveType = typeRows[0];
       if (!leaveType || !leaveType.active) {
-        return { kind: "error", message: "This leave type is not available." };
+        return { kind: "error", message: "Jenis cuti ini tidak tersedia." };
       }
 
       const overlapRows = await tx
@@ -212,18 +212,18 @@ export async function createLeaveRequestAction(
         if (totalDays > available) {
           return {
             kind: "error",
-            message: "Insufficient leave balance for this request.",
+            message: "Saldo cuti tidak mencukupi untuk pengajuan ini.",
           };
         }
       } else if (leaveType.defaultAllowanceDays === null) {
         return {
           kind: "error",
-          message: "No leave balance is configured for this leave type.",
+          message: "Saldo cuti untuk jenis cuti ini belum diatur.",
         };
       } else if (totalDays > leaveType.defaultAllowanceDays) {
         return {
           kind: "error",
-          message: "The request exceeds the default annual allowance.",
+          message: "Pengajuan melebihi jatah cuti tahunan.",
         };
       }
 
@@ -288,12 +288,12 @@ export async function createLeaveRequestAction(
       eventType: "leave.created",
       metadata: { totalDays },
     });
-    return { ok: true, message: "Leave request submitted." };
+    return { ok: true, message: "Pengajuan cuti berhasil dikirim." };
   } catch (error) {
     console.error("[leave] create failed", error);
     return {
       ok: false,
-      message: "The leave request could not be submitted. Please try again.",
+      message: "Pengajuan cuti gagal dikirim. Silakan coba lagi.",
     };
   }
 }
@@ -362,7 +362,7 @@ export async function reviewLeaveRequestAction(
   if (!user.organizationId) {
     return {
       ok: false,
-      message: "Your account is not assigned to an organization.",
+      message: "Akun Anda belum terhubung ke organisasi.",
     };
   }
   const organizationId = user.organizationId;
@@ -371,7 +371,7 @@ export async function reviewLeaveRequestAction(
   if (!parsed.success) {
     return {
       ok: false,
-      message: parsed.error.issues[0]?.message ?? "Invalid decision.",
+      message: parsed.error.issues[0]?.message ?? "Keputusan tidak valid.",
     };
   }
   const { decision, reviewerNote } = parsed.data;
@@ -379,7 +379,7 @@ export async function reviewLeaveRequestAction(
   const request = await loadLeaveRequestForAction(organizationId, requestId);
   if (!request) forbidden();
   if (request.employeeUserId === user.id) {
-    return { ok: false, message: "You cannot review your own request." };
+    return { ok: false, message: "Anda tidak dapat meninjau pengajuan Anda sendiri." };
   }
 
   const now = new Date();
@@ -406,11 +406,11 @@ export async function reviewLeaveRequestAction(
         .for("update")
         .limit(1);
       const locked = lockedRows[0];
-      if (!locked) return { kind: "error", message: "Request not found." };
+      if (!locked) return { kind: "error", message: "Pengajuan tidak ditemukan." };
       if (locked.status !== "pending") {
         return {
           kind: "error",
-          message: "This request has already been reviewed or cancelled.",
+          message: "Pengajuan ini sudah ditinjau atau dibatalkan.",
         };
       }
       if (!locked.employeeId) {
@@ -445,13 +445,13 @@ export async function reviewLeaveRequestAction(
       if (!balance) {
         return {
           kind: "error",
-          message: "The leave balance could not be found for this request.",
+          message: "Saldo cuti untuk pengajuan ini tidak ditemukan.",
         };
       }
       if (balance.pending - locked.totalDays < 0) {
         return {
           kind: "error",
-          message: "The leave balance is inconsistent. Contact an administrator.",
+          message: "Saldo cuti tidak konsisten. Hubungi administrator.",
         };
       }
 
@@ -522,7 +522,7 @@ export async function reviewLeaveRequestAction(
     console.error("[leave] review failed", error);
     return {
       ok: false,
-      message: "The decision could not be saved. Please try again.",
+      message: "Keputusan gagal disimpan. Silakan coba lagi.",
     };
   }
 }
@@ -536,7 +536,7 @@ export async function cancelLeaveRequestAction(
   await requirePermission(user.id, PERMISSIONS.LEAVE_VIEW);
   const resolved = await resolveEmployeeContext(user);
   if (!resolved.ok || !resolved.organizationId || !resolved.employee) {
-    return { ok: false, message: resolved.message ?? "Request failed." };
+    return { ok: false, message: resolved.message ?? "Permintaan gagal." };
   }
   const organizationId = resolved.organizationId;
   const employee = resolved.employee;
@@ -550,7 +550,7 @@ export async function cancelLeaveRequestAction(
   if (request.status !== "pending") {
     return {
       ok: false,
-      message: "Only pending requests can be cancelled.",
+      message: "Hanya pengajuan berstatus menunggu yang dapat dibatalkan.",
     };
   }
 
@@ -581,7 +581,7 @@ export async function cancelLeaveRequestAction(
       if (!locked || locked.status !== "pending") {
         return {
           kind: "error",
-          message: "This request can no longer be cancelled.",
+          message: "Pengajuan ini tidak dapat dibatalkan lagi.",
         };
       }
 
@@ -636,12 +636,12 @@ export async function cancelLeaveRequestAction(
       eventType: "cancelled",
       metadata: { totalDays: request.totalDays },
     });
-    return { ok: true, message: "Leave request cancelled." };
+    return { ok: true, message: "Pengajuan cuti dibatalkan." };
   } catch (error) {
     console.error("[leave] cancel failed", error);
     return {
       ok: false,
-      message: "The leave request could not be cancelled. Please try again.",
+      message: "Pengajuan cuti gagal dibatalkan. Silakan coba lagi.",
     };
   }
 }

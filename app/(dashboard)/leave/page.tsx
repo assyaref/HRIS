@@ -56,7 +56,7 @@ export default async function LeavePage({
   if (!employee) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+        <h1 className="emp-page-title text-2xl font-semibold tracking-tight text-foreground">
           Cuti
         </h1>
         <EmployeeEmptyState
@@ -93,7 +93,7 @@ export default async function LeavePage({
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+        <div className="emp-page-title">
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             Cuti
           </h1>

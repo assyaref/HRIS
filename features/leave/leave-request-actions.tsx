@@ -83,26 +83,26 @@ export function LeaveRequestActions({
           onClick={cancel}
           disabled={pending}
         >
-          Cancel request
+          Batalkan Pengajuan
         </Button>
       ) : null}
 
       {canReview ? (
         <form action={review} className="space-y-3 border-t border-border pt-4">
           <div className="space-y-2">
-            <Label htmlFor="review-decision">Decision</Label>
+            <Label htmlFor="review-decision">Keputusan</Label>
             <select
               id="review-decision"
               name="decision"
               defaultValue="approved"
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
-              <option value="approved">Approve</option>
-              <option value="rejected">Reject</option>
+              <option value="approved">Setujui</option>
+              <option value="rejected">Tolak</option>
             </select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="reviewer-note">Reviewer note (optional)</Label>
+            <Label htmlFor="reviewer-note">Catatan peninjau (opsional)</Label>
             <textarea
               id="reviewer-note"
               name="reviewerNote"
@@ -112,7 +112,7 @@ export function LeaveRequestActions({
           </div>
           <div className="flex justify-end">
             <Button type="submit" disabled={pending}>
-              {pending ? "Saving…" : "Submit decision"}
+              {pending ? "Menyimpan…" : "Simpan Keputusan"}
             </Button>
           </div>
         </form>

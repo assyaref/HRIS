@@ -72,7 +72,7 @@ export default async function NotificationsPage({
 
   return (
     <div className="space-y-5">
-      <div>
+      <div className="emp-page-title">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           Notifikasi
         </h1>

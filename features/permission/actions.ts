@@ -47,14 +47,14 @@ async function resolveEmployeeContext(user: CurrentUser): Promise<{
   if (!user.organizationId) {
     return {
       ok: false,
-      message: "Your account is not assigned to an organization.",
+      message: "Akun Anda belum terhubung ke organisasi.",
     };
   }
   const employee = await getEmployeeByUserId(user.id, user.organizationId);
   if (!employee) {
     return {
       ok: false,
-      message: "No employee profile is linked to your account.",
+      message: "Akun Anda belum ditautkan ke data karyawan.",
     };
   }
   return { ok: true, organizationId: user.organizationId, employee };
@@ -149,7 +149,7 @@ export async function createPermissionRequestAction(
   await requirePermission(user.id, PERMISSIONS.PERMISSION_CREATE);
   const resolved = await resolveEmployeeContext(user);
   if (!resolved.ok || !resolved.organizationId || !resolved.employee) {
-    return { ok: false, message: resolved.message ?? "Request failed." };
+    return { ok: false, message: resolved.message ?? "Permintaan gagal." };
   }
   const organizationId = resolved.organizationId;
   const employee = resolved.employee;
@@ -158,7 +158,7 @@ export async function createPermissionRequestAction(
   if (!parsed.success) {
     return {
       ok: false,
-      message: parsed.error.issues[0]?.message ?? "Invalid request.",
+      message: parsed.error.issues[0]?.message ?? "Data pengajuan tidak valid.",
     };
   }
   const { permissionType, reason } = parsed.data;
@@ -166,10 +166,10 @@ export async function createPermissionRequestAction(
   const startAt = parseDateTime(parsed.data.startAt);
   const endAt = parseDateTime(parsed.data.endAt);
   if (!startAt || !endAt) {
-    return { ok: false, message: "The requested time range is invalid." };
+    return { ok: false, message: "Rentang waktu tidak valid." };
   }
   if (endAt.getTime() <= startAt.getTime()) {
-    return { ok: false, message: "End time must be after the start time." };
+    return { ok: false, message: "Waktu selesai harus setelah waktu mulai." };
   }
 
   try {
@@ -220,12 +220,12 @@ export async function createPermissionRequestAction(
       eventType: "submitted",
       metadata: { permissionType },
     });
-    return { ok: true, message: "Permission request submitted." };
+    return { ok: true, message: "Pengajuan izin berhasil dikirim." };
   } catch (error) {
     console.error("[permission] create failed", error);
     return {
       ok: false,
-      message: "The permission request could not be submitted. Please try again.",
+      message: "Pengajuan izin gagal dikirim. Silakan coba lagi.",
     };
   }
 }
@@ -244,7 +244,7 @@ export async function reviewPermissionRequestAction(
   if (!user.organizationId) {
     return {
       ok: false,
-      message: "Your account is not assigned to an organization.",
+      message: "Akun Anda belum terhubung ke organisasi.",
     };
   }
   const organizationId = user.organizationId;
@@ -253,7 +253,7 @@ export async function reviewPermissionRequestAction(
   if (!parsed.success) {
     return {
       ok: false,
-      message: parsed.error.issues[0]?.message ?? "Invalid decision.",
+      message: parsed.error.issues[0]?.message ?? "Keputusan tidak valid.",
     };
   }
   const { decision, reviewerNote } = parsed.data;
@@ -264,7 +264,7 @@ export async function reviewPermissionRequestAction(
   );
   if (!request) forbidden();
   if (request.employeeUserId === user.id) {
-    return { ok: false, message: "You cannot review your own request." };
+    return { ok: false, message: "Anda tidak dapat meninjau pengajuan Anda sendiri." };
   }
 
   try {
@@ -282,12 +282,12 @@ export async function reviewPermissionRequestAction(
         .limit(1);
       const locked = lockedRows[0];
       if (!locked) {
-        return { kind: "error", message: "Request not found." };
+        return { kind: "error", message: "Pengajuan tidak ditemukan." };
       }
       if (locked.status !== "pending") {
         return {
           kind: "error",
-          message: "This request has already been reviewed or cancelled.",
+          message: "Pengajuan ini sudah ditinjau atau dibatalkan.",
         };
       }
 
@@ -338,7 +338,7 @@ export async function reviewPermissionRequestAction(
     console.error("[permission] review failed", error);
     return {
       ok: false,
-      message: "The decision could not be saved. Please try again.",
+      message: "Keputusan gagal disimpan. Silakan coba lagi.",
     };
   }
 }
@@ -351,7 +351,7 @@ export async function cancelPermissionRequestAction(
   await requirePermission(user.id, PERMISSIONS.PERMISSION_VIEW);
   const resolved = await resolveEmployeeContext(user);
   if (!resolved.ok || !resolved.organizationId || !resolved.employee) {
-    return { ok: false, message: resolved.message ?? "Request failed." };
+    return { ok: false, message: resolved.message ?? "Permintaan gagal." };
   }
   const organizationId = resolved.organizationId;
   const employee = resolved.employee;
@@ -365,7 +365,7 @@ export async function cancelPermissionRequestAction(
   if (request.status !== "pending") {
     return {
       ok: false,
-      message: "Only pending requests can be cancelled.",
+      message: "Hanya pengajuan berstatus menunggu yang dapat dibatalkan.",
     };
   }
 
@@ -386,7 +386,7 @@ export async function cancelPermissionRequestAction(
       if (!locked || locked.status !== "pending") {
         return {
           kind: "error",
-          message: "This request can no longer be cancelled.",
+          message: "Pengajuan ini tidak dapat dibatalkan lagi.",
         };
       }
 
@@ -419,12 +419,12 @@ export async function cancelPermissionRequestAction(
       employeeNumber: employee.employeeNumber,
       eventType: "cancelled",
     });
-    return { ok: true, message: "Permission request cancelled." };
+    return { ok: true, message: "Pengajuan izin dibatalkan." };
   } catch (error) {
     console.error("[permission] cancel failed", error);
     return {
       ok: false,
-      message: "The permission request could not be cancelled. Please try again.",
+      message: "Pengajuan izin gagal dibatalkan. Silakan coba lagi.",
     };
   }
 }

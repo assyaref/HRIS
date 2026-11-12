@@ -48,15 +48,15 @@ export default async function AnnouncementsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+        <div className="emp-page-title">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
             Pengumuman
           </h1>
           <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-            Official news and information from management.
+            Informasi resmi dari perusahaan.
             {unread > 0 ? (
               <span className="ml-2 inline-flex items-center rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
-                {unread} unread
+                {unread} belum dibaca
               </span>
             ) : null}
           </p>
@@ -77,13 +77,13 @@ export default async function AnnouncementsPage() {
 
       {!employee ? (
         <EmptyState
-          title="No employee profile linked"
-          description="Your account is not linked to an employee record yet, so announcements cannot be addressed to you. Contact your administrator."
+          title="Profil karyawan belum tertaut"
+          description="Akun Anda belum ditautkan ke data karyawan, sehingga pengumuman belum dapat ditujukan kepada Anda. Hubungi administrator."
         />
       ) : announcements.length === 0 ? (
         <EmptyState
-          title="No announcements yet"
-          description="New announcements from management will appear here."
+          title="Belum ada pengumuman"
+          description="Pengumuman baru dari perusahaan akan tampil di sini."
         />
       ) : (
         <div className="space-y-3">
@@ -110,7 +110,7 @@ export default async function AnnouncementsPage() {
                           aria-hidden="true"
                           className="size-1.5 rounded-full bg-primary"
                         />
-                        New
+                        Baru
                       </span>
                     ) : null}
                   </span>
@@ -123,14 +123,14 @@ export default async function AnnouncementsPage() {
                   <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                     <span>
                       {item.author
-                        ? `By ${item.author.displayName}`
-                        : "By management"}
+                        ? `Oleh ${item.author.displayName}`
+                        : "Oleh manajemen"}
                     </span>
                     {item.publishedAt ? (
-                      <span>Published {formatDateTime(item.publishedAt)}</span>
+                      <span>Terbit {formatDateTime(item.publishedAt)}</span>
                     ) : null}
                     {item.attachmentCount > 0 ? (
-                      <span>{item.attachmentCount} attachment(s)</span>
+                      <span>{item.attachmentCount} lampiran</span>
                     ) : null}
                   </span>
                 </Link>
@@ -146,7 +146,7 @@ export default async function AnnouncementsPage() {
 function BadgePin() {
   return (
     <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-700">
-      Pinned
+      Disematkan
     </span>
   );
 }

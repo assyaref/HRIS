@@ -257,7 +257,6 @@ export default async function AccountSettingsPage({
 
       <ProfileView
         initialTab={parseTab(params.tab)}
-        overlapBand={employeeFrame}
         identity={{
           displayName,
           subtitle: profile?.position ?? roleLabel ?? null,

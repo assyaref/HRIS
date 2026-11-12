@@ -1,23 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { forbidden } from "next/navigation";
 
-import { buttonVariants } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { formatRequestTimestamp, RequestDetail } from "@/components/employee/request-detail";
 import { requireUser } from "@/lib/auth/auth";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import {
@@ -28,13 +12,14 @@ import {
 import { getEmployeeByUserId } from "@/features/employees/queries";
 import { PermissionRequestActions } from "@/features/permission/permission-request-actions";
 import {
+  PERMISSION_REQUEST_STATUS_LABELS,
   PERMISSION_TYPE_LABELS,
+  type PermissionRequestStatus,
 } from "@/features/permission/constants";
-import { formatDateTime } from "@/features/permission/format";
 import { getPermissionRequestDetail } from "@/features/permission/queries";
 
 export const metadata: Metadata = {
-  title: "Permission request",
+  title: "Detail Pengajuan Izin",
 };
 
 export default async function PermissionRequestDetailPage({
@@ -67,103 +52,36 @@ export default async function PermissionRequestDetailPage({
     ] ?? request.permissionType;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            Detail Pengajuan Izin
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-            {request.employeeName} · {request.employeeNumber}
-          </p>
-        </div>
-        <Link
-          href={canReview ? "/permission/management" : "/permission"}
-          className={buttonVariants({ variant: "outline", size: "sm" })}
-        >
-          Back
-        </Link>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{typeLabel}</CardTitle>
-          <CardDescription>
-            {formatDateTime(request.startAt)} → {formatDateTime(request.endAt)}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <p>
-            <span className="text-muted-foreground">Reason: </span>
-            {request.reason}
-          </p>
-          <p>
-            <span className="text-muted-foreground">Status: </span>
-            <span className="capitalize">{request.status}</span>
-          </p>
-          {request.reviewerNote ? (
-            <p>
-              <span className="text-muted-foreground">Reviewer note: </span>
-              {request.reviewerNote}
-            </p>
-          ) : null}
-          {request.reviewedAt ? (
-            <p className="text-xs text-muted-foreground">
-              Reviewed at {request.reviewedAt.toISOString()}
-            </p>
-          ) : null}
-        </CardContent>
-      </Card>
-
-      {statusPending ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Actions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <PermissionRequestActions
-              requestId={request.id}
-              canCancel={isOwner}
-              canReview={canReview && !isOwner}
-            />
-          </CardContent>
-        </Card>
-      ) : null}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>History</CardTitle>
-          <CardDescription>Immutable request events.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {detail.events.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No events.</p>
-          ) : (
-            <div className="rounded-lg border border-border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Event</TableHead>
-                    <TableHead>Actor</TableHead>
-                    <TableHead>Time</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {detail.events.map((event) => (
-                    <TableRow key={event.id}>
-                      <TableCell className="font-mono text-xs">
-                        {event.eventType}
-                      </TableCell>
-                      <TableCell>{event.actorName ?? "—"}</TableCell>
-                      <TableCell>{event.createdAt.toISOString()}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    <RequestDetail
+      backHref={canReview ? "/permission/management" : "/permission"}
+      title="Detail Pengajuan Izin"
+      subtitle={`${request.employeeName} · ${request.employeeNumber}`}
+      icon="clipboard"
+      typeLabel={typeLabel}
+      status={request.status}
+      statusLabel={
+        PERMISSION_REQUEST_STATUS_LABELS[request.status as PermissionRequestStatus] ??
+        request.status
+      }
+      rows={[
+        { label: "Mulai", value: formatRequestTimestamp(request.startAt) },
+        { label: "Selesai", value: formatRequestTimestamp(request.endAt) },
+        { label: "Alasan", value: request.reason || "—" },
+        ...(request.reviewerNote
+          ? [{ label: "Catatan peninjau", value: request.reviewerNote }]
+          : []),
+      ]}
+      reviewedAt={request.reviewedAt}
+      actions={
+        statusPending ? (
+          <PermissionRequestActions
+            requestId={request.id}
+            canCancel={isOwner}
+            canReview={canReview && !isOwner}
+          />
+        ) : null
+      }
+      events={detail.events}
+    />
   );
 }

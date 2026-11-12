@@ -25,7 +25,7 @@ export default async function FaceIdPage() {
   if (!user.organizationId) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Face ID</h1>
+        <h1 className="emp-page-title text-2xl font-semibold tracking-tight">Face ID</h1>
         <p className="text-sm text-muted-foreground">
           Akun belum memiliki organisasi.
         </p>
@@ -41,7 +41,7 @@ export default async function FaceIdPage() {
   if (!employee) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Face ID</h1>
+        <h1 className="emp-page-title text-2xl font-semibold tracking-tight">Face ID</h1>
         <p className="text-sm text-muted-foreground">
           {FACE_SELF_ENROLLMENT_UNLINKED_MESSAGE}
         </p>
@@ -61,7 +61,7 @@ export default async function FaceIdPage() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="emp-page-title">
         <h1 className="text-2xl font-semibold tracking-tight">Face ID</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Pendaftaran wajah untuk absensi — lewat kamera, atau dari foto profil.

@@ -100,7 +100,7 @@ export default async function AnnouncementDetailPage({
               name="arrow-right"
               className="size-4 rotate-180"
             />
-            {perms.canView ? "Management view" : "All announcements"}
+            {perms.canView ? "Kelola Pengumuman" : "Semua pengumuman"}
           </Link>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
             {detail.title}
@@ -110,7 +110,7 @@ export default async function AnnouncementDetailPage({
             <AnnouncementPriorityBadge priority={detail.priority} />
             {detail.pinned ? (
               <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-700">
-                Pinned
+                Disematkan
               </span>
             ) : null}
             <span>
@@ -121,8 +121,8 @@ export default async function AnnouncementDetailPage({
             <span>·</span>
             <span>
               {detail.author
-                ? `By ${detail.author.displayName}`
-                : "By management"}
+                ? `Oleh ${detail.author.displayName}`
+                : "Oleh manajemen"}
             </span>
           </div>
         </div>
@@ -154,10 +154,10 @@ export default async function AnnouncementDetailPage({
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
             {detail.publishedAt
-              ? `Published ${formatDateTime(detail.publishedAt)}`
+              ? `Terbit ${formatDateTime(detail.publishedAt)}`
               : detail.scheduledAt
-                ? `Scheduled ${formatDateTime(detail.scheduledAt)}`
-                : `Created ${formatDateTime(detail.createdAt)}`}
+                ? `Dijadwalkan ${formatDateTime(detail.scheduledAt)}`
+                : `Dibuat ${formatDateTime(detail.createdAt)}`}
             {detail.expiresAt
               ? ` · expires ${formatDateTime(detail.expiresAt)}`
               : ""}

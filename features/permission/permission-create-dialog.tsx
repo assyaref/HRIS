@@ -50,15 +50,15 @@ export function PermissionCreateDialog() {
   return (
     <>
       <Button type="button" onClick={() => setOpen(true)}>
-        Request permission
+        Ajukan Izin
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Permission request</DialogTitle>
+            <DialogTitle>Pengajuan Izin</DialogTitle>
             <DialogDescription>
-              Request time-based permission (for example, a short errand or a
-              home-office session).
+              Ajukan izin berbasis waktu, misalnya urusan singkat di luar
+              kantor atau kerja dari rumah.
             </DialogDescription>
           </DialogHeader>
           <form action={submit} className="space-y-4">
@@ -72,7 +72,7 @@ export function PermissionCreateDialog() {
             ) : null}
 
             <div className="space-y-2">
-              <Label htmlFor="permission-type">Type</Label>
+              <Label htmlFor="permission-type">Jenis Izin</Label>
               <select
                 id="permission-type"
                 name="permissionType"
@@ -90,7 +90,7 @@ export function PermissionCreateDialog() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="permission-start">Start</Label>
+                <Label htmlFor="permission-start">Mulai</Label>
                 <Input
                   id="permission-start"
                   name="startAt"
@@ -99,7 +99,7 @@ export function PermissionCreateDialog() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="permission-end">End</Label>
+                <Label htmlFor="permission-end">Selesai</Label>
                 <Input
                   id="permission-end"
                   name="endAt"
@@ -110,7 +110,7 @@ export function PermissionCreateDialog() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="permission-reason">Reason</Label>
+              <Label htmlFor="permission-reason">Alasan</Label>
               <textarea
                 id="permission-reason"
                 name="reason"
@@ -126,10 +126,10 @@ export function PermissionCreateDialog() {
                 variant="ghost"
                 onClick={() => setOpen(false)}
               >
-                Cancel
+                Batal
               </Button>
               <Button type="submit" disabled={pending}>
-                {pending ? "Submitting…" : "Submit request"}
+                {pending ? "Mengirim…" : "Kirim Pengajuan"}
               </Button>
             </DialogFooter>
           </form>

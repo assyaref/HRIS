@@ -49,15 +49,15 @@ export function LeaveCreateDialog({
   return (
     <>
       <Button type="button" onClick={() => setOpen(true)}>
-        Request leave
+        Ajukan Cuti
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Request leave</DialogTitle>
+            <DialogTitle>Ajukan Cuti</DialogTitle>
             <DialogDescription>
-              Submit a leave request. Total days and available balance are
-              validated on the server.
+              Isi jenis cuti, tanggal, dan alasan. Jumlah hari dan saldo cuti
+              diperiksa otomatis oleh sistem.
             </DialogDescription>
           </DialogHeader>
           <form action={submit} className="space-y-4">
@@ -71,7 +71,7 @@ export function LeaveCreateDialog({
             ) : null}
 
             <div className="space-y-2">
-              <Label htmlFor="leave-type">Leave type</Label>
+              <Label htmlFor="leave-type">Jenis Cuti</Label>
               <select
                 id="leave-type"
                 name="leaveTypeId"
@@ -89,17 +89,17 @@ export function LeaveCreateDialog({
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="leave-start">Start date</Label>
+                <Label htmlFor="leave-start">Tanggal Mulai</Label>
                 <Input id="leave-start" name="startDate" type="date" required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="leave-end">End date</Label>
+                <Label htmlFor="leave-end">Tanggal Selesai</Label>
                 <Input id="leave-end" name="endDate" type="date" required />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="leave-reason">Reason</Label>
+              <Label htmlFor="leave-reason">Alasan</Label>
               <textarea
                 id="leave-reason"
                 name="reason"
@@ -115,10 +115,10 @@ export function LeaveCreateDialog({
                 variant="ghost"
                 onClick={() => setOpen(false)}
               >
-                Cancel
+                Batal
               </Button>
               <Button type="submit" disabled={pending || leaveTypes.length === 0}>
-                {pending ? "Submitting…" : "Submit request"}
+                {pending ? "Mengirim…" : "Kirim Pengajuan"}
               </Button>
             </DialogFooter>
           </form>

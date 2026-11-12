@@ -75,27 +75,27 @@ export function PermissionRequestActions({
 
       {canCancel ? (
         <Button type="button" variant="outline" onClick={cancel} disabled={pending}>
-          Cancel request
+          Batalkan Pengajuan
         </Button>
       ) : null}
 
       {canReview ? (
         <form action={review} className="space-y-3 border-t border-border pt-4">
           <div className="space-y-2">
-            <Label htmlFor="permission-review-decision">Decision</Label>
+            <Label htmlFor="permission-review-decision">Keputusan</Label>
             <select
               id="permission-review-decision"
               name="decision"
               defaultValue="approved"
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
-              <option value="approved">Approve</option>
-              <option value="rejected">Reject</option>
+              <option value="approved">Setujui</option>
+              <option value="rejected">Tolak</option>
             </select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="permission-reviewer-note">
-              Reviewer note (optional)
+              Catatan peninjau (opsional)
             </Label>
             <textarea
               id="permission-reviewer-note"
@@ -106,7 +106,7 @@ export function PermissionRequestActions({
           </div>
           <div className="flex justify-end">
             <Button type="submit" disabled={pending}>
-              {pending ? "Saving…" : "Submit decision"}
+              {pending ? "Menyimpan…" : "Simpan Keputusan"}
             </Button>
           </div>
         </form>

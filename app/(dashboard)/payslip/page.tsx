@@ -53,7 +53,7 @@ export default async function EmployeePayslipPage() {
   if (!employee || employee.employmentStatus !== "active") {
     return (
       <div className="space-y-6">
-        <div>
+        <div className="emp-page-title">
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             Slip Gaji
           </h1>
@@ -73,7 +73,7 @@ export default async function EmployeePayslipPage() {
 
   return (
     <div className="space-y-5">
-      <div>
+      <div className="emp-page-title">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           Slip Gaji
         </h1>

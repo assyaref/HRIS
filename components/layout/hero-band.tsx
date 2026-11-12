@@ -27,7 +27,7 @@ export function HeroBand() {
   const isHome = pathname === "/dashboard" || pathname === "/";
   // Self-service pages that carry their title inside the band (reference
   // mobile layout); the page then renders its title only for screen readers.
-  const bandTitle = employeeFrame ? EMPLOYEE_BAND_TITLES[pathname] : undefined;
+  const bandTitle = employeeFrame ? employeeBandTitle(pathname) : undefined;
 
   return (
     <>
@@ -36,7 +36,7 @@ export function HeroBand() {
         {isHome ? (
           <Greeting employeeFrame={employeeFrame} />
         ) : bandTitle ? (
-          <div className="relative px-5 pt-1 pb-12">
+          <div className="relative px-4 pt-1 pb-12">
             <p className="text-[clamp(24px,7vw,30px)] leading-tight font-extrabold tracking-tight text-white">
               {bandTitle.title}
             </p>
@@ -59,16 +59,40 @@ export function HeroBand() {
   );
 }
 
-const EMPLOYEE_BAND_TITLES: Record<string, { title: string; subtitle: string }> = {
-  "/settings/account": {
-    title: "Profil Saya",
-    subtitle: "Kelola informasi akun dan data kepegawaian Anda.",
-  },
-};
+/**
+ * Band title + subtitle for every self-service page, so they all share the
+ * Profil Saya header. Matched by route prefix (detail pages inherit their
+ * list's title). Pages keep their own h1, visually hidden in the employee
+ * frame (`.emp-page-title`, globals.css).
+ */
+const EMPLOYEE_BAND_TITLES: Array<[string, { title: string; subtitle: string }]> = [
+  ["/settings/account", { title: "Profil Saya", subtitle: "Kelola informasi akun dan data kepegawaian Anda." }],
+  ["/attendance", { title: "Absensi", subtitle: "Riwayat, rekap, dan presensi kehadiran Anda." }],
+  ["/face-id", { title: "Face ID", subtitle: "Data wajah untuk verifikasi absensi Anda." }],
+  ["/leave", { title: "Cuti", subtitle: "Ajukan cuti, pantau saldo dan riwayatnya." }],
+  ["/permission", { title: "Izin Kegiatan", subtitle: "Ajukan dan pantau izin kegiatan Anda." }],
+  ["/payslip", { title: "Slip Gaji Saya", subtitle: "Lihat dan unduh slip gaji Anda." }],
+  ["/announcements", { title: "Pengumuman", subtitle: "Informasi resmi dari perusahaan." }],
+  ["/notifications", { title: "Notifikasi", subtitle: "Pemberitahuan terbaru untuk Anda." }],
+];
+
+function employeeBandTitle(pathname: string) {
+  return EMPLOYEE_BAND_TITLES.find(
+    ([prefix]) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  )?.[1];
+}
 
 function TopBar() {
-  const { profile, notificationCount, toggleCollapsed, setDrawerOpen, setPaletteOpen } =
-    useShell();
+  const {
+    profile,
+    notificationCount,
+    toggleCollapsed,
+    setDrawerOpen,
+    setPaletteOpen,
+    employeeFrame,
+  } = useShell();
+
+  if (employeeFrame) return <EmployeeTopBar />;
 
   return (
     <div className="relative z-10 flex h-[72px] items-center gap-1.5 px-3 sm:gap-3 sm:px-4 lg:h-[76px] lg:px-8">
@@ -155,6 +179,80 @@ function TopBar() {
       </div>
       <Link href="/settings/account" aria-label="Profil saya" className="shrink-0 lg:hidden">
         <Avatar profile={profile} size={44} className="ring-2 ring-white/30" />
+      </Link>
+    </div>
+  );
+}
+
+/**
+ * Self-service top bar: HRIS mark + wordmark, the company logo plate,
+ * notifications and the profile photo. No menu button (every page is on
+ * Beranda) and fixed sizes, so the brand and the company logo look the same
+ * on every phone from 360px up and in the desktop frame. Only below 360px does the plate
+ * give up width (its logo scales down inside, never disappears).
+ */
+function EmployeeTopBar() {
+  const { profile, notificationCount } = useShell();
+  return (
+    <div className="relative z-10 flex h-[72px] items-center gap-1.5 px-3.5">
+      <Link
+        href="/dashboard"
+        className="flex shrink-0 items-center gap-2"
+        aria-label="HRIS — Beranda"
+      >
+        <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white shadow-sm">
+          <BrandMark size={33} priority />
+        </span>
+        <span className="leading-none">
+          <span className="block text-[20px] font-extrabold tracking-tight">HRIS</span>
+          <span className="mt-0.5 block w-[4.6rem] text-[8.5px] leading-[1.15] font-medium text-white/85">
+            Human Resource Information System
+          </span>
+        </span>
+      </Link>
+
+      {profile.organizationName ? (
+        <span className="flex min-w-0 items-center">
+          <span aria-hidden="true" className="mx-1.5 h-8 w-px shrink-0 bg-white/40" />
+          <span
+            className="flex h-9 w-[5.25rem] min-w-[3.5rem] shrink items-center justify-center rounded-full bg-white px-2.5 shadow-sm"
+            title={profile.organizationName}
+          >
+            {profile.organizationLogoUrl ? (
+              // Authenticated image route; next/image cannot optimise it.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={profile.organizationLogoUrl}
+                alt={profile.organizationName}
+                className="max-h-[22px] w-auto max-w-full object-contain"
+              />
+            ) : (
+              <span className="truncate text-[12px] font-extrabold tracking-tight text-[var(--brand-navy)]">
+                {profile.organizationName}
+              </span>
+            )}
+          </span>
+        </span>
+      ) : null}
+
+      <div className="min-w-1 flex-1" />
+
+      <Link
+        href="/notifications"
+        aria-label={
+          notificationCount > 0
+            ? `Notifikasi, ${notificationCount} belum dibaca`
+            : "Notifikasi"
+        }
+        className="relative flex size-10 shrink-0 items-center justify-center rounded-xl text-white transition-colors hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none"
+      >
+        <HrisIcon name="bell" className="size-[26px]" />
+        {notificationCount > 0 ? (
+          <span className="absolute top-1.5 right-1.5 size-3 rounded-full bg-[#FF3B47] ring-2 ring-[var(--brand-band-via)]" />
+        ) : null}
+      </Link>
+      <Link href="/settings/account" aria-label="Profil saya" className="shrink-0">
+        <Avatar profile={profile} size={40} className="ring-2 ring-white/30" />
       </Link>
     </div>
   );

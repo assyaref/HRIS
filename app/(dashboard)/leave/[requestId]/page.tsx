@@ -1,23 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { forbidden } from "next/navigation";
 
-import { buttonVariants } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { RequestDetail } from "@/components/employee/request-detail";
 import { requireUser } from "@/lib/auth/auth";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import {
@@ -27,11 +11,15 @@ import {
 
 import { getEmployeeByUserId } from "@/features/employees/queries";
 import { LeaveRequestActions } from "@/features/leave/leave-request-actions";
+import {
+  LEAVE_REQUEST_STATUS_LABELS,
+  type LeaveRequestStatus,
+} from "@/features/leave/constants";
 import { formatDate, formatDayCount } from "@/features/leave/format";
 import { getLeaveRequestDetail } from "@/features/leave/queries";
 
 export const metadata: Metadata = {
-  title: "Leave request",
+  title: "Detail Pengajuan Cuti",
 };
 
 export default async function LeaveRequestDetailPage({
@@ -64,105 +52,38 @@ export default async function LeaveRequestDetailPage({
   const statusPending = request.status === "pending";
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            Detail Pengajuan Cuti
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-            {request.employeeName} · {request.employeeNumber}
-          </p>
-        </div>
-        <Link
-          href={canReview ? "/leave/management" : "/leave"}
-          className={buttonVariants({ variant: "outline", size: "sm" })}
-        >
-          Back
-        </Link>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            {request.leaveTypeName} · {formatDayCount(request.totalDays)}
-          </CardTitle>
-          <CardDescription>
-            {formatDate(request.startDate)} → {formatDate(request.endDate)}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <p>
-            <span className="text-muted-foreground">Reason: </span>
-            {request.reason}
-          </p>
-          <p>
-            <span className="text-muted-foreground">Status: </span>
-            <span className="capitalize">{request.status}</span>
-          </p>
-          {request.reviewerNote ? (
-            <p>
-              <span className="text-muted-foreground">Reviewer note: </span>
-              {request.reviewerNote}
-            </p>
-          ) : null}
-          {request.reviewedAt ? (
-            <p className="text-xs text-muted-foreground">
-              Reviewed at {request.reviewedAt.toISOString()}
-            </p>
-          ) : null}
-        </CardContent>
-      </Card>
-
-      {statusPending ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Actions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <LeaveRequestActions
-              requestId={request.id}
-              canCancel={isOwner}
-              canReview={canReview && !isOwner}
-            />
-          </CardContent>
-        </Card>
-      ) : null}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>History</CardTitle>
-          <CardDescription>Immutable request events.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {detail.events.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No events.</p>
-          ) : (
-            <div className="rounded-lg border border-border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Event</TableHead>
-                    <TableHead>Actor</TableHead>
-                    <TableHead>Time</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {detail.events.map((event) => (
-                    <TableRow key={event.id}>
-                      <TableCell className="font-mono text-xs">
-                        {event.eventType}
-                      </TableCell>
-                      <TableCell>{event.actorName ?? "—"}</TableCell>
-                      <TableCell>{event.createdAt.toISOString()}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    <RequestDetail
+      backHref={canReview ? "/leave/management" : "/leave"}
+      title="Detail Pengajuan Cuti"
+      subtitle={`${request.employeeName} · ${request.employeeNumber}`}
+      icon="plane"
+      typeLabel={request.leaveTypeName}
+      status={request.status}
+      statusLabel={
+        LEAVE_REQUEST_STATUS_LABELS[request.status as LeaveRequestStatus] ?? request.status
+      }
+      rows={[
+        {
+          label: "Periode",
+          value: `${formatDate(request.startDate)} – ${formatDate(request.endDate)}`,
+        },
+        { label: "Durasi", value: formatDayCount(request.totalDays) },
+        { label: "Alasan", value: request.reason || "—" },
+        ...(request.reviewerNote
+          ? [{ label: "Catatan peninjau", value: request.reviewerNote }]
+          : []),
+      ]}
+      reviewedAt={request.reviewedAt}
+      actions={
+        statusPending ? (
+          <LeaveRequestActions
+            requestId={request.id}
+            canCancel={isOwner}
+            canReview={canReview && !isOwner}
+          />
+        ) : null
+      }
+      events={detail.events}
+    />
   );
 }

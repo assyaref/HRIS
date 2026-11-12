@@ -28,9 +28,9 @@ export type AnnouncementTargetType =
   (typeof ANNOUNCEMENT_TARGET_TYPES)[number];
 
 export const ANNOUNCEMENT_STATUS_LABELS: Record<AnnouncementStatus, string> = {
-  draft: "Draft",
-  published: "Published",
-  unpublished: "Unpublished",
+  draft: "Draf",
+  published: "Terbit",
+  unpublished: "Ditarik",
 };
 
 export const ANNOUNCEMENT_PRIORITY_LABELS: Record<
@@ -38,16 +38,16 @@ export const ANNOUNCEMENT_PRIORITY_LABELS: Record<
   string
 > = {
   normal: "Normal",
-  important: "Important",
-  urgent: "Urgent",
+  important: "Penting",
+  urgent: "Mendesak",
 };
 
 export const ANNOUNCEMENT_TARGET_LABELS: Record<
   AnnouncementTargetType,
   string
 > = {
-  all_employees: "All employees",
-  selected_employees: "Selected employees",
+  all_employees: "Semua karyawan",
+  selected_employees: "Karyawan terpilih",
 };
 
 export function isAnnouncementStatus(

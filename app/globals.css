@@ -905,3 +905,17 @@ html:has(.emp-frame) body {
 .hris-brand-pills > span:nth-child(1) { background: #0B5CC5; }
 .hris-brand-pills > span:nth-child(2) { background: #0388CB; }
 .hris-brand-pills > span:nth-child(3) { background: var(--brand-orange); }
+
+/* Self-service pages show their title in the blue band (hero-band.tsx);
+   the page's own title block stays for screen readers only. */
+html:has(.emp-frame) .emp-page-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
