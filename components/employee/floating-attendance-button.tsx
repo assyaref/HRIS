@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 
-import { HrisIcon } from "@/components/layout/icons";
 import { useOptionalShell } from "@/components/layout/shell-context";
 import { cn } from "@/lib/utils/cn";
 
+import { FaceScanIcon } from "./face-scan-icon";
+
 /**
- * Raised round "ABSEN" action (face glyph) at the centre of the bottom
+ * Raised round "ABSEN" action (animated face-scan glyph) at the centre of the bottom
  * navigation. Inside the app shell it opens the face-attendance sheet, which
  * submits through the EXISTING check-in / check-out server actions — no new
  * attendance logic lives here. Rendered outside the shell (no context) it
@@ -40,7 +41,7 @@ export function FloatingAttendanceButton({
         onClick={shell.openAttendanceSheet}
         className={classes}
       >
-        <HrisIcon name="face" className="size-9" />
+        <FaceScanIcon className="size-9" />
         <span className="sr-only">ABSEN</span>
       </button>
     );
@@ -53,7 +54,7 @@ export function FloatingAttendanceButton({
       aria-current={active ? "page" : undefined}
       className={classes}
     >
-      <HrisIcon name="face" className="size-9" />
+      <FaceScanIcon className="size-9" />
       <span className="sr-only">ABSEN</span>
     </Link>
   );

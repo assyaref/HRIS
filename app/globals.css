@@ -809,6 +809,43 @@ html:has(.emp-frame) body {
   box-shadow: 0 12px 24px -10px rgb(11 92 197 / 0.8), 0 0 0 6px var(--card);
 }
 
+/* Animated face-scan glyph on the ABSEN button (FaceScanIcon). SVG transforms
+   use user units, so `px` here are 24-grid units of the icon. */
+.face-scan__frame {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: face-scan-frame 2.4s ease-in-out infinite;
+}
+.face-scan__eyes {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: face-scan-blink 4.8s ease-in-out infinite;
+}
+.face-scan__line {
+  filter: drop-shadow(0 0 1.2px rgb(255 255 255 / 0.9));
+  animation: face-scan-sweep 2.4s ease-in-out infinite;
+}
+@keyframes face-scan-frame {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(0.9); }
+}
+@keyframes face-scan-sweep {
+  0% { transform: translateY(6px); opacity: 0; }
+  12% { opacity: 1; }
+  50% { transform: translateY(18px); opacity: 1; }
+  62% { opacity: 1; }
+  100% { transform: translateY(6px); opacity: 0; }
+}
+@keyframes face-scan-blink {
+  0%, 44%, 50%, 100% { transform: scaleY(1); }
+  47% { transform: scaleY(0.1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .face-scan__frame,
+  .face-scan__eyes { animation: none; }
+  .face-scan__line { display: none; }
+}
+
 /* Page titles everywhere inside the app shell share one voice. */
 @layer base {
   .hris-main h1 {
