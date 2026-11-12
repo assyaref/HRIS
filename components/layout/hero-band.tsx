@@ -22,6 +22,7 @@ import { Avatar, UserMenu } from "./user-menu";
  * follow directly below it.
  */
 export function HeroBand() {
+  const { employeeFrame } = useShell();
   const pathname = usePathname();
   const isHome = pathname === "/dashboard" || pathname === "/";
   const pageHero = PAGE_HEROES[pathname];
@@ -31,7 +32,7 @@ export function HeroBand() {
       <div className="hris-band relative isolate overflow-hidden">
         <TopBar />
         {isHome ? (
-          <Greeting />
+          <Greeting employeeFrame={employeeFrame} />
         ) : pageHero ? (
           <PageHero {...pageHero} />
         ) : (
@@ -39,7 +40,8 @@ export function HeroBand() {
         )}
         <Wave />
       </div>
-      {isHome ? (
+      {/* Self-service home renders the widgets itself, below its menu grid. */}
+      {isHome && !employeeFrame ? (
         <div className="mx-auto w-full max-w-[1400px] px-4 pt-3 sm:px-6 lg:px-10 lg:pt-4">
           <HeroWidgets />
         </div>
@@ -213,19 +215,29 @@ function OrganizationPlate({
   );
 }
 
-function Greeting() {
+function Greeting({ employeeFrame }: { employeeFrame: boolean }) {
   const { profile } = useShell();
   const title = profile.position?.trim() || profile.roleLabel;
 
   return (
-    <div className="relative px-4 pt-2 pb-10 sm:px-8 lg:px-14 lg:pt-1 lg:pb-12">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between md:gap-8">
-        <div className="min-w-0">
+    <div
+      className={cn(
+        "relative px-4 pt-2 sm:px-8 lg:px-14 lg:pt-1 lg:pb-12",
+        // The self-service menu grid overlaps the wave, so leave room for it.
+        employeeFrame ? "pb-14" : "pb-10"
+      )}
+    >
+      {employeeFrame ? <BuildingArt /> : null}
+      <div className="relative flex flex-col gap-4 md:flex-row md:items-end md:justify-between md:gap-8">
+        <div className={cn("min-w-0", employeeFrame && "max-w-[64%]")}>
           <p className="text-[19px] font-medium text-white/95 lg:text-xl">
             {profile.greeting},
           </p>
           <p className="mt-0.5 text-[28px] leading-tight font-extrabold tracking-tight text-white sm:text-[30px] lg:text-[34px]">
-            {profile.displayName}
+            {profile.displayName}{" "}
+            <span aria-hidden="true" className="inline-block origin-[70%_70%]">
+              👋
+            </span>
           </p>
           {title ? (
             <p className="mt-2 flex items-center gap-2 text-[17px] font-medium text-white/90 lg:text-lg">
@@ -254,6 +266,65 @@ function Greeting() {
         ) : null}
       </div>
     </div>
+  );
+}
+
+/**
+ * Decorative office building on the right of the self-service greeting
+ * (reference home). Pure SVG, no brand text, fades into the band on its left.
+ */
+function BuildingArt() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 200 150"
+      className="pointer-events-none absolute right-0 bottom-9 h-[128px] w-[172px] max-[360px]:opacity-40"
+      preserveAspectRatio="xMaxYMax meet"
+    >
+      <defs>
+        <linearGradient id="hris-bldg-glass" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#7FB6F5" />
+          <stop offset="0.5" stopColor="#2F6FC8" />
+          <stop offset="1" stopColor="#163E86" />
+        </linearGradient>
+        <linearGradient id="hris-bldg-side" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#FFFFFF" />
+          <stop offset="1" stopColor="#D8E4F5" />
+        </linearGradient>
+        <linearGradient id="hris-bldg-fade" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#fff" stopOpacity="0" />
+          <stop offset="0.14" stopColor="#fff" stopOpacity="1" />
+        </linearGradient>
+        <mask id="hris-bldg-mask">
+          <rect width="200" height="150" fill="url(#hris-bldg-fade)" />
+        </mask>
+      </defs>
+      <g mask="url(#hris-bldg-mask)">
+        {/* back tower */}
+        <path d="M118 30 172 14v116h-54z" fill="url(#hris-bldg-side)" />
+        <path d="M124 36h42v4h-42zM124 50h42v4h-42zM124 64h42v4h-42zM124 78h42v4h-42zM124 92h42v4h-42z" fill="#9CC0EE" />
+        <rect x="128" y="20" width="34" height="9" rx="2" transform="rotate(-16 145 24)" fill="#FFFFFF" />
+        <circle cx="157" cy="19" r="2.4" transform="rotate(-16 145 24)" fill="#F59E0B" />
+        {/* front glass block */}
+        <path d="M58 70 132 50v80H58z" fill="url(#hris-bldg-glass)" />
+        <path d="M58 70h-10v60h10z" fill="#E7EEF9" />
+        <g stroke="#CFE2FB" strokeOpacity="0.55" strokeWidth="1">
+          <path d="M58 84 132 66M58 98 132 82M58 112 132 98" />
+          <path d="M76 65v65M94 60v70M112 55v75" />
+        </g>
+        <rect x="44" y="64" width="92" height="6" rx="1.5" transform="rotate(-15 90 67)" fill="#FFFFFF" />
+        {/* canopy + entrance */}
+        <rect x="70" y="118" width="40" height="12" fill="#0E2E66" />
+        <rect x="64" y="114" width="52" height="4" rx="1" fill="#FFFFFF" />
+        {/* trees */}
+        <circle cx="50" cy="122" r="10" fill="#2E9E52" />
+        <circle cx="42" cy="127" r="7" fill="#3BB563" />
+        <circle cx="182" cy="116" r="12" fill="#2E9E52" />
+        <circle cx="194" cy="124" r="9" fill="#3BB563" />
+        <circle cx="140" cy="128" r="6" fill="#3BB563" />
+        <rect x="30" y="130" width="170" height="20" fill="#3BB563" opacity="0.55" />
+      </g>
+    </svg>
   );
 }
 

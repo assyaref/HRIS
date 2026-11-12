@@ -46,6 +46,7 @@ export function AppShell({
       sections={sections}
       profile={profile}
       notificationCount={notificationCount}
+      employeeFrame={employeeFrame}
     >
       <div
         className={cn(

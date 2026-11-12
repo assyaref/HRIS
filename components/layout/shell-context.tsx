@@ -61,6 +61,8 @@ interface ShellContextValue {
   attendanceSheetOpen: boolean;
   openAttendanceSheet: () => void;
   closeAttendanceSheet: () => void;
+  /** Self-service account rendered in the phone frame (see AppShell). */
+  employeeFrame: boolean;
 }
 
 const ShellContext = createContext<ShellContextValue | null>(null);
@@ -76,11 +78,13 @@ export function ShellProvider({
   sections,
   profile,
   notificationCount,
+  employeeFrame = false,
   children,
 }: {
   sections: NavSection[];
   profile: ShellProfile;
   notificationCount: number;
+  employeeFrame?: boolean;
   children: ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -133,8 +137,10 @@ export function ShellProvider({
       attendanceSheetOpen,
       openAttendanceSheet,
       closeAttendanceSheet,
+      employeeFrame,
     }),
     [
+      employeeFrame,
       sections,
       hrefs,
       profile,
