@@ -5,7 +5,7 @@ import { SectionHeader } from "@/components/employee/section-header";
 import { EmployeeEmptyState } from "@/components/employee/ui-states";
 import { MonthlyRecapCard } from "@/components/dashboard/monthly-recap-card";
 import { HeroWidgets } from "@/components/layout/hero-widgets";
-import { HrisIcon, type HrisIconName } from "@/components/layout/icons";
+import { HrisIcon } from "@/components/layout/icons";
 import { PERMISSIONS, type Permission } from "@/lib/auth/permissions";
 import type { UserAuthorization } from "@/lib/auth/rbac";
 import type { CurrentUser } from "@/lib/auth/types";
@@ -29,13 +29,7 @@ import {
 } from "@/lib/attendance/time";
 import { APP_TIME_ZONE } from "@/lib/utils/greeting";
 
-import {
-  AbsenNowCard,
-  QuickMenuMoreTile,
-  QuickMenuSeeAll,
-  QuickMenuTile,
-  TodayTile,
-} from "./home-actions";
+import { AbsenNowCard, HomeMenuGrid, TodayTile } from "./home-actions";
 import { getMonthlyRecap, recentMonthKeys } from "./queries";
 import { TODAY_STATUS, type TodayState } from "./today-status";
 
@@ -54,12 +48,11 @@ interface EmployeeDashboardProps {
  * The greeting lives in the shell's blue band; this page renders, in order:
  * the compact clock / weather cards overlapping the band's wave, the prayer
  * schedule, four "today" tiles (Hadir Hari Ini, Jam Pulang, Lokasi, Status),
- * the "Absen Sekarang" card, the one-row "Menu Cepat", "Ringkasan Kehadiran
+ * the "Absen Sekarang" card, the full "Menu" grid, "Ringkasan Kehadiran
  * Saya" and the announcement feed. The column is an `@container`: sizes
  * scale with its width instead of switching at viewport breakpoints, so the
- * layout stays fixed on every phone. Menu tiles are filtered by the
- * employee's permissions (the server route guards stay the authority);
- * "Lainnya" / "Lihat Semua" open the full navigation drawer.
+ * layout stays fixed on every phone. Menu tiles come from the
+ * server-filtered navigation (the route guards stay the authority).
  */
 export async function EmployeeDashboard({
   user,
@@ -156,27 +149,6 @@ export async function EmployeeDashboard({
     NOT_CHECKED_IN: "Lakukan absensi masuk atau pulang",
   }[state];
 
-  const menu: Array<{
-    href: string;
-    icon: HrisIconName;
-    label: string;
-    dot?: boolean;
-    show: boolean;
-  }> = [
-    { href: "/attendance", icon: "calendar-check", label: "Absensi", show: canAttendance },
-    { href: "/leave", icon: "plane", label: "Cuti", show: can(P.LEAVE_VIEW) },
-    { href: "/payslip", icon: "wallet", label: "Slip Gaji Saya", show: can(P.PAYSLIP_VIEW) },
-    {
-      href: "/announcements",
-      icon: "megaphone",
-      // Soft hyphen: breaks as "Pengu-muman" only when the tile is too narrow.
-      label: "Pengu\u00ADmuman",
-      dot: unreadAnnouncements > 0,
-      show: true,
-    },
-  ];
-  const visibleMenu = menu.filter((item) => item.show).slice(0, 4);
-
   const carouselItems = latestAnnouncements.map((item) => ({
     id: item.id,
     title: item.title,
@@ -268,27 +240,12 @@ export async function EmployeeDashboard({
         <AbsenNowCard enabled={absenEnabled} subtitle={absenSubtitle} />
       ) : null}
 
-      {/* Menu Cepat — one row: up to four modules + "Lainnya" */}
-      <section aria-labelledby="menu-cepat" className="space-y-2 pt-1">
-        <div className="flex items-center justify-between gap-3">
-          <h2 id="menu-cepat" className="text-[17px] font-bold tracking-tight text-foreground">
-            Menu Cepat
-          </h2>
-          <QuickMenuSeeAll />
-        </div>
-        <nav aria-label="Menu cepat" className="grid grid-cols-5 gap-1.5">
-          {visibleMenu.map((item) => (
-            <QuickMenuTile
-              key={item.href}
-              href={item.href}
-              icon={item.icon}
-              label={item.label}
-              dot={item.dot}
-              dotLabel={item.dot ? `${unreadAnnouncements} belum dibaca` : undefined}
-            />
-          ))}
-          <QuickMenuMoreTile />
-        </nav>
+      {/* Menu — every page the employee can open (the drawer has none) */}
+      <section aria-labelledby="menu-beranda" className="space-y-2 pt-1">
+        <h2 id="menu-beranda" className="text-[17px] font-bold tracking-tight text-foreground">
+          Menu
+        </h2>
+        <HomeMenuGrid unreadAnnouncements={unreadAnnouncements} />
       </section>
 
       <MonthlyRecapCard compact recap={recap} monthOptions={recentMonthKeys(6)} />

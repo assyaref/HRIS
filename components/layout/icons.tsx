@@ -68,7 +68,13 @@ export type HrisIconName =
   | "droplet"
   | "grid"
   | "mosque"
-  | "camera";
+  | "camera"
+  // v4 additions (employee profile)
+  | "mail"
+  | "phone"
+  | "key"
+  | "shield"
+  | "sliders";
 
 interface IconPathProps {
   name: HrisIconName;
@@ -481,6 +487,39 @@ function paths(name: HrisIconName) {
         <>
           <path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" />
           <path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" />
+        </>
+      );
+    case "mail":
+      return (
+        <>
+          <rect x="3" y="5" width="18" height="14" rx="2.2" />
+          <path d="m3.5 6.5 8.5 6.5 8.5-6.5" />
+        </>
+      );
+    case "phone":
+      return (
+        <path d="M5 3.5h3.2l1.6 4.2-2.1 1.4a11.5 11.5 0 0 0 7.2 7.2l1.4-2.1 4.2 1.6V19a1.8 1.8 0 0 1-1.9 1.8A16.6 16.6 0 0 1 3.2 5.4 1.8 1.8 0 0 1 5 3.5z" />
+      );
+    case "key":
+      return (
+        <>
+          <circle cx="8" cy="15" r="4.5" />
+          <path d="m11.2 11.8 8.3-8.3M16.5 6.5l2.5 2.5M14.5 8.5l2 2" />
+        </>
+      );
+    case "shield":
+      return (
+        <>
+          <path d="M12 3 4.5 6v5.6c0 4.5 3.1 8.2 7.5 9.4 4.4-1.2 7.5-4.9 7.5-9.4V6z" />
+          <path d="m9 12 2.2 2.2L15.5 10" />
+        </>
+      );
+    case "sliders":
+      return (
+        <>
+          <path d="M4 7h9M17 7h3M4 17h3M11 17h9" />
+          <circle cx="15" cy="7" r="2" />
+          <circle cx="9" cy="17" r="2" />
         </>
       );
     default:

@@ -25,8 +25,15 @@ import { OrganizationSwitcher } from "./organization-switcher";
  * close. Groups are shown flattened so every page is one tap away.
  */
 export function AppDrawer() {
-  const { sections, hrefs, profile, notificationCount, drawerOpen, setDrawerOpen } =
-    useShell();
+  const {
+    sections,
+    hrefs,
+    profile,
+    notificationCount,
+    drawerOpen,
+    setDrawerOpen,
+    employeeFrame,
+  } = useShell();
   const pathname = usePathname();
   const panelRef = useRef<HTMLDivElement>(null);
   const activeHref = resolveActiveHref(pathname, hrefs);
@@ -140,7 +147,29 @@ export function AppDrawer() {
           </div>
         ) : null}
 
-        {/* Menu */}
+        {/* Menu — self-service accounts have none here: every page they can
+            open is on Beranda ("Menu" grid). */}
+        {employeeFrame ? (
+          <div className="flex-1 overflow-y-auto px-4 pt-1 pb-3">
+            <div className="rounded-[22px] bg-surface-primary px-4 py-5 text-center">
+              <span className="hris-band mx-auto flex size-12 items-center justify-center rounded-2xl">
+                <HrisIcon name="grid" className="size-6" />
+              </span>
+              <p className="mt-3 text-[16px] font-bold text-foreground">Semua menu ada di Beranda</p>
+              <p className="mt-1 text-[13px] leading-snug text-muted-foreground">
+                Buka Beranda untuk mengakses Absensi, Cuti, Slip Gaji, Pengumuman, dan lainnya.
+              </p>
+              <Link
+                href="/dashboard"
+                onClick={close}
+                className="hris-band mt-4 inline-flex h-11 items-center justify-center gap-1.5 rounded-full px-5 text-[14.5px] font-semibold focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+              >
+                Ke Beranda
+                <HrisIcon name="arrow-right" className="size-4" />
+              </Link>
+            </div>
+          </div>
+        ) : (
         <nav aria-label="Menu navigasi" className="flex-1 overflow-y-auto px-4 pt-1 pb-3">
           {groups.map((group, index) => (
             <div key={group.title ?? index} className={cn(index > 0 && "mt-3 border-t border-border pt-3")}>
@@ -186,6 +215,7 @@ export function AppDrawer() {
             </div>
           ))}
         </nav>
+        )}
 
         <div className="shrink-0 border-t border-border px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <form action={logoutAction}>

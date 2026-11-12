@@ -25,6 +25,9 @@ export function HeroBand() {
   const { employeeFrame } = useShell();
   const pathname = usePathname();
   const isHome = pathname === "/dashboard" || pathname === "/";
+  // Self-service pages that carry their title inside the band (reference
+  // mobile layout); the page then renders its title only for screen readers.
+  const bandTitle = employeeFrame ? EMPLOYEE_BAND_TITLES[pathname] : undefined;
 
   return (
     <>
@@ -32,6 +35,15 @@ export function HeroBand() {
         <TopBar />
         {isHome ? (
           <Greeting employeeFrame={employeeFrame} />
+        ) : bandTitle ? (
+          <div className="relative px-5 pt-1 pb-12">
+            <p className="text-[clamp(24px,7vw,30px)] leading-tight font-extrabold tracking-tight text-white">
+              {bandTitle.title}
+            </p>
+            <p className="mt-1 text-[14px] leading-snug font-medium text-white/90">
+              {bandTitle.subtitle}
+            </p>
+          </div>
         ) : (
           <div className="h-7 lg:h-9" />
         )}
@@ -46,6 +58,13 @@ export function HeroBand() {
     </>
   );
 }
+
+const EMPLOYEE_BAND_TITLES: Record<string, { title: string; subtitle: string }> = {
+  "/settings/account": {
+    title: "Profil Saya",
+    subtitle: "Kelola informasi akun dan data kepegawaian Anda.",
+  },
+};
 
 function TopBar() {
   const { profile, notificationCount, toggleCollapsed, setDrawerOpen, setPaletteOpen } =

@@ -48,7 +48,7 @@ function PasswordInput({
         />
         <button
           type="button"
-          aria-label={showPassword ? "Hide password" : "Show password"}
+          aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
           onClick={() => setShowPassword((prev) => !prev)}
           className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
