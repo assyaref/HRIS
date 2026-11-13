@@ -318,14 +318,6 @@ function Greeting({ employeeFrame }: { employeeFrame: boolean }) {
             )}
           >
             {profile.displayName}
-            {employeeFrame ? null : (
-              <>
-                {" "}
-                <span aria-hidden="true" className="inline-block origin-[70%_70%]">
-                  👋
-                </span>
-              </>
-            )}
           </p>
           {title ? (
             <p
