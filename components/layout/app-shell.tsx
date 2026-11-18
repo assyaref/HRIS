@@ -51,7 +51,9 @@ export function AppShell({
       <div
         className={cn(
           "flex min-h-svh bg-background font-sans text-foreground",
-          employeeFrame && "emp-frame"
+          // `.hris-admin` scopes the management look (globals.css, v8) so
+          // the self-service frame keeps its own design untouched.
+          employeeFrame ? "emp-frame" : "hris-admin"
         )}
       >
         {employeeFrame ? null : <Sidebar />}

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -106,7 +106,7 @@ export function EmployeeExcelButtons({
       {canTemplate ? (
         <a
           href={templateHref}
-          className="inline-flex h-9 items-center rounded-md px-3 text-sm font-medium text-foreground/80 transition-colors hover:bg-accent hover:text-accent-foreground"
+          className={buttonVariants({ variant: "ghost", size: "sm" })}
           aria-label="Download Excel import template"
         >
           Template Excel
@@ -116,7 +116,7 @@ export function EmployeeExcelButtons({
         <>
           <a
             href={excelHref}
-            className="inline-flex h-9 items-center rounded-md px-3 text-sm font-medium text-foreground/80 transition-colors hover:bg-accent hover:text-accent-foreground"
+            className={buttonVariants({ variant: "ghost", size: "sm" })}
             aria-label="Export employees to Excel"
           >
             Export Excel

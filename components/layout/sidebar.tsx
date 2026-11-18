@@ -13,6 +13,7 @@ import {
   OrganizationSwitcher,
 } from "./organization-switcher";
 import { useShell } from "./shell-context";
+import { Avatar } from "./user-menu";
 
 /**
  * Desktop sidebar (HRIS Lite Enterprise v2.0). Hidden below `lg`.
@@ -99,6 +100,41 @@ export function Sidebar() {
           collapsed={collapsed}
           notificationCount={notificationCount}
         />
+      </div>
+
+      {/* Signed-in identity */}
+      <div className={cn("shrink-0 pb-4", collapsed ? "px-3" : "px-4")}>
+        <Link
+          href="/settings/account"
+          title={collapsed ? profile.displayName : undefined}
+          className={cn(
+            "hris-sidebar-profile group flex items-center gap-3 rounded-2xl transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+            collapsed ? "justify-center p-2" : "p-3"
+          )}
+        >
+          <Avatar
+            profile={profile}
+            size={collapsed ? 40 : 42}
+            tone="light"
+            className="ring-2 ring-white/40"
+          />
+          {collapsed ? null : (
+            <>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-bold">
+                  {profile.displayName}
+                </span>
+                <span className="mt-0.5 block truncate text-xs text-white/75">
+                  {profile.roleLabel ?? profile.email}
+                </span>
+              </span>
+              <HrisIcon
+                name="chevron-right"
+                className="size-4 shrink-0 text-white/70 transition-transform group-hover:translate-x-0.5"
+              />
+            </>
+          )}
+        </Link>
       </div>
     </aside>
   );

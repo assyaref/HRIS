@@ -36,10 +36,11 @@ function CountBadge({ count, className }: { count: number; className?: string })
 }
 
 const linkBase =
-  "group relative flex min-h-11 items-center gap-3.5 rounded-xl px-3.5 py-2.5 text-[15px] font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none";
+  "group relative flex min-h-11 items-center gap-3 rounded-xl px-2.5 py-1.5 text-[15px] font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none";
 const linkIdle =
   "text-sidebar-foreground hover:bg-sidebar-hover hover:text-primary";
-const iconIdle = "text-sidebar-foreground/80 group-hover:text-primary";
+const iconIdle =
+  "text-sidebar-foreground/80 group-hover:bg-white group-hover:text-primary group-hover:shadow-[0_4px_10px_-4px_rgb(11_92_197/0.45)] dark:group-hover:bg-white/10";
 
 /**
  * Sidebar / drawer navigation (HRIS Lite v2): uppercase section headings,
@@ -124,7 +125,7 @@ function NavLeaf({
       className={cn(
         linkBase,
         collapsed && "justify-center px-0",
-        nested && !collapsed && "min-h-10 py-2 pl-12 text-sm",
+        nested && !collapsed && "min-h-10 py-2 pl-[3.25rem] text-sm",
         active ? "hris-nav-active font-semibold" : linkIdle
       )}
     >
@@ -132,18 +133,18 @@ function NavLeaf({
         <span
           aria-hidden="true"
           className={cn(
-            "absolute left-[1.55rem] size-1.5 rounded-full",
+            "absolute left-[1.45rem] size-1.5 rounded-full",
             active ? "bg-white" : "bg-sidebar-muted/60 group-hover:bg-primary"
           )}
         />
       ) : (
         <span
           className={cn(
-            "flex size-6 shrink-0 items-center justify-center",
-            active ? "text-white" : iconIdle
+            "hris-nav-icon flex size-8 shrink-0 items-center justify-center rounded-lg",
+            active ? "bg-white/15 text-white" : iconIdle
           )}
         >
-          <HrisIcon name={item.icon ?? "dashboard"} className="size-[22px]" />
+          <HrisIcon name={item.icon ?? "dashboard"} className="size-[21px]" />
         </span>
       )}
       {collapsed ? (
@@ -207,11 +208,11 @@ function NavGroup({
       >
         <span
           className={cn(
-            "flex size-6 shrink-0 items-center justify-center",
-            containsActive ? "text-primary" : iconIdle
+            "hris-nav-icon flex size-8 shrink-0 items-center justify-center rounded-lg",
+            containsActive ? "bg-surface-primary text-primary" : iconIdle
           )}
         >
-          <HrisIcon name={item.icon ?? "dashboard"} className="size-[22px]" />
+          <HrisIcon name={item.icon ?? "dashboard"} className="size-[21px]" />
         </span>
         <span className="min-w-0 flex-1 truncate">{item.title}</span>
         <HrisIcon
@@ -223,7 +224,10 @@ function NavGroup({
         />
       </button>
       {expanded ? (
-        <ul id={panelId} className="mt-1 space-y-0.5">
+        <ul
+          id={panelId}
+          className="relative mt-1 space-y-0.5 before:absolute before:top-1 before:bottom-1 before:left-[1.6rem] before:w-px before:bg-sidebar-border"
+        >
           {children.map((child) => (
             <li key={child.href}>
               <NavLeaf

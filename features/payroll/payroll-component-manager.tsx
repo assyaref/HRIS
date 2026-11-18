@@ -266,10 +266,10 @@ export function PayrollComponentManager({
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            Komponen Gaji
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground sm:text-base">
+          <h2 className="text-lg font-bold tracking-tight sm:text-xl">
+            Daftar Komponen
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             {components.length} defined · {activeCount} active
           </p>
         </div>

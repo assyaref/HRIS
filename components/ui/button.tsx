@@ -51,6 +51,9 @@ export function buttonVariants({
 }: ButtonVariants = {}): string {
   return cn(
     baseButtonClasses,
+    // Marker class (`btn-<variant>`): lets the management shell refine each
+    // variant in globals.css (`.hris-admin`) without touching self-service.
+    `btn btn-${variant}`,
     buttonVariantClasses[variant],
     buttonSizeClasses[size],
     className

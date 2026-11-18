@@ -345,8 +345,8 @@ export default async function EmployeesPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+        <div className="min-w-0 shrink-0">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
               Karyawan
@@ -365,7 +365,7 @@ export default async function EmployeesPage({
               : " in your organization."}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 xl:justify-end">
           <EmployeeExportButton
             search={search}
             status={filters.status ?? ""}

@@ -18,7 +18,10 @@ export function AuthShell({ children }: { children: ReactNode }) {
       <section className="hris-band relative isolate overflow-hidden px-6 pt-8 pb-24 lg:flex lg:w-[46%] lg:flex-col lg:px-14 lg:py-12">
         <Brand tone="onBlue" size="lg" />
         <div className="mt-10 hidden lg:mt-auto lg:block">
-          <HeroWidgets geolocate={false} className="lg:grid-cols-1 xl:grid-cols-3" />
+          <HeroWidgets
+            geolocate={false}
+            className="lg:grid-cols-2! lg:[&>:last-child]:col-span-2!"
+          />
         </div>
         <svg
           aria-hidden="true"

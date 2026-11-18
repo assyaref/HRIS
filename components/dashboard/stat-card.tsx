@@ -47,6 +47,29 @@ const chipToneClasses: Record<StatTone, string> = {
   slate: "hris-chip-slate",
 };
 
+/** Solid gradient icon tile + matching corner glow (see `.hris-tile-*`). */
+const tileToneClasses: Record<StatTone, string> = {
+  primary: "hris-tile-blue",
+  "soft-blue": "hris-tile-blue",
+  blue: "hris-tile-blue",
+  indigo: "hris-tile-indigo",
+  lavender: "hris-tile-violet",
+  violet: "hris-tile-violet",
+  pink: "hris-tile-pink",
+  rose: "hris-tile-red",
+  coral: "hris-tile-red",
+  danger: "hris-tile-red",
+  peach: "hris-tile-orange",
+  amber: "hris-tile-amber",
+  warning: "hris-tile-amber",
+  mint: "hris-tile-green",
+  green: "hris-tile-green",
+  success: "hris-tile-green",
+  teal: "hris-tile-teal",
+  info: "hris-tile-sky",
+  slate: "hris-tile-slate",
+};
+
 /** A single aggregate metric card used across dashboards and reports.
  *
  * HRIS Lite v2: pastel round icon well on the left, small uppercase blue
@@ -74,17 +97,27 @@ export function StatCard({
   return (
     <div
       className={cn(
-        "flex items-center rounded-2xl border border-[var(--card-border)] bg-card hris-card hris-card-hover",
+        "relative isolate flex items-center overflow-hidden rounded-2xl border border-[var(--card-border)] bg-card hris-card hris-card-hover",
         compact ? "gap-3 p-3.5" : "gap-4 p-4 sm:px-5 sm:py-[18px]",
         className
       )}
     >
+      {compact ? null : (
+        <span
+          aria-hidden="true"
+          className={cn(
+            "pointer-events-none absolute -top-10 -right-10 -z-10 size-32 rounded-full opacity-[0.09] blur-[2px]",
+            tileToneClasses[tone]
+          )}
+        />
+      )}
       <span
         aria-hidden="true"
         className={cn(
-          "flex shrink-0 items-center justify-center rounded-full",
-          compact ? "size-10" : "size-14",
-          chipToneClasses[tone]
+          "flex shrink-0 items-center justify-center",
+          compact
+            ? cn("size-10 rounded-full", chipToneClasses[tone])
+            : cn("size-14 rounded-2xl", tileToneClasses[tone], "hris-tile")
         )}
       >
         <HrisIcon name={icon} className={compact ? "size-5" : "size-7"} />

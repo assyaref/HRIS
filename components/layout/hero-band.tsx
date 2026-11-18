@@ -4,8 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils/cn";
+import { longDateLabel } from "@/lib/utils/greeting";
 
 import { BrandMark } from "./brand";
+import { resolveNavTrail } from "./navigation";
 import { HeroWidgets } from "./hero-widgets";
 import { HrisIcon } from "./icons";
 import { OrganizationIdentity } from "./organization-switcher";
@@ -31,7 +33,7 @@ export function HeroBand() {
 
   return (
     <>
-      <div className="hris-band relative isolate overflow-hidden">
+      <div className="hris-band hris-shell-band relative isolate overflow-hidden">
         <TopBar />
         {isHome ? (
           <Greeting employeeFrame={employeeFrame} />
@@ -44,18 +46,127 @@ export function HeroBand() {
               {bandTitle.subtitle}
             </p>
           </div>
-        ) : (
+        ) : employeeFrame ? (
           <div className="h-7 lg:h-9" />
+        ) : (
+          <PageContext pathname={pathname} />
         )}
         <Wave />
       </div>
       {/* Self-service home renders the widgets itself, below its menu grid. */}
       {isHome && !employeeFrame ? (
-        <div className="mx-auto w-full max-w-[1400px] px-4 pt-3 sm:px-6 lg:px-10 lg:pt-4">
+        <div className="mx-auto w-full max-w-[1400px] px-4 pt-3 pb-4 sm:px-6 lg:px-10 lg:pt-4 lg:pb-6">
           <HeroWidgets />
         </div>
       ) : null}
     </>
+  );
+}
+
+const NESTED_LABELS: Record<string, string> = {
+  new: "Baru",
+  edit: "Ubah",
+  upload: "Unggah",
+  "bulk-upload": "Unggah Massal",
+  components: "Komponen",
+  readiness: "Kesiapan",
+};
+
+/**
+ * Management pages: breadcrumb trail with the module icon on the left, the
+ * date and active organization on the right. The page keeps its own h1; the
+ * band only says where you are, so every admin page shares one header.
+ */
+function PageContext({ pathname }: { pathname: string }) {
+  const { sections, profile } = useShell();
+  const trail = resolveNavTrail(pathname, sections);
+  const lastSegment = pathname.split("/").filter(Boolean).at(-1) ?? "";
+  const nestedLabel = trail?.nested
+    ? (NESTED_LABELS[lastSegment] ?? "Detail")
+    : null;
+  const today = longDateLabel();
+
+  const crumbs: Array<{ label: string; href?: string }> = [];
+  // "Menu Utama" is the default section: it adds nothing to the trail.
+  if (trail?.section && trail.section !== "Menu Utama") {
+    crumbs.push({ label: trail.section });
+  }
+  if (trail?.group) crumbs.push({ label: trail.group.title });
+  if (trail) {
+    crumbs.push({
+      label: trail.item.title,
+      href: nestedLabel ? trail.item.href : undefined,
+    });
+  }
+  if (nestedLabel) crumbs.push({ label: nestedLabel });
+  // A group named like its section ("Pengaturan › Pengaturan") shows once.
+  const trailCrumbs = crumbs.filter(
+    (crumb, index) => index === 0 || crumb.label !== crumbs[index - 1].label
+  );
+
+  return (
+    <div className="hris-page-context relative px-4 pt-1 pb-11 sm:px-6 lg:px-10 lg:pb-14">
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+        <div className="flex min-w-0 items-center gap-3.5">
+          <span
+            aria-hidden="true"
+            className="hris-band-icon flex size-11 shrink-0 items-center justify-center rounded-2xl lg:size-12"
+          >
+            <HrisIcon
+              name={trail?.item.icon ?? trail?.group?.icon ?? "grid"}
+              className="size-6"
+            />
+          </span>
+          <div className="min-w-0">
+            <nav aria-label="Breadcrumb">
+              <ol className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12.5px] font-medium text-white/70">
+                <li>
+                  <Link
+                    href="/dashboard"
+                    className="rounded transition-colors hover:text-white focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none"
+                  >
+                    Beranda
+                  </Link>
+                </li>
+                {trailCrumbs.slice(0, -1).map((crumb) => (
+                  <li key={crumb.label} className="flex items-center gap-1.5">
+                    <HrisIcon name="chevron-right" className="size-3.5 text-white/45" />
+                    {crumb.href ? (
+                      <Link
+                        href={crumb.href}
+                        className="rounded transition-colors hover:text-white focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none"
+                      >
+                        {crumb.label}
+                      </Link>
+                    ) : (
+                      <span>{crumb.label}</span>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </nav>
+            <p
+              aria-current="page"
+              className="mt-0.5 truncate text-lg leading-tight font-bold tracking-tight text-white lg:text-xl"
+            >
+              {trailCrumbs.at(-1)?.label ?? "HRIS"}
+            </p>
+          </div>
+        </div>
+        <div className="hidden items-center gap-2 md:flex">
+          <span className="hris-band-chip">
+            <HrisIcon name="calendar" className="size-4" />
+            {today}
+          </span>
+          {profile.organizationName ? (
+            <span className="hris-band-chip max-w-[16rem]">
+              <HrisIcon name="building" className="size-4" />
+              <span className="truncate">{profile.organizationName}</span>
+            </span>
+          ) : null}
+        </div>
+      </div>
+    </div>
   );
 }
 

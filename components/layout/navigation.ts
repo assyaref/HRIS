@@ -256,3 +256,42 @@ export function resolveActiveHref(
   }
   return best;
 }
+
+/** Where the current page sits in the navigation (band breadcrumb). */
+export interface NavTrail {
+  /** Section heading ("Manajemen"); absent for untitled sections. */
+  section?: string;
+  /** Collapsible group the page belongs to ("Penggajian"). */
+  group?: NavItem;
+  /** The matched navigation item. */
+  item: NavItem;
+  /** True when the path is below the item (a detail / edit page). */
+  nested: boolean;
+}
+
+/** Resolve the breadcrumb trail for `pathname` within the authorized sections. */
+export function resolveNavTrail(
+  pathname: string,
+  sections: NavSection[]
+): NavTrail | null {
+  const activeHref = resolveActiveHref(pathname, flattenNavHrefs(sections));
+  if (!activeHref) return null;
+  for (const section of sections) {
+    for (const item of section.items) {
+      if (item.children) {
+        const child = item.children.find((c) => c.href === activeHref);
+        if (child) {
+          return {
+            section: section.title,
+            group: item,
+            item: child,
+            nested: pathname !== activeHref,
+          };
+        }
+      } else if (item.href === activeHref) {
+        return { section: section.title, item, nested: pathname !== activeHref };
+      }
+    }
+  }
+  return null;
+}

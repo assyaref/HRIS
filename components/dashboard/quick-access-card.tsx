@@ -13,13 +13,13 @@ export type QuickAccessTone =
   | "pink";
 
 const iconToneClasses: Record<QuickAccessTone, string> = {
-  "soft-blue": "hris-chip-blue",
-  mint: "hris-chip-green",
-  lavender: "hris-chip-violet",
-  peach: "hris-chip-amber",
-  indigo: "hris-chip-indigo",
-  teal: "hris-chip-teal",
-  pink: "hris-chip-rose",
+  "soft-blue": "hris-tile-blue",
+  mint: "hris-tile-green",
+  lavender: "hris-tile-violet",
+  peach: "hris-tile-orange",
+  indigo: "hris-tile-indigo",
+  teal: "hris-tile-teal",
+  pink: "hris-tile-pink",
 };
 
 interface QuickAccessCardProps {
@@ -45,14 +45,22 @@ export function QuickAccessCard({
     <Link
       href={href}
       className={cn(
-        "group flex min-h-[76px] w-full items-center gap-4 rounded-[18px] border border-[var(--card-border)] bg-card px-4 py-3.5 hris-card hris-card-hover",
+        "group relative isolate flex min-h-[76px] w-full items-center gap-4 overflow-hidden rounded-[18px] border border-[var(--card-border)] bg-card px-4 py-3.5 hris-card hris-card-hover",
         "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       )}
     >
+      {/* Tone wash that fades in on hover. */}
       <span
         aria-hidden="true"
         className={cn(
-          "flex size-[52px] shrink-0 items-center justify-center rounded-2xl",
+          "pointer-events-none absolute -bottom-12 -left-12 -z-10 size-36 rounded-full opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-20",
+          iconToneClasses[tone]
+        )}
+      />
+      <span
+        aria-hidden="true"
+        className={cn(
+          "hris-tile flex size-[52px] shrink-0 items-center justify-center rounded-2xl transition-transform duration-200 group-hover:scale-105 group-hover:-rotate-3",
           iconToneClasses[tone]
         )}
       >
@@ -66,10 +74,12 @@ export function QuickAccessCard({
           {description}
         </span>
       </span>
-      <HrisIcon
-        name="arrow-right"
-        className="size-5 shrink-0 text-muted-foreground transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-primary"
-      />
+      <span
+        aria-hidden="true"
+        className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground transition-[background-color,color,transform] group-hover:translate-x-0.5 group-hover:bg-primary group-hover:text-primary-foreground"
+      >
+        <HrisIcon name="arrow-right" className="size-4" />
+      </span>
     </Link>
   );
 }

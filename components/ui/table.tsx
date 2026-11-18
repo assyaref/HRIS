@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils/cn";
 
 export function Table({ className, ...props }: ComponentProps<"table">) {
   return (
-    <div className="relative w-full overflow-x-auto rounded-2xl border border-[var(--card-border)] bg-card shadow-[var(--shadow-card)]">
+    <div className="hris-table-wrap relative w-full overflow-x-auto rounded-2xl border border-[var(--card-border)] bg-card shadow-[var(--shadow-card)]">
       <table
         className={cn("w-full caption-bottom text-sm", className)}
         {...props}
@@ -106,6 +106,7 @@ export function TableStatusBadge({
   return (
     <span
       className={cn(
+        `badge badge-${variant}`,
         "inline-flex w-fit items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] leading-4 font-semibold whitespace-nowrap",
         variantClasses[variant],
         className
