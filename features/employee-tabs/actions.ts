@@ -15,8 +15,6 @@ import { getCustomTab } from "./queries";
 import {
   CUSTOM_TAB_STATUSES,
   normalizeTabKey,
-  RESERVED_TAB_KEYS,
-  TAB_KEY_PATTERN,
   TAB_LIMITS,
   validateCustomTabDefinition,
 } from "./validation";

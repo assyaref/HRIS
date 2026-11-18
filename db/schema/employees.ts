@@ -1,5 +1,5 @@
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
-import { boolean, date, index, integer, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { date, index, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { createdAt, updatedAt, uuidId } from "./common";
 import { organizations } from "./organizations";
 import { users } from "./users";
