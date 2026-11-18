@@ -19,7 +19,7 @@ export function TabNav({ items }: { items: TabNavItem[] }) {
     <div
       role="tablist"
       aria-label="Bagian"
-      className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5"
+      className="no-scrollbar -mx-1 flex gap-6 overflow-x-auto border-b border-border px-1"
     >
       {items.map((item) => (
         <Link
@@ -28,10 +28,12 @@ export function TabNav({ items }: { items: TabNavItem[] }) {
           role="tab"
           aria-selected={item.active}
           className={cn(
-            "inline-flex min-h-10 shrink-0 items-center rounded-xl px-4 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+            // Minimal UI tabs: text with a 2px indicator under the active tab.
+            "relative inline-flex min-h-12 shrink-0 items-center text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+            "after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:rounded-full after:transition-colors",
             item.active
-              ? "bg-surface-primary text-primary ring-1 ring-primary/25 ring-inset"
-              : "bg-card text-muted-foreground ring-1 ring-border ring-inset hover:bg-muted hover:text-foreground"
+              ? "text-foreground after:bg-foreground"
+              : "text-muted-foreground after:bg-transparent hover:text-foreground"
           )}
         >
           {item.label}

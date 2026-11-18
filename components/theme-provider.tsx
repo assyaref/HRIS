@@ -22,18 +22,19 @@ const ThemeContext = createContext<ThemeContextValue>({
  * take effect.
  */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<"light" | "dark" | "system">(() => {
-    if (typeof window === "undefined") return "light";
+  // Always start as "light" so the first client render matches the server
+  // (reading localStorage here caused hydration mismatches for dark-mode
+  // users). The stored choice is applied right after mount, and the effect
+  // below then sets the `dark` class on <html>.
+  const [theme, setTheme] = useState<"light" | "dark" | "system">("light");
+  useEffect(() => {
     try {
       const stored = localStorage.getItem("hris-theme");
-      if (stored === "light" || stored === "dark" || stored === "system") {
-        return stored;
-      }
+      if (stored === "dark" || stored === "system") setTheme(stored);
     } catch {
       // localStorage unavailable — keep light default.
     }
-    return "light";
-  });
+  }, []);
 
   const resolvedTheme = useCallback((): "light" | "dark" => {
     if (theme === "system") {

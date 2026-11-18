@@ -266,7 +266,7 @@ export default async function AttendancePage({
       <div
         role="tablist"
         aria-label="Bagian absensi"
-        className="grid grid-cols-2 gap-2.5 lg:grid-cols-3 lg:gap-3"
+        className="hris-segmented grid grid-cols-2 gap-1 lg:grid-cols-3"
       >
         <SegmentTab
           href="/attendance"
@@ -602,14 +602,14 @@ function SegmentTab({
       role="tab"
       aria-selected={active}
       className={cn(
-        "flex min-h-12 min-w-0 items-center justify-center gap-2 rounded-full px-3 text-[16px] font-bold transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+        "flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-xl px-3 text-[15px] font-semibold transition-[background-color,color,box-shadow] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
         active
-          ? "bg-gradient-to-r from-[#0B5CC5] to-[#0A3F8F] text-white shadow-[0_12px_24px_-12px_rgb(11_92_197/0.9)]"
-          : "border border-border bg-card text-foreground/80 shadow-sm hover:bg-muted",
+          ? "hris-segmented-active"
+          : "text-muted-foreground hover:text-foreground",
         className
       )}
     >
-      <HrisIcon name={icon} className="size-6 shrink-0" />
+      <HrisIcon name={icon} className="size-5 shrink-0" />
       <span className="truncate">{label}</span>
     </Link>
   );

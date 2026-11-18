@@ -177,7 +177,7 @@ export function ProfileView({
         role="tablist"
         aria-label="Bagian profil"
         onKeyDown={onTabKey}
-        className="grid grid-cols-3 gap-1 rounded-[20px] border border-[var(--card-border)] bg-card p-1.5 hris-card"
+        className="hris-segmented grid grid-cols-3 gap-1"
       >
         {TABS.map((item) => {
           const active = item.key === tab;
@@ -195,10 +195,10 @@ export function ProfileView({
               tabIndex={active ? 0 : -1}
               onClick={() => select(item.key)}
               className={cn(
-                "flex min-h-[60px] flex-col items-center justify-center gap-1 rounded-2xl px-1 text-center transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                "flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-xl px-1 text-center transition-[background-color,color,box-shadow] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                 active
-                  ? "hris-band shadow-[0_10px_20px_-12px_rgb(30_94_235/0.9)]"
-                  : "text-foreground/75 hover:bg-muted"
+                  ? "hris-segmented-active text-primary"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               <HrisIcon name={item.icon} className="size-[22px]" />

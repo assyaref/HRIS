@@ -1359,3 +1359,129 @@ a.hris-glass:hover {
     break-inside: avoid;
   }
 }
+
+/* ==========================================================
+   v10 — MINIMAL UI for the self-service frame (`.emp-frame`)
+   Minimal-style tokens: neutral grey text (#1C252E / #637381), hairless
+   cards lifted by the soft grey shadow, 16px card / 8px control radius,
+   solid buttons, soft square labels, segmented & underline tabs.
+   Loaded after v9, so it refines the shared soft-pastel layer.
+   ========================================================== */
+.emp-frame {
+  --foreground: #1C252E;
+  --card-foreground: #1C252E;
+  --muted: #F4F6F8;
+  --muted-foreground: #637381;
+  --border: rgb(145 158 171 / 0.2);
+  --input: rgb(145 158 171 / 0.32);
+  --card-border: transparent;
+  --card-border-level2: rgb(145 158 171 / 0.16);
+  --minimal-shadow: 0 0 2px 0 rgb(145 158 171 / 0.2), 0 12px 24px -4px rgb(145 158 171 / 0.12);
+  --minimal-shadow-z8: 0 8px 16px 0 rgb(145 158 171 / 0.16);
+}
+.dark .emp-frame {
+  --foreground: #FFFFFF;
+  --card-foreground: #FFFFFF;
+  --muted: #212B36;
+  --muted-foreground: #919EAB;
+  --border: rgb(145 158 171 / 0.16);
+  --card-border: transparent;
+  --minimal-shadow: 0 0 2px 0 rgb(0 0 0 / 0.2), 0 12px 24px -4px rgb(0 0 0 / 0.12);
+  --minimal-shadow-z8: 0 8px 16px 0 rgb(0 0 0 / 0.24);
+}
+
+/* Cards: no outline, soft grey elevation, 16px corners. */
+.emp-frame .hris-card,
+.emp-frame .hris-top-card {
+  border-color: transparent;
+  border-radius: 16px;
+  box-shadow: var(--minimal-shadow);
+}
+.emp-frame .hris-card-level-2 {
+  border-color: transparent;
+  background: var(--muted);
+}
+.emp-frame .hris-card-hover:hover {
+  box-shadow: var(--minimal-shadow-z8);
+}
+.emp-frame .hris-overview {
+  border-radius: 16px;
+  box-shadow: var(--minimal-shadow);
+}
+
+/* Buttons: solid, 8px, Minimal "contained" shadow on primary only. */
+body:has(.emp-frame) .btn {
+  border-radius: 8px;
+  font-weight: 700;
+}
+body:has(.emp-frame) .btn-primary {
+  background: var(--primary);
+  background-image: none;
+  box-shadow: 0 8px 16px 0 rgb(11 92 197 / 0.24);
+}
+body:has(.emp-frame) .btn-primary:hover {
+  background: #0A4FAA;
+  transform: none;
+}
+body:has(.emp-frame) .btn-secondary {
+  background: #1C252E;
+  color: #FFFFFF;
+}
+body:has(.emp-frame) .btn-secondary:hover {
+  background: #454F5B;
+}
+body:has(.emp-frame) :is(.btn-outline, .btn-ghost:not([class*="destructive"])) {
+  border: 1px solid rgb(145 158 171 / 0.32);
+  background: transparent;
+  color: var(--foreground);
+  box-shadow: none;
+}
+body:has(.emp-frame) :is(.btn-outline, .btn-ghost:not([class*="destructive"])):hover {
+  border-color: var(--foreground);
+  background: rgb(145 158 171 / 0.08);
+  color: var(--foreground);
+}
+
+/* Labels: Minimal "soft" chips — 6px corners, no dot. */
+body:has(.emp-frame) .badge {
+  border-radius: 6px;
+  border-color: transparent;
+  font-weight: 700;
+}
+body:has(.emp-frame) .badge::before {
+  display: none;
+}
+
+/* Segmented control (Riwayat / Rekap, profile tabs). */
+.hris-segmented {
+  border-radius: 14px;
+  background: rgb(145 158 171 / 0.12);
+  padding: 4px;
+}
+.hris-segmented-active {
+  background: var(--card);
+  color: var(--foreground);
+  box-shadow: 0 1px 2px 0 rgb(145 158 171 / 0.2), 0 4px 10px -2px rgb(145 158 171 / 0.24);
+}
+
+/* Fields: hairline grey outline, darker on hover, primary on focus. */
+.emp-frame :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea) {
+  border-radius: 8px;
+  border-color: rgb(145 158 171 / 0.32);
+}
+.emp-frame :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea):hover:not(:disabled) {
+  border-color: var(--foreground);
+}
+
+/* Canvas: plain Minimal grey instead of pastel glows. */
+.emp-frame {
+  background: #F9FAFB;
+}
+.dark .emp-frame {
+  background: #141A21;
+}
+/* Pastel "tint" tiles become clean white tiles with the shadow. */
+.emp-frame [class*="hris-tint-"] {
+  background: var(--card);
+  box-shadow: var(--minimal-shadow);
+}
