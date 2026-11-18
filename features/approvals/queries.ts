@@ -11,11 +11,14 @@ import {
   leaveTypes,
   overtimeRequests,
   permissionRequests,
+  profileChangeRequests,
 } from "@/db/schema";
+import { fieldLabel } from "@/features/profile-changes/fields";
+import { isProfileChangeModuleReady } from "@/features/profile-changes/module";
 import { isTimeModuleReady } from "@/features/time/module";
 import { formatDuration } from "@/features/time/rules";
 
-export type ApprovalKind = "leave" | "permission" | "overtime";
+export type ApprovalKind = "leave" | "permission" | "overtime" | "profile";
 
 export interface ApprovalItem {
   kind: ApprovalKind;
@@ -75,7 +78,10 @@ export async function listApprovalInbox(
   // Overtime lives in migration 0024; skip it until the tables exist.
   const wantOvertime = filters.kinds.includes("overtime") && (await isTimeModuleReady());
 
-  const [leaveRows, permissionRows, overtimeRows] = await Promise.all([
+  // Profile changes live in migration 0025; same rule.
+  const wantProfile = filters.kinds.includes("profile") && (await isProfileChangeModuleReady());
+
+  const [leaveRows, permissionRows, overtimeRows, profileRows] = await Promise.all([
     wantLeave
       ? db
           .select({
@@ -144,6 +150,26 @@ export async function listApprovalInbox(
           )
           .orderBy(desc(overtimeRequests.createdAt))
       : Promise.resolve([]),
+    wantProfile
+      ? db
+          .select({
+            id: profileChangeRequests.id,
+            employeeNumber: employees.employeeNumber,
+            employeeName: sql<string>`TRIM(${employees.firstName} || ' ' || ${employees.lastName})`,
+            changes: profileChangeRequests.changes,
+            status: profileChangeRequests.status,
+            submittedAt: profileChangeRequests.createdAt,
+          })
+          .from(profileChangeRequests)
+          .innerJoin(employees, eq(employees.id, profileChangeRequests.employeeId))
+          .where(
+            and(
+              eq(profileChangeRequests.organizationId, organizationId),
+              ...dayWindow(profileChangeRequests.createdAt, filters.from, filters.to)
+            )
+          )
+          .orderBy(desc(profileChangeRequests.createdAt))
+      : Promise.resolve([]),
   ]);
 
   const dateTime = new Intl.DateTimeFormat("id-ID", {
@@ -174,6 +200,17 @@ export async function listApprovalInbox(
       employeeName: row.employeeName,
       subject: row.subject,
       period: `${dateTime.format(row.startAt)} → ${dateTime.format(row.endAt)}`,
+      status: row.status,
+      submittedAt: row.submittedAt,
+    })),
+    ...profileRows.map((row) => ({
+      kind: "profile" as const,
+      id: row.id,
+      href: `/profile-changes?status=${row.status}`,
+      employeeNumber: row.employeeNumber,
+      employeeName: row.employeeName,
+      subject: Object.keys(row.changes ?? {}).map(fieldLabel).join(", "),
+      period: `${Object.keys(row.changes ?? {}).length} data`,
       status: row.status,
       submittedAt: row.submittedAt,
     })),

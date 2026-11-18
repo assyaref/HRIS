@@ -28,6 +28,7 @@ export const primaryNavigation: NavItem[] = [
       PERMISSIONS.PERMISSION_MANAGE,
       PERMISSIONS.ATTENDANCE_APPROVE,
       PERMISSIONS.ATTENDANCE_MANAGE,
+      PERMISSIONS.EMPLOYEES_PERSONAL_UPDATE,
     ],
     icon: "shield",
   },
@@ -188,6 +189,13 @@ export const managementNavigation: NavItem[] = [
     href: "/organization/chart",
     permission: PERMISSIONS.EMPLOYEES_VIEW,
     icon: "network",
+  },
+  {
+    title: "Perubahan Data Karyawan",
+    href: "/profile-changes",
+    permission: PERMISSIONS.EMPLOYEES_PERSONAL_VIEW,
+    anyPermission: [PERMISSIONS.EMPLOYEES_VIEW],
+    icon: "edit",
   },
   {
     title: "Kelola Pengumuman",

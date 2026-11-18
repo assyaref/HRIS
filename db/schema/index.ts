@@ -28,3 +28,4 @@ export * from "./sessions";
 export * from "./audit";
 export * from "./compliance";
 export * from "./time";
+export * from "./profile_changes";

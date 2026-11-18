@@ -51,6 +51,12 @@ Pengumuman, Notifikasi, Pengguna / Role / Hak Akses (RBAC), jejak audit
 | Overtime / SPKL (self-service) | `/overtime` |
 | Overtime approval & recap | `/overtime/management`, `/approvals` (type Lembur) |
 
+## Built with migration 0025 (see docs/profile-change-requests.md)
+
+| Reference module | Route |
+| --- | --- |
+| Approval of profile-change requests from mobile | Profil Saya → Ajukan perubahan data; `/profile-changes`, `/approvals` |
+
 ## Next phase (needs migrations)
 
 | Module | New data |
@@ -59,12 +65,12 @@ Pengumuman, Notifikasi, Pengguna / Role / Hak Akses (RBAC), jejak audit
 | Overtime Setup (rates, project rules), overtime → payroll | project overtime settings |
 | Shift-aware attendance (late / early by work group shift) | uses `shifts` + `work_group_members` |
 | Organization master (department, area, grade, jabatan, job desc) | organization master tables |
-| Generic approval engine for profile-change requests from mobile | `approval_requests` (type, payload old/new, approver chain) |
+| Multi-level approver chain, bank-account / address / family change requests | extends `profile_change_requests` |
 | Ask Admin (helpdesk), Activity, Planner | tickets, categories, activities |
 | Management No Surat (document numbering), PKWT generator | counters, templates |
 | Timesheet | timesheets + approvals |
 
 Recommended order (from the reference roadmap): ~~calendar + shifts →
-overtime → MCU + training~~ (done) → approval engine → helpdesk →
+overtime → MCU + training → profile-change approval~~ (done) → helpdesk →
 documents. Each: migration + seed for new permission codes + pages +
 tests + `npm run smoke:routes`.

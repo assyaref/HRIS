@@ -219,8 +219,15 @@ export type TimeAuditAction =
   | "overtime.approved"
   | "overtime.rejected";
 
+export type ProfileChangeAuditAction =
+  | "profile_change.submitted"
+  | "profile_change.cancelled"
+  | "profile_change.approved"
+  | "profile_change.rejected";
+
 export type AuditAction =
   | ReportAuditAction
+  | ProfileChangeAuditAction
   | TimeAuditAction
   | ComplianceAuditAction
   | RbacAuditAction

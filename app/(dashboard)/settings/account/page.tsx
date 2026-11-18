@@ -22,6 +22,7 @@ import { logoutAction } from "@/features/auth/actions";
 import { hasManagementDashboard } from "@/features/dashboard/access";
 import { getFaceEnrollmentSummaryInOrganization } from "@/features/employees/face-enrollment.queries";
 import { ProfilePhotoCard } from "@/features/employees/profile-photo-card";
+import { ProfileChangeSelfSection } from "@/features/profile-changes/self-section";
 import { getEmployeeSelfProfile, getOrganizationName } from "@/features/employees/queries";
 
 export const metadata: Metadata = {
@@ -108,9 +109,7 @@ export default async function AccountSettingsPage({
           ]}
         />
       </ProfileSection>
-      <p className="px-2 text-center text-[12px] leading-snug text-muted-foreground">
-        Data kepegawaian dikelola oleh HR. Hubungi HR jika ada data yang perlu diperbarui.
-      </p>
+      <ProfileChangeSelfSection organizationId={profile.organizationId} employeeId={profile.id} />
     </>
   ) : (
     <Card>

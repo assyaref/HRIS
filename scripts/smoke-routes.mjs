@@ -68,6 +68,7 @@ const ROUTES = [
   "/compliance/trainings?tab=master",
   "/time/calendar", "/time/calendar?month=2026-08", "/time/shifts", "/time/shifts?tab=groups",
   "/overtime", "/overtime/management", "/approvals?type=overtime",
+  "/profile-changes", "/profile-changes?status=all", "/approvals?type=profile",
 ];
 
 const ERROR_UI =

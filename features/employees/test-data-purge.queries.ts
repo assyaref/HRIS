@@ -31,6 +31,7 @@ import {
   employeeTrainings,
   medicalCheckups,
   overtimeRequests,
+  profileChangeRequests,
   workGroupMembers,
 } from "@/db/schema";
 import { tableExists } from "@/lib/db/table-exists";
@@ -334,6 +335,17 @@ const PURGE_SOURCES: readonly {
         employeeIdColumn: overtimeRequests.employeeId,
         organizationIdColumn: overtimeRequests.organizationId,
         optionalTable: "overtime_requests",
+      },
+    ],
+  },
+  {
+    category: "Profile change requests",
+    tables: [
+      {
+        table: profileChangeRequests,
+        employeeIdColumn: profileChangeRequests.employeeId,
+        organizationIdColumn: profileChangeRequests.organizationId,
+        optionalTable: "profile_change_requests",
       },
     ],
   },
