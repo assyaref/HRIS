@@ -87,7 +87,7 @@ export default async function DashboardLayout({
       profile={profile}
       notificationCount={notifications?.unreadCount ?? 0}
       employeeFrame={!hasManagementDashboard(authorization.permissionCodes)}
-      bottomNav={<EmployeeBottomNavigation canAttendance={canAttendance} />}
+      bottomNav={<EmployeeBottomNavigation key="bottom-nav" canAttendance={canAttendance} />}
     >
       {children}
     </AppShell>

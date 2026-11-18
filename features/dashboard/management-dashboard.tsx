@@ -11,6 +11,14 @@ import {
 import { SectionHeading } from "@/components/dashboard/section-heading";
 import { RingLegend, SegmentRing } from "@/components/dashboard/segment-ring";
 import { StackedBarChart } from "@/components/dashboard/stacked-bar-chart";
+import { EXPIRING_WINDOW_DAYS } from "@/features/compliance/contract-status";
+import { countByStatus, listContractRows } from "@/features/compliance/queries";
+import {
+  ageDistribution,
+  genderSplit,
+  profileCompleteness,
+} from "@/features/insights/workforce";
+import { listInsightEmployees } from "@/features/insights/queries";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { HrisIcon, type HrisIconName } from "@/components/layout/icons";
 import { Badge } from "@/components/ui/badge";
@@ -210,12 +218,24 @@ export async function ManagementDashboard({
   ]);
 
   const canViewAudit = can(P.AUDIT_VIEW);
-  const [recentAudit, recap] = await Promise.all([
+  // Workforce insights: completeness needs the employee list; demographics
+  // aggregate personal data; contract warnings read Employment data.
+  const canInsights = can(P.EMPLOYEES_VIEW);
+  const canDemographics = canInsights && can(P.EMPLOYEES_PERSONAL_VIEW);
+  const canContracts = canInsights && can(P.EMPLOYEES_EMPLOYMENT_VIEW);
+  const todayDateKey = dateStringInTimeZone(new Date(), APP_TIME_ZONE);
+  const [recentAudit, recap, insightRows, contractRows] = await Promise.all([
     canViewAudit ? listRecentAuditActivity(organizationId, 6) : Promise.resolve([]),
     selfProfile
       ? getMonthlyRecap(organizationId, selfProfile.id, monthKey)
       : Promise.resolve(null),
+    canInsights ? listInsightEmployees(organizationId) : Promise.resolve([]),
+    canContracts ? listContractRows(organizationId, todayDateKey) : Promise.resolve([]),
   ]);
+  const completeness = profileCompleteness(insightRows);
+  const gender = genderSplit(insightRows);
+  const ages = ageDistribution(insightRows, todayDateKey);
+  const contractCounts = countByStatus(contractRows);
 
   const visibleActions = QUICK_ACTIONS.filter((action) =>
     action.superadminOnly
@@ -241,6 +261,18 @@ export async function ManagementDashboard({
       label: "Periode payroll sedang diproses",
       count: approvals.payrollAttention,
       show: can(P.PAYROLL_VIEW),
+    },
+    {
+      href: "/monitoring/contracts?status=expired",
+      label: "Kontrak karyawan sudah kedaluwarsa",
+      count: contractCounts.expired,
+      show: canContracts,
+    },
+    {
+      href: "/monitoring/contracts?status=expiring",
+      label: `Kontrak berakhir dalam ${EXPIRING_WINDOW_DAYS} hari`,
+      count: contractCounts.expiring,
+      show: canContracts,
     },
   ].filter((item) => item.show && item.count > 0);
 
@@ -284,7 +316,7 @@ export async function ManagementDashboard({
       value: pendingApprovals,
       sub: "tertunda",
       label: "Persetujuan",
-      href: priorities[0]?.href,
+      href: pendingApprovals > 0 ? "/approvals?status=pending" : undefined,
     },
   ];
 
@@ -438,6 +470,119 @@ export async function ManagementDashboard({
           />
         </div>
       </div>
+
+      {/* Workforce insights: data completeness + demographics */}
+      {canInsights && insightRows.length > 0 ? (
+        <div className={canDemographics ? "grid gap-5 xl:grid-cols-2" : "grid gap-5"}>
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="text-[17px]">Kelengkapan Data Karyawan</CardTitle>
+                  <CardDescription>
+                    Karyawan aktif dengan data lengkap per kategori
+                  </CardDescription>
+                </div>
+                <span className="shrink-0 rounded-full bg-surface-primary px-3 py-1 text-sm font-bold text-primary tabular-nums">
+                  {completeness.overall}%
+                </span>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3.5 pt-2">
+              {completeness.categories.map((category) => (
+                <div key={category.key}>
+                  <div className="flex items-baseline justify-between gap-3 text-sm">
+                    <span className="font-medium text-foreground">{category.label}</span>
+                    <span className="text-muted-foreground tabular-nums">
+                      {category.complete}/{category.total}
+                      <span className="ml-2 font-semibold text-foreground">{category.percent}%</span>
+                    </span>
+                  </div>
+                  <div
+                    className="mt-1.5 h-2 overflow-hidden rounded-full bg-muted"
+                    role="progressbar"
+                    aria-label={category.label}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={category.percent}
+                  >
+                    <span
+                      className="block h-full rounded-full"
+                      style={{
+                        width: `${category.percent}%`,
+                        background:
+                          category.percent >= 80
+                            ? "#22C55E"
+                            : category.percent >= 50
+                              ? "#3B82F6"
+                              : "#F97316",
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {canDemographics ? (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-[17px]">Demografi</CardTitle>
+                <CardDescription>Jenis kelamin dan usia karyawan aktif</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6 pt-2">
+                <div className="flex flex-col items-center gap-6 sm:flex-row">
+                  <SegmentRing
+                    variant="solid"
+                    size={150}
+                    slices={[
+                      { label: "Laki-laki", value: gender.male, color: "#3B82F6" },
+                      { label: "Perempuan", value: gender.female, color: "#EC4899" },
+                      { label: "Belum diisi", value: gender.unknown, color: "#CBD5E1" },
+                    ]}
+                    centerValue={insightRows.length}
+                    centerLabel="aktif"
+                  />
+                  <div className="w-full min-w-0 flex-1">
+                    <RingLegend
+                      slices={[
+                        { label: "Laki-laki", value: gender.male, color: "#3B82F6" },
+                        { label: "Perempuan", value: gender.female, color: "#EC4899" },
+                        { label: "Belum diisi", value: gender.unknown, color: "#CBD5E1" },
+                      ]}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-2 text-sm font-medium text-foreground">Sebaran usia</p>
+                  <ul className="space-y-2">
+                    {ages.buckets.map((bucket) => {
+                      const max = Math.max(1, ...ages.buckets.map((b) => b.value));
+                      return (
+                        <li key={bucket.label} className="flex items-center gap-3 text-sm">
+                          <span className="w-14 shrink-0 text-muted-foreground">{bucket.label}</span>
+                          <span className="h-2.5 flex-1 overflow-hidden rounded-full bg-muted">
+                            <span
+                              className="block h-full rounded-full bg-gradient-to-r from-[#8B5CF6] to-[#3B82F6]"
+                              style={{ width: `${(bucket.value / max) * 100}%` }}
+                            />
+                          </span>
+                          <span className="w-8 shrink-0 text-right font-semibold tabular-nums">{bucket.value}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  {ages.unknown > 0 ? (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {ages.unknown} karyawan belum mengisi tanggal lahir.
+                    </p>
+                  ) : null}
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
+      ) : null}
 
       {/* Trend + today's status ring */}
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">

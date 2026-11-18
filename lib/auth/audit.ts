@@ -186,7 +186,11 @@ export type OrganizationAuditAction =
   | "organization.logo.updated"
   | "organization.logo.removed";
 
+/** Report downloads (/api/reports/export). */
+export type ReportAuditAction = "report.exported";
+
 export type AuditAction =
+  | ReportAuditAction
   | RbacAuditAction
   | UserAuditAction
   | EmployeeAuditAction

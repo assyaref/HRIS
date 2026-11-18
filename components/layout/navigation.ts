@@ -19,6 +19,17 @@ export const primaryNavigation: NavItem[] = [
     badge: "notifications",
   },
   {
+    title: "Persetujuan",
+    href: "/approvals",
+    anyPermission: [
+      PERMISSIONS.LEAVE_APPROVE,
+      PERMISSIONS.LEAVE_MANAGE,
+      PERMISSIONS.PERMISSION_APPROVE,
+      PERMISSIONS.PERMISSION_MANAGE,
+    ],
+    icon: "shield",
+  },
+  {
     title: "Karyawan",
     href: "/employees",
     permission: PERMISSIONS.EMPLOYEES_VIEW,
@@ -147,10 +158,47 @@ export const managementNavigation: NavItem[] = [
     superadminOnly: true,
   },
   {
+    title: "Struktur Organisasi",
+    href: "/organization/chart",
+    permission: PERMISSIONS.EMPLOYEES_VIEW,
+    icon: "network",
+  },
+  {
     title: "Kelola Pengumuman",
     href: "/announcements/management",
     permission: PERMISSIONS.ANNOUNCEMENTS_VIEW,
     icon: "megaphone",
+  },
+];
+
+/** Compliance monitoring and reports (read-only views over existing data). */
+export const monitoringNavigation: NavItem[] = [
+  {
+    title: "Monitoring Kontrak",
+    href: "/monitoring/contracts",
+    // Both are required by the page (employee list + Employment data).
+    permission: PERMISSIONS.EMPLOYEES_EMPLOYMENT_VIEW,
+    anyPermission: [PERMISSIONS.EMPLOYEES_VIEW],
+    icon: "document",
+  },
+  {
+    title: "Laporan",
+    href: "#laporan",
+    icon: "bar-chart",
+    children: [
+      {
+        title: "Laporan Karyawan",
+        href: "/reports/employees",
+        permission: PERMISSIONS.REPORTS_VIEW,
+        icon: "trend-up",
+      },
+      {
+        title: "Laporan Cuti",
+        href: "/reports/leave",
+        permission: PERMISSIONS.REPORTS_VIEW,
+        icon: "plane",
+      },
+    ],
   },
 ];
 
@@ -206,6 +254,12 @@ export const settingsNavigation: NavItem[] = [
         permission: PERMISSIONS.PERMISSIONS_VIEW,
         icon: "permissions",
       },
+      {
+        title: "Audit Trail",
+        href: "/settings/audit-trail",
+        permission: PERMISSIONS.AUDIT_VIEW,
+        icon: "history",
+      },
     ],
   },
 ];
@@ -221,6 +275,7 @@ export const settingsNavigation: NavItem[] = [
 export const navigationSections: NavSection[] = [
   { title: "Menu Utama", items: primaryNavigation },
   { title: "Manajemen", items: managementNavigation },
+  { title: "Monitoring & Laporan", items: monitoringNavigation },
   { title: "Pengaturan", items: settingsNavigation },
 ];
 

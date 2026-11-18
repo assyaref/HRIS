@@ -186,7 +186,9 @@ describe("face-attendance sheet (ABSEN dialog)", () => {
 describe("ABSEN wiring in the authenticated shell", () => {
   it("renders the employee bottom navigation for self-service users", () => {
     assert.equal(layout.includes('import { EmployeeBottomNavigation }'), true);
-    assert.equal(layout.includes("<EmployeeBottomNavigation canAttendance={canAttendance} />"), true);
+    // Keyed: the element is created in the server layout and rendered among
+    // ShellProvider's children (an unkeyed server element warns in dev).
+    assert.match(layout, /<EmployeeBottomNavigation key="[\w-]+" canAttendance=\{canAttendance\} \/>/);
   });
 
   it("gates the ABSEN action on attendance.view (server-resolved)", () => {

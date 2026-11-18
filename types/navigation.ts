@@ -41,7 +41,11 @@ export type NavIconKey =
   | "calendar-check"
   | "bar-chart"
   | "link"
-  | "edit";
+  | "edit"
+  | "document"
+  | "history"
+  | "trend-up"
+  | "shield";
 
 export interface NavItem {
   title: string;

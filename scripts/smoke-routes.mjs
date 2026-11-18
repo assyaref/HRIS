@@ -62,6 +62,8 @@ const ROUTES = [
   "/settings/permissions", "/settings/roles", "/settings/roles/:roleId",
   "/settings/test-data", "/settings/users", "/settings/work-locations",
   "/settings/work-locations/:locationId", "/change-password",
+  "/approvals", "/monitoring/contracts", "/reports/employees", "/reports/leave",
+  "/settings/audit-trail", "/organization/chart",
 ];
 
 const ERROR_UI =

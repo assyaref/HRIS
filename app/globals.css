@@ -1332,3 +1332,30 @@ a.hris-glass:hover {
 :is(.hris-admin, .emp-frame) .hris-main td:has(.btn) {
   white-space: nowrap;
 }
+
+/* Print: only the page content (org chart "Cetak / PDF", reports). */
+@media print {
+  .hris-sidebar,
+  .hris-admin > div > header,
+  .hris-admin .hris-top-card,
+  form,
+  nav[aria-label="Halaman"],
+  button {
+    display: none !important;
+  }
+  .hris-admin,
+  body {
+    background: #FFFFFF !important;
+  }
+  .hris-main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  .hris-main > * > * {
+    animation: none !important;
+  }
+  .hris-card {
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+}
