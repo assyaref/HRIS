@@ -48,6 +48,24 @@ describe("reference modules: navigation matches page guards", () => {
     assert.match(page("organization/chart"), /requirePermission\(user\.id, PERMISSIONS\.EMPLOYEES_VIEW\)/);
   });
 
+  it("/approvals also opens for overtime approvers", () => {
+    const item = entry("/approvals");
+    for (const code of ["ATTENDANCE_APPROVE", "ATTENDANCE_MANAGE"]) {
+      assert.match(item, new RegExp(`PERMISSIONS\\.${code}`));
+      assert.match(page("approvals"), new RegExp(`PERMISSIONS\\.${code}`));
+    }
+  });
+
+  it("time management entries mirror their page guards", () => {
+    assert.match(entry("/time/calendar"), /permission: PERMISSIONS\.ATTENDANCE_VIEW/);
+    assert.match(entry("/time/shifts"), /permission: PERMISSIONS\.ATTENDANCE_MANAGE/);
+    assert.match(entry("/overtime"), /permission: PERMISSIONS\.ATTENDANCE_VIEW/);
+    assert.match(
+      entry("/overtime/management"),
+      /anyPermission: \[PERMISSIONS\.ATTENDANCE_APPROVE, PERMISSIONS\.ATTENDANCE_MANAGE\]/
+    );
+  });
+
   it("the report export route checks every required permission server-side", () => {
     const route = readFileSync(join(root, "app/api/reports/export/route.ts"), "utf8");
     assert.match(route, /required\.every\(\(code\) => granted\.has\(code\)\)/);

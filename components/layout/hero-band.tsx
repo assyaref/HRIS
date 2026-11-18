@@ -59,6 +59,8 @@ const EMPLOYEE_BAND_TITLES: Array<[string, { title: string; subtitle: string }]>
   ["/face-id", { title: "Face ID", subtitle: "Data wajah untuk verifikasi absensi Anda." }],
   ["/leave", { title: "Cuti", subtitle: "Ajukan cuti, pantau saldo dan riwayatnya." }],
   ["/permission", { title: "Izin Kegiatan", subtitle: "Ajukan dan pantau izin kegiatan Anda." }],
+  ["/overtime", { title: "Lembur", subtitle: "Ajukan dan pantau lembur (SPKL) Anda." }],
+  ["/time/calendar", { title: "Kalender Libur", subtitle: "Hari libur nasional, cuti bersama, dan libur perusahaan." }],
   ["/payslip", { title: "Slip Gaji Saya", subtitle: "Lihat dan unduh slip gaji Anda." }],
   ["/announcements", { title: "Pengumuman", subtitle: "Informasi resmi dari perusahaan." }],
   ["/notifications", { title: "Notifikasi", subtitle: "Pemberitahuan terbaru untuk Anda." }],

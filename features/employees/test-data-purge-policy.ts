@@ -123,6 +123,7 @@ export const TEST_DATA_PURGE_CATEGORIES = [
   "Custom field values",
   "Announcement recipients",
   "Medical & training",
+  "Shift & overtime",
 ] as const;
 
 export type TestDataPurgeCategory = (typeof TEST_DATA_PURGE_CATEGORIES)[number];
@@ -190,6 +191,7 @@ export const TEST_DATA_PURGE_DELETABLE_CATEGORIES = [
   "Custom field values",
   "Announcement recipients",
   "Medical & training",
+  "Shift & overtime",
 ] as const satisfies readonly TestDataPurgeCategory[];
 
 const PROTECTED_SET: ReadonlySet<string> = new Set(

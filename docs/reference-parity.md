@@ -42,20 +42,29 @@ Pengumuman, Notifikasi, Pengguna / Role / Hak Akses (RBAC), jejak audit
 | Monitoring / Reporting Medical Check Up | `/compliance/mcu` |
 | Monitoring / Reporting Training, Matrix Training, Matrix Training Setup, Employee Training (master) | `/compliance/trainings` |
 
+## Built with migration 0024 (see docs/time-management.md)
+
+| Reference module | Route |
+| --- | --- |
+| Holiday calendar | `/time/calendar` |
+| Shift / Work Schedule, Work Group | `/time/shifts` |
+| Overtime / SPKL (self-service) | `/overtime` |
+| Overtime approval & recap | `/overtime/management`, `/approvals` (type Lembur) |
+
 ## Next phase (needs migrations)
 
 | Module | New data |
 | --- | --- |
 | MCU doctor notes / consultation requests (from mobile) | doctor-note & consultation tables |
-| Overtime / SPKL, Overtime Setup | `overtime_requests`, project overtime settings |
-| Holiday calendar, Shift / Work Schedule, Work Group | `holidays`, `shifts`, `work_groups` |
+| Overtime Setup (rates, project rules), overtime → payroll | project overtime settings |
+| Shift-aware attendance (late / early by work group shift) | uses `shifts` + `work_group_members` |
 | Organization master (department, area, grade, jabatan, job desc) | organization master tables |
 | Generic approval engine for profile-change requests from mobile | `approval_requests` (type, payload old/new, approver chain) |
 | Ask Admin (helpdesk), Activity, Planner | tickets, categories, activities |
 | Management No Surat (document numbering), PKWT generator | counters, templates |
 | Timesheet | timesheets + approvals |
 
-Recommended order (from the reference roadmap): calendar + shifts → overtime
-→ MCU + training (feeds Document Control) → approval engine → helpdesk →
+Recommended order (from the reference roadmap): ~~calendar + shifts →
+overtime → MCU + training~~ (done) → approval engine → helpdesk →
 documents. Each: migration + seed for new permission codes + pages +
 tests + `npm run smoke:routes`.

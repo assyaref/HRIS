@@ -1,7 +1,18 @@
 import { HrisIcon } from "@/components/layout/icons";
 
-/** Shown by MCU / Training pages until migration 0023 is applied. */
-export function ModuleNotReady({ module }: { module: string }) {
+/**
+ * Shown by a module's pages until its additive migration is applied
+ * (defaults: MCU / Training, migration 0023).
+ */
+export function ModuleNotReady({
+  module,
+  migration = "0023_compliance_mcu_training",
+  guide = "docs/compliance-mcu-training.md",
+}: {
+  module: string;
+  migration?: string;
+  guide?: string;
+}) {
   return (
     <div className="hris-attention flex flex-col gap-3 rounded-[20px] p-5 sm:flex-row sm:items-start">
       <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#FFE7C2] text-[#D97706] dark:bg-surface-warning">
@@ -11,9 +22,9 @@ export function ModuleNotReady({ module }: { module: string }) {
         <p className="font-semibold text-foreground">Modul {module} belum aktif</p>
         <p className="mt-1 text-sm text-foreground/80">
           Tabel database untuk modul ini belum dibuat. Administrator server perlu
-          menjalankan migrasi <code className="rounded bg-white/70 px-1">0023_compliance_mcu_training</code>{" "}
+          menjalankan migrasi <code className="rounded bg-white/70 px-1">{migration}</code>{" "}
           (<code className="rounded bg-white/70 px-1">npm run db:migrate</code>) sesuai
-          panduan di <code className="rounded bg-white/70 px-1">docs/compliance-mcu-training.md</code>.
+          panduan di <code className="rounded bg-white/70 px-1">{guide}</code>.
           Halaman ini aktif otomatis setelahnya.
         </p>
       </div>

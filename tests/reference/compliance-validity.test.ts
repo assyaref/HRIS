@@ -44,12 +44,13 @@ describe("migration 0023 (compliance) is additive and RESTRICT-only", () => {
     assert.deepEqual(toEmployees, ["restrict", "restrict"]);
   });
 
-  it("is journaled last with a fresh, increasing when", () => {
-    const last = journal.entries.at(-1)!;
-    const previous = journal.entries.at(-2)!;
-    assert.equal(last.tag, "0023_compliance_mcu_training");
-    assert.equal(last.idx, previous.idx + 1);
-    assert.ok(last.when > previous.when);
+  it("is journaled with a fresh, increasing when", () => {
+    const at = journal.entries.findIndex((e) => e.tag === "0023_compliance_mcu_training");
+    assert.ok(at > 0);
+    const entry = journal.entries[at];
+    const previous = journal.entries[at - 1];
+    assert.equal(entry.idx, previous.idx + 1);
+    assert.ok(entry.when > previous.when);
   });
 
   it("deletion plans register the new employee tables as optional", () => {

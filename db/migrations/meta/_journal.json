@@ -176,6 +176,13 @@
       "when": 1795035930816,
       "tag": "0023_compliance_mcu_training",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1795037613181,
+      "tag": "0024_time_management",
+      "breakpoints": true
     }
   ]
 }

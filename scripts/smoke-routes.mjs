@@ -66,6 +66,8 @@ const ROUTES = [
   "/settings/audit-trail", "/organization/chart",
   "/compliance/mcu", "/compliance/trainings", "/compliance/trainings?tab=matrix",
   "/compliance/trainings?tab=master",
+  "/time/calendar", "/time/calendar?month=2026-08", "/time/shifts", "/time/shifts?tab=groups",
+  "/overtime", "/overtime/management", "/approvals?type=overtime",
 ];
 
 const ERROR_UI =

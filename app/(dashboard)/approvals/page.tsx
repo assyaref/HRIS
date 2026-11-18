@@ -47,6 +47,12 @@ const STATUS_BADGE: Record<string, "warning" | "success" | "danger" | "outline">
   cancelled: "outline",
 };
 
+const KIND_LABEL: Record<ApprovalKind, string> = {
+  leave: "Cuti",
+  permission: "Izin",
+  overtime: "Lembur",
+};
+
 function shiftDays(day: string, delta: number): string {
   const date = new Date(`${day}T00:00:00Z`);
   date.setUTCDate(date.getUTCDate() + delta);
@@ -73,7 +79,10 @@ export default async function ApprovalsPage({
   const canPermission =
     granted.has(PERMISSIONS.PERMISSION_APPROVE) ||
     granted.has(PERMISSIONS.PERMISSION_MANAGE);
-  if (!canLeave && !canPermission) forbidden();
+  const canOvertime =
+    granted.has(PERMISSIONS.ATTENDANCE_APPROVE) ||
+    granted.has(PERMISSIONS.ATTENDANCE_MANAGE);
+  if (!canLeave && !canPermission && !canOvertime) forbidden();
 
   const params = await searchParams;
   const today = todayKey();
@@ -84,6 +93,7 @@ export default async function ApprovalsPage({
   const available: ApprovalKind[] = [
     ...(canLeave ? (["leave"] as const) : []),
     ...(canPermission ? (["permission"] as const) : []),
+    ...(canOvertime ? (["overtime"] as const) : []),
   ];
   const kinds = available.filter((k) => !requestedKind || k === requestedKind);
 
@@ -106,7 +116,7 @@ export default async function ApprovalsPage({
     <div className="space-y-6">
       <PageHeader
         title="Persetujuan"
-        description="Kotak masuk semua pengajuan cuti dan izin yang perlu ditinjau. Buka pengajuan untuk menyetujui atau menolak."
+        description="Kotak masuk semua pengajuan cuti, izin, dan lembur yang perlu ditinjau. Buka pengajuan untuk menyetujui atau menolak."
       />
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
@@ -136,6 +146,7 @@ export default async function ApprovalsPage({
             <option value="">Semua jenis</option>
             {canLeave ? <option value="leave">Cuti</option> : null}
             {canPermission ? <option value="permission">Izin</option> : null}
+            {canOvertime ? <option value="overtime">Lembur</option> : null}
           </NativeSelect>
         </div>
         <button type="submit" className={buttonVariants({ variant: "secondary" })}>
@@ -180,7 +191,7 @@ export default async function ApprovalsPage({
                   <p className="font-mono text-xs text-muted-foreground">{item.employeeNumber}</p>
                 </TableCell>
                 <TableCell>
-                  <p className="font-medium">{item.kind === "leave" ? "Cuti" : "Izin"}</p>
+                  <p className="font-medium">{KIND_LABEL[item.kind]}</p>
                   <p className="text-xs text-muted-foreground">
                     {item.kind === "permission"
                       ? (PERMISSION_TYPE_LABELS as Record<string, string>)[item.subject] ?? item.subject

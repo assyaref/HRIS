@@ -30,6 +30,8 @@ import {
   permissionRequests,
   employeeTrainings,
   medicalCheckups,
+  overtimeRequests,
+  workGroupMembers,
 } from "@/db/schema";
 import { tableExists } from "@/lib/db/table-exists";
 import {
@@ -300,7 +302,8 @@ const PURGE_SOURCES: readonly {
         organizationIdColumn: announcementRecipients.organizationId,
       },
     ],
-  },  {
+  },
+  {
     category: "Medical & training",
     tables: [
       {
@@ -314,6 +317,23 @@ const PURGE_SOURCES: readonly {
         employeeIdColumn: employeeTrainings.employeeId,
         organizationIdColumn: employeeTrainings.organizationId,
         optionalTable: "employee_trainings",
+      },
+    ],
+  },
+  {
+    category: "Shift & overtime",
+    tables: [
+      {
+        table: workGroupMembers,
+        employeeIdColumn: workGroupMembers.employeeId,
+        organizationIdColumn: workGroupMembers.organizationId,
+        optionalTable: "work_group_members",
+      },
+      {
+        table: overtimeRequests,
+        employeeIdColumn: overtimeRequests.employeeId,
+        organizationIdColumn: overtimeRequests.organizationId,
+        optionalTable: "overtime_requests",
       },
     ],
   },

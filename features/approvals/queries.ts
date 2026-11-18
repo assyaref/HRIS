@@ -5,9 +5,17 @@ import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
 import { db } from "@/db";
 import { APP_TIME_ZONE } from "@/lib/utils/greeting";
-import { employees, leaveRequests, leaveTypes, permissionRequests } from "@/db/schema";
+import {
+  employees,
+  leaveRequests,
+  leaveTypes,
+  overtimeRequests,
+  permissionRequests,
+} from "@/db/schema";
+import { isTimeModuleReady } from "@/features/time/module";
+import { formatDuration } from "@/features/time/rules";
 
-export type ApprovalKind = "leave" | "permission";
+export type ApprovalKind = "leave" | "permission" | "overtime";
 
 export interface ApprovalItem {
   kind: ApprovalKind;
@@ -64,8 +72,10 @@ export async function listApprovalInbox(
 ): Promise<{ items: ApprovalItem[]; counts: ApprovalCounts }> {
   const wantLeave = filters.kinds.includes("leave");
   const wantPermission = filters.kinds.includes("permission");
+  // Overtime lives in migration 0024; skip it until the tables exist.
+  const wantOvertime = filters.kinds.includes("overtime") && (await isTimeModuleReady());
 
-  const [leaveRows, permissionRows] = await Promise.all([
+  const [leaveRows, permissionRows, overtimeRows] = await Promise.all([
     wantLeave
       ? db
           .select({
@@ -111,6 +121,29 @@ export async function listApprovalInbox(
           )
           .orderBy(desc(permissionRequests.submittedAt))
       : Promise.resolve([]),
+    wantOvertime
+      ? db
+          .select({
+            id: overtimeRequests.id,
+            employeeNumber: employees.employeeNumber,
+            employeeName: sql<string>`TRIM(${employees.firstName} || ' ' || ${employees.lastName})`,
+            overtimeDate: overtimeRequests.overtimeDate,
+            startTime: overtimeRequests.startTime,
+            endTime: overtimeRequests.endTime,
+            totalMinutes: overtimeRequests.totalMinutes,
+            status: overtimeRequests.status,
+            submittedAt: overtimeRequests.createdAt,
+          })
+          .from(overtimeRequests)
+          .innerJoin(employees, eq(employees.id, overtimeRequests.employeeId))
+          .where(
+            and(
+              eq(overtimeRequests.organizationId, organizationId),
+              ...dayWindow(overtimeRequests.createdAt, filters.from, filters.to)
+            )
+          )
+          .orderBy(desc(overtimeRequests.createdAt))
+      : Promise.resolve([]),
   ]);
 
   const dateTime = new Intl.DateTimeFormat("id-ID", {
@@ -141,6 +174,17 @@ export async function listApprovalInbox(
       employeeName: row.employeeName,
       subject: row.subject,
       period: `${dateTime.format(row.startAt)} → ${dateTime.format(row.endAt)}`,
+      status: row.status,
+      submittedAt: row.submittedAt,
+    })),
+    ...overtimeRows.map((row) => ({
+      kind: "overtime" as const,
+      id: row.id,
+      href: `/overtime/management?from=${row.overtimeDate}&to=${row.overtimeDate}`,
+      employeeNumber: row.employeeNumber,
+      employeeName: row.employeeName,
+      subject: formatDuration(row.totalMinutes),
+      period: `${row.overtimeDate} · ${row.startTime}–${row.endTime}`,
       status: row.status,
       submittedAt: row.submittedAt,
     })),

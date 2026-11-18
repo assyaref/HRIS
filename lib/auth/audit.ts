@@ -203,8 +203,25 @@ export type ComplianceAuditAction =
   | "training_requirement.created"
   | "training_requirement.deleted";
 
+export type TimeAuditAction =
+  | "holiday.created"
+  | "holiday.deleted"
+  | "shift.created"
+  | "shift.updated"
+  | "shift.deleted"
+  | "work_group.created"
+  | "work_group.updated"
+  | "work_group.deleted"
+  | "work_group.members_updated"
+  | "overtime.submitted"
+  | "overtime.created"
+  | "overtime.cancelled"
+  | "overtime.approved"
+  | "overtime.rejected";
+
 export type AuditAction =
   | ReportAuditAction
+  | TimeAuditAction
   | ComplianceAuditAction
   | RbacAuditAction
   | UserAuditAction
