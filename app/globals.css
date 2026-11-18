@@ -921,15 +921,15 @@ html:has(.emp-frame) .emp-page-title {
 }
 
 /* ==========================================================
-   v9 — MANAGEMENT SHELL · SOFT PASTEL (`.hris-admin`)
+   v9 — MANAGEMENT SHELL · SOFT PASTEL (`:is(.hris-admin, .emp-frame)`)
    Light canvas with pastel glows, floating white top-bar cards, soft
    hairline cards, plain ink titles, pill table headers, pastel overview
    panel with glass tiles. Applies only outside the employee frame
-   (AppShell adds `.hris-admin`); dialogs pick up button / badge styles
-   through `body:has(.hris-admin)`.
+   (AppShell adds `:is(.hris-admin, .emp-frame)`); dialogs pick up button / badge styles
+   through `body:has(:is(.hris-admin, .emp-frame), .emp-frame)`.
    ========================================================== */
 
-.hris-admin {
+:is(.hris-admin, .emp-frame) {
   --card-border: #ECEFF6;
   --card-border-hover: rgb(11 92 197 / 0.22);
   --radius-card: 1.25rem;
@@ -938,7 +938,7 @@ html:has(.emp-frame) .emp-page-title {
     radial-gradient(36rem 20rem at 35% -6rem, rgb(221 214 254 / 0.40) 0%, transparent 70%),
     #F4F6FB;
 }
-.dark .hris-admin {
+.dark :is(.hris-admin, .emp-frame) {
   --card-border: #1E2B45;
   background:
     radial-gradient(40rem 22rem at 85% -4rem, rgb(56 189 248 / 0.10) 0%, transparent 70%),
@@ -971,16 +971,16 @@ html:has(.emp-frame) .emp-page-title {
 }
 
 /* ---- Titles: plain ink, semibold ---- */
-.hris-admin .hris-main h1 {
+:is(.hris-admin, .emp-frame) .hris-main h1 {
   font-weight: 700;
   letter-spacing: -0.02em;
   color: #1B1F3B;
 }
-.dark .hris-admin .hris-main h1 {
+.dark :is(.hris-admin, .emp-frame) .hris-main h1 {
   color: var(--foreground);
 }
-.hris-admin .hris-main h2,
-.hris-admin .hris-main h3 {
+:is(.hris-admin, .emp-frame) .hris-main h2,
+:is(.hris-admin, .emp-frame) .hris-main h3 {
   letter-spacing: -0.01em;
 }
 
@@ -989,49 +989,49 @@ html:has(.emp-frame) .emp-page-title {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: none; }
 }
-.hris-admin .hris-main > * > * {
+:is(.hris-admin, .emp-frame) .hris-main > * > * {
   animation: hris-rise 380ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
-.hris-admin .hris-main > * > :nth-child(2) { animation-delay: 40ms; }
-.hris-admin .hris-main > * > :nth-child(3) { animation-delay: 80ms; }
-.hris-admin .hris-main > * > :nth-child(4) { animation-delay: 120ms; }
-.hris-admin .hris-main > * > :nth-child(n + 5) { animation-delay: 160ms; }
+:is(.hris-admin, .emp-frame) .hris-main > * > :nth-child(2) { animation-delay: 40ms; }
+:is(.hris-admin, .emp-frame) .hris-main > * > :nth-child(3) { animation-delay: 80ms; }
+:is(.hris-admin, .emp-frame) .hris-main > * > :nth-child(4) { animation-delay: 120ms; }
+:is(.hris-admin, .emp-frame) .hris-main > * > :nth-child(n + 5) { animation-delay: 160ms; }
 
 /* ---- Cards: soft hairline, airy shadow ---- */
-.hris-admin .hris-card {
+:is(.hris-admin, .emp-frame) .hris-card {
   border-color: var(--card-border);
   border-radius: 1.25rem;
   box-shadow: 0 1px 2px 0 rgb(16 24 40 / 0.03), 0 10px 30px -18px rgb(16 24 40 / 0.14);
 }
-.dark .hris-admin .hris-card {
+.dark :is(.hris-admin, .emp-frame) .hris-card {
   box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.35), 0 10px 24px -14px rgb(0 0 0 / 0.6);
 }
-.hris-admin .hris-card-level-2 {
+:is(.hris-admin, .emp-frame) .hris-card-level-2 {
   background: #F7F8FC;
   border-color: #EEF0F6;
 }
-.dark .hris-admin .hris-card-level-2 {
+.dark :is(.hris-admin, .emp-frame) .hris-card-level-2 {
   background: var(--muted);
   border-color: var(--card-border-level2);
 }
-.hris-admin .hris-card-hover:hover {
+:is(.hris-admin, .emp-frame) .hris-card-hover:hover {
   transform: translateY(-2px);
   box-shadow: 0 16px 32px -18px rgb(16 24 40 / 0.22);
 }
 
 /* ---- Tables: pill header row, hairline rows ---- */
-.hris-admin .hris-table-wrap {
+:is(.hris-admin, .emp-frame) .hris-table-wrap {
   border-color: var(--card-border);
   border-radius: 1.25rem;
   padding: 0.5rem;
   box-shadow: 0 1px 2px 0 rgb(16 24 40 / 0.03), 0 10px 30px -18px rgb(16 24 40 / 0.14);
 }
-.hris-admin .hris-main table thead,
-.hris-admin .hris-main table thead tr {
+:is(.hris-admin, .emp-frame) .hris-main table thead,
+:is(.hris-admin, .emp-frame) .hris-main table thead tr {
   background: transparent;
   border-bottom: 0;
 }
-.hris-admin .hris-main table thead th {
+:is(.hris-admin, .emp-frame) .hris-main table thead th {
   background: #F5F6FA;
   color: #3F4767;
   font-size: 12.5px;
@@ -1039,34 +1039,34 @@ html:has(.emp-frame) .emp-page-title {
   letter-spacing: 0;
   text-transform: none;
 }
-.hris-admin .hris-main table thead th:first-child {
+:is(.hris-admin, .emp-frame) .hris-main table thead th:first-child {
   border-top-left-radius: 0.875rem;
   border-bottom-left-radius: 0.875rem;
 }
-.hris-admin .hris-main table thead th:last-child {
+:is(.hris-admin, .emp-frame) .hris-main table thead th:last-child {
   border-top-right-radius: 0.875rem;
   border-bottom-right-radius: 0.875rem;
 }
-.dark .hris-admin .hris-main table thead th {
+.dark :is(.hris-admin, .emp-frame) .hris-main table thead th {
   background: #17223A;
   color: #B4C2DA;
 }
-.hris-admin .hris-main table tbody tr {
+:is(.hris-admin, .emp-frame) .hris-main table tbody tr {
   border-color: #F0F2F7;
   transition: background-color 140ms ease;
 }
-.dark .hris-admin .hris-main table tbody tr {
+.dark :is(.hris-admin, .emp-frame) .hris-main table tbody tr {
   border-color: #1C2840;
 }
-.hris-admin .hris-main table tbody tr:not([class^="bg-"]):not([class*=" bg-"]):hover {
+:is(.hris-admin, .emp-frame) .hris-main table tbody tr:not([class^="bg-"]):not([class*=" bg-"]):hover {
   background-color: #F8F9FD;
 }
-.dark .hris-admin .hris-main table tbody tr:not([class^="bg-"]):not([class*=" bg-"]):hover {
+.dark :is(.hris-admin, .emp-frame) .hris-main table tbody tr:not([class^="bg-"]):not([class*=" bg-"]):hover {
   background-color: #152139;
 }
 
 /* Row actions: ghost / text buttons inside a cell read as soft chips. */
-.hris-admin .hris-main td :is(.btn-ghost:not([class*="destructive"]), .btn-text) {
+:is(.hris-admin, .emp-frame) .hris-main td :is(.btn-ghost:not([class*="destructive"]), .btn-text) {
   height: 2rem;
   border-radius: 9999px;
   padding-inline: 0.75rem;
@@ -1075,12 +1075,12 @@ html:has(.emp-frame) .emp-page-title {
   background: var(--card);
   color: var(--foreground);
 }
-.hris-admin .hris-main td :is(.btn-ghost:not([class*="destructive"]), .btn-text):hover {
+:is(.hris-admin, .emp-frame) .hris-main td :is(.btn-ghost:not([class*="destructive"]), .btn-text):hover {
   border-color: rgb(11 92 197 / 0.35);
   background: var(--surface-primary);
   color: var(--primary);
 }
-.hris-admin .hris-main td :is(.btn-destructive, .btn-ghost[class*="destructive"]) {
+:is(.hris-admin, .emp-frame) .hris-main td :is(.btn-destructive, .btn-ghost[class*="destructive"]) {
   height: 2rem;
   border-radius: 9999px;
   padding-inline: 0.75rem;
@@ -1089,54 +1089,54 @@ html:has(.emp-frame) .emp-page-title {
   color: var(--danger);
   box-shadow: none;
 }
-.hris-admin .hris-main td :is(.btn-destructive, .btn-ghost[class*="destructive"]):hover {
+:is(.hris-admin, .emp-frame) .hris-main td :is(.btn-destructive, .btn-ghost[class*="destructive"]):hover {
   background: var(--danger);
   color: #FFFFFF;
 }
-.hris-admin .hris-main td .btn-outline {
+:is(.hris-admin, .emp-frame) .hris-main td .btn-outline {
   height: 2rem;
   border-radius: 9999px;
   font-size: 12.5px;
 }
 
 /* ---- Buttons ---- */
-body:has(.hris-admin) .btn-primary {
+body:has(:is(.hris-admin, .emp-frame), .emp-frame) .btn-primary {
   background-image: linear-gradient(135deg, #2F8CF0 0%, #0B5CC5 100%);
   box-shadow: 0 8px 18px -10px rgb(11 92 197 / 0.75);
 }
-body:has(.hris-admin) .btn-primary:hover {
+body:has(:is(.hris-admin, .emp-frame), .emp-frame) .btn-primary:hover {
   transform: translateY(-1px);
   box-shadow: 0 12px 22px -12px rgb(11 92 197 / 0.85);
 }
-body:has(.hris-admin) .btn-secondary {
+body:has(:is(.hris-admin, .emp-frame), .emp-frame) .btn-secondary {
   background: #1B1F3B;
   color: #FFFFFF;
 }
-body:has(.hris-admin) .btn-secondary:hover {
+body:has(:is(.hris-admin, .emp-frame), .emp-frame) .btn-secondary:hover {
   background: #2A3058;
 }
-.dark body:has(.hris-admin) .btn-secondary {
+.dark body:has(:is(.hris-admin, .emp-frame), .emp-frame) .btn-secondary {
   background: #2A3A5C;
 }
-body:has(.hris-admin) .btn-outline,
-body:has(.hris-admin) .btn-ghost:not([class*="destructive"]) {
+body:has(:is(.hris-admin, .emp-frame), .emp-frame) .btn-outline,
+body:has(:is(.hris-admin, .emp-frame), .emp-frame) .btn-ghost:not([class*="destructive"]) {
   border: 1px solid var(--card-border);
   background: var(--card);
   color: var(--foreground);
   box-shadow: 0 1px 2px 0 rgb(16 24 40 / 0.04);
 }
-body:has(.hris-admin) .btn-outline:hover,
-body:has(.hris-admin) .btn-ghost:not([class*="destructive"]):hover {
+body:has(:is(.hris-admin, .emp-frame), .emp-frame) .btn-outline:hover,
+body:has(:is(.hris-admin, .emp-frame), .emp-frame) .btn-ghost:not([class*="destructive"]):hover {
   border-color: rgb(11 92 197 / 0.35);
   background: var(--surface-primary);
   color: var(--primary);
 }
-body:has(.hris-admin) .btn-ghost[class*="destructive"] {
+body:has(:is(.hris-admin, .emp-frame), .emp-frame) .btn-ghost[class*="destructive"] {
   box-shadow: inset 0 0 0 1px rgb(220 38 38 / 0.22);
 }
 
 /* ---- Status badges: leading dot ---- */
-body:has(.hris-admin) :is(.badge-success, .badge-warning, .badge-danger, .badge-info, .badge-primary, .badge-tonal, .badge-destructive)::before {
+body:has(:is(.hris-admin, .emp-frame), .emp-frame) :is(.badge-success, .badge-warning, .badge-danger, .badge-info, .badge-primary, .badge-tonal, .badge-destructive)::before {
   content: "";
   width: 6px;
   height: 6px;
@@ -1144,26 +1144,26 @@ body:has(.hris-admin) :is(.badge-success, .badge-warning, .badge-danger, .badge-
   border-radius: 9999px;
   background: currentColor;
 }
-body:has(.hris-admin) .badge-primary {
+body:has(:is(.hris-admin, .emp-frame), .emp-frame) .badge-primary {
   border-color: transparent;
   background: var(--surface-primary);
   color: var(--primary);
 }
 
 /* ---- Form fields ---- */
-.hris-admin .hris-main :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea) {
+:is(.hris-admin, .emp-frame) .hris-main :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea) {
   border-color: #E4E7F0;
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
-.dark .hris-admin .hris-main :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea) {
+.dark :is(.hris-admin, .emp-frame) .hris-main :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea) {
   border-color: var(--input);
 }
-.hris-admin .hris-main :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea):focus-visible {
+:is(.hris-admin, .emp-frame) .hris-main :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea):focus-visible {
   border-color: var(--primary);
   box-shadow: 0 0 0 4px rgb(11 92 197 / 0.12);
   outline: none;
 }
-.hris-admin .hris-main :is(input[type="checkbox"], input[type="radio"]) {
+:is(.hris-admin, .emp-frame) .hris-main :is(input[type="checkbox"], input[type="radio"]) {
   accent-color: var(--primary);
 }
 
@@ -1256,11 +1256,11 @@ a.hris-glass:hover {
 }
 
 /* ---- Gradient icon tiles get a soft gloss ---- */
-.hris-admin .hris-tile {
+:is(.hris-admin, .emp-frame) .hris-tile {
   position: relative;
   overflow: hidden;
 }
-.hris-admin .hris-tile::after {
+:is(.hris-admin, .emp-frame) .hris-tile::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -1282,19 +1282,18 @@ a.hris-glass:hover {
 }
 .hris-empty-art::before { inset: -12px; }
 .hris-empty-art::after { inset: -26px; border-style: solid; border-color: rgb(11 92 197 / 0.08); }
-html:has(.emp-frame) .hris-empty-default { display: none; }
-.hris-admin .hris-main .bg-gradient-to-b.from-card {
+:is(.hris-admin, .emp-frame) .hris-main .bg-gradient-to-b.from-card {
   background-image: none;
   background-color: var(--card);
 }
 
 /* ---- Skeleton shimmer ---- */
-.hris-admin .animate-pulse.bg-muted {
+:is(.hris-admin, .emp-frame) .animate-pulse.bg-muted {
   background: linear-gradient(90deg, var(--muted) 0%, #E9EDF6 40%, var(--muted) 80%);
   background-size: 200% 100%;
   animation: hris-shimmer 1.3s linear infinite;
 }
-.dark .hris-admin .animate-pulse.bg-muted {
+.dark :is(.hris-admin, .emp-frame) .animate-pulse.bg-muted {
   background-image: linear-gradient(90deg, var(--muted) 0%, #22314F 40%, var(--muted) 80%);
 }
 @keyframes hris-shimmer {
@@ -1303,33 +1302,33 @@ html:has(.emp-frame) .hris-empty-default { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hris-admin .hris-main > * > *,
-  .hris-admin .animate-pulse.bg-muted {
+  :is(.hris-admin, .emp-frame) .hris-main > * > *,
+  :is(.hris-admin, .emp-frame) .animate-pulse.bg-muted {
     animation: none;
   }
-  body:has(.hris-admin) :is(.btn, .hris-card-hover, .hris-glass):hover { transform: none; }
+  body:has(:is(.hris-admin, .emp-frame), .emp-frame) :is(.btn, .hris-card-hover, .hris-glass):hover { transform: none; }
 }
 
 /* Rounded header cells need the separated border model; row lines move
    from <tr> (not painted in that model) to the cells. */
-.hris-admin .hris-main table {
+:is(.hris-admin, .emp-frame) .hris-main table {
   border-collapse: separate;
   border-spacing: 0;
 }
-.hris-admin .hris-main table tbody td {
+:is(.hris-admin, .emp-frame) .hris-main table tbody td {
   border-bottom: 1px solid #F0F2F7;
 }
-.dark .hris-admin .hris-main table tbody td {
+.dark :is(.hris-admin, .emp-frame) .hris-main table tbody td {
   border-bottom-color: #1C2840;
 }
-.hris-admin .hris-main table tbody tr:last-child td {
+:is(.hris-admin, .emp-frame) .hris-main table tbody tr:last-child td {
   border-bottom: 0;
 }
 
 /* Row action groups stay on one line (the table scrolls sideways instead). */
-.hris-admin .hris-main td :is(div, span):has(> .btn) {
+:is(.hris-admin, .emp-frame) .hris-main td :is(div, span):has(> .btn) {
   flex-wrap: nowrap;
 }
-.hris-admin .hris-main td:has(.btn) {
+:is(.hris-admin, .emp-frame) .hris-main td:has(.btn) {
   white-space: nowrap;
 }
