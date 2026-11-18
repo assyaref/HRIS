@@ -237,18 +237,22 @@ test("excel import: analyzes valid and invalid employee rows", async () => {
   const sheet = workbook.addWorksheet(EMPLOYEE_SHEET_NAME);
   sheet.addRow(["Employee No.", "First Name", "Last Name", "Email", "Status"]);
   sheet.addRow(["EMP-100", "Alice", "Smith", "alice@acme.test", "active"]);
-  sheet.addRow(["EMP-101", "Bob", "", "bob@acme.test", "active"]); // missing last name
+  sheet.addRow(["EMP-101", "Bob", "", "bob@acme.test", "active"]); // Last Name is optional
+  sheet.addRow(["EMP-102", "", "Lee", "lee@acme.test", "active"]); // missing first name
   sheet.addRow(["ALT-1", "Carol", "Ng", "carol@acme.test", "bogus"]); // bad status
   const buffer = await workbook.xlsx.writeBuffer();
 
   const analysis = await analyzeExcelImport(buffer as unknown as ArrayBuffer, []);
   assert.equal(analysis.employeesSheetFound, true);
   assert.deepEqual(analysis.missingColumns, []);
-  assert.equal(analysis.validEmployees.length, 1);
+  assert.equal(analysis.validEmployees.length, 2);
   assert.equal(analysis.errorEmployees.length, 2);
-  assert.equal(analysis.validEmployees[0]?.employeeNumber, "EMP-100");
+  assert.deepEqual(
+    analysis.validEmployees.map((row) => row.employeeNumber),
+    ["EMP-100", "EMP-101"]
+  );
   assert.ok(
-    analysis.errorEmployees.some((row) => row.error === "Name is required.")
+    analysis.errorEmployees.some((row) => row.error === "First name is required.")
   );
   assert.ok(
     analysis.errorEmployees.some((row) => (row.error ?? "").includes("Invalid status"))
@@ -269,12 +273,13 @@ test("excel import: rows without identity are reported instead of skipped", asyn
 test("excel import: reports missing required columns", async () => {
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet(EMPLOYEE_SHEET_NAME);
-  sheet.addRow(["Name", "Status"]); // no employee number, no first/last
+  sheet.addRow(["Name", "Status"]); // no employee number, no first name
   const buffer = await workbook.xlsx.writeBuffer();
 
   const analysis = await analyzeExcelImport(buffer as unknown as ArrayBuffer, []);
   assert.equal(analysis.employeesSheetFound, true);
-  assert.deepEqual(analysis.missingColumns, ["employee number", "first name", "last name"]);
+  // Last Name is optional, so only the two identity columns are required.
+  assert.deepEqual(analysis.missingColumns, ["employee number", "first name"]);
 });
 
 test("excel import: rejects duplicate employee numbers in the file", async () => {

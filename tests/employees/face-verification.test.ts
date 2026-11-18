@@ -93,6 +93,16 @@ describe("faceVerificationInputSchema (server authority)", () => {
     }
   });
 
+  it("rejects any template/biometric payload fields", () => {
+    const parsed = faceVerificationInputSchema.safeParse({
+      employeeId: EMPLOYEE_A,
+      providerTemplateRef: "opaque-ref",
+      embedding: [1, 2, 3],
+      template: "base64...",
+    });
+    assert.equal(parsed.success, false);
+  });
+});
 
 describe("evaluateFaceVerificationGuard (state rules)", () => {
   it("allows verification for an active employee with an ACTIVE template", () => {
@@ -197,6 +207,12 @@ describe("evaluateFaceVerificationGuard (state rules)", () => {
       ok: false,
       reason: "employee_unavailable",
     });
+    assert.match(
+      faceVerificationMessage(crossOrg.ok ? "unexpected" : crossOrg.reason),
+      /tidak ditemukan/i
+    );
+  });
+});
 
 describe("mapFaceVerificationResultStatusToFailure (provider mapping)", () => {
   it("maps success to null (caller uses the matched flag)", () => {
@@ -297,6 +313,13 @@ describe("public failure codes never leak biometric detail", () => {
       faceVerificationFailureCode("unexpected"),
     ];
     for (const code of codes) {
+      assert.equal(
+        (FACE_VERIFICATION_FAILURE_CODES as readonly string[]).includes(code),
+        true
+      );
+    }
+  });
+});
 
 describe("action result shapes (minimal + safe)", () => {
   it("returns a bare matched flag for a successful MATCH", () => {
@@ -410,31 +433,5 @@ describe("buildFaceVerificationAuditMetadata (safe audit)", () => {
       buildFaceVerificationAuditMetadata(input),
       buildFaceVerificationAuditMetadata(input)
     );
-  });
-});
-
-      assert.equal(
-        (FACE_VERIFICATION_FAILURE_CODES as readonly string[]).includes(code),
-        true
-      );
-    }
-  });
-});
-
-    assert.match(
-      faceVerificationMessage(crossOrg.ok ? "unexpected" : crossOrg.reason),
-      /tidak ditemukan/i
-    );
-  });
-});
-
-  it("rejects any template/biometric payload fields", () => {
-    const parsed = faceVerificationInputSchema.safeParse({
-      employeeId: EMPLOYEE_A,
-      providerTemplateRef: "opaque-ref",
-      embedding: [1, 2, 3],
-      template: "base64...",
-    });
-    assert.equal(parsed.success, false);
   });
 });

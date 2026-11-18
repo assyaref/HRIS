@@ -44,7 +44,8 @@ describe("ABSEN bottom-navigation button", () => {
     assert.equal(button.includes('type="button"'), true);
     assert.equal(button.includes("onClick={shell.openAttendanceSheet}"), true);
     assert.equal(button.includes('aria-haspopup="dialog"'), true);
-    assert.equal(button.includes('<HrisIcon name="face"'), true);
+    // Face glyph (animated FaceScanIcon since the face-scan refresh).
+    assert.equal(button.includes("<FaceScanIcon"), true);
     assert.equal(button.includes('"qr-scan"'), false);
   });
 

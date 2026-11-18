@@ -443,6 +443,35 @@ describe("Project eligibility guard", () => {
       projectIsUnchanged: false,
     });
     assert.deepEqual(decision, { ok: false, message: "The selected project is not available." });
+  });
+
+  it("rejects binding to an inactive/completed project when the binding changes", () => {
+    const inactive = evaluateWorkLocationProjectEligibility({
+      actorOrganizationId: ORG_A,
+      project: { id: PROJECT_A, organizationId: ORG_A, status: "inactive" },
+      projectIsUnchanged: false,
+    });
+    assert.equal(inactive.ok, false);
+    if (!inactive.ok) assert.match(inactive.message, /Only active projects/i);
+
+    const completed = evaluateWorkLocationProjectEligibility({
+      actorOrganizationId: ORG_A,
+      project: { id: PROJECT_A, organizationId: ORG_A, status: "completed" },
+      projectIsUnchanged: false,
+    });
+    assert.equal(completed.ok, false);
+  });
+
+  it("keeps an unchanged project binding when the project was deactivated later", () => {
+    const decision = evaluateWorkLocationProjectEligibility({
+      actorOrganizationId: ORG_A,
+      project: { id: PROJECT_A, organizationId: ORG_A, status: "inactive" },
+      projectIsUnchanged: true,
+    });
+    assert.deepEqual(decision, { ok: true });
+  });
+});
+
 describe("Multiple locations for one project stay allowed (no invented uniqueness)", () => {
   it("accepts several location configurations for the SAME project", () => {
     const siteOffice = createWorkLocationSchema.safeParse(
@@ -520,34 +549,5 @@ describe("Operational warnings (warnings, not blockers)", () => {
       hasActiveAssignments: true,
     });
     assert.deepEqual(warnings, []);
-  });
-});
-
-  });
-
-  it("rejects binding to an inactive/completed project when the binding changes", () => {
-    const inactive = evaluateWorkLocationProjectEligibility({
-      actorOrganizationId: ORG_A,
-      project: { id: PROJECT_A, organizationId: ORG_A, status: "inactive" },
-      projectIsUnchanged: false,
-    });
-    assert.equal(inactive.ok, false);
-    if (!inactive.ok) assert.match(inactive.message, /Only active projects/i);
-
-    const completed = evaluateWorkLocationProjectEligibility({
-      actorOrganizationId: ORG_A,
-      project: { id: PROJECT_A, organizationId: ORG_A, status: "completed" },
-      projectIsUnchanged: false,
-    });
-    assert.equal(completed.ok, false);
-  });
-
-  it("keeps an unchanged project binding when the project was deactivated later", () => {
-    const decision = evaluateWorkLocationProjectEligibility({
-      actorOrganizationId: ORG_A,
-      project: { id: PROJECT_A, organizationId: ORG_A, status: "inactive" },
-      projectIsUnchanged: true,
-    });
-    assert.deepEqual(decision, { ok: true });
   });
 });

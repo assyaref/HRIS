@@ -140,12 +140,15 @@ describe("employees page: organization + project scope resolution", () => {
   });
 
   it("passes organization + project to every export control", () => {
-    const orgPropCount = (
-      pageSource.match(/organizationId=\{viewedOrganizationId \?\? undefined\}/g) ??
-      []
-    ).length;
-    assert.ok(orgPropCount >= 2, "CSV and Excel buttons get the organization");
+    // Export Excel carries the viewed organization and project…
+    assert.match(pageSource, /organizationId=\{viewedOrganizationId \?\? undefined\}/);
     assert.match(pageSource, /projectId=\{projectId\}/);
+    // …and the import template link (inside the Import dialog) the organization.
+    assert.equal(
+      pageSource.includes('templateParams.set("org", viewedOrganizationId)'),
+      true
+    );
+    assert.match(pageSource, /templateHref=\{templateHref\}/);
   });
 });
 
@@ -209,7 +212,7 @@ describe("export route: organization + project scope", () => {
 });
 
 describe("export buttons carry the active scope", () => {
-  it("CSV button includes org and projectId", () => {
+  it("CSV button (kept for direct use) includes org and projectId", () => {
     assert.equal(csvButtonSource.includes('searchParams.set("org", organizationId)'), true);
     assert.equal(csvButtonSource.includes('searchParams.set("projectId", projectId)'), true);
   });

@@ -358,6 +358,9 @@ describe("Multiple work locations and employees", () => {
     const summary = summarizeReconciliation(rows);
     assert.equal(summary.readyEmployees, 1);
     assert.equal(summary.notReadyEmployees, 1);
+    assert.equal(summary.projectsWithoutActiveWorkLocation, 1);
+  });
+});
 
 describe("Mixed dataset, determinism and edge cases", () => {
   it("produces a mixed READY/WARNING/NOT_READY dataset and consistent summary", () => {
@@ -496,10 +499,6 @@ describe("Mixed dataset, determinism and edge cases", () => {
     });
     assert.equal(projectRows.length, 1);
     assert.equal(projectRows[0].employeeId, BUDI);
-  });
-});
-
-    assert.equal(summary.projectsWithoutActiveWorkLocation, 1);
   });
 });
 
