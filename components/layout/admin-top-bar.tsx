@@ -70,8 +70,14 @@ export function AdminTopBar({
   pathname: string;
   isHome: boolean;
 }) {
-  const { profile, notificationCount, setDrawerOpen, setPaletteOpen } =
-    useShell();
+  const {
+    profile,
+    notificationCount,
+    setDrawerOpen,
+    setPaletteOpen,
+    collapsed,
+    toggleCollapsed,
+  } = useShell();
   const { theme, setTheme } = useTheme();
   const dark = theme === "dark";
   const { icon, crumbs } = usePageTrail(pathname);
@@ -103,6 +109,18 @@ export function AdminTopBar({
               </span>
             </Link>
           </div>
+
+          {/* Desktop: collapse / expand the sidebar */}
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            aria-label={collapsed ? "Perluas sidebar" : "Ciutkan sidebar"}
+            title={collapsed ? "Perluas sidebar" : "Ciutkan sidebar"}
+            aria-expanded={!collapsed}
+            className="hris-top-card hidden w-16 shrink-0 items-center justify-center text-foreground/75 transition-colors hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none lg:flex"
+          >
+            <HrisIcon name="menu" className="size-5" />
+          </button>
 
           {/* Greeting (Beranda) or breadcrumb */}
           <div className="hris-top-card order-last flex min-w-0 basis-full items-center gap-3.5 px-4 py-3 lg:order-none lg:basis-auto lg:flex-1 lg:px-5">

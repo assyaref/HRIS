@@ -66,6 +66,21 @@ export function Sidebar() {
         )}
       </div>
 
+      {/* Collapsed rail: the way back to the full sidebar. */}
+      {collapsed ? (
+        <div className="flex shrink-0 justify-center pt-3">
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            aria-label="Perluas sidebar"
+            title="Perluas sidebar"
+            className="flex size-9 items-center justify-center rounded-full bg-sidebar-hover text-sidebar-muted transition-colors hover:bg-accent hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          >
+            <HrisIcon name="chevron-right" className="size-[18px]" />
+          </button>
+        </div>
+      ) : null}
+
       {/* Organization chip */}
       {profile.organizationName ? (
         <div className={cn("shrink-0 pt-5 pb-2", collapsed ? "px-3" : "px-5")}>
