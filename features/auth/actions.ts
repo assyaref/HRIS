@@ -31,6 +31,8 @@ export interface LoginState {
 }
 
 const GENERIC_AUTH_ERROR = "Invalid credentials. Check your Employee Number / Email and password.";
+const SERVICE_UNAVAILABLE_ERROR =
+  "Layanan sedang tidak dapat diakses (database tidak terhubung). Coba lagi beberapa saat lagi atau hubungi administrator.";
 const LOCKED_ERROR =
   "Too many failed sign-in attempts. Try again later.";
 
@@ -166,6 +168,10 @@ export async function loginAction(
       parsed.data.password
     );
     if (!result.ok) {
+      if (result.reason === "service_unavailable") {
+        // Outage, not a credential problem: never counted as a failure.
+        return { status: "error", error: SERVICE_UNAVAILABLE_ERROR };
+      }
       if (result.reason === "account_not_active") {
         // Only reachable with a correct password — no unauthenticated
         // enumeration. The message still avoids leaking internal details.
@@ -213,7 +219,7 @@ export async function loginAction(
     console.error("[auth] login failed", error);
     return {
       status: "error",
-      error: "Something went wrong. Please try again.",
+      error: SERVICE_UNAVAILABLE_ERROR,
     };
   }
 

@@ -48,23 +48,29 @@ jobs:
             echo "[3] DEPLOYMENT COMMAND FINISHED"
 
             echo "[4] HEALTH CHECK"
-            HTTP_STATUS="$(curl -sS \
-              -o /dev/null \
-              -w '%{http_code}' \
-              --max-time 15 \
-              http://127.0.0.1:3000/)"
+            # "/" redirects without touching the database, so it stays green
+            # even when PostgreSQL is down. /api/health runs SELECT 1 and
+            # answers 503 when the database is unreachable. Retry while the
+            # service restarts.
+            HTTP_STATUS=000
+            for attempt in 1 2 3 4 5 6; do
+              HTTP_STATUS="$(curl -sS \
+                -o /dev/null \
+                -w '%{http_code}' \
+                --max-time 15 \
+                http://127.0.0.1:3000/api/health || true)"
+              echo "attempt ${attempt}: HTTP_STATUS=$HTTP_STATUS"
+              [ "$HTTP_STATUS" = "200" ] && break
+              sleep 5
+            done
 
-            echo "HTTP_STATUS=$HTTP_STATUS"
-
-            case "$HTTP_STATUS" in
-              2??|3??)
-                echo "HRIS HEALTH CHECK: OK"
-                ;;
-              *)
-                echo "HRIS HEALTH CHECK: FAILED"
-                exit 1
-                ;;
-            esac
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "HRIS HEALTH CHECK: OK (app + database)"
+            else
+              echo "HRIS HEALTH CHECK: FAILED — app or database unavailable"
+              echo "Check on the VPS: df -h; systemctl status postgresql; journalctl -u hris -n 100"
+              exit 1
+            fi
 
             echo
             echo "=================================================="

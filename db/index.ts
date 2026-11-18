@@ -35,6 +35,9 @@ const globalForDb = globalThis as unknown as {
 function createDatabase(): HrisDatabase {
   const pool = new Pool({
     connectionString: getRequiredEnv("DATABASE_URL"),
+    // Fail fast when PostgreSQL is unreachable instead of hanging requests
+    // (the login page then reports an outage, /api/health returns 503).
+    connectionTimeoutMillis: 10_000,
   });
   globalForDb.hrisPool = pool;
   return drizzle(pool, { schema });

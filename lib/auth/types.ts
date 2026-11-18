@@ -43,7 +43,9 @@ export interface CurrentUser {
 
 export type AuthenticateErrorReason =
   | "invalid_credentials"
-  | "account_not_active";
+  | "account_not_active"
+  /** The account store could not be reached (same for every identifier). */
+  | "service_unavailable";
 
 export type AuthenticateResult =
   | { ok: true; user: CurrentUser }

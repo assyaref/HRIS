@@ -102,10 +102,13 @@ export async function authenticateUser(
   try {
     candidates = await findUserRowsByIdentifier(trimmed);
   } catch (error) {
-    // Lookup failures must behave exactly like unknown credentials.
+    // The account store is unreachable (database down, pool timeout, …).
+    // Reported as an outage — the SAME answer for every identifier, so it
+    // reveals nothing about which accounts exist — instead of "invalid
+    // credentials", which sent users chasing passwords during an outage.
     console.error("[auth] identifier lookup failed", error);
     await verifyPasswordTimingEqualizer(password);
-    return { ok: false, reason: "invalid_credentials" };
+    return { ok: false, reason: "service_unavailable" };
   }
 
   const userRow = candidates.length === 1 ? candidates[0] : undefined;
