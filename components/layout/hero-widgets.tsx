@@ -392,7 +392,7 @@ export function HeroWidgets({
       className={cn(
         compact
           ? "grid grid-cols-2 gap-2.5"
-          : "grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-[1fr_1fr_1.7fr]",
+          : "grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-[1fr_1fr_2.1fr]",
         className
       )}
       aria-label="Jam, cuaca dan jadwal shalat"
@@ -516,6 +516,7 @@ export function HeroWidgets({
       </section>
 
       {/* Prayer schedule — full-width card */}
+      {compact ? (
       <section
         className={cn(
           "hris-card col-span-2 flex items-stretch overflow-hidden",
@@ -620,7 +621,179 @@ export function HeroWidgets({
           )}
         </div>
       </section>
+      ) : (
+        <PrayerCard
+          dateLabel={dateLabel}
+          prayer={prayer}
+          failed={Boolean(prayerError)}
+          timings={visibleTimings}
+          nextKey={nextPrayer?.key ?? null}
+          nextInMinutes={nextPrayer?.inMinutes ?? null}
+          now={now}
+          onRefresh={refreshPosition}
+          placeTitle={placeNote ?? `Lokasi: ${placeLabel}`}
+        />
+      )}
     </div>
+  );
+}
+
+/**
+ * Minimal prayer schedule (full-size widget): arched mosque art, title and
+ * date, five time tiles with the next prayer highlighted, and a thin bar
+ * showing how far the current interval has run.
+ */
+function PrayerCard({
+  dateLabel,
+  prayer,
+  failed,
+  timings,
+  nextKey,
+  nextInMinutes,
+  now,
+  onRefresh,
+  placeTitle,
+}: {
+  dateLabel: string;
+  prayer: PrayerTimes | null;
+  failed: boolean;
+  timings: { key: string; label: string; time: string }[];
+  nextKey: string | null;
+  nextInMinutes: number | null;
+  now: Date | null;
+  onRefresh: () => void;
+  placeTitle: string;
+}) {
+  // Progress from the previous prayer to the next one (0–100).
+  let progress = 0;
+  if (now && timings.length && nextInMinutes !== null) {
+    const minutesNow = now.getHours() * 60 + now.getMinutes();
+    const past = timings.filter((t) => minutesOf(t.time) <= minutesNow);
+    const previous = past.length
+      ? minutesOf(past[past.length - 1].time)
+      : minutesOf(timings[timings.length - 1].time) - 24 * 60;
+    const span = minutesNow + nextInMinutes - previous;
+    progress = span > 0 ? Math.min(100, ((minutesNow - previous) / span) * 100) : 0;
+  }
+  const next = timings.find((t) => t.key === nextKey);
+
+  return (
+    <section
+      className="hris-card col-span-2 flex items-stretch gap-4 overflow-hidden rounded-[22px] p-4 sm:gap-5 sm:p-5 xl:col-span-1"
+      aria-label="Jadwal shalat"
+    >
+      <div className="hidden shrink-0 items-center gap-5 sm:flex">
+        <MosqueArch />
+        <span aria-hidden="true" className="h-full w-px bg-border" />
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="flex items-center gap-2 text-[17px] leading-tight font-bold text-foreground">
+              <HrisIcon name="mosque" className="size-5 shrink-0 text-primary" />
+              Jadwal Shalat
+            </p>
+            <p
+              className="mt-1 truncate text-[13px] text-muted-foreground"
+              suppressHydrationWarning
+            >
+              {dateLabel || "\u00a0"}
+            </p>
+            {prayer?.hijri ? <span className="sr-only">{prayer.hijri} (Kemenag)</span> : null}
+          </div>
+          <button
+            type="button"
+            onClick={onRefresh}
+            aria-label="Perbarui lokasi perangkat untuk jadwal shalat dan cuaca"
+            title={placeTitle}
+            className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          >
+            <HrisIcon name="settings" className="size-5" />
+          </button>
+        </div>
+
+        {prayer ? (
+          <>
+            <ul className="mt-3 grid grid-cols-5 gap-1.5 sm:gap-2">
+              {timings.map((entry) => {
+                const isNext = entry.key === nextKey;
+                return (
+                  <li
+                    key={entry.key}
+                    aria-current={isNext ? "time" : undefined}
+                    className={cn(
+                      "rounded-2xl px-1 py-2 text-center transition-colors sm:py-2.5",
+                      isNext
+                        ? "bg-gradient-to-b from-[#2F86F0] to-[#0B5CC5] text-white shadow-[0_10px_20px_-12px_rgb(11_92_197/0.9)]"
+                        : "bg-[#F3F6FB] text-foreground dark:bg-muted"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "block truncate text-[11px] leading-tight font-medium sm:text-[12.5px]",
+                        isNext ? "text-white/90" : "text-muted-foreground"
+                      )}
+                    >
+                      {entry.label}
+                    </span>
+                    <span className="mt-1 block text-[15px] leading-none font-bold tracking-tight tabular-nums sm:text-[18px]">
+                      {entry.time}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+            <div
+              className="mt-3.5 h-1 overflow-hidden rounded-full bg-[#EEF1F6] dark:bg-muted"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(progress)}
+              aria-label={next ? `Menuju waktu ${next.label}` : "Jadwal shalat"}
+            >
+              <span
+                className="block h-full rounded-full bg-primary transition-[width] duration-700"
+                style={{ width: `${Math.max(4, progress)}%` }}
+              />
+            </div>
+          </>
+        ) : (
+          <p className="mt-3 text-sm text-foreground/80">
+            {failed ? "Jadwal shalat tidak tersedia." : "Memuat jadwal shalat…"}
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/** Arched mosque illustration for the minimal prayer card (decorative). */
+function MosqueArch() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 90 110" className="h-[96px] w-[78px]">
+      <defs>
+        <linearGradient id="hris-arch-bg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#F3F7FF" />
+          <stop offset="1" stopColor="#DCE8FF" />
+        </linearGradient>
+        <linearGradient id="hris-arch-dome" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#4C8DF8" />
+          <stop offset="1" stopColor="#1F5FD6" />
+        </linearGradient>
+      </defs>
+      <path d="M0 110V42a45 42 0 0 1 90 0v68z" fill="url(#hris-arch-bg)" />
+      <circle cx="58" cy="26" r="11" fill="#FBBF24" />
+      <circle cx="64" cy="21" r="10" fill="#EFF4FF" />
+      <rect x="12" y="56" width="10" height="42" rx="2" fill="#BFD4FA" />
+      <path d="M10 58a7 8 0 0 1 14 0z" fill="url(#hris-arch-dome)" />
+      <rect x="15" y="66" width="4" height="7" rx="2" fill="#4C7FD9" />
+      <rect x="28" y="74" width="50" height="24" rx="3" fill="#C7DAFB" />
+      <path d="M31 75c0-14 9-21 22-23 13 2 22 9 22 23z" fill="url(#hris-arch-dome)" />
+      <rect x="52" y="45" width="2" height="8" rx="1" fill="#1F5FD6" />
+      <path d="M48 98V87a5 5 0 0 1 10 0v11z" fill="#3B76DD" />
+      <path d="M35 98v-8a3.5 3.5 0 0 1 7 0v8zM64 98v-8a3.5 3.5 0 0 1 7 0v8z" fill="#7FA7EC" />
+      <path d="M0 96c20-6 50-8 90 2v12H0z" fill="#E3ECFD" />
+    </svg>
   );
 }
 

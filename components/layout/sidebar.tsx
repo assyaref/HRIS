@@ -8,8 +8,7 @@ import { BrandLogo, BrandMark } from "./brand";
 import { HrisIcon } from "./icons";
 import { NavLinks } from "./nav-links";
 import {
-  OrganizationIdentity,
-  OrganizationInitial,
+  OrganizationMonogram,
   OrganizationSwitcher,
 } from "./organization-switcher";
 import { useShell } from "./shell-context";
@@ -77,7 +76,6 @@ export function Sidebar() {
               activeOrganizationId={profile.activeOrganizationId ?? null}
               options={profile.organizationOptions}
               collapsed={collapsed}
-              className={cn(!collapsed && "border-b border-sidebar-border pb-4")}
             />
           ) : (
             <OrganizationChip
@@ -142,31 +140,33 @@ export function Sidebar() {
 
 function OrganizationChip({
   name,
-  logoUrl,
   collapsed,
 }: {
   name: string;
   logoUrl: string | null;
   collapsed: boolean;
 }) {
+  // Text-only, like the Super Administrator switcher (no logo).
   return (
     <div
       className={cn(
-        "flex items-center gap-3 border-b border-sidebar-border pb-4",
-        collapsed && "justify-center border-b-0 pb-0"
+        "flex items-center gap-3 rounded-2xl",
+        collapsed
+          ? "justify-center"
+          : "border border-sidebar-border bg-sidebar-panel px-2.5 py-2.5"
       )}
       title={collapsed ? name : undefined}
     >
-      {collapsed ? (
-        <OrganizationInitial name={name} logoUrl={logoUrl} />
-      ) : (
-        <OrganizationIdentity
-          name={name}
-          logoUrl={logoUrl}
-          className="flex-1"
-          imgClassName="h-10"
-          textClassName="text-[15px] font-semibold text-foreground"
-        />
+      <OrganizationMonogram name={name} />
+      {collapsed ? null : (
+        <span className="min-w-0 flex-1">
+          <span className="block text-[11px] font-medium text-muted-foreground">
+            Organisasi
+          </span>
+          <span className="mt-0.5 block truncate text-[14.5px] font-semibold text-foreground">
+            {name}
+          </span>
+        </span>
       )}
     </div>
   );

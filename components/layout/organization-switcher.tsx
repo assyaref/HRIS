@@ -85,9 +85,39 @@ export function OrganizationInitial({
   );
 }
 
+/** Two-letter monogram for text-only organization chips ("PT Len" → "PL"). */
+function orgMonogram(name: string): string {
+  const words = name
+    .replace(/^(PT|CV|KSO)\.?\s*-?\s*/i, "")
+    .split(/[\s.-]+/)
+    .filter(Boolean);
+  const letters = (words[0]?.[0] ?? "") + (words[1]?.[0] ?? words[0]?.[1] ?? "");
+  return (letters || name.charAt(0) || "?").toUpperCase();
+}
+
+/** Text-only monogram tile used by the switcher (no logo). */
+export function OrganizationMonogram({
+  name,
+  size = "md",
+}: {
+  name: string;
+  size?: "sm" | "md";
+}) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "flex shrink-0 items-center justify-center rounded-xl bg-surface-primary font-bold tracking-tight text-primary",
+        size === "sm" ? "size-8 text-[11px]" : "size-10 text-[13px]"
+      )}
+    >
+      {orgMonogram(name)}
+    </span>
+  );
+}
+
 export function OrganizationSwitcher({
   name,
-  logoUrl = null,
   activeOrganizationId,
   options,
   collapsed = false,
@@ -146,25 +176,22 @@ export function OrganizationSwitcher({
         title={collapsed ? name : "Ganti organisasi"}
         disabled={pending}
         className={cn(
-          "flex w-full items-center gap-3 rounded-lg text-left transition-colors hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-60",
-          collapsed && "justify-center"
+          "flex w-full items-center gap-3 rounded-2xl text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-60",
+          collapsed
+            ? "justify-center"
+            : "border border-sidebar-border bg-sidebar-panel px-2.5 py-2.5 hover:border-primary/30"
         )}
       >
-        {collapsed ? (
-          <OrganizationInitial name={name} logoUrl={logoUrl} />
-        ) : (
+        <OrganizationMonogram name={name} />
+        {collapsed ? null : (
           <>
             <span className="min-w-0 flex-1">
-              <span className="block text-[11px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+              <span className="block text-[11px] font-medium text-muted-foreground">
                 {pending ? "Mengganti…" : "Organisasi aktif"}
               </span>
-              <OrganizationIdentity
-                name={name}
-                logoUrl={logoUrl}
-                className="mt-1"
-                imgClassName="h-10"
-                textClassName="text-[15px] font-semibold text-foreground"
-              />
+              <span className="mt-0.5 block truncate text-[14.5px] font-semibold text-foreground">
+                {name}
+              </span>
             </span>
             <HrisIcon
               name="chevron-down"
@@ -186,11 +213,11 @@ export function OrganizationSwitcher({
       {open ? (
         <div
           className={cn(
-            "absolute z-40 mt-2 w-64 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-lg",
+            "absolute z-40 mt-2 w-64 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-border bg-card p-1.5 text-card-foreground shadow-[var(--shadow-xl)]",
             collapsed ? "left-0" : "inset-x-0 w-auto"
           )}
         >
-          <ul role="listbox" aria-label="Pilih organisasi" className="max-h-72 overflow-y-auto py-1">
+          <ul role="listbox" aria-label="Pilih organisasi" className="max-h-72 space-y-0.5 overflow-y-auto">
             {options.map((option) => {
               const selected = option.id === activeOrganizationId;
               return (
@@ -199,22 +226,27 @@ export function OrganizationSwitcher({
                     type="button"
                     onClick={() => choose(option.id)}
                     className={cn(
-                      "flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent focus-visible:bg-accent focus-visible:outline-none",
-                      selected && "font-semibold text-primary"
+                      "flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left text-sm hover:bg-muted focus-visible:bg-muted focus-visible:outline-none",
+                      selected && "bg-surface-primary/60"
                     )}
                   >
-                    <span className="flex min-w-0 flex-1 items-center gap-2">
-                      <OrganizationIdentity
-                        name={option.name}
-                        logoUrl={option.logoUrl ?? null}
-                        imgClassName="h-7"
-                      />
-                      <span className="shrink-0 text-xs font-normal text-muted-foreground">
+                    <OrganizationMonogram name={option.name} size="sm" />
+                    <span className="min-w-0 flex-1">
+                      <span
+                        className={cn(
+                          "block truncate font-medium text-foreground",
+                          selected && "font-semibold text-primary"
+                        )}
+                        title={option.name}
+                      >
+                        {option.name}
+                      </span>
+                      <span className="block truncate text-[11.5px] text-muted-foreground">
                         {option.isSystem ? "Sistem" : option.code}
                       </span>
                     </span>
                     {selected ? (
-                      <HrisIcon name="check" className="size-4 shrink-0" />
+                      <HrisIcon name="check" className="size-4 shrink-0 text-primary" />
                     ) : null}
                   </button>
                 </li>
@@ -224,8 +256,9 @@ export function OrganizationSwitcher({
           <Link
             href="/settings/organizations"
             onClick={() => setOpen(false)}
-            className="block border-t border-border px-3 py-2 text-sm font-medium text-primary hover:bg-accent"
+            className="mt-1 flex items-center gap-2 rounded-xl border-t border-border px-2 py-2 text-sm font-medium text-primary hover:bg-muted"
           >
+            <HrisIcon name="settings" className="size-4" />
             Kelola organisasi
           </Link>
         </div>
