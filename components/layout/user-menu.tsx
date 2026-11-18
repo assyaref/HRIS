@@ -56,7 +56,14 @@ export function Avatar({
  * Avatar + chevron in the blue top bar. Opens a menu with identity, account
  * settings, theme switch and sign-out. Closes on outside click and Escape.
  */
-export function UserMenu({ profile }: { profile: ShellProfile }) {
+export function UserMenu({
+  profile,
+  variant = "band",
+}: {
+  profile: ShellProfile;
+  /** "band" = on the blue header; "card" = name + role on a white card. */
+  variant?: "band" | "card";
+}) {
   const [open, setOpen] = useState(false);
   const [anchor, setAnchor] = useState<{ top: number; right: number } | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -106,6 +113,33 @@ export function UserMenu({ profile }: { profile: ShellProfile }) {
 
   return (
     <div ref={rootRef} className="relative">
+      {variant === "card" ? (
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-label={`Menu akun ${profile.displayName}`}
+          className="flex max-w-[15rem] items-center gap-3 rounded-2xl py-1 pr-1 pl-1 text-left transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        >
+          <Avatar profile={profile} size={42} />
+          <span className="hidden min-w-0 flex-1 xl:block">
+            <span className="block truncate text-[15px] leading-tight font-semibold text-foreground">
+              {profile.displayName}
+            </span>
+            <span className="mt-0.5 block truncate text-[13px] text-muted-foreground">
+              {profile.roleLabel ?? profile.email}
+            </span>
+          </span>
+          <HrisIcon
+            name="chevron-down"
+            className={cn(
+              "size-4 shrink-0 text-muted-foreground transition-transform",
+              open && "rotate-180"
+            )}
+          />
+        </button>
+      ) : (
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
@@ -123,6 +157,7 @@ export function UserMenu({ profile }: { profile: ShellProfile }) {
           )}
         />
       </button>
+      )}
 
       {open && anchor ? createPortal(
         <div

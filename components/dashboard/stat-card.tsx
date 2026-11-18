@@ -94,57 +94,82 @@ export function StatCard({
   /** Dense variant (smaller well and metric) for nested lists. */
   compact?: boolean;
 }) {
-  return (
-    <div
-      className={cn(
-        "relative isolate flex items-center overflow-hidden rounded-2xl border border-[var(--card-border)] bg-card hris-card hris-card-hover",
-        compact ? "gap-3 p-3.5" : "gap-4 p-4 sm:px-5 sm:py-[18px]",
-        className
-      )}
-    >
-      {compact ? null : (
+  if (compact) {
+    return (
+      <div
+        className={cn(
+          "flex items-center gap-3 rounded-2xl border border-[var(--card-border)] bg-card p-3.5 hris-card hris-card-hover",
+          className
+        )}
+      >
         <span
           aria-hidden="true"
           className={cn(
-            "pointer-events-none absolute -top-10 -right-10 -z-10 size-32 rounded-full opacity-[0.09] blur-[2px]",
-            tileToneClasses[tone]
+            "flex size-10 shrink-0 items-center justify-center rounded-full",
+            chipToneClasses[tone]
           )}
-        />
+        >
+          <HrisIcon name={icon} className="size-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-xl leading-7 font-bold tracking-tight text-foreground tabular-nums">
+            {value}
+          </p>
+          <p className="truncate text-[12px] font-medium text-muted-foreground">
+            {label}
+          </p>
+          {hint ? (
+            <p className="truncate text-[11px] text-muted-foreground">{hint}</p>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        "relative isolate flex min-h-[136px] flex-col overflow-hidden rounded-[20px] border border-[var(--card-border)] bg-card p-5 hris-card hris-card-hover",
+        className
       )}
+    >
+      {/* Faint tone wash in the corner. */}
       <span
         aria-hidden="true"
         className={cn(
-          "flex shrink-0 items-center justify-center",
-          compact
-            ? cn("size-10 rounded-full", chipToneClasses[tone])
-            : cn("size-14 rounded-2xl", tileToneClasses[tone], "hris-tile")
+          "pointer-events-none absolute -right-12 -bottom-14 -z-10 size-36 rounded-full opacity-[0.08] blur-xl",
+          tileToneClasses[tone]
         )}
-      >
-        <HrisIcon name={icon} className={compact ? "size-5" : "size-7"} />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p
-          className={cn(
-            "leading-tight font-semibold tracking-wide text-primary uppercase",
-            compact ? "text-[10px]" : "text-[11px]"
-          )}
-        >
-          {label}
-        </p>
-        <p
-          className={cn(
-            "font-extrabold tracking-tight text-foreground tabular-nums",
-            compact ? "text-xl leading-7" : "mt-0.5 text-[26px] leading-8"
-          )}
-        >
-          {value}
-        </p>
-        {hint ? (
-          <p className="mt-0.5 flex items-center gap-1.5 truncate text-[13px] font-medium text-muted-foreground">
-            <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full border-2 border-[#22C55E]" />
-            {hint}
+      />
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[28px] leading-none font-bold tracking-tight text-foreground tabular-nums">
+            {value}
           </p>
-        ) : null}
+          <p className="mt-2.5 truncate text-[15px] font-medium text-foreground/80">
+            {label}
+          </p>
+        </div>
+        <span
+          aria-hidden="true"
+          className={cn(
+            "hris-tile flex size-11 shrink-0 items-center justify-center rounded-2xl",
+            tileToneClasses[tone]
+          )}
+        >
+          <HrisIcon name={icon} className="size-[22px]" />
+        </span>
+      </div>
+      <div className="mt-auto flex items-center justify-between gap-2 pt-4">
+        <p className="min-w-0 truncate text-[12.5px] text-muted-foreground">
+          {hint ?? "Data terkini"}
+        </p>
+        <span
+          aria-hidden="true"
+          className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#22C55E] text-white shadow-[0_0_0_4px_rgb(34_197_94/0.15)]"
+        >
+          <HrisIcon name="arrow-right" className="size-3.5 -rotate-45" />
+        </span>
       </div>
     </div>
   );

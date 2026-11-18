@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import { AttendanceTrendChart } from "@/components/dashboard/attendance-trend-chart";
 import {
   MonthlyRecapCard,
   type MonthlyRecapView,
@@ -10,6 +9,8 @@ import {
   type QuickAccessTone,
 } from "@/components/dashboard/quick-access-card";
 import { SectionHeading } from "@/components/dashboard/section-heading";
+import { RingLegend, SegmentRing } from "@/components/dashboard/segment-ring";
+import { StackedBarChart } from "@/components/dashboard/stacked-bar-chart";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { HrisIcon, type HrisIconName } from "@/components/layout/icons";
 import { Badge } from "@/components/ui/badge";
@@ -132,108 +133,6 @@ const QUICK_ACTIONS: Array<{
   },
 ];
 
-/** Compact responsive SVG donut for workforce distribution. */
-function DistributionDonut({
-  series,
-  width = 170,
-  height = 150,
-}: {
-  series: Array<{ label: string; value: number; color: string }>;
-  width?: number;
-  height?: number;
-}) {
-  const total = series.reduce((s, d) => s + d.value, 0);
-  if (total === 0) return null;
-
-  const cx = width / 2;
-  const cy = height / 2;
-  const outerR = Math.min(width, height) * 0.34;
-  const innerR = outerR * 0.72;
-
-  const arcs = series.reduce((acc, d) => {
-    const startAngle = acc.angle;
-    // A full 360° arc has identical start/end points and draws nothing.
-    const sweep = Math.min((d.value / total) * 360, 359.99);
-    const endAngle = startAngle + sweep;
-    const radStart = (startAngle * Math.PI) / 180;
-    const radEnd = (endAngle * Math.PI) / 180;
-    const x1 = cx + outerR * Math.cos(radStart);
-    const y1 = cy + outerR * Math.sin(radStart);
-    const x2 = cx + outerR * Math.cos(radEnd);
-    const y2 = cy + outerR * Math.sin(radEnd);
-    const largeArc = sweep > 180 ? 1 : 0;
-    const path = [
-      `M ${x1} ${y1}`,
-      `A ${outerR} ${outerR} 0 ${largeArc} 1 ${x2} ${y2}`,
-      `L ${cx + innerR * Math.cos(radEnd)} ${cy + innerR * Math.sin(radEnd)}`,
-      `A ${innerR} ${innerR} 0 ${largeArc} 0 ${cx + innerR * Math.cos(radStart)} ${cy + innerR * Math.sin(radStart)}`,
-      "Z",
-    ].join(" ");
-    return {
-      arcs: [
-        ...acc.arcs,
-        <path key={d.label} d={path} fill={d.color} />,
-      ],
-      angle: endAngle,
-    };
-  }, { arcs: [] as React.ReactNode[], angle: -90 }).arcs;
-
-  const legend = series.map((d) => {
-    const pct = total > 0 ? ((d.value / total) * 100).toFixed(0) : "0";
-    return (
-      <div key={d.label} className="flex items-center gap-2 py-1">
-        <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: d.color }} />
-        <span className="text-xs text-muted-foreground">{d.label}</span>
-        <span className="ml-auto text-xs font-semibold text-foreground tabular-nums">{pct}%</span>
-      </div>
-    );
-  });
-
-  return (
-    <Card>
-      <CardHeader className="pb-4">
-        <CardTitle>Distribusi karyawan</CardTitle>
-        <CardDescription>Jumlah karyawan per status kerja</CardDescription>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="flex items-center gap-4">
-          <svg
-            width={width}
-            height={height}
-            viewBox={`0 0 ${width} ${height}`}
-            className="block shrink-0"
-          >
-            {arcs}
-            <circle cx={cx} cy={cy} r={innerR} fill="var(--card)" />
-            <text
-              x={cx}
-              y={cy + 5}
-              textAnchor="middle"
-              style={{ fill: "var(--foreground)" }}
-              fontSize="18"
-              fontWeight="700"
-              fontFamily="var(--font-jakarta), sans-serif"
-            >
-              {total}
-            </text>
-            <text
-              x={cx}
-              y={cy + 21}
-              textAnchor="middle"
-              style={{ fill: "var(--muted-foreground)" }}
-              fontSize="10"
-              fontFamily="var(--font-jakarta), sans-serif"
-            >
-              karyawan
-            </text>
-          </svg>
-          <div className="min-w-0 flex-1">{legend}</div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 /** Empty state for the attendance trend: chart icon over a soft wave. */
 function AttendanceTrendEmpty() {
   return (
@@ -318,12 +217,6 @@ export async function ManagementDashboard({
       : Promise.resolve(null),
   ]);
 
-  const trendHasData = trend.some((p) => p.present > 0 || p.completed > 0);
-  const trendPoints = trend.map((p) => ({
-    label: p.label,
-    value: p.present + p.completed,
-  }));
-
   const visibleActions = QUICK_ACTIONS.filter((action) =>
     action.superadminOnly
       ? authorization.isSuperAdmin
@@ -352,46 +245,270 @@ export async function ManagementDashboard({
   ].filter((item) => item.show && item.count > 0);
 
   const recapView: MonthlyRecapView | null = recap;
+  const pendingApprovals =
+    (can(P.LEAVE_APPROVE) || can(P.LEAVE_MANAGE) ? approvals.pendingLeave : 0) +
+    (can(P.PERMISSION_APPROVE) || can(P.PERMISSION_MANAGE)
+      ? approvals.pendingPermission
+      : 0);
+
+  const overviewTiles: Array<{
+    value: number;
+    sub: string;
+    label: string;
+    href?: string;
+  }> = [
+    {
+      value: workforce.total,
+      sub: `${workforce.active} aktif`,
+      label: "Total Karyawan",
+      href: can(P.EMPLOYEES_VIEW) ? "/employees" : undefined,
+    },
+    {
+      value: attendance.checkedInNow,
+      sub: `${attendance.present + attendance.completed} hadir`,
+      label: "Sedang Hadir",
+      href: can(P.ATTENDANCE_MANAGE) ? "/attendance/management" : undefined,
+    },
+    {
+      value: onLeaveToday,
+      sub: "hari ini",
+      label: "Sedang Cuti",
+      href: can(P.LEAVE_APPROVE) || can(P.LEAVE_MANAGE) ? "/leave/management" : undefined,
+    },
+    {
+      value: workforce.newLast30Days,
+      sub: "30 hari",
+      label: "Karyawan Baru",
+    },
+    {
+      value: pendingApprovals,
+      sub: "tertunda",
+      label: "Persetujuan",
+      href: priorities[0]?.href,
+    },
+  ];
+
+  const distribution = [
+    {
+      label: "Aktif",
+      value: Math.max(0, workforce.active - workforce.newLast30Days),
+      color: "#22C55E",
+    },
+    { label: "Baru (30 hari)", value: workforce.newLast30Days, color: "#3B82F6" },
+    { label: "Nonaktif", value: workforce.inactive, color: "#F97316" },
+  ];
+
+  const todaySlices = [
+    { label: "Sedang hadir", value: attendance.present, color: "#8B5CF6" },
+    { label: "Selesai", value: attendance.completed, color: "#22C55E" },
+    { label: "Belum lengkap", value: attendance.incomplete, color: "#F97316" },
+    { label: "Ditolak", value: attendance.rejected, color: "#EF4444" },
+  ];
+  const todayTotal = todaySlices.reduce((sum, s) => sum + s.value, 0);
+
+  const trendTotals = trend.reduce(
+    (acc, p) => ({
+      all: acc.all + p.present + p.completed + p.incomplete + p.rejected,
+      done: acc.done + p.completed,
+      open: acc.open + p.incomplete + p.rejected,
+    }),
+    { all: 0, done: 0, open: 0 }
+  );
 
   return (
-    <div className="space-y-7">
-      {/* Page header */}
-      <section className="flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-xs font-bold tracking-[0.08em] text-primary uppercase">
-            {organizationName ?? "Organisasi"}
-          </p>
-          <h1 className="mt-1 text-2xl tracking-tight sm:text-[28px]">
-            {indonesianGreeting()} — ringkasan tim
-          </h1>
-          <p className="mt-1.5 flex flex-wrap items-center gap-2.5 text-sm text-muted-foreground">
-            <time>{longDateLabel()}</time>
-            {roleLabel ? (
-              <span className="inline-flex items-center rounded-full border border-primary/40 bg-surface-primary px-2.5 py-0.5 text-[11px] font-semibold text-primary">
-                {roleLabel}
-              </span>
-            ) : null}
+    <div className="space-y-6">
+      {/* Quick overview */}
+      <section
+        className="hris-overview p-5 sm:p-6"
+        aria-labelledby="ringkasan-cepat"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 id="ringkasan-cepat" className="text-xl sm:text-[22px]">
+              Ringkasan Cepat
+            </h1>
+            <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-foreground/70">
+              <span>{organizationName ?? "Organisasi"}</span>
+              <span aria-hidden="true">·</span>
+              <time>{longDateLabel()}</time>
+              {roleLabel ? (
+                <span className="inline-flex items-center rounded-full bg-white/70 px-2.5 py-0.5 text-[11px] font-semibold text-primary dark:bg-white/10">
+                  {roleLabel}
+                </span>
+              ) : null}
+            </p>
+          </div>
+          <p className="hidden text-sm font-medium text-foreground/70 sm:block">
+            {indonesianGreeting()}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2.5 text-sm font-semibold">
-          <span className="inline-flex items-center gap-2 rounded-xl bg-[#E4EEFF] px-3.5 py-2 text-primary dark:bg-surface-primary">
-            <HrisIcon name="user" className="size-4" />
-            {workforce.total} karyawan
-          </span>
-          <span className="inline-flex items-center gap-2 rounded-xl bg-[#DDF5E6] px-3.5 py-2 text-[#15803D] dark:bg-surface-success dark:text-success">
-            <HrisIcon name="calendar-check" className="size-4" />
-            {attendance.checkedInNow} sedang hadir
-          </span>
-          <span className="inline-flex items-center gap-2 rounded-xl bg-[#FFEFD2] px-3.5 py-2 text-[#B45309] dark:bg-surface-warning dark:text-warning">
-            <HrisIcon name="calendar" className="size-4" />
-            {onLeaveToday} cuti hari ini
-          </span>
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+          {overviewTiles.map((tile) => {
+            const body = (
+              <>
+                <p className="flex items-baseline gap-1.5">
+                  <span className="text-[26px] leading-none font-bold tracking-tight text-foreground tabular-nums">
+                    {tile.value}
+                  </span>
+                  <span className="truncate text-[12px] text-foreground/60">
+                    ({tile.sub})
+                  </span>
+                </p>
+                <p className="mt-2 truncate text-[15px] font-medium text-foreground/85">
+                  {tile.label}
+                </p>
+              </>
+            );
+            return tile.href ? (
+              <Link
+                key={tile.label}
+                href={tile.href}
+                className="hris-glass block px-4 py-4 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:px-5"
+              >
+                {body}
+              </Link>
+            ) : (
+              <div key={tile.label} className="hris-glass px-4 py-4 sm:px-5">
+                {body}
+              </div>
+            );
+          })}
         </div>
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+      {/* Distribution + today's attendance numbers */}
+      <div className="grid gap-5 xl:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between gap-3">
+            <div>
+              <CardTitle className="text-[17px]">Distribusi Karyawan</CardTitle>
+              <CardDescription>Komposisi berdasarkan status kerja</CardDescription>
+            </div>
+            {can(P.EMPLOYEES_VIEW) ? (
+              <Link href="/employees" className={linkClass}>
+                Kelola
+                <HrisIcon name="arrow-right" className="size-4" />
+              </Link>
+            ) : null}
+            </div>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center gap-6 pt-2 sm:flex-row sm:gap-8">
+            <SegmentRing
+              slices={distribution}
+              variant="solid"
+              size={190}
+              centerValue={workforce.total}
+              centerLabel="karyawan"
+            />
+            <div className="w-full min-w-0 flex-1">
+              <RingLegend slices={distribution} />
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <StatCard
+            icon="check-in"
+            label="Hadir Hari Ini"
+            value={attendance.present + attendance.completed}
+            hint={`${attendance.checkedInNow} sedang di lokasi`}
+            tone="mint"
+          />
+          <StatCard
+            icon="clock"
+            label="Absensi Selesai"
+            value={attendance.completed}
+            hint="Check-in & check-out lengkap"
+            tone="teal"
+          />
+          <StatCard
+            icon="alert"
+            label="Belum Lengkap"
+            value={attendance.incomplete}
+            hint="Tanpa check-out"
+            tone="amber"
+          />
+          <StatCard
+            icon="alert-triangle"
+            label="Ditolak"
+            value={attendance.rejected}
+            hint="Verifikasi gagal"
+            tone="rose"
+          />
+        </div>
+      </div>
+
+      {/* Trend + today's status ring */}
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between gap-3">
+            <div>
+              <CardTitle className="text-[17px]">Tren Kehadiran</CardTitle>
+              <CardDescription>Catatan absensi 7 hari terakhir</CardDescription>
+            </div>
+            {can(P.ATTENDANCE_MANAGE) ? (
+              <Link href="/attendance/management" className={linkClass}>
+                Buka absensi
+                <HrisIcon name="arrow-right" className="size-4" />
+              </Link>
+            ) : null}
+            </div>
+          </CardHeader>
+          <CardContent className="pt-2">
+            {trendTotals.all > 0 ? (
+              <StackedBarChart
+                height={260}
+                series={[
+                  { key: "completed", label: "Selesai", color: "#22C55E" },
+                  { key: "present", label: "Hadir", color: "#8B5CF6" },
+                  { key: "incomplete", label: "Belum lengkap", color: "#F97316" },
+                  { key: "rejected", label: "Ditolak", color: "#EF4444" },
+                ]}
+                points={trend.map((p) => ({
+                  label: p.label,
+                  values: {
+                    completed: p.completed,
+                    present: p.present,
+                    incomplete: p.incomplete,
+                    rejected: p.rejected,
+                  },
+                }))}
+              />
+            ) : (
+              <AttendanceTrendEmpty />
+            )}
+            <div className="mt-5 grid grid-cols-1 gap-3 border-t border-border pt-4 sm:grid-cols-3">
+              <TrendSummary icon="bar-chart" tone="hris-tile-green" value={trendTotals.all} label="Total catatan" />
+              <TrendSummary icon="check" tone="hris-tile-violet" value={trendTotals.done} label="Selesai" />
+              <TrendSummary icon="alert" tone="hris-tile-orange" value={trendTotals.open} label="Perlu ditinjau" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-[17px]">Status Absensi Hari Ini</CardTitle>
+            <CardDescription>Sebaran catatan absensi hari ini</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center gap-6 pt-3">
+            <SegmentRing
+              slices={todaySlices}
+              size={210}
+              centerValue={todayTotal}
+              centerLabel="Total catatan"
+            />
+            <div className="w-full min-w-0">
+              <RingLegend slices={todaySlices} columns={2} />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
         {/* Main column */}
-        <div className="min-w-0 space-y-7">
+        <div className="min-w-0 space-y-6">
           {visibleActions.length > 0 ? (
             <section className="space-y-3.5">
               <SectionHeading
@@ -413,89 +530,10 @@ export async function ManagementDashboard({
             </section>
           ) : null}
 
-          <section className="space-y-3.5">
-            <SectionHeading
-              title="Statistik Karyawan"
-              description="Jumlah karyawan di organisasi Anda"
-              action={
-                can(P.EMPLOYEES_VIEW) ? (
-                  <Link href="/employees" className={linkClass}>
-                    Kelola karyawan
-                    <HrisIcon name="arrow-right" className="size-4" />
-                  </Link>
-                ) : undefined
-              }
-            />
-            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 2xl:grid-cols-4">
-              <StatCard
-                icon="employees"
-                label="Total karyawan"
-                value={workforce.total}
-                hint={`${workforce.active} aktif`}
-                tone="soft-blue"
-              />
-              <StatCard
-                icon="user"
-                label="Aktif"
-                value={workforce.active}
-                hint={`${workforce.inactive} nonaktif`}
-                tone="mint"
-              />
-              <StatCard
-                icon="calendar"
-                label="Bergabung (30 hari)"
-                value={workforce.newLast30Days}
-                tone="amber"
-              />
-              <StatCard
-                icon="plane"
-                label="Cuti hari ini"
-                value={onLeaveToday}
-                tone="lavender"
-              />
-            </div>
-          </section>
-
-          <section className="space-y-3.5">
-            <SectionHeading
-              title="Tren Kehadiran"
-              description={
-                trendHasData
-                  ? "Check-in dan absensi selesai dalam 7 hari terakhir"
-                  : "Belum ada catatan absensi. Grafik muncul saat karyawan check-in."
-              }
-              action={
-                can(P.ATTENDANCE_MANAGE) ? (
-                  <Link href="/attendance/management" className={linkClass}>
-                    Buka absensi
-                    <HrisIcon name="arrow-right" className="size-4" />
-                  </Link>
-                ) : undefined
-              }
-            />
-            <Card>
-              <CardContent className="p-3 sm:p-4">
-                {trendHasData ? (
-                  <AttendanceTrendChart points={trendPoints} height={210} />
-                ) : (
-                  <AttendanceTrendEmpty />
-                )}
-              </CardContent>
-            </Card>
-          </section>
-
-          <AttendanceAnalytics
-            checkedInNow={attendance.checkedInNow}
-            present={attendance.present}
-            completed={attendance.completed}
-            incomplete={attendance.incomplete}
-            rejected={attendance.rejected}
-          />
-
           {canViewAudit ? (
             <Card>
               <CardHeader className="pb-4">
-                <CardTitle>Aktivitas terbaru</CardTitle>
+                <CardTitle className="text-[17px]">Aktivitas Terbaru</CardTitle>
                 <CardDescription>Entri terbaru dari jejak audit</CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
@@ -556,15 +594,11 @@ export async function ManagementDashboard({
               <span className="flex size-10 items-center justify-center rounded-xl bg-[#FFE7C2] text-[#D97706] dark:bg-surface-warning">
                 <HrisIcon name="alert-triangle" className="size-[22px]" />
               </span>
-              <h2 id="perlu-perhatian" className="text-[17px] font-bold text-foreground">
+              <h2 id="perlu-perhatian" className="text-[17px] font-semibold text-foreground">
                 Perlu Perhatian
               </h2>
             </div>
             <ul className="mt-3.5 space-y-2.5 text-[15px] text-foreground/90">
-              <li className="flex gap-2.5">
-                <span aria-hidden="true" className="mt-2 size-1.5 shrink-0 rounded-full bg-[#F59E0B]" />
-                Item yang menunggu keputusan atau sedang diproses
-              </li>
               {priorities.length ? (
                 priorities.map((item) => (
                   <li key={item.href}>
@@ -592,11 +626,11 @@ export async function ManagementDashboard({
               href="/payroll"
               className="group flex items-center gap-4 rounded-[20px] border border-[var(--card-border)] bg-card p-5 hris-card hris-card-hover"
             >
-              <span className="hris-chip-blue flex size-14 shrink-0 items-center justify-center rounded-2xl">
-                <HrisIcon name="wallet" className="size-7" />
+              <span className="hris-tile hris-tile-blue flex size-12 shrink-0 items-center justify-center rounded-2xl">
+                <HrisIcon name="wallet" className="size-6" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-[17px] font-bold text-foreground">Payroll</span>
+                <span className="block text-[17px] font-semibold text-foreground">Payroll</span>
                 {payroll.latestPeriod ? (
                   <span className="mt-0.5 block truncate text-sm text-muted-foreground">
                     {payroll.latestPeriod.name}
@@ -616,60 +650,42 @@ export async function ManagementDashboard({
                   </span>
                 ) : null}
               </span>
-              <HrisIcon
-                name="chevron-right"
-                className="size-6 shrink-0 text-foreground/70 transition-transform group-hover:translate-x-0.5"
-              />
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-foreground/70 transition-transform group-hover:translate-x-0.5">
+                <HrisIcon name="chevron-right" className="size-4" />
+              </span>
             </Link>
           ) : null}
-
-          <DistributionDonut
-            series={[
-              // New hires are a subset of active: split them out so the
-              // slices sum to the headcount instead of double counting.
-              {
-                label: "Aktif",
-                value: Math.max(0, workforce.active - workforce.newLast30Days),
-                color: "#22C55E",
-              },
-              { label: "Nonaktif", value: workforce.inactive, color: "#94A3B8" },
-              { label: "Baru (30 hari)", value: workforce.newLast30Days, color: "#0B5CC5" },
-            ]}
-          />
         </aside>
       </div>
     </div>
   );
 }
 
-function AttendanceAnalytics({
-  checkedInNow,
-  present,
-  completed,
-  incomplete,
-  rejected,
+function TrendSummary({
+  icon,
+  tone,
+  value,
+  label,
 }: {
-  checkedInNow: number;
-  present: number;
-  completed: number;
-  incomplete: number;
-  rejected: number;
+  icon: HrisIconName;
+  tone: string;
+  value: number;
+  label: string;
 }) {
   return (
-    <Card>
-      <CardHeader className="pb-4">
-        <CardTitle>Absensi hari ini</CardTitle>
-        <CardDescription>Check-in, selesai, dan catatan hari ini</CardDescription>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 2xl:grid-cols-5">
-          <StatCard icon="check-in" label="Sedang hadir" value={checkedInNow} tone="mint" compact />
-          <StatCard icon="check" label="Hadir" value={present} compact />
-          <StatCard icon="clock" label="Selesai" value={completed} tone="teal" compact />
-          <StatCard icon="alert" label="Belum lengkap" value={incomplete} tone="amber" compact />
-          <StatCard icon="alert" label="Ditolak" value={rejected} tone="rose" compact />
-        </div>
-      </CardContent>
-    </Card>
+    <div className="flex items-center gap-3">
+      <span
+        aria-hidden="true"
+        className={`hris-tile ${tone} flex size-9 shrink-0 items-center justify-center rounded-full`}
+      >
+        <HrisIcon name={icon} className="size-4" />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[17px] leading-tight font-bold text-foreground tabular-nums">
+          {value}
+        </span>
+        <span className="block truncate text-[13px] text-muted-foreground">{label}</span>
+      </span>
+    </div>
   );
 }

@@ -921,155 +921,148 @@ html:has(.emp-frame) .emp-page-title {
 }
 
 /* ==========================================================
-   v8 — MANAGEMENT SHELL POLISH (`.hris-admin`)
-   Applies only to the non-self-service shell (AppShell adds `.hris-admin`
-   when the employee frame is off), so the employee app stays as it is.
-   Same palette and radii as v5–v7: navy → blue band, white cards, pastel
-   chips; adds depth, motion and clearer affordances.
+   v9 — MANAGEMENT SHELL · SOFT PASTEL (`.hris-admin`)
+   Light canvas with pastel glows, floating white top-bar cards, soft
+   hairline cards, plain ink titles, pill table headers, pastel overview
+   panel with glass tiles. Applies only outside the employee frame
+   (AppShell adds `.hris-admin`); dialogs pick up button / badge styles
+   through `body:has(.hris-admin)`.
    ========================================================== */
 
-/* ---- Blue band: decorative glow + dot grid ---- */
-.hris-admin .hris-shell-band::before,
-.hris-admin .hris-shell-band::after {
-  content: "";
-  position: absolute;
-  pointer-events: none;
-  z-index: 0;
+.hris-admin {
+  --card-border: #ECEFF6;
+  --card-border-hover: rgb(11 92 197 / 0.22);
+  --radius-card: 1.25rem;
+  background:
+    radial-gradient(40rem 22rem at 85% -4rem, rgb(186 230 253 / 0.45) 0%, transparent 70%),
+    radial-gradient(36rem 20rem at 35% -6rem, rgb(221 214 254 / 0.40) 0%, transparent 70%),
+    #F4F6FB;
 }
-.hris-admin .hris-shell-band::before {
-  inset: 0;
-  background-image: radial-gradient(rgb(255 255 255 / 0.16) 1px, transparent 1.2px);
-  background-size: 22px 22px;
-  mask-image: linear-gradient(100deg, transparent 35%, rgb(0 0 0 / 0.9) 75%, transparent 100%);
-  -webkit-mask-image: linear-gradient(100deg, transparent 35%, rgb(0 0 0 / 0.9) 75%, transparent 100%);
-}
-.hris-admin .hris-shell-band::after {
-  width: 520px;
-  height: 520px;
-  right: -140px;
-  top: -300px;
-  border-radius: 9999px;
-  background: radial-gradient(circle, rgb(56 189 248 / 0.35) 0%, rgb(56 189 248 / 0) 65%);
-  animation: hris-glow 9s ease-in-out infinite alternate;
-}
-.hris-admin .hris-shell-band > * {
-  position: relative;
-  z-index: 1;
-}
-.hris-admin .hris-shell-band > .hris-wave {
-  position: absolute;
-  z-index: 2;
-}
-@keyframes hris-glow {
-  from { transform: translate3d(0, 0, 0) scale(1); opacity: 0.85; }
-  to { transform: translate3d(-80px, 40px, 0) scale(1.15); opacity: 1; }
+.dark .hris-admin {
+  --card-border: #1E2B45;
+  background:
+    radial-gradient(40rem 22rem at 85% -4rem, rgb(56 189 248 / 0.10) 0%, transparent 70%),
+    radial-gradient(36rem 20rem at 35% -6rem, rgb(139 92 246 / 0.10) 0%, transparent 70%),
+    var(--background);
 }
 
-/* Module icon + chips inside the band (breadcrumb row). */
-.hris-band-icon {
-  background: linear-gradient(135deg, rgb(255 255 255 / 0.26) 0%, rgb(255 255 255 / 0.08) 100%);
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.28), 0 10px 24px -12px rgb(0 0 0 / 0.45);
-  color: #FFFFFF;
-  backdrop-filter: blur(6px);
+/* ---- Floating top bar cards ---- */
+.hris-top-card {
+  min-height: 4rem;
+  border: 1px solid var(--card-border);
+  border-radius: 1.25rem;
+  background: var(--card);
+  box-shadow: 0 1px 2px 0 rgb(16 24 40 / 0.03), 0 8px 24px -16px rgb(16 24 40 / 0.12);
 }
-.hris-band-chip {
+.hris-kbd-light {
   display: inline-flex;
+  min-width: 1.5rem;
+  height: 1.5rem;
   align-items: center;
-  gap: 0.5rem;
-  height: 2.25rem;
-  border-radius: 9999px;
-  padding: 0 0.875rem;
-  font-size: 0.8125rem;
+  justify-content: center;
+  border-radius: 0.375rem;
+  border: 1px solid var(--border);
+  background: var(--muted);
+  padding: 0 0.375rem;
+  font-family: inherit;
+  font-size: 0.6875rem;
   font-weight: 600;
-  color: rgb(255 255 255 / 0.92);
-  background: rgb(255 255 255 / 0.1);
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.2);
-  white-space: nowrap;
+  color: var(--muted-foreground);
 }
 
-/* ---- Page titles: navy → blue gradient ink ---- */
+/* ---- Titles: plain ink, semibold ---- */
 .hris-admin .hris-main h1 {
-  font-weight: 800;
-  letter-spacing: -0.025em;
-  background: linear-gradient(100deg, var(--brand-navy) 0%, #0A3F8F 45%, #0B5CC5 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-/* Badges / codes nested in a title keep their own ink. */
-.hris-admin .hris-main h1 * {
-  -webkit-text-fill-color: currentColor;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #1B1F3B;
 }
 .dark .hris-admin .hris-main h1 {
-  background-image: linear-gradient(100deg, #FFFFFF 0%, #BFD3FF 60%, #8CB6FF 100%);
+  color: var(--foreground);
 }
-.hris-admin .hris-main h2 {
-  letter-spacing: -0.015em;
+.hris-admin .hris-main h2,
+.hris-admin .hris-main h3 {
+  letter-spacing: -0.01em;
 }
 
 /* ---- Entrance motion: page blocks rise in, lightly staggered ---- */
 @keyframes hris-rise {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: none; }
 }
 .hris-admin .hris-main > * > * {
-  animation: hris-rise 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation: hris-rise 380ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
-.hris-admin .hris-main > * > :nth-child(2) { animation-delay: 50ms; }
-.hris-admin .hris-main > * > :nth-child(3) { animation-delay: 100ms; }
-.hris-admin .hris-main > * > :nth-child(4) { animation-delay: 150ms; }
-.hris-admin .hris-main > * > :nth-child(5) { animation-delay: 200ms; }
-.hris-admin .hris-main > * > :nth-child(n + 6) { animation-delay: 240ms; }
+.hris-admin .hris-main > * > :nth-child(2) { animation-delay: 40ms; }
+.hris-admin .hris-main > * > :nth-child(3) { animation-delay: 80ms; }
+.hris-admin .hris-main > * > :nth-child(4) { animation-delay: 120ms; }
+.hris-admin .hris-main > * > :nth-child(n + 5) { animation-delay: 160ms; }
 
-/* ---- Cards: layered depth, crisp edge ---- */
+/* ---- Cards: soft hairline, airy shadow ---- */
 .hris-admin .hris-card {
-  box-shadow:
-    0 1px 0 0 rgb(255 255 255 / 0.8) inset,
-    0 1px 2px 0 rgb(15 23 42 / 0.04),
-    0 8px 24px -12px rgb(30 64 175 / 0.16);
+  border-color: var(--card-border);
+  border-radius: 1.25rem;
+  box-shadow: 0 1px 2px 0 rgb(16 24 40 / 0.03), 0 10px 30px -18px rgb(16 24 40 / 0.14);
 }
 .dark .hris-admin .hris-card {
   box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.35), 0 10px 24px -14px rgb(0 0 0 / 0.6);
 }
+.hris-admin .hris-card-level-2 {
+  background: #F7F8FC;
+  border-color: #EEF0F6;
+}
+.dark .hris-admin .hris-card-level-2 {
+  background: var(--muted);
+  border-color: var(--card-border-level2);
+}
 .hris-admin .hris-card-hover:hover {
   transform: translateY(-2px);
+  box-shadow: 0 16px 32px -18px rgb(16 24 40 / 0.22);
 }
 
-/* ---- Tables ---- */
-.hris-admin .hris-main table thead {
-  background: linear-gradient(180deg, #F7FAFF 0%, #EEF4FF 100%);
+/* ---- Tables: pill header row, hairline rows ---- */
+.hris-admin .hris-table-wrap {
+  border-color: var(--card-border);
+  border-radius: 1.25rem;
+  padding: 0.5rem;
+  box-shadow: 0 1px 2px 0 rgb(16 24 40 / 0.03), 0 10px 30px -18px rgb(16 24 40 / 0.14);
 }
-.dark .hris-admin .hris-main table thead {
-  background: linear-gradient(180deg, #17223A 0%, #142038 100%);
+.hris-admin .hris-main table thead,
+.hris-admin .hris-main table thead tr {
+  background: transparent;
+  border-bottom: 0;
 }
 .hris-admin .hris-main table thead th {
-  color: #475569;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  background: #F5F6FA;
+  color: #3F4767;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.hris-admin .hris-main table thead th:first-child {
+  border-top-left-radius: 0.875rem;
+  border-bottom-left-radius: 0.875rem;
+}
+.hris-admin .hris-main table thead th:last-child {
+  border-top-right-radius: 0.875rem;
+  border-bottom-right-radius: 0.875rem;
 }
 .dark .hris-admin .hris-main table thead th {
-  color: #9FB0CC;
+  background: #17223A;
+  color: #B4C2DA;
 }
 .hris-admin .hris-main table tbody tr {
-  transition: background-color 140ms ease, box-shadow 140ms ease;
+  border-color: #F0F2F7;
+  transition: background-color 140ms ease;
 }
-.hris-admin .hris-main table tbody tr:nth-child(even):not([class^="bg-"]):not([class*=" bg-"]) {
-  background-color: rgb(246 249 255 / 0.55);
-}
-.dark .hris-admin .hris-main table tbody tr:nth-child(even):not([class^="bg-"]):not([class*=" bg-"]) {
-  background-color: rgb(255 255 255 / 0.015);
+.dark .hris-admin .hris-main table tbody tr {
+  border-color: #1C2840;
 }
 .hris-admin .hris-main table tbody tr:not([class^="bg-"]):not([class*=" bg-"]):hover {
-  background-color: #EEF4FF;
+  background-color: #F8F9FD;
 }
 .dark .hris-admin .hris-main table tbody tr:not([class^="bg-"]):not([class*=" bg-"]):hover {
-  background-color: #182746;
-}
-.hris-admin .hris-main table tbody tr:hover > td:first-child {
-  box-shadow: inset 3px 0 0 var(--primary);
-}
-.hris-admin .hris-table-wrap {
-  box-shadow: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 10px 28px -16px rgb(30 64 175 / 0.22);
+  background-color: #152139;
 }
 
 /* Row actions: ghost / text buttons inside a cell read as soft chips. */
@@ -1078,22 +1071,23 @@ html:has(.emp-frame) .emp-page-title {
   border-radius: 9999px;
   padding-inline: 0.75rem;
   font-size: 12.5px;
-  background: var(--surface-primary);
-  color: var(--primary);
+  border: 1px solid var(--card-border);
+  background: var(--card);
+  color: var(--foreground);
 }
 .hris-admin .hris-main td :is(.btn-ghost:not([class*="destructive"]), .btn-text):hover {
-  background: var(--primary);
-  color: var(--primary-foreground);
-  box-shadow: var(--shadow-primary);
+  border-color: rgb(11 92 197 / 0.35);
+  background: var(--surface-primary);
+  color: var(--primary);
 }
 .hris-admin .hris-main td :is(.btn-destructive, .btn-ghost[class*="destructive"]) {
   height: 2rem;
   border-radius: 9999px;
   padding-inline: 0.75rem;
   font-size: 12.5px;
-  background: transparent;
+  background: var(--surface-danger);
   color: var(--danger);
-  box-shadow: inset 0 0 0 1px rgb(220 38 38 / 0.22);
+  box-shadow: none;
 }
 .hris-admin .hris-main td :is(.btn-destructive, .btn-ghost[class*="destructive"]):hover {
   background: var(--danger);
@@ -1107,60 +1101,38 @@ html:has(.emp-frame) .emp-page-title {
 
 /* ---- Buttons ---- */
 body:has(.hris-admin) .btn-primary {
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
-  background-image: linear-gradient(135deg, #2F8CF0 0%, #0B5CC5 55%, #0A3F8F 120%);
-}
-body:has(.hris-admin) .btn-primary::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: linear-gradient(115deg, transparent 30%, rgb(255 255 255 / 0.35) 50%, transparent 70%);
-  transform: translateX(-120%);
-  transition: transform 600ms ease;
-}
-body:has(.hris-admin) .btn-primary:hover::after {
-  transform: translateX(120%);
+  background-image: linear-gradient(135deg, #2F8CF0 0%, #0B5CC5 100%);
+  box-shadow: 0 8px 18px -10px rgb(11 92 197 / 0.75);
 }
 body:has(.hris-admin) .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 12px 24px -12px rgb(11 92 197 / 0.85);
+  box-shadow: 0 12px 22px -12px rgb(11 92 197 / 0.85);
 }
 body:has(.hris-admin) .btn-secondary {
-  background-image: linear-gradient(135deg, #0A3F8F 0%, var(--brand-navy) 100%);
+  background: #1B1F3B;
   color: #FFFFFF;
-  box-shadow: 0 8px 18px -10px rgb(1 37 79 / 0.7);
 }
 body:has(.hris-admin) .btn-secondary:hover {
-  filter: brightness(1.12);
-  transform: translateY(-1px);
+  background: #2A3058;
 }
 .dark body:has(.hris-admin) .btn-secondary {
-  background-image: linear-gradient(135deg, #2F5FAF 0%, #1A3A73 100%);
+  background: #2A3A5C;
 }
-body:has(.hris-admin) .btn-outline {
-  box-shadow: 0 1px 2px 0 rgb(15 23 42 / 0.05);
-}
-body:has(.hris-admin) .btn-outline:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 16px -10px rgb(11 92 197 / 0.45);
-}
+body:has(.hris-admin) .btn-outline,
 body:has(.hris-admin) .btn-ghost:not([class*="destructive"]) {
-  background: rgb(11 92 197 / 0.06);
-  color: #0A3F8F;
+  border: 1px solid var(--card-border);
+  background: var(--card);
+  color: var(--foreground);
+  box-shadow: 0 1px 2px 0 rgb(16 24 40 / 0.04);
 }
+body:has(.hris-admin) .btn-outline:hover,
 body:has(.hris-admin) .btn-ghost:not([class*="destructive"]):hover {
+  border-color: rgb(11 92 197 / 0.35);
   background: var(--surface-primary);
   color: var(--primary);
 }
-.dark body:has(.hris-admin) .btn-ghost:not([class*="destructive"]) {
-  background: rgb(255 255 255 / 0.05);
-  color: #BFD3FF;
-}
-body:has(.hris-admin) .btn-destructive:hover {
-  transform: translateY(-1px);
+body:has(.hris-admin) .btn-ghost[class*="destructive"] {
+  box-shadow: inset 0 0 0 1px rgb(220 38 38 / 0.22);
 }
 
 /* ---- Status badges: leading dot ---- */
@@ -1172,46 +1144,30 @@ body:has(.hris-admin) :is(.badge-success, .badge-warning, .badge-danger, .badge-
   border-radius: 9999px;
   background: currentColor;
 }
-body:has(.hris-admin) .badge-primary,
-body:has(.hris-admin) .badge-destructive {
-  box-shadow: 0 4px 10px -6px currentColor;
-}
 body:has(.hris-admin) .badge-primary {
-  background-image: linear-gradient(135deg, #2F8CF0 0%, #0B5CC5 100%);
-}
-body:has(.hris-admin) .badge-success {
-  box-shadow: inset 0 0 0 1px rgb(22 163 74 / 0.18);
-}
-body:has(.hris-admin) .badge-warning {
-  box-shadow: inset 0 0 0 1px rgb(217 119 6 / 0.2);
-}
-body:has(.hris-admin) .badge-danger {
-  box-shadow: inset 0 0 0 1px rgb(220 38 38 / 0.18);
-}
-body:has(.hris-admin) .badge-info {
-  box-shadow: inset 0 0 0 1px rgb(3 105 161 / 0.18);
+  border-color: transparent;
+  background: var(--surface-primary);
+  color: var(--primary);
 }
 
-/* ---- Form fields: consistent hover + focus glow ---- */
+/* ---- Form fields ---- */
 .hris-admin .hris-main :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea) {
-  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+  border-color: #E4E7F0;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
 }
-.hris-admin .hris-main :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea):hover:not(:disabled) {
-  border-color: rgb(11 92 197 / 0.45);
+.dark .hris-admin .hris-main :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea) {
+  border-color: var(--input);
 }
 .hris-admin .hris-main :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea):focus-visible {
   border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgb(11 92 197 / 0.14);
+  box-shadow: 0 0 0 4px rgb(11 92 197 / 0.12);
   outline: none;
 }
 .hris-admin .hris-main :is(input[type="checkbox"], input[type="radio"]) {
   accent-color: var(--primary);
 }
-.hris-admin .hris-main label {
-  font-weight: 600;
-}
 
-/* ---- Navigation rail ---- */
+/* ---- Navigation rail (kept from v8) ---- */
 .hris-admin .hris-sidebar {
   background:
     radial-gradient(90% 40% at 0% 100%, rgb(11 92 197 / 0.07) 0%, transparent 70%),
@@ -1241,14 +1197,62 @@ body:has(.hris-admin) .badge-info {
   border-radius: 0 9999px 9999px 0;
   background: linear-gradient(180deg, #38BDF8 0%, var(--brand-orange) 100%);
 }
-
-/* Profile card at the foot of the sidebar. */
 .hris-sidebar-profile {
   background:
     radial-gradient(120% 120% at 100% 0%, rgb(56 189 248 / 0.28) 0%, transparent 55%),
     linear-gradient(135deg, var(--brand-band-from) 0%, var(--brand-band-via) 55%, var(--brand-band-to) 100%);
   box-shadow: 0 14px 28px -16px rgb(1 37 79 / 0.8);
   color: #FFFFFF;
+}
+
+/* ---- Quick overview: pastel panel + glass tiles ---- */
+.hris-overview {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 0.7);
+  border-radius: 1.5rem;
+  background:
+    radial-gradient(28rem 16rem at 72% 30%, rgb(125 211 252 / 0.55) 0%, transparent 70%),
+    radial-gradient(22rem 14rem at 5% 110%, rgb(196 181 253 / 0.65) 0%, transparent 70%),
+    radial-gradient(20rem 14rem at 100% 110%, rgb(165 243 252 / 0.6) 0%, transparent 70%),
+    linear-gradient(120deg, #F3F0FF 0%, #EAF4FF 50%, #E6FBFF 100%);
+  box-shadow: 0 10px 30px -18px rgb(16 24 40 / 0.18);
+}
+.hris-overview::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 18rem;
+  height: 18rem;
+  right: 18%;
+  top: -7rem;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 40% 60%, rgb(56 189 248 / 0.35), rgb(56 189 248 / 0) 70%);
+}
+.dark .hris-overview {
+  border-color: var(--card-border);
+  background:
+    radial-gradient(28rem 16rem at 72% 30%, rgb(56 189 248 / 0.16) 0%, transparent 70%),
+    radial-gradient(22rem 14rem at 5% 110%, rgb(139 92 246 / 0.2) 0%, transparent 70%),
+    linear-gradient(120deg, #151A33 0%, #10213C 50%, #0E2633 100%);
+}
+.hris-glass {
+  border: 1px solid rgb(255 255 255 / 0.85);
+  border-radius: 1.125rem;
+  background: rgb(255 255 255 / 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px -16px rgb(16 24 40 / 0.25);
+  transition: transform 160ms ease, background-color 160ms ease;
+}
+a.hris-glass:hover {
+  transform: translateY(-2px);
+  background: rgb(255 255 255 / 0.75);
+}
+.dark .hris-glass {
+  border-color: rgb(255 255 255 / 0.08);
+  background: rgb(255 255 255 / 0.05);
 }
 
 /* ---- Gradient icon tiles get a soft gloss ---- */
@@ -1279,11 +1283,14 @@ body:has(.hris-admin) .badge-info {
 .hris-empty-art::before { inset: -12px; }
 .hris-empty-art::after { inset: -26px; border-style: solid; border-color: rgb(11 92 197 / 0.08); }
 html:has(.emp-frame) .hris-empty-default { display: none; }
+.hris-admin .hris-main .bg-gradient-to-b.from-card {
+  background-image: none;
+  background-color: var(--card);
+}
 
 /* ---- Skeleton shimmer ---- */
 .hris-admin .animate-pulse.bg-muted {
-  animation: none;
-  background: linear-gradient(90deg, var(--muted) 0%, #E6EEFB 40%, var(--muted) 80%);
+  background: linear-gradient(90deg, var(--muted) 0%, #E9EDF6 40%, var(--muted) 80%);
   background-size: 200% 100%;
   animation: hris-shimmer 1.3s linear infinite;
 }
@@ -1297,15 +1304,32 @@ html:has(.emp-frame) .hris-empty-default { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .hris-admin .hris-main > * > *,
-  .hris-admin .hris-shell-band::after,
   .hris-admin .animate-pulse.bg-muted {
     animation: none;
   }
-  body:has(.hris-admin) .btn-primary::after { display: none; }
-  body:has(.hris-admin) :is(.btn, .hris-card-hover):hover { transform: none; }
+  body:has(.hris-admin) :is(.btn, .hris-card-hover, .hris-glass):hover { transform: none; }
 }
 
-/* Destructive ghost actions outside tables (mobile cards, toolbars). */
-body:has(.hris-admin) .btn-ghost[class*="destructive"] {
-  box-shadow: inset 0 0 0 1px rgb(220 38 38 / 0.22);
+/* Rounded header cells need the separated border model; row lines move
+   from <tr> (not painted in that model) to the cells. */
+.hris-admin .hris-main table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.hris-admin .hris-main table tbody td {
+  border-bottom: 1px solid #F0F2F7;
+}
+.dark .hris-admin .hris-main table tbody td {
+  border-bottom-color: #1C2840;
+}
+.hris-admin .hris-main table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* Row action groups stay on one line (the table scrolls sideways instead). */
+.hris-admin .hris-main td :is(div, span):has(> .btn) {
+  flex-wrap: nowrap;
+}
+.hris-admin .hris-main td:has(.btn) {
+  white-space: nowrap;
 }

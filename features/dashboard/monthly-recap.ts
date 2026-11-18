@@ -131,6 +131,9 @@ export interface AttendanceTrendPoint {
   label: string;
   present: number;
   completed: number;
+  /** Check-in without check-out (closed by reconciliation). */
+  incomplete: number;
+  rejected: number;
 }
 
 /** "YYYY-MM-DD" for a `date` column value (drizzle `mode: "date"` → Date). */
@@ -155,9 +158,12 @@ export function buildAttendanceTrend(
 ): AttendanceTrendPoint[] {
   const end = new Date(`${todayKey}T00:00:00.000Z`);
   const start = new Date(end.getTime() - 6 * 24 * 60 * 60 * 1000);
-  const byDate = new Map<string, { present: number; completed: number }>();
+  const byDate = new Map<
+    string,
+    { present: number; completed: number; incomplete: number; rejected: number }
+  >();
   for (const key of eachDay(start.toISOString().slice(0, 10), todayKey)) {
-    byDate.set(key, { present: 0, completed: 0 });
+    byDate.set(key, { present: 0, completed: 0, incomplete: 0, rejected: 0 });
   }
 
   for (const row of rows) {
@@ -165,6 +171,8 @@ export function buildAttendanceTrend(
     if (!entry) continue;
     if (row.status === "present") entry.present = Number(row.count);
     if (row.status === "completed") entry.completed = Number(row.count);
+    if (row.status === "incomplete") entry.incomplete = Number(row.count);
+    if (row.status === "rejected") entry.rejected = Number(row.count);
   }
 
   return [...byDate.entries()].map(([date, values]) => ({
@@ -172,5 +180,7 @@ export function buildAttendanceTrend(
     label: TREND_WEEKDAY.format(new Date(`${date}T00:00:00.000Z`)),
     present: values.present,
     completed: values.completed,
+    incomplete: values.incomplete,
+    rejected: values.rejected,
   }));
 }
