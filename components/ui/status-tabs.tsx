@@ -30,10 +30,11 @@ export function StatusTabs({
   return (
     <nav aria-label={label} className="no-scrollbar -mx-1 overflow-x-auto px-1">
       <ul className="flex w-max gap-2">
-        {tabs.map((tab) => {
+        {tabs.map((tab, index) => {
           const selected = tab.value === active;
           return (
-            <li key={tab.value || "all"}>
+            // Position-based key: "" (all) may coexist with a real "all" value.
+            <li key={`${index}:${tab.value}`}>
               <Link
                 href={buildHref(tab.value)}
                 aria-current={selected ? "page" : undefined}

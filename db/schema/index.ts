@@ -26,3 +26,4 @@ export * from "./role_permissions";
 export * from "./user_roles";
 export * from "./sessions";
 export * from "./audit";
+export * from "./compliance";

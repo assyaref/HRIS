@@ -64,6 +64,8 @@ const ROUTES = [
   "/settings/work-locations/:locationId", "/change-password",
   "/approvals", "/monitoring/contracts", "/reports/employees", "/reports/leave",
   "/settings/audit-trail", "/organization/chart",
+  "/compliance/mcu", "/compliance/trainings", "/compliance/trainings?tab=matrix",
+  "/compliance/trainings?tab=master",
 ];
 
 const ERROR_UI =

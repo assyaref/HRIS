@@ -9,6 +9,13 @@ import {
   remainingLabel,
 } from "@/features/compliance/contract-status";
 import { listContractRows, sortByUrgency } from "@/features/compliance/queries";
+import { isComplianceModuleReady } from "@/features/compliance/module";
+import { listMcuRecords, listTrainingRecords } from "@/features/compliance/records.queries";
+import {
+  isValidityStatus,
+  MCU_RESULT_LABELS,
+  VALIDITY_LABELS,
+} from "@/features/compliance/validity";
 import { buildEmployeeMovementReport } from "@/features/reports/employee-movement";
 import { listLeaveReport, listMovementEmployees } from "@/features/reports/queries";
 import { buildReportWorkbook, type SheetSpec } from "@/features/reports/workbook";
@@ -32,6 +39,15 @@ const REPORT_PERMISSIONS: Record<string, Permission[]> = {
   ],
   employees: [PERMISSIONS.REPORTS_VIEW],
   leave: [PERMISSIONS.REPORTS_VIEW],
+  // Compliance (migration 0023): same data rules as the pages + export.
+  mcu: [
+    PERMISSIONS.EMPLOYEES_EXPORT,
+    PERMISSIONS.EMPLOYEES_PERSONAL_VIEW,
+  ],
+  trainings: [
+    PERMISSIONS.EMPLOYEES_EXPORT,
+    PERMISSIONS.EMPLOYEES_EMPLOYMENT_VIEW,
+  ],
 };
 
 const LEAVE_STATUS: Record<string, string> = {
@@ -42,7 +58,7 @@ const LEAVE_STATUS: Record<string, string> = {
 };
 
 /**
- * GET /api/reports/export?report=contracts|employees|leave&…
+ * GET /api/reports/export?report=contracts|employees|leave|mcu|trainings&…
  * Authenticated, RBAC-checked server-side, organization-scoped to the
  * caller's (acting) organization; every download is audit-logged.
  */
@@ -150,6 +166,81 @@ export async function GET(request: Request): Promise<Response> {
       { name: "Per Departemen", columns: groupColumns("Departemen"), rows: result.byDepartment.map((g) => ({ ...g })) },
       { name: "Per Lokasi", columns: groupColumns("Lokasi Kerja"), rows: result.byWorkLocation.map((g) => ({ ...g })) },
     ];
+  } else if (report === "mcu" || report === "trainings") {
+    if (!(await isComplianceModuleReady())) {
+      return text(409, "Modul belum aktif: migrasi 0023 belum dijalankan.");
+    }
+    const statusParam = get("status");
+    const keep = (status: string) => !isValidityStatus(statusParam) || status === statusParam;
+    if (report === "mcu") {
+      const rows = (await listMcuRecords(organizationId, today)).filter((r) => keep(r.status));
+      filename = `mcu-${today}.xlsx`;
+      sheets = [
+        {
+          name: "MCU",
+          columns: [
+            { header: "No. Karyawan", key: "number", width: 16 },
+            { header: "Nama", key: "name", width: 28 },
+            { header: "Jabatan", key: "position", width: 22 },
+            { header: "Tanggal MCU", key: "date", width: 14 },
+            { header: "Berlaku Sampai", key: "until", width: 14 },
+            { header: "Sisa", key: "remaining", width: 18 },
+            { header: "Hasil", key: "result", width: 18 },
+            { header: "Provider", key: "provider", width: 22 },
+            { header: "Lokasi", key: "location", width: 18 },
+            { header: "Dokter", key: "doctor", width: 18 },
+            { header: "Status", key: "status", width: 16 },
+            { header: "Catatan", key: "notes", width: 30 },
+          ],
+          rows: rows.map((r) => ({
+            number: r.employeeNumber,
+            name: r.employeeName,
+            position: r.position,
+            date: r.checkupDate,
+            until: r.validUntil,
+            remaining: remainingLabel(r.daysRemaining),
+            result: MCU_RESULT_LABELS[r.result] ?? r.result,
+            provider: r.provider,
+            location: r.location,
+            doctor: r.doctor,
+            status: VALIDITY_LABELS[r.status],
+            notes: r.notes,
+          })),
+        },
+      ];
+    } else {
+      const rows = (await listTrainingRecords(organizationId, today)).filter((r) => keep(r.status));
+      filename = `training-${today}.xlsx`;
+      sheets = [
+        {
+          name: "Training",
+          columns: [
+            { header: "No. Karyawan", key: "number", width: 16 },
+            { header: "Nama", key: "name", width: 28 },
+            { header: "Jabatan", key: "position", width: 22 },
+            { header: "Training", key: "title", width: 30 },
+            { header: "No. Sertifikat", key: "cert", width: 20 },
+            { header: "Penerbit", key: "issuer", width: 22 },
+            { header: "Tanggal", key: "date", width: 14 },
+            { header: "Berlaku Sampai", key: "until", width: 14 },
+            { header: "Sisa", key: "remaining", width: 18 },
+            { header: "Status", key: "status", width: 16 },
+          ],
+          rows: rows.map((r) => ({
+            number: r.employeeNumber,
+            name: r.employeeName,
+            position: r.position,
+            title: r.title,
+            cert: r.certificateNumber,
+            issuer: r.issuer,
+            date: r.trainingDate,
+            until: r.validUntil,
+            remaining: remainingLabel(r.daysRemaining),
+            status: VALIDITY_LABELS[r.status],
+          })),
+        },
+      ];
+    }
   } else {
     const from = dateParam(get("from"), month.from);
     const to = dateParam(get("to"), month.to);

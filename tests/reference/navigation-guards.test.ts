@@ -57,3 +57,41 @@ describe("reference modules: navigation matches page guards", () => {
     assert.match(route, /if \(!user\) return text\(401/);
   });
 });
+
+describe("compliance modules (0023): navigation matches page guards", () => {
+  it("/compliance/mcu: employees.view AND personal.view (health data)", () => {
+    const item = entry("/compliance/mcu");
+    assert.match(item, /permission: PERMISSIONS\.EMPLOYEES_PERSONAL_VIEW/);
+    assert.match(item, /anyPermission: \[PERMISSIONS\.EMPLOYEES_VIEW\]/);
+    const guard = page("compliance/mcu");
+    assert.match(guard, /requirePermission\(user\.id, PERMISSIONS\.EMPLOYEES_VIEW\)/);
+    assert.match(guard, /requirePermission\(user\.id, PERMISSIONS\.EMPLOYEES_PERSONAL_VIEW\)/);
+    assert.match(guard, /isComplianceModuleReady\(\)/);
+  });
+
+  it("/compliance/trainings: employees.view AND employment.view", () => {
+    const item = entry("/compliance/trainings");
+    assert.match(item, /permission: PERMISSIONS\.EMPLOYEES_EMPLOYMENT_VIEW/);
+    const guard = page("compliance/trainings");
+    assert.match(guard, /requirePermission\(user\.id, PERMISSIONS\.EMPLOYEES_EMPLOYMENT_VIEW\)/);
+    assert.match(guard, /isComplianceModuleReady\(\)/);
+  });
+
+  it("mutations re-check permission, module readiness and organization", () => {
+    const actions = readFileSync(join(root, "features/compliance/records.actions.ts"), "utf8");
+    assert.match(actions, /^"use server";/);
+    assert.match(actions, /saveMcuAction[\s\S]*?authorize\(PERMISSIONS\.EMPLOYEES_PERSONAL_UPDATE\)/);
+    assert.match(actions, /saveTrainingAction[\s\S]*?authorize\(PERMISSIONS\.EMPLOYEES_EMPLOYMENT_UPDATE\)/);
+    assert.match(actions, /isComplianceModuleReady\(\)/);
+    assert.match(actions, /employeeInOrganization\(data\.employeeId, ctx\.organizationId\)/);
+    // Every update / delete is scoped by organization.
+    const scoped = actions.match(/eq\(\w+\.organizationId, ctx\.organizationId\)/g) ?? [];
+    assert.ok(scoped.length >= 10, `expected organization scoping on every write, found ${scoped.length}`);
+  });
+
+  it("exports need export + the data permission", () => {
+    const route = readFileSync(join(root, "app/api/reports/export/route.ts"), "utf8");
+    assert.match(route, /mcu: \[\s*PERMISSIONS\.EMPLOYEES_EXPORT,\s*PERMISSIONS\.EMPLOYEES_PERSONAL_VIEW,/);
+    assert.match(route, /trainings: \[\s*PERMISSIONS\.EMPLOYEES_EXPORT,\s*PERMISSIONS\.EMPLOYEES_EMPLOYMENT_VIEW,/);
+  });
+});

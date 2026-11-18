@@ -189,8 +189,23 @@ export type OrganizationAuditAction =
 /** Report downloads (/api/reports/export). */
 export type ReportAuditAction = "report.exported";
 
+/** Compliance records (migration 0023): MCU, trainings, matrix. */
+export type ComplianceAuditAction =
+  | "mcu.created"
+  | "mcu.updated"
+  | "mcu.deleted"
+  | "training.created"
+  | "training.updated"
+  | "training.deleted"
+  | "training_master.created"
+  | "training_master.updated"
+  | "training_master.deleted"
+  | "training_requirement.created"
+  | "training_requirement.deleted";
+
 export type AuditAction =
   | ReportAuditAction
+  | ComplianceAuditAction
   | RbacAuditAction
   | UserAuditAction
   | EmployeeAuditAction

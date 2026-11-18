@@ -19,6 +19,8 @@ import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db";
 import {
   announcementRecipients,
+  employeeTrainings,
+  medicalCheckups,
   attendanceEvents,
   attendanceRecords,
   employeeAddresses,
@@ -57,6 +59,7 @@ import {
 } from "./permanent-delete-policy";
 import type { EmployeeListSearchInput } from "./schemas";
 import type { CustomFieldFilter } from "@/features/employee-fields/filtering";
+import { tableExists } from "@/lib/db/table-exists";
 
 /**
  * Employee data access (Phase 5) — server-only.
@@ -732,6 +735,12 @@ interface EmployeeDeleteDependencySource {
   table: AnyPgTable;
   employeeIdColumn: AnyPgColumn;
   organizationIdColumn: AnyPgColumn;
+  /**
+   * Set for tables added by a migration that may not be applied yet (e.g.
+   * 0023 compliance). Counting and deletion skip the table while it does not
+   * exist, so permanent deletion keeps working before the migration.
+   */
+  optionalTable?: string;
 }
 
 /**
@@ -909,6 +918,18 @@ const EMPLOYEE_DELETE_DEPENDENCY_SOURCES: readonly {
         employeeIdColumn: announcementRecipients.employeeId,
         organizationIdColumn: announcementRecipients.organizationId,
       },
+      {
+        table: medicalCheckups,
+        employeeIdColumn: medicalCheckups.employeeId,
+        organizationIdColumn: medicalCheckups.organizationId,
+        optionalTable: "medical_checkups",
+      },
+      {
+        table: employeeTrainings,
+        employeeIdColumn: employeeTrainings.employeeId,
+        organizationIdColumn: employeeTrainings.organizationId,
+        optionalTable: "employee_trainings",
+      },
     ],
   },
 ];
@@ -1035,6 +1056,9 @@ async function countEmployeeScopedRows(
   employeeId: string,
   organizationId: string
 ): Promise<number> {
+  if (source.optionalTable && !(await tableExists(tx, source.optionalTable))) {
+    return 0;
+  }
   const rows = await tx
     .select({ count: sql<number>`count(*)::int` })
     .from(source.table)
@@ -1198,6 +1222,9 @@ export async function deleteEmployeeDeletableRecords(
   for (const entry of EMPLOYEE_DELETABLE_DELETE_PLAN) {
     let removedForCategory = 0;
     for (const source of entry.tables) {
+      if (source.optionalTable && !(await tableExists(tx, source.optionalTable))) {
+        continue;
+      }
       const removed = await tx
         .delete(source.table)
         .where(

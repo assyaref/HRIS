@@ -182,6 +182,21 @@ export const monitoringNavigation: NavItem[] = [
     icon: "document",
   },
   {
+    title: "Medical Check Up",
+    href: "/compliance/mcu",
+    // Health data is personal data: same rule as the profile's Personal tab.
+    permission: PERMISSIONS.EMPLOYEES_PERSONAL_VIEW,
+    anyPermission: [PERMISSIONS.EMPLOYEES_VIEW],
+    icon: "shield",
+  },
+  {
+    title: "Training",
+    href: "/compliance/trainings",
+    permission: PERMISSIONS.EMPLOYEES_EMPLOYMENT_VIEW,
+    anyPermission: [PERMISSIONS.EMPLOYEES_VIEW],
+    icon: "trend-up",
+  },
+  {
     title: "Laporan",
     href: "#laporan",
     icon: "bar-chart",

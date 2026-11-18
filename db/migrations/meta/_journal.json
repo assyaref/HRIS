@@ -169,6 +169,13 @@
       "when": 1792727896035,
       "tag": "0022_employee_retention_detach",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1795035930816,
+      "tag": "0023_compliance_mcu_training",
+      "breakpoints": true
     }
   ]
 }

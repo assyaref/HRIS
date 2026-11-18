@@ -28,7 +28,10 @@ import {
   payslipDocuments,
   payslips,
   permissionRequests,
+  employeeTrainings,
+  medicalCheckups,
 } from "@/db/schema";
+import { tableExists } from "@/lib/db/table-exists";
 import {
   TEST_DATA_EMPLOYEE_NUMBER_PREFIX,
   baseTestDataPurgeDisposition,
@@ -61,6 +64,8 @@ interface PurgeSource {
   table: AnyPgTable;
   employeeIdColumn: AnyPgColumn;
   organizationIdColumn: AnyPgColumn;
+  /** Table from a migration that may not be applied yet: skipped until it exists. */
+  optionalTable?: string;
 }
 
 /**
@@ -293,6 +298,22 @@ const PURGE_SOURCES: readonly {
         table: announcementRecipients,
         employeeIdColumn: announcementRecipients.employeeId,
         organizationIdColumn: announcementRecipients.organizationId,
+      },
+    ],
+  },  {
+    category: "Medical & training",
+    tables: [
+      {
+        table: medicalCheckups,
+        employeeIdColumn: medicalCheckups.employeeId,
+        organizationIdColumn: medicalCheckups.organizationId,
+        optionalTable: "medical_checkups",
+      },
+      {
+        table: employeeTrainings,
+        employeeIdColumn: employeeTrainings.employeeId,
+        organizationIdColumn: employeeTrainings.organizationId,
+        optionalTable: "employee_trainings",
       },
     ],
   },
@@ -564,6 +585,9 @@ export async function countPurgeDependencies(
     for (const group of PURGE_SOURCES) {
       let total = 0;
       for (const source of group.tables) {
+        if (source.optionalTable && !(await tableExists(tx, source.optionalTable))) {
+          continue;
+        }
         const counted = await tx
           .select({ count: sql<number>`count(*)::int` })
           .from(source.table)
@@ -613,6 +637,9 @@ export async function deletePurgeDeletableRecords(
   for (const entry of PURGE_DELETE_PLAN) {
     let removed = 0;
     for (const source of entry.tables) {
+      if (source.optionalTable && !(await tableExists(tx, source.optionalTable))) {
+        continue;
+      }
       const deleted = await tx
         .delete(source.table)
         .where(

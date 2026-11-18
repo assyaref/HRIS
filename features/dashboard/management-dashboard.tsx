@@ -19,6 +19,12 @@ import {
   profileCompleteness,
 } from "@/features/insights/workforce";
 import { listInsightEmployees } from "@/features/insights/queries";
+import { isComplianceModuleReady } from "@/features/compliance/module";
+import {
+  latestPerEmployee,
+  listMcuRecords,
+  listTrainingRecords,
+} from "@/features/compliance/records.queries";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { HrisIcon, type HrisIconName } from "@/components/layout/icons";
 import { Badge } from "@/components/ui/badge";
@@ -224,14 +230,24 @@ export async function ManagementDashboard({
   const canDemographics = canInsights && can(P.EMPLOYEES_PERSONAL_VIEW);
   const canContracts = canInsights && can(P.EMPLOYEES_EMPLOYMENT_VIEW);
   const todayDateKey = dateStringInTimeZone(new Date(), APP_TIME_ZONE);
-  const [recentAudit, recap, insightRows, contractRows] = await Promise.all([
+  // Compliance alerts only once migration 0023 is applied.
+  const complianceReady = canInsights ? await isComplianceModuleReady() : false;
+  const [recentAudit, recap, insightRows, contractRows, mcuRows, trainingRows] = await Promise.all([
     canViewAudit ? listRecentAuditActivity(organizationId, 6) : Promise.resolve([]),
     selfProfile
       ? getMonthlyRecap(organizationId, selfProfile.id, monthKey)
       : Promise.resolve(null),
     canInsights ? listInsightEmployees(organizationId) : Promise.resolve([]),
     canContracts ? listContractRows(organizationId, todayDateKey) : Promise.resolve([]),
+    complianceReady && canDemographics
+      ? listMcuRecords(organizationId, todayDateKey).then(latestPerEmployee)
+      : Promise.resolve([]),
+    complianceReady && canContracts
+      ? listTrainingRecords(organizationId, todayDateKey)
+      : Promise.resolve([]),
   ]);
+  const countStatus = (rows: readonly { status: string }[], status: string) =>
+    rows.filter((row) => row.status === status).length;
   const completeness = profileCompleteness(insightRows);
   const gender = genderSplit(insightRows);
   const ages = ageDistribution(insightRows, todayDateKey);
@@ -273,6 +289,30 @@ export async function ManagementDashboard({
       label: `Kontrak berakhir dalam ${EXPIRING_WINDOW_DAYS} hari`,
       count: contractCounts.expiring,
       show: canContracts,
+    },
+    {
+      href: "/compliance/mcu?status=expired",
+      label: "MCU karyawan sudah kedaluwarsa",
+      count: countStatus(mcuRows, "expired"),
+      show: complianceReady && canDemographics,
+    },
+    {
+      href: "/compliance/mcu?status=expiring",
+      label: "MCU berakhir dalam 30 hari",
+      count: countStatus(mcuRows, "expiring"),
+      show: complianceReady && canDemographics,
+    },
+    {
+      href: "/compliance/trainings?status=expired",
+      label: "Sertifikat training kedaluwarsa",
+      count: countStatus(trainingRows, "expired"),
+      show: complianceReady && canContracts,
+    },
+    {
+      href: "/compliance/trainings?status=expiring",
+      label: "Sertifikat training berakhir dalam 30 hari",
+      count: countStatus(trainingRows, "expiring"),
+      show: complianceReady && canContracts,
     },
   ].filter((item) => item.show && item.count > 0);
 

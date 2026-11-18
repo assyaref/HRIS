@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  startTransition,
   useActionState,
   useCallback,
   useEffect,
@@ -671,7 +672,9 @@ export function EmployeePermanentDeleteDialog({
                     formData.set("confirmEmployeeNumber", confirmation);
                     formData.set("acknowledgedPermanentDelete", "true");
                     formData.set("deletionReason", reason);
-                    formAction(formData);
+                    // Inside a transition so isPending is tracked (the button
+                    // shows "Deleting…" and cannot be clicked twice).
+                    startTransition(() => formAction(formData));
                   }}
                 >
                   {isPending ? "Deleting…" : "Permanently Delete Employee"}

@@ -35,12 +35,18 @@ rekap), Cuti (jenis, saldo, persetujuan), Izin, Payroll & slip gaji,
 Pengumuman, Notifikasi, Pengguna / Role / Hak Akses (RBAC), jejak audit
 (tabel `audit_logs`).
 
+## Built with migration 0023 (see docs/compliance-mcu-training.md)
+
+| Reference module | Route |
+| --- | --- |
+| Monitoring / Reporting Medical Check Up | `/compliance/mcu` |
+| Monitoring / Reporting Training, Matrix Training, Matrix Training Setup, Employee Training (master) | `/compliance/trainings` |
+
 ## Next phase (needs migrations)
 
 | Module | New data |
 | --- | --- |
-| Medical Check Up (monitoring, reporting, doctor notes) | `medical_checkups` |
-| Training & certification, Matrix Training | `training_masters`, `employee_trainings`, `training_matrices` |
+| MCU doctor notes / consultation requests (from mobile) | doctor-note & consultation tables |
 | Overtime / SPKL, Overtime Setup | `overtime_requests`, project overtime settings |
 | Holiday calendar, Shift / Work Schedule, Work Group | `holidays`, `shifts`, `work_groups` |
 | Organization master (department, area, grade, jabatan, job desc) | organization master tables |
