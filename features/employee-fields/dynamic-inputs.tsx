@@ -26,14 +26,19 @@ export interface DynamicCustomFieldSpec {
 export function DynamicCustomFieldInputs({
   specs,
   idPrefix = "cf",
+  legend = "Custom fields",
 }: {
   specs: DynamicCustomFieldSpec[];
   idPrefix?: string;
+  /** Visible fieldset legend; `null` hides it (caller renders a heading). */
+  legend?: string | null;
 }) {
   if (specs.length === 0) return null;
   return (
     <fieldset className="space-y-4">
-      <legend className="text-sm font-medium">Custom fields</legend>
+      {legend === null ? null : (
+        <legend className="text-sm font-medium">{legend}</legend>
+      )}
       <div className="grid gap-4 sm:grid-cols-2">
         {specs.map((spec) => {
           const id = `${idPrefix}-${spec.fieldKey}`;

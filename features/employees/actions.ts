@@ -15,6 +15,7 @@ import {
   users,
   roles,
   userRoles,
+  workLocations,
 } from "@/db/schema";
 import {
   listActiveFieldDefinitions,
@@ -32,7 +33,11 @@ import { PERMISSIONS } from "@/lib/auth/permissions";
 import { getUserAuthorization, requirePermission } from "@/lib/auth/rbac";
 import { ORGANIZATION_ROLE_CODES, ROLE_CATALOG, displayRoleLabel } from "@/lib/auth/roles";
 
-import type { EmployeeStatus } from "./constants";
+import {
+  EMPLOYMENT_TYPES,
+  GENDERS,
+  type EmployeeStatus,
+} from "./constants";
 import { evaluateEmployeeDeletion } from "./delete-policy";
 import {
   buildPermanentDeleteDependencyMessage,
@@ -241,6 +246,171 @@ async function validateUserLink(
   return null;
 }
 
+const MARITAL_STATUSES = ["Single", "Married", "Divorced", "Widowed"] as const;
+
+const PERSONAL_FIELDS = [
+  "nik",
+  "birthDate",
+  "nickname",
+  "birthPlace",
+  "gender",
+  "religion",
+  "maritalStatus",
+  "nationality",
+  "personalEmail",
+] as const;
+
+const EMPLOYMENT_FIELDS = [
+  "division",
+  "department",
+  "position",
+  "employmentType",
+  "workLocationId",
+  "managerId",
+  "contractStart",
+  "contractEnd",
+] as const;
+
+type CreateProfileSections =
+  | {
+      ok: true;
+      personal: {
+        nickname: string | null;
+        birthPlace: string | null;
+        gender: string | null;
+        religion: string | null;
+        maritalStatus: string | null;
+        nationality: string | null;
+        personalEmail: string | null;
+      };
+      employment: {
+        division: string | null;
+        department: string | null;
+        position: string | null;
+        employmentType: string | null;
+        workLocationId: string | null;
+        managerId: string | null;
+        contractStart: Date | null;
+        contractEnd: Date | null;
+      };
+    }
+  | { ok: false; state: EmployeeActionState };
+
+/**
+ * Read + validate the Personal and Employment sections of the create form.
+ * NIK and birth date are validated by `createEmployeeSchema`; everything else
+ * here follows the profile tab actions. Values for a section the caller may
+ * not edit are refused rather than silently dropped.
+ */
+async function readCreateProfileSections(
+  formData: FormData,
+  organizationId: string,
+  granted: ReadonlySet<string>
+): Promise<CreateProfileSections> {
+  const canPersonal = granted.has(PERMISSIONS.EMPLOYEES_PERSONAL_UPDATE);
+  const canEmployment = granted.has(PERMISSIONS.EMPLOYEES_EMPLOYMENT_UPDATE);
+  const submitted = (names: readonly string[]) =>
+    names.some((name) => optionalField(formData, name) !== undefined);
+
+  if (!canPersonal && submitted(PERSONAL_FIELDS)) {
+    return { ok: false, state: toStateError("You are not authorized to set personal details.") };
+  }
+  if (!canEmployment && submitted(EMPLOYMENT_FIELDS)) {
+    return { ok: false, state: toStateError("You are not authorized to set employment details.") };
+  }
+
+  const errors: Record<string, string> = {};
+  const capped = (name: string, max: number, label: string): string | null => {
+    const value = optionalField(formData, name) ?? null;
+    if (value && value.length > max) {
+      errors[name] = `${label} must be ${max} characters or fewer.`;
+    }
+    return value;
+  };
+  const oneOf = (name: string, allowed: readonly string[], label: string) => {
+    const value = optionalField(formData, name) ?? null;
+    if (value && !allowed.includes(value)) errors[name] = `${label} is invalid.`;
+    return value;
+  };
+  const date = (name: string): Date | null => {
+    const value = optionalField(formData, name);
+    if (!value) return null;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(value))) {
+      errors[name] = "Use the YYYY-MM-DD date format.";
+      return null;
+    }
+    return toDateValue(value);
+  };
+
+  const personalEmail = capped("personalEmail", 254, "Personal email");
+  if (personalEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(personalEmail)) {
+    errors.personalEmail = "Personal email is invalid.";
+  }
+  const personal = {
+    nickname: capped("nickname", 100, "Nickname"),
+    birthPlace: capped("birthPlace", 200, "Birth place"),
+    gender: oneOf("gender", GENDERS, "Gender"),
+    religion: capped("religion", 50, "Religion"),
+    maritalStatus: oneOf("maritalStatus", MARITAL_STATUSES, "Marital status"),
+    nationality: capped("nationality", 50, "Nationality"),
+    personalEmail,
+  };
+
+  const workLocationId = optionalField(formData, "workLocationId") ?? null;
+  const managerId = optionalField(formData, "managerId") ?? null;
+  const employment = {
+    division: capped("division", 100, "Division"),
+    department: capped("department", 100, "Department"),
+    position: capped("position", 100, "Position"),
+    employmentType: oneOf("employmentType", EMPLOYMENT_TYPES, "Employment type"),
+    workLocationId,
+    managerId,
+    contractStart: date("contractStart"),
+    contractEnd: date("contractEnd"),
+  };
+  if (
+    employment.contractStart &&
+    employment.contractEnd &&
+    employment.contractEnd < employment.contractStart
+  ) {
+    errors.contractEnd = "Contract end cannot be before the start.";
+  }
+
+  // Work location and manager must belong to the caller's organization.
+  if (workLocationId) {
+    const location = UUID_PATTERN.test(workLocationId)
+      ? await db
+          .select({ id: workLocations.id })
+          .from(workLocations)
+          .where(
+            and(
+              eq(workLocations.id, workLocationId),
+              eq(workLocations.organizationId, organizationId)
+            )
+          )
+          .limit(1)
+      : [];
+    if (!location[0]) errors.workLocationId = "The selected work location is invalid.";
+  }
+  if (managerId) {
+    const manager = UUID_PATTERN.test(managerId)
+      ? await db
+          .select({ id: employees.id })
+          .from(employees)
+          .where(
+            and(eq(employees.id, managerId), eq(employees.organizationId, organizationId))
+          )
+          .limit(1)
+      : [];
+    if (!manager[0]) errors.managerId = "The selected manager is invalid.";
+  }
+
+  if (Object.keys(errors).length > 0) {
+    return { ok: false, state: { status: "error", fieldErrors: errors } };
+  }
+  return { ok: true, personal, employment };
+}
+
 /** Create a new employee in the authenticated user's organization. */
 export async function createEmployeeAction(
   _prevState: EmployeeActionState,
@@ -261,6 +431,8 @@ export async function createEmployeeAction(
     email: optionalField(formData, "email"),
     phone: optionalField(formData, "phone"),
     hireDate: optionalField(formData, "hireDate"),
+    nik: optionalField(formData, "nik"),
+    birthDate: optionalField(formData, "birthDate"),
     userId: optionalField(formData, "userId"),
   });
   if (!parsed.success) {
@@ -365,6 +537,20 @@ export async function createEmployeeAction(
   if (Object.keys(customFieldErrors).length > 0) {
     return { status: "error", fieldErrors: customFieldErrors };
   }
+
+  // Personal / Employment sections mirror the profile tabs and follow the
+  // same rules as `updatePersonalDataAction` / `updateEmploymentDataAction`:
+  // each is only accepted from a caller who may edit that tab.
+  const profile = await readCreateProfileSections(
+    formData,
+    organizationId,
+    new Set(authorization.permissionCodes)
+  );
+  if (!profile.ok) {
+    return profile.state;
+  }
+  const { personal, employment } = profile;
+
   try {
     employeeId = await db.transaction(async (tx) => {
       const inserted = await tx
@@ -379,10 +565,36 @@ export async function createEmployeeAction(
           phone: parsed.data.phone ?? null,
           employmentStatus: "active",
           hireDate: toDateValue(parsed.data.hireDate),
+          nik: parsed.data.nik ?? null,
+          birthDate: toDateValue(parsed.data.birthDate),
+          ...personal,
+          ...employment,
         })
         .returning({ id: employees.id });
       const row = inserted[0];
       if (!row) throw new Error("Employee insert returned no row.");
+      // First History-tab snapshot when an assignment was set at creation.
+      if (
+        employment.division ||
+        employment.department ||
+        employment.position ||
+        employment.workLocationId ||
+        employment.managerId ||
+        employment.employmentType
+      ) {
+        await tx.insert(employeeEmploymentHistory).values({
+          organizationId,
+          employeeId: row.id,
+          division: employment.division,
+          department: employment.department,
+          position: employment.position,
+          managerId: employment.managerId,
+          workLocationId: employment.workLocationId,
+          employmentType: employment.employmentType,
+          employmentStatus: "active",
+          notes: "Data awal saat karyawan dibuat",
+        });
+      }
       for (const write of customWrites) {
         await tx.insert(employeeCustomFieldValues).values({
           organizationId,

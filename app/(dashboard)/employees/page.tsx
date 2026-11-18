@@ -14,9 +14,7 @@ import {
 } from "@/lib/auth/rbac";
 
 import { CreateEmployeeDialog } from "@/features/employees/employee-create-dialog";
-import { ImportEmployeesDialog } from "@/features/employees/import/import-dialog";
 import { ImportExcelDialog } from "@/features/employees/excel/import-dialog";
-import { EmployeeExportButton } from "@/features/employees/export/export-button";
 import { EmployeeExcelButtons } from "@/features/employees/export/excel-buttons";
 import { EmployeeFilters } from "@/features/employees/employee-filters";
 import { EmployeeTable } from "@/features/employees/employee-table";
@@ -31,6 +29,11 @@ import {
 } from "@/features/employees/schemas";
 import { canPermanentlyDeleteEmployees } from "@/features/employees/permanent-delete-policy";
 import { listActiveFieldDefinitions } from "@/features/employee-fields/queries";
+import { listActiveCustomTabs } from "@/features/employee-tabs/queries";
+import {
+  listManagerOptions,
+  listWorkLocationOptions as listCreateWorkLocationOptions,
+} from "@/features/employees/master-data/queries-options";
 import {
   CUSTOM_FILTER_PARAM_PREFIX,
   isFieldVisibleToRoles,
@@ -214,6 +217,8 @@ export default async function EmployeesPage({
     canExportExcel,
     customDataView,
     customDataUpdate,
+    canPersonal,
+    canEmployment,
   ] = await Promise.all([
     hasPermission(user.id, PERMISSIONS.EMPLOYEES_CREATE),
     hasPermission(user.id, PERMISSIONS.EMPLOYEES_UPDATE),
@@ -222,6 +227,8 @@ export default async function EmployeesPage({
     hasPermission(user.id, PERMISSIONS.EMPLOYEES_EXPORT),
     hasPermission(user.id, PERMISSIONS.EMPLOYEE_CUSTOM_DATA_VIEW),
     hasPermission(user.id, PERMISSIONS.EMPLOYEE_CUSTOM_DATA_UPDATE),
+    hasPermission(user.id, PERMISSIONS.EMPLOYEES_PERSONAL_UPDATE),
+    hasPermission(user.id, PERMISSIONS.EMPLOYEES_EMPLOYMENT_UPDATE),
   ]);
 
   // Permanent deletion is a separate, higher-privilege capability: the
@@ -320,8 +327,34 @@ export default async function EmployeesPage({
             fieldType: definition.fieldType,
             isRequired: definition.isRequired,
             options: definition.options,
+            tabKey: definition.section,
           }))
       : [];
+
+  // The create form mirrors the profile tabs. It always writes into the
+  // caller's own organization (createEmployeeAction), so its option lists
+  // come from there too; the action re-validates every submitted id.
+  const createOrganizationId = user.organizationId ?? organizationId;
+  const [createTabs, createWorkLocations, createManagers] = canCreate
+    ? await Promise.all([
+        customFieldSpecs.length > 0
+          ? listActiveCustomTabs(createOrganizationId)
+          : Promise.resolve([]),
+        canEmployment
+          ? listCreateWorkLocationOptions(createOrganizationId)
+          : Promise.resolve([]),
+        canEmployment
+          ? listManagerOptions(
+              createOrganizationId,
+              "00000000-0000-0000-0000-000000000000"
+            )
+          : Promise.resolve([]),
+      ])
+    : [[], [], []];
+
+  const templateParams = new URLSearchParams({ format: "template" });
+  if (viewedOrganizationId) templateParams.set("org", viewedOrganizationId);
+  const templateHref = `/api/employees/export?${templateParams.toString()}`;
 
   const { items, total, page, totalPages } = result;
   const hasActiveFilters = Boolean(
@@ -366,39 +399,37 @@ export default async function EmployeesPage({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-          <EmployeeExportButton
-            search={search}
-            status={filters.status ?? ""}
-            organizationId={viewedOrganizationId ?? undefined}
-            projectId={projectId}
-            canExport={canExportExcel}
-          />
+          {canCreate && canImportExcel && importData ? (
+            <ImportExcelDialog
+              organizations={importData.organizations}
+              projects={importData.projects}
+              workLocations={importData.workLocations}
+              roles={importData.roles}
+              isSuperAdmin={importData.isSuperAdmin}
+              userOrganizationId={importData.userOrganizationId}
+              templateHref={templateHref}
+            />
+          ) : null}
           <EmployeeExcelButtons
             search={search}
             status={filters.status ?? ""}
             organizationId={viewedOrganizationId ?? undefined}
             projectId={projectId}
             canExport={canExportExcel}
-            canTemplate={canImportExcel}
           />
           {canCreate ? (
-            <>
-              <ImportEmployeesDialog />
-              {canImportExcel && importData ? (
-                <ImportExcelDialog
-                  organizations={importData.organizations}
-                  projects={importData.projects}
-                  workLocations={importData.workLocations}
-                  roles={importData.roles}
-                  isSuperAdmin={importData.isSuperAdmin}
-                  userOrganizationId={importData.userOrganizationId}
-                />
-              ) : null}
-              <CreateEmployeeDialog
-                linkableUsers={linkableUsers}
-                customFieldSpecs={customFieldSpecs}
-              />
-            </>
+            <CreateEmployeeDialog
+              linkableUsers={linkableUsers}
+              customFieldSpecs={customFieldSpecs}
+              customTabs={createTabs.map((tab) => ({
+                tabKey: tab.tabKey,
+                name: tab.name,
+              }))}
+              workLocations={createWorkLocations}
+              managers={createManagers}
+              canPersonal={canPersonal}
+              canEmployment={canEmployment}
+            />
           ) : null}
         </div>
       </div>

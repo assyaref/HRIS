@@ -3,7 +3,8 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
+import { HrisIcon } from "@/components/layout/icons";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -161,6 +162,12 @@ interface ImportExcelDialogProps {
   roles: { id: string; code: string; name: string; organizationId: string }[];
   /** Whether the current user is SUPERADMIN. */
   isSuperAdmin: boolean;
+  /**
+   * Download URL of the import template. The route builds it on every
+   * request from the organization's ACTIVE fields and tabs, so the file is
+   * always current.
+   */
+  templateHref?: string;
   /** The user's own organization ID (for non-SUPERADMIN). */
   userOrganizationId: string | null;
 }
@@ -172,6 +179,7 @@ export function ImportExcelDialog({
   roles,
   isSuperAdmin,
   userOrganizationId,
+  templateHref,
 }: ImportExcelDialogProps) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -338,12 +346,12 @@ export function ImportExcelDialog({
     <>
       <Button
         type="button"
-        variant="ghost"
-        size="sm"
+        variant="outline"
         onClick={openDialog}
         aria-label="Import employees from Excel"
       >
-        Import Excel
+        <HrisIcon name="download" className="size-4 rotate-180" />
+        Import
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -381,6 +389,33 @@ export function ImportExcelDialog({
           {/* Step 0: Upload */}
           {step === 0 ? (
             <div className="space-y-4">
+              {templateHref ? (
+                <div className="flex flex-col gap-3 rounded-2xl border border-[var(--card-border)] bg-muted/50 p-4 sm:flex-row sm:items-center">
+                  <span
+                    aria-hidden="true"
+                    className="hris-chip-green flex size-10 shrink-0 items-center justify-center rounded-xl"
+                  >
+                    <HrisIcon name="document" className="size-5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-foreground">
+                      Template import karyawan
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Selalu terbaru: berisi semua kolom profil, sheet per tab
+                      (termasuk tab &amp; field kustom yang aktif) dan dropdown
+                      pilihan.
+                    </p>
+                  </div>
+                  <a
+                    href={templateHref}
+                    className={buttonVariants({ variant: "outline", size: "sm" })}
+                  >
+                    <HrisIcon name="download" className="size-4" />
+                    Unduh template
+                  </a>
+                </div>
+              ) : null}
               <div className="space-y-2">
                 <label htmlFor="excel-file" className="text-sm font-medium">
                   Excel workbook (.xlsx)
