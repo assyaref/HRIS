@@ -3,17 +3,25 @@
  *
  * Times are stored as UTC instants. For display we render them in the
  * work-location timezone (when known) so a WIB site shows WIB times.
+ * Inputs may be `Date` or raw PostgreSQL text (see `toInstant`); missing or
+ * malformed values render as "—" instead of throwing.
  */
 
-export function formatDate(value: Date | null): string {
+import { toInstant } from "../../lib/utils/instant.ts";
+
+type InstantInput = Date | string | null | undefined;
+
+export function formatDate(input: InstantInput): string {
+  const value = toInstant(input);
   if (!value) return "—";
   return value.toISOString().slice(0, 10);
 }
 
 export function formatTime(
-  value: Date | null,
+  input: InstantInput,
   timeZone?: string | null
 ): string {
+  const value = toInstant(input);
   if (!value) return "—";
   const zone = timeZone && timeZone.trim() !== "" ? timeZone : "UTC";
   try {

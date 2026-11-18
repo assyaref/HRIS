@@ -15,6 +15,7 @@ import type {
   RecapSortDirection,
   RecapSortField,
 } from "./recap.schemas";
+import { toInstant } from "@/lib/utils/instant";
 
 /**
  * Attendance Recap data access — server-only, READ-ONLY reporting layer.
@@ -155,8 +156,9 @@ type RecapDetailDayRaw = {
   is_late: boolean | null;
   attendance_id: string | null;
   record_status: string | null;
-  check_in_at: Date | null;
-  check_out_at: Date | null;
+  /** Raw execute() rows carry timestamptz as text; see `toInstant`. */
+  check_in_at: Date | string | null;
+  check_out_at: Date | string | null;
   work_location_name: string | null;
   work_location_timezone: string | null;
   check_in_location_status: string | null;
@@ -713,8 +715,8 @@ function toRecapDetailDay(raw: RecapDetailDayRaw): RecapDetailDay {
     late: raw.is_late === true,
     attendanceId: raw.attendance_id,
     recordStatus: raw.record_status,
-    checkInAt: raw.check_in_at,
-    checkOutAt: raw.check_out_at,
+    checkInAt: toInstant(raw.check_in_at),
+    checkOutAt: toInstant(raw.check_out_at),
     workLocationName: raw.work_location_name,
     workLocationTimezone: raw.work_location_timezone,
     checkInLocationStatus: raw.check_in_location_status,
