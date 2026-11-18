@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 export interface ThemeContextValue {
   theme: "light" | "dark" | "system";
@@ -22,19 +29,17 @@ const ThemeContext = createContext<ThemeContextValue>({
  * take effect.
  */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  // Always start as "light" so the first client render matches the server
-  // (reading localStorage here caused hydration mismatches for dark-mode
-  // users). The stored choice is applied right after mount, and the effect
-  // below then sets the `dark` class on <html>.
-  const [theme, setTheme] = useState<"light" | "dark" | "system">("light");
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("hris-theme");
-      if (stored === "dark" || stored === "system") setTheme(stored);
-    } catch {
-      // localStorage unavailable — keep light default.
-    }
-  }, []);
+  // The stored choice is an external store: the server snapshot is "light"
+  // and hydration uses it too, then React switches to the stored value —
+  // no hydration mismatch for dark-mode users (reading localStorage in the
+  // first render used to cause one). A choice made in this tab overrides it.
+  const stored = useSyncExternalStore(
+    subscribeStoredTheme,
+    readStoredTheme,
+    () => "light" as const
+  );
+  const [override, setTheme] = useState<"light" | "dark" | "system" | null>(null);
+  const theme = override ?? stored;
 
   const resolvedTheme = useCallback((): "light" | "dark" => {
     if (theme === "system") {
@@ -81,6 +86,24 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       {children}
     </ThemeContext.Provider>
   );
+}
+
+type ThemeChoice = "light" | "dark" | "system";
+
+function readStoredTheme(): ThemeChoice {
+  try {
+    const value = localStorage.getItem("hris-theme");
+    if (value === "dark" || value === "system" || value === "light") return value;
+  } catch {
+    // localStorage unavailable — keep light default.
+  }
+  return "light";
+}
+
+/** Other tabs changing the theme ("storage" fires only cross-tab). */
+function subscribeStoredTheme(onChange: () => void): () => void {
+  window.addEventListener("storage", onChange);
+  return () => window.removeEventListener("storage", onChange);
 }
 
 export function useTheme(): ThemeContextValue {
