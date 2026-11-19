@@ -15,6 +15,16 @@ import {
 import { listMyPermissionRequests } from "@/features/permission/queries";
 import { listMyPublishedPayslips } from "@/features/payroll/queries";
 
+import { isHelpdeskModuleReady } from "@/features/helpdesk/module";
+import { listTickets } from "@/features/helpdesk/queries";
+import { hasUnreadReply, STATUS_LABELS as HELPDESK_STATUS_LABELS } from "@/features/helpdesk/rules";
+import { fieldLabel } from "@/features/profile-changes/fields";
+import { isProfileChangeModuleReady } from "@/features/profile-changes/module";
+import { listProfileChanges } from "@/features/profile-changes/queries";
+import { isTimeModuleReady } from "@/features/time/module";
+import { listOvertime } from "@/features/time/queries";
+import { formatDuration, OVERTIME_STATUS_LABELS } from "@/features/time/rules";
+
 import type { NotificationCategory } from "./constants";
 
 export interface EmployeeNotification {
@@ -66,11 +76,26 @@ export async function listMyNotifications(
     return { items: [], unreadCount: 0 };
   }
 
-  const [announcements, leave, permissions, payslips] = await Promise.all([
+  // Modules from additive migrations (0024–0026) join the feed once their
+  // tables exist; before that they simply contribute nothing.
+  const [timeReady, profileReady, helpdeskReady] = await Promise.all([
+    isTimeModuleReady(),
+    isProfileChangeModuleReady(),
+    isHelpdeskModuleReady(),
+  ]);
+  const yearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const farFuture = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  const [announcements, leave, permissions, payslips, overtime, profileChanges, tickets] = await Promise.all([
     listMyAnnouncements({ organizationId, employeeId: employee.id }),
     listMyLeaveRequests(organizationId, employee.id),
     listMyPermissionRequests(organizationId, employee.id),
     listMyPublishedPayslips(organizationId, employee.id),
+    timeReady
+      ? listOvertime(organizationId, { employeeId: employee.id, from: yearAgo, to: farFuture })
+      : Promise.resolve([]),
+    profileReady ? listProfileChanges(organizationId, { employeeId: employee.id }) : Promise.resolve([]),
+    helpdeskReady ? listTickets(organizationId, { employeeId: employee.id }) : Promise.resolve([]),
   ]);
 
   const items: EmployeeNotification[] = [];
@@ -136,6 +161,47 @@ export async function listMyNotifications(
       time: payslip.issuedAt,
       unread: false,
       href: `/payroll/payslips/${payslip.id}`,
+    });
+  }
+
+  for (const request of overtime) {
+    // Only decisions are news; a pending request is the employee's own action.
+    if (request.status !== "approved" && request.status !== "rejected") continue;
+    items.push({
+      id: `overtime-${request.id}`,
+      category: "approval",
+      title: `Lembur ${request.overtimeDate}`,
+      description: `Status: ${OVERTIME_STATUS_LABELS[request.status] ?? request.status} · ${formatDuration(request.totalMinutes)}`,
+      time: request.reviewedAt ?? request.createdAt,
+      unread: false,
+      href: "/overtime",
+    });
+  }
+
+  for (const request of profileChanges) {
+    if (request.status !== "approved" && request.status !== "rejected") continue;
+    const fields = Object.keys(request.changes ?? {}).map(fieldLabel).join(", ");
+    items.push({
+      id: `profile-change-${request.id}`,
+      category: "approval",
+      title: request.status === "approved" ? "Perubahan data disetujui" : "Perubahan data ditolak",
+      description: request.reviewerNote ? `${fields} · ${request.reviewerNote}` : fields,
+      time: request.reviewedAt ?? request.createdAt,
+      unread: false,
+      href: "/settings/account",
+    });
+  }
+
+  for (const ticket of tickets) {
+    if (!ticket.lastMessageFromAgent) continue;
+    items.push({
+      id: `helpdesk-${ticket.id}`,
+      category: "system",
+      title: `Balasan HR: ${ticket.subject}`,
+      description: `${ticket.ticketNumber} · ${HELPDESK_STATUS_LABELS[ticket.status] ?? ticket.status}`,
+      time: ticket.lastMessageAt,
+      unread: hasUnreadReply(ticket),
+      href: `/helpdesk/${ticket.id}`,
     });
   }
 

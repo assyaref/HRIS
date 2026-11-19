@@ -28,6 +28,7 @@ const HOME_MENU_STYLE: Record<string, { label?: string; icon?: HrisIconName; chi
   "/leave": { label: "Cuti", chip: "bg-[#EEE8FF] text-[#7C3AED] dark:bg-[#251E45] dark:text-[#C4B5FD]" },
   "/overtime": { label: "Lembur", icon: "clock", chip: "bg-[#FFE4E6] text-[#E11D48] dark:bg-[#3A1520] dark:text-[#FDA4AF]" },
   "/time/calendar": { label: "Libur", icon: "calendar", chip: "bg-[#E0F2FE] text-[#0284C7] dark:bg-[#0F2A3A] dark:text-[#7DD3FC]" },
+  "/helpdesk": { label: "Tanya HR", icon: "help", chip: "bg-[#EDE9FE] text-[#6D28D9] dark:bg-[#251E45] dark:text-[#C4B5FD]" },
   "/permission": { label: "Izin", chip: "bg-[#FFF1E0] text-[#EA7A0C] dark:bg-[#3A2A10] dark:text-[#FCD34D]" },
   "/payslip": { label: "Slip Gaji", icon: "wallet", chip: "bg-[#E3F6E8] text-[#16A34A] dark:bg-[#16301C] dark:text-[#86EFAC]" },
   // Soft hyphen: breaks as "Pengu-muman" only when the tile is too narrow.

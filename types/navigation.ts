@@ -47,7 +47,8 @@ export type NavIconKey =
   | "trend-up"
   | "shield"
   | "clock"
-  | "calendar";
+  | "calendar"
+  | "help";
 
 export interface NavItem {
   title: string;

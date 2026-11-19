@@ -69,6 +69,8 @@ const ROUTES = [
   "/time/calendar", "/time/calendar?month=2026-08", "/time/shifts", "/time/shifts?tab=groups",
   "/overtime", "/overtime/management", "/approvals?type=overtime",
   "/profile-changes", "/profile-changes?status=all", "/approvals?type=profile",
+  "/helpdesk", "/helpdesk/management", "/helpdesk/management?status=all",
+  "/helpdesk/management?tab=categories", "/notifications",
 ];
 
 const ERROR_UI =

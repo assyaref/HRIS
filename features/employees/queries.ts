@@ -22,6 +22,7 @@ import {
   employeeTrainings,
   medicalCheckups,
   overtimeRequests,
+  helpdeskTickets,
   profileChangeRequests,
   workGroupMembers,
   attendanceEvents,
@@ -950,6 +951,13 @@ const EMPLOYEE_DELETE_DEPENDENCY_SOURCES: readonly {
         employeeIdColumn: profileChangeRequests.employeeId,
         organizationIdColumn: profileChangeRequests.organizationId,
         optionalTable: "profile_change_requests",
+      },
+      {
+        // Messages cascade with their ticket (no employee column of their own).
+        table: helpdeskTickets,
+        employeeIdColumn: helpdeskTickets.employeeId,
+        organizationIdColumn: helpdeskTickets.organizationId,
+        optionalTable: "helpdesk_tickets",
       },
     ],
   },

@@ -57,6 +57,12 @@ Pengumuman, Notifikasi, Pengguna / Role / Hak Akses (RBAC), jejak audit
 | --- | --- |
 | Approval of profile-change requests from mobile | Profil Saya → Ajukan perubahan data; `/profile-changes`, `/approvals` |
 
+## Built with migration 0026 (see docs/helpdesk.md)
+
+| Reference module | Route |
+| --- | --- |
+| Ask Admin (helpdesk) with categories | `/helpdesk`, `/helpdesk/management` |
+
 ## Next phase (needs migrations)
 
 | Module | New data |
@@ -66,11 +72,11 @@ Pengumuman, Notifikasi, Pengguna / Role / Hak Akses (RBAC), jejak audit
 | Shift-aware attendance (late / early by work group shift) | uses `shifts` + `work_group_members` |
 | Organization master (department, area, grade, jabatan, job desc) | organization master tables |
 | Multi-level approver chain, bank-account / address / family change requests | extends `profile_change_requests` |
-| Ask Admin (helpdesk), Activity, Planner | tickets, categories, activities |
+| Activity, Planner | activities |
 | Management No Surat (document numbering), PKWT generator | counters, templates |
 | Timesheet | timesheets + approvals |
 
 Recommended order (from the reference roadmap): ~~calendar + shifts →
-overtime → MCU + training → profile-change approval~~ (done) → helpdesk →
-documents. Each: migration + seed for new permission codes + pages +
+overtime → MCU + training → profile-change approval → helpdesk~~ (done) →
+documents (No Surat, PKWT). Each: migration + seed for new permission codes + pages +
 tests + `npm run smoke:routes`.

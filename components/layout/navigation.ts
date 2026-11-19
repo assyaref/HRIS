@@ -165,6 +165,8 @@ export const primaryNavigation: NavItem[] = [
     ],
   },
   { title: "Pengumuman", href: "/announcements", icon: "megaphone" },
+  // Every signed-in user may ask HR; the page needs a linked employee.
+  { title: "Tanya Admin", href: "/helpdesk", icon: "help" },
 ];
 
 export const managementNavigation: NavItem[] = [
@@ -196,6 +198,13 @@ export const managementNavigation: NavItem[] = [
     permission: PERMISSIONS.EMPLOYEES_PERSONAL_VIEW,
     anyPermission: [PERMISSIONS.EMPLOYEES_VIEW],
     icon: "edit",
+  },
+  {
+    title: "Kelola Tiket Helpdesk",
+    href: "/helpdesk/management",
+    permission: PERMISSIONS.EMPLOYEES_UPDATE,
+    anyPermission: [PERMISSIONS.EMPLOYEES_VIEW],
+    icon: "help",
   },
   {
     title: "Kelola Pengumuman",

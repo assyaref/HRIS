@@ -225,8 +225,16 @@ export type ProfileChangeAuditAction =
   | "profile_change.approved"
   | "profile_change.rejected";
 
+export type HelpdeskAuditAction =
+  | "helpdesk.ticket_created"
+  | "helpdesk.message_added"
+  | "helpdesk.ticket_updated"
+  | "helpdesk.category_created"
+  | "helpdesk.category_updated";
+
 export type AuditAction =
   | ReportAuditAction
+  | HelpdeskAuditAction
   | ProfileChangeAuditAction
   | TimeAuditAction
   | ComplianceAuditAction
