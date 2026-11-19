@@ -3,7 +3,15 @@ import "server-only";
 import { and, asc, desc, eq, gte, lte, sql, type SQL } from "drizzle-orm";
 
 import { db } from "@/db";
-import { documentTypes, employeeAddresses, employees, issuedDocuments, users } from "@/db/schema";
+import {
+  documentTypes,
+  employeeAddresses,
+  employees,
+  issuedDocuments,
+  letterTemplates,
+  users,
+  workLocations,
+} from "@/db/schema";
 
 export interface DocumentTypeRow {
   id: string;
@@ -140,6 +148,63 @@ export async function getPkwtEmployeeData(organizationId: string, employeeId: st
       )`,
     })
     .from(employees)
+    .where(and(eq(employees.organizationId, organizationId), eq(employees.id, employeeId)))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export interface LetterTemplateRow {
+  id: string;
+  name: string;
+  title: string;
+  body: string;
+  active: boolean;
+  documentTypeId: string;
+  typeCode: string;
+  typeName: string;
+}
+
+export async function listLetterTemplates(organizationId: string): Promise<LetterTemplateRow[]> {
+  return db
+    .select({
+      id: letterTemplates.id,
+      name: letterTemplates.name,
+      title: letterTemplates.title,
+      body: letterTemplates.body,
+      active: letterTemplates.active,
+      documentTypeId: letterTemplates.documentTypeId,
+      typeCode: documentTypes.code,
+      typeName: documentTypes.name,
+    })
+    .from(letterTemplates)
+    .innerJoin(documentTypes, eq(documentTypes.id, letterTemplates.documentTypeId))
+    .where(eq(letterTemplates.organizationId, organizationId))
+    .orderBy(desc(letterTemplates.active), asc(documentTypes.code), asc(letterTemplates.name));
+}
+
+/** Employee data used by letter merge fields. */
+export async function getLetterEmployeeData(organizationId: string, employeeId: string) {
+  const rows = await db
+    .select({
+      id: employees.id,
+      employeeNumber: employees.employeeNumber,
+      name: sql<string>`TRIM(${employees.firstName} || ' ' || ${employees.lastName})`,
+      nik: employees.nik,
+      position: employees.position,
+      department: employees.department,
+      division: employees.division,
+      employmentType: employees.employmentType,
+      hireDate: sql<string | null>`to_char(${employees.hireDate}, 'YYYY-MM-DD')`,
+      workLocation: workLocations.name,
+      address: sql<string | null>`(
+        SELECT NULLIF(CONCAT_WS(', ', ${employeeAddresses.address}, ${employeeAddresses.city}, ${employeeAddresses.province}), '')
+        FROM ${employeeAddresses}
+        WHERE ${employeeAddresses.employeeId} = ${employees.id} AND ${employeeAddresses.type} = 'ktp'
+        LIMIT 1
+      )`,
+    })
+    .from(employees)
+    .leftJoin(workLocations, eq(workLocations.id, employees.workLocationId))
     .where(and(eq(employees.organizationId, organizationId), eq(employees.id, employeeId)))
     .limit(1);
   return rows[0] ?? null;

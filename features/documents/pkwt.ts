@@ -73,3 +73,29 @@ export function longDate(day: string | null): string {
 export function rupiah(value: number): string {
   return `Rp ${Math.round(value).toLocaleString("id-ID")}`;
 }
+
+export interface LetterContent {
+  kind: "letter";
+  templateName: string;
+  title: string;
+  paragraphs: string[];
+  signatoryName: string;
+  signatoryTitle: string;
+  city: string;
+}
+
+/** Safe read of a template-generated letter; null for anything else. */
+export function parseLetterContent(value: unknown): LetterContent | null {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Record<string, unknown>;
+  if (v.kind !== "letter" || !Array.isArray(v.paragraphs)) return null;
+  return {
+    kind: "letter",
+    templateName: str(v.templateName) ?? "",
+    title: str(v.title) ?? "SURAT",
+    paragraphs: v.paragraphs.filter((p): p is string => typeof p === "string"),
+    signatoryName: str(v.signatoryName) ?? "—",
+    signatoryTitle: str(v.signatoryTitle) ?? "—",
+    city: str(v.city) ?? "",
+  };
+}

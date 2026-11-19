@@ -5,20 +5,30 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { db } from "@/db";
-import { NUMBER_RESET_PERIODS, documentTypes, employees, issuedDocuments } from "@/db/schema";
+import { NUMBER_RESET_PERIODS, documentTypes, employees, issuedDocuments, letterTemplates } from "@/db/schema";
+import { getOrganizationName } from "@/features/employees/queries";
 import { writeAuditLog, type AuditAction } from "@/lib/auth/audit";
 import { requireUser } from "@/lib/auth/auth";
 import { PERMISSIONS, type Permission } from "@/lib/auth/permissions";
 import { getUserAuthorization } from "@/lib/auth/rbac";
 
-import { DOCUMENTS_MIGRATION, isDocumentsModuleReady } from "./module";
+import { DOCUMENTS_MIGRATION, isDocumentsModuleReady, isLetterTemplatesReady, TEMPLATES_MIGRATION } from "./module";
 import {
   DEFAULT_DOCUMENT_TYPES,
   formatDocumentNumber,
   numberingPeriod,
   validateNumberFormat,
 } from "./numbering";
-import { getPkwtEmployeeData } from "./queries";
+import { longDate } from "./pkwt";
+import { getLetterEmployeeData, getPkwtEmployeeData } from "./queries";
+import {
+  DEFAULT_TEMPLATES,
+  paragraphs,
+  promptedFields,
+  renderTemplate,
+  validateTemplateBody,
+  type MergeValues,
+} from "./templates";
 
 /**
  * Letter numbering and generated letters.
@@ -199,7 +209,8 @@ async function issueInTx(
     recipient: string | null;
     employeeId: string | null;
     notes: string | null;
-    content?: Record<string, unknown> | null;
+    /** Snapshot, or a builder that receives the issued number. */
+    content?: Record<string, unknown> | null | ((documentNumber: string) => Record<string, unknown>);
   }
 ): Promise<{ id: string; documentNumber: string } | { error: string }> {
   const locked = await tx.execute(sql`
@@ -239,7 +250,7 @@ async function issueInTx(
       subject: data.subject,
       recipient: data.recipient,
       employeeId: data.employeeId,
-      content: data.content ?? null,
+      content: typeof data.content === "function" ? data.content(documentNumber) : (data.content ?? null),
       notes: data.notes,
       issuedBy: ctx.userId,
     })
@@ -433,6 +444,237 @@ export async function generatePkwtAction(formData: FormData): Promise<DocumentRe
       revalidatePath(`/employees/${employee.id}`);
       revalidatePath("/monitoring/contracts");
       return { ok: true, message: `PKWT ${result.documentNumber} dibuat.`, ...result };
+    } catch (error) {
+      if (!uniqueViolation(error)) throw error;
+    }
+  }
+  return { ok: false, message: "Nomor bentrok dengan surat lain. Coba lagi." };
+}
+
+/* ------------------------------------------------------------------ */
+/* Letter templates                                                    */
+/* ------------------------------------------------------------------ */
+
+const TEMPLATES_NOT_READY: DocumentResult = {
+  ok: false,
+  message: `Templat surat belum aktif: migrasi ${TEMPLATES_MIGRATION} belum dijalankan di server.`,
+};
+
+const templateSchema = z.object({
+  documentTypeId: z.string().regex(UUID, "Pilih jenis surat."),
+  name: z.string().trim().min(3, "Nama templat minimal 3 karakter.").max(120),
+  title: z.string().trim().min(3, "Judul surat minimal 3 karakter.").max(150),
+  body: z.string(),
+});
+
+async function typeInOrganization(typeId: string, organizationId: string) {
+  const rows = await db
+    .select({ id: documentTypes.id })
+    .from(documentTypes)
+    .where(and(eq(documentTypes.id, typeId), eq(documentTypes.organizationId, organizationId)))
+    .limit(1);
+  return Boolean(rows[0]);
+}
+
+export async function saveLetterTemplateAction(id: string | null, formData: FormData): Promise<DocumentResult> {
+  const ctx = await context(MANAGE);
+  if (!isCtx(ctx)) return ctx;
+  if (!(await isLetterTemplatesReady())) return TEMPLATES_NOT_READY;
+  const parsed = templateSchema.safeParse({
+    documentTypeId: formData.get("documentTypeId") ?? "",
+    name: formData.get("name") ?? "",
+    title: formData.get("title") ?? "",
+    body: formData.get("body") ?? "",
+  });
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? "Data tidak valid." };
+  const bodyError = validateTemplateBody(parsed.data.body);
+  if (bodyError) return { ok: false, message: bodyError };
+  if (!(await typeInOrganization(parsed.data.documentTypeId, ctx.organizationId))) {
+    return { ok: false, message: "Jenis surat tidak ditemukan." };
+  }
+  const values = { ...parsed.data, body: parsed.data.body.replace(/\r\n/g, "\n").trim() };
+  try {
+    if (id) {
+      if (!UUID.test(id)) return { ok: false, message: "Templat tidak ditemukan." };
+      const updated = await db
+        .update(letterTemplates)
+        .set({ ...values, updatedAt: new Date() })
+        .where(and(eq(letterTemplates.id, id), eq(letterTemplates.organizationId, ctx.organizationId)))
+        .returning({ id: letterTemplates.id });
+      if (!updated[0]) return { ok: false, message: "Templat tidak ditemukan." };
+      await audit(ctx, "letter_template.updated", "letter_template", id, { name: values.name });
+    } else {
+      const inserted = await db
+        .insert(letterTemplates)
+        .values({ ...values, organizationId: ctx.organizationId })
+        .returning({ id: letterTemplates.id });
+      await audit(ctx, "letter_template.created", "letter_template", inserted[0]?.id ?? null, { name: values.name });
+    }
+  } catch (error) {
+    if (uniqueViolation(error)) return { ok: false, message: "Nama templat sudah dipakai." };
+    throw error;
+  }
+  revalidate();
+  return { ok: true, message: id ? "Templat diperbarui." : "Templat ditambahkan." };
+}
+
+export async function setLetterTemplateActiveAction(id: string, active: boolean): Promise<DocumentResult> {
+  const ctx = await context(MANAGE);
+  if (!isCtx(ctx)) return ctx;
+  if (!(await isLetterTemplatesReady())) return TEMPLATES_NOT_READY;
+  if (!UUID.test(id)) return { ok: false, message: "Templat tidak ditemukan." };
+  const updated = await db
+    .update(letterTemplates)
+    .set({ active, updatedAt: new Date() })
+    .where(and(eq(letterTemplates.id, id), eq(letterTemplates.organizationId, ctx.organizationId)))
+    .returning({ id: letterTemplates.id });
+  if (!updated[0]) return { ok: false, message: "Templat tidak ditemukan." };
+  await audit(ctx, "letter_template.updated", "letter_template", id, { active });
+  revalidate();
+  return { ok: true, message: active ? "Templat diaktifkan." : "Templat dinonaktifkan." };
+}
+
+/** Adds the default letter types (if missing) and the default templates. */
+export async function seedLetterTemplatesAction(): Promise<DocumentResult> {
+  const ctx = await context(MANAGE);
+  if (!isCtx(ctx)) return ctx;
+  if (!(await isLetterTemplatesReady())) return TEMPLATES_NOT_READY;
+  await db
+    .insert(documentTypes)
+    .values(DEFAULT_DOCUMENT_TYPES.map((t) => ({ ...t, organizationId: ctx.organizationId })))
+    .onConflictDoNothing();
+  const types = await db
+    .select({ id: documentTypes.id, code: documentTypes.code })
+    .from(documentTypes)
+    .where(eq(documentTypes.organizationId, ctx.organizationId));
+  const typeId = new Map(types.map((t) => [t.code, t.id]));
+  const rows = DEFAULT_TEMPLATES.filter((t) => typeId.has(t.typeCode)).map((t) => ({
+    organizationId: ctx.organizationId,
+    documentTypeId: typeId.get(t.typeCode)!,
+    name: t.name,
+    title: t.title,
+    body: t.body,
+  }));
+  const inserted = rows.length
+    ? await db.insert(letterTemplates).values(rows).onConflictDoNothing().returning({ id: letterTemplates.id })
+    : [];
+  await audit(ctx, "letter_template.created", "letter_template", null, { defaults: inserted.length });
+  revalidate();
+  return { ok: true, message: `${inserted.length} templat standar ditambahkan.` };
+}
+
+const letterSchema = z.object({
+  templateId: z.string().regex(UUID, "Pilih templat."),
+  employeeId: z.string().regex(UUID, "Pilih karyawan."),
+  issuedDate: dateField,
+  keterangan: optionalText(1000),
+  tanggalMulai: z.union([dateField, z.literal("")]).optional().transform((v) => (v ? v : null)),
+  tanggalSelesai: z.union([dateField, z.literal("")]).optional().transform((v) => (v ? v : null)),
+  signatoryName: z.string().trim().min(2, "Nama penandatangan wajib diisi.").max(120),
+  signatoryTitle: z.string().trim().min(2, "Jabatan penandatangan wajib diisi.").max(120),
+  city: z.string().trim().min(2, "Kota wajib diisi.").max(80),
+});
+
+const EMPLOYMENT_TYPE_LABELS: Record<string, string> = {
+  Probation: "Masa Percobaan",
+  Contract: "Kontrak",
+  Permanent: "Tetap",
+  Daily: "Harian",
+  Internship: "Magang",
+  Freelance: "Lepas",
+};
+
+/** Creates a numbered letter from a template and an employee. */
+export async function generateLetterAction(formData: FormData): Promise<DocumentResult> {
+  const ctx = await context(MANAGE);
+  if (!isCtx(ctx)) return ctx;
+  if (!(await isLetterTemplatesReady())) return TEMPLATES_NOT_READY;
+  const raw = Object.fromEntries([...formData.entries()].filter(([, v]) => typeof v === "string"));
+  const parsed = letterSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? "Data tidak valid." };
+  const data = parsed.data;
+
+  const template = (
+    await db
+      .select({
+        id: letterTemplates.id,
+        name: letterTemplates.name,
+        title: letterTemplates.title,
+        body: letterTemplates.body,
+        active: letterTemplates.active,
+        documentTypeId: letterTemplates.documentTypeId,
+      })
+      .from(letterTemplates)
+      .where(and(eq(letterTemplates.id, data.templateId), eq(letterTemplates.organizationId, ctx.organizationId)))
+      .limit(1)
+  )[0];
+  if (!template) return { ok: false, message: "Templat tidak ditemukan." };
+  if (!template.active) return { ok: false, message: "Templat ini nonaktif." };
+
+  const prompts = promptedFields(template.body);
+  if (prompts.includes("keterangan") && !data.keterangan) return { ok: false, message: "Isi keterangan surat." };
+  if (prompts.includes("tanggal_mulai") && !data.tanggalMulai) return { ok: false, message: "Isi tanggal mulai." };
+  if (prompts.includes("tanggal_selesai") && !data.tanggalSelesai) return { ok: false, message: "Isi tanggal selesai." };
+  if (data.tanggalMulai && data.tanggalSelesai && data.tanggalSelesai < data.tanggalMulai) {
+    return { ok: false, message: "Tanggal selesai tidak boleh sebelum tanggal mulai." };
+  }
+
+  const [employee, organizationName] = await Promise.all([
+    getLetterEmployeeData(ctx.organizationId, data.employeeId),
+    getOrganizationName(ctx.organizationId),
+  ]);
+  if (!employee) return { ok: false, message: "Karyawan tidak ditemukan." };
+
+  const values = (documentNumber: string): MergeValues => ({
+    nama: employee.name,
+    nomor_karyawan: employee.employeeNumber,
+    nik: employee.nik,
+    jabatan: employee.position,
+    departemen: employee.department,
+    divisi: employee.division,
+    lokasi_kerja: employee.workLocation,
+    tanggal_masuk: employee.hireDate ? longDate(employee.hireDate) : null,
+    jenis_kepegawaian: employee.employmentType ? (EMPLOYMENT_TYPE_LABELS[employee.employmentType] ?? employee.employmentType) : null,
+    alamat: employee.address,
+    perusahaan: organizationName,
+    nomor_surat: documentNumber,
+    tanggal_surat: longDate(data.issuedDate),
+    kota: data.city,
+    penandatangan: data.signatoryName,
+    jabatan_penandatangan: data.signatoryTitle,
+    keterangan: data.keterangan,
+    tanggal_mulai: data.tanggalMulai ? longDate(data.tanggalMulai) : null,
+    tanggal_selesai: data.tanggalSelesai ? longDate(data.tanggalSelesai) : null,
+  });
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const result = await db.transaction((tx) =>
+        issueInTx(tx, ctx, template.documentTypeId, {
+          issuedDate: data.issuedDate,
+          subject: `${template.name} — ${employee.name}`,
+          recipient: employee.name,
+          employeeId: employee.id,
+          notes: data.keterangan,
+          content: (documentNumber) => ({
+            kind: "letter",
+            templateName: template.name,
+            title: template.title,
+            paragraphs: paragraphs(renderTemplate(template.body, values(documentNumber))),
+            signatoryName: data.signatoryName,
+            signatoryTitle: data.signatoryTitle,
+            city: data.city,
+          }),
+        })
+      );
+      if ("error" in result) return { ok: false, message: result.error };
+      await audit(ctx, "document.letter_generated", "issued_document", result.id, {
+        documentNumber: result.documentNumber,
+        template: template.name,
+        employeeNumber: employee.employeeNumber,
+      });
+      revalidate(result.id);
+      return { ok: true, message: `${template.name} ${result.documentNumber} dibuat.`, ...result };
     } catch (error) {
       if (!uniqueViolation(error)) throw error;
     }

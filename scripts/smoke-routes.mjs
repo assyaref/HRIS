@@ -71,7 +71,7 @@ const ROUTES = [
   "/profile-changes", "/profile-changes?status=all", "/approvals?type=profile",
   "/helpdesk", "/helpdesk/management", "/helpdesk/management?status=all",
   "/helpdesk/management?tab=categories", "/notifications",
-  "/documents", "/documents?tab=types",
+  "/documents", "/documents?tab=types", "/documents?tab=templates",
   "/time/schedule-report", "/time/schedule-report?view=matrix", "/payroll/components", "/time/schedule-report?month=2026-02&grace=0",
 ];
 

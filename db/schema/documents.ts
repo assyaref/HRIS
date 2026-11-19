@@ -89,3 +89,30 @@ export const issuedDocuments = pgTable(
     index("issued_documents_org_employee_idx").on(table.organizationId, table.employeeId),
   ]
 );
+
+/**
+ * Letter templates (migration 0028): plain-text bodies with {{merge}} fields,
+ * rendered from employee data into an issued letter of `document_type_id`.
+ * No employee reference (nothing to clean up on employee deletion).
+ */
+export const letterTemplates = pgTable(
+  "letter_templates",
+  {
+    id: uuidId(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id),
+    documentTypeId: uuid("document_type_id")
+      .notNull()
+      .references(() => documentTypes.id, { onDelete: "restrict" }),
+    name: text("name").notNull(),
+    /** Title printed on the letter, e.g. "SURAT KETERANGAN KERJA". */
+    title: text("title").notNull(),
+    /** Paragraphs separated by blank lines; {{field}} placeholders. */
+    body: text("body").notNull(),
+    active: boolean("active").notNull().default(true),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [uniqueIndex("letter_templates_org_name_unique").on(table.organizationId, table.name)]
+);

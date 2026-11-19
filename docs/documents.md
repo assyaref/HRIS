@@ -14,6 +14,32 @@
 **Cetak / PDF** (browser print; app chrome, toasts and mobile navigation are
 hidden in print).
 
+## Letter templates (migration 0028)
+
+Tab **Templat surat** on `/documents`: templates with a title, a letter type
+(for numbering) and a plain-text body — paragraphs separated by blank
+lines — with merge fields: `{{nama}}`, `{{nomor_karyawan}}`, `{{nik}}`,
+`{{jabatan}}`, `{{departemen}}`, `{{divisi}}`, `{{lokasi_kerja}}`,
+`{{tanggal_masuk}}`, `{{jenis_kepegawaian}}`, `{{alamat}}`,
+`{{perusahaan}}`, `{{nomor_surat}}`, `{{tanggal_surat}}`, `{{kota}}`,
+`{{penandatangan}}`, `{{jabatan_penandatangan}}`, and three typed when the
+letter is made: `{{keterangan}}`, `{{tanggal_mulai}}`, `{{tanggal_selesai}}`.
+
+- Editor with clickable fields and a live preview on sample data; unknown
+  fields or broken braces are rejected.
+- "Tambah templat standar": Surat Keterangan Kerja, SP-1, SP-2, SP-3, Surat
+  Tugas, SK Pengangkatan Karyawan Tetap (creates the default letter types
+  when missing).
+- **Buat surat dari templat**: pick template + employee; only the fields the
+  template uses are asked; the number is issued from the template's type and
+  the rendered text is snapshotted (`content.kind = "letter"`), printed as
+  an A4 letter. Text only — a template can never inject markup.
+- Same permissions as letters (employees.view + employees.document.upload).
+  Audit: `letter_template.created|updated`, `document.letter_generated`.
+- Additive table `letter_templates` (no employee reference). Before 0028 the
+  tab shows "Modul belum aktif" and the button is hidden; numbering and PKWT
+  keep working.
+
 ## Numbering
 
 Format tokens: `{seq}` (zero-padded), `{code}`, `{month}`, `{roman}`,

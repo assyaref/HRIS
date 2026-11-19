@@ -12,7 +12,8 @@ import { hasPermission, requirePermission } from "@/lib/auth/rbac";
 import { ModuleNotReady } from "@/features/compliance/module-not-ready";
 import { VoidDocumentButton } from "@/features/documents/document-forms";
 import { DOCUMENTS_GUIDE, DOCUMENTS_MIGRATION, isDocumentsModuleReady } from "@/features/documents/module";
-import { longDate, parsePkwtContent } from "@/features/documents/pkwt";
+import { LetterView } from "@/features/documents/letter-view";
+import { longDate, parseLetterContent, parsePkwtContent } from "@/features/documents/pkwt";
 import { PkwtLetter } from "@/features/documents/pkwt-letter";
 import { getIssuedDocument } from "@/features/documents/queries";
 import { getOrganizationName } from "@/features/employees/queries";
@@ -43,6 +44,7 @@ export default async function DocumentDetailPage({ params }: { params: Promise<{
   ]);
   if (!doc) notFound();
   const pkwt = parsePkwtContent(doc.content);
+  const letter = pkwt ? null : parseLetterContent(doc.content);
 
   return (
     <div className="space-y-5">
@@ -53,7 +55,7 @@ export default async function DocumentDetailPage({ params }: { params: Promise<{
         </Link>
         <div className="flex flex-wrap items-center gap-2">
           {canManage && !doc.voided ? <VoidDocumentButton id={doc.id} documentNumber={doc.documentNumber} /> : null}
-          {pkwt && canSeeContract ? <PrintButton /> : null}
+          {(pkwt && canSeeContract) || letter ? <PrintButton /> : null}
         </div>
       </div>
 
@@ -100,6 +102,16 @@ export default async function DocumentDetailPage({ params }: { params: Promise<{
         ) : (
           <p className="text-sm text-muted-foreground">Isi kontrak hanya dapat dilihat dengan akses data kepegawaian.</p>
         )
+      ) : letter ? (
+        <div className="overflow-x-auto rounded-[20px] bg-muted/50 p-4 print:overflow-visible print:bg-transparent print:p-0">
+          <LetterView
+            content={letter}
+            documentNumber={doc.documentNumber}
+            issuedDate={doc.issuedDate}
+            organizationName={organizationName ?? "Perusahaan"}
+            voided={doc.voided}
+          />
+        </div>
       ) : (
         <p className="hris-no-print text-sm text-muted-foreground">
           Nomor ini dicatat di register. Isi surat dibuat di luar aplikasi; cantumkan nomor di atas pada surat Anda.

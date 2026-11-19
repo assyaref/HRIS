@@ -237,7 +237,10 @@ export type DocumentAuditAction =
   | "document_type.updated"
   | "document.issued"
   | "document.voided"
-  | "document.pkwt_generated";
+  | "document.pkwt_generated"
+  | "document.letter_generated"
+  | "letter_template.created"
+  | "letter_template.updated";
 
 export type AuditAction =
   | ReportAuditAction

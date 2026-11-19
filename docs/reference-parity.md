@@ -70,6 +70,7 @@ Pengumuman, Notifikasi, Pengguna / Role / Hak Akses (RBAC), jejak audit
 | Reference module | Route |
 | --- | --- |
 | Management No Surat (document numbering), PKWT generator | `/documents` |
+| Letter templates (SKK, SP-1/2/3, Surat Tugas, SK) with merge fields (migration 0028) | `/documents?tab=templates` |
 
 ## Next phase (needs migrations)
 
@@ -80,7 +81,6 @@ Pengumuman, Notifikasi, Pengguna / Role / Hak Akses (RBAC), jejak audit
 | Organization master (department, area, grade, jabatan, job desc) | organization master tables |
 | Multi-level approver chain, bank-account / address / family change requests | extends `profile_change_requests` |
 | Activity, Planner | activities |
-| Custom letter templates (SK, SKK, SP) with merge fields | letter templates |
 | Timesheet | timesheets + approvals |
 
 Recommended order (from the reference roadmap): ~~calendar + shifts →

@@ -27,16 +27,32 @@ import { hasPermission, requirePermission } from "@/lib/auth/rbac";
 import { listActiveEmployeeOptions } from "@/features/compliance/records.queries";
 import { ModuleNotReady } from "@/features/compliance/module-not-ready";
 import {
+  GenerateLetterButton,
   IssueNumberButton,
+  SeedTemplatesButton,
+  TemplateCreateButton,
+  TemplateRowActions,
   PkwtButton,
   SeedTypesButton,
   TypeCreateButton,
   TypeRowActions,
   VoidDocumentButton,
 } from "@/features/documents/document-forms";
-import { DOCUMENTS_GUIDE, DOCUMENTS_MIGRATION, isDocumentsModuleReady } from "@/features/documents/module";
+import {
+  DOCUMENTS_GUIDE,
+  DOCUMENTS_MIGRATION,
+  isDocumentsModuleReady,
+  isLetterTemplatesReady,
+  TEMPLATES_MIGRATION,
+} from "@/features/documents/module";
 import { RESET_LABELS } from "@/features/documents/numbering";
-import { DOCUMENT_LIST_LIMIT, listDocumentTypes, listIssuedDocuments } from "@/features/documents/queries";
+import {
+  DOCUMENT_LIST_LIMIT,
+  listDocumentTypes,
+  listIssuedDocuments,
+  listLetterTemplates,
+} from "@/features/documents/queries";
+import { placeholdersOf } from "@/features/documents/templates";
 import { dateParam, textParam, todayKey } from "@/features/reference-shared";
 
 export const metadata: Metadata = { title: "Surat & Nomor Surat" };
@@ -76,7 +92,8 @@ export default async function DocumentsPage({
   ]);
 
   const params = await searchParams;
-  const tab = textParam(params.tab) === "types" ? "types" : "register";
+  const tabParam = textParam(params.tab);
+  const tab = tabParam === "types" || tabParam === "templates" ? tabParam : "register";
   const today = todayKey();
   const from = dateParam(params.from, `${today.slice(0, 4)}-01-01`);
   const to = dateParam(params.to, today);
@@ -84,11 +101,14 @@ export default async function DocumentsPage({
   const typeId = typeParam && UUID.test(typeParam) ? typeParam : undefined;
   const q = textParam(params.q)?.toLowerCase() ?? "";
 
-  const [types, documents, employees] = await Promise.all([
+  const templatesReady = await isLetterTemplatesReady();
+  const [types, documents, employees, templates] = await Promise.all([
     listDocumentTypes(organizationId),
     listIssuedDocuments(organizationId, { from, to, typeId }),
     canManage ? listActiveEmployeeOptions(organizationId) : Promise.resolve([]),
+    templatesReady ? listLetterTemplates(organizationId) : Promise.resolve([]),
   ]);
+  const typeOptions = types.map(({ id, code, name }) => ({ id, code, name }));
   const rows = q
     ? documents.filter(
         (d) =>
@@ -109,6 +129,15 @@ export default async function DocumentsPage({
         actions={
           canManage ? (
             <>
+              {templatesReady ? (
+                <GenerateLetterButton
+                  templates={templates
+                    .filter((t) => t.active)
+                    .map(({ id, name, typeCode, body }) => ({ id, name, typeCode, body }))}
+                  employees={employees.map(({ id, employeeNumber, name }) => ({ id, employeeNumber, name }))}
+                  today={today}
+                />
+              ) : null}
               <IssueNumberButton
                 types={activeTypes.map(({ id, code, name }) => ({ id, code, name }))}
                 employees={employees.map(({ id, employeeNumber, name }) => ({ id, employeeNumber, name }))}
@@ -140,11 +169,64 @@ export default async function DocumentsPage({
         buildHref={(value) => (value ? `/documents?tab=${value}` : "/documents")}
         tabs={[
           { value: "", label: "Register surat", count: documents.length },
+          { value: "templates", label: "Templat surat", count: templates.length },
           { value: "types", label: "Jenis surat", count: types.length },
         ]}
       />
 
-      {tab === "types" ? (
+      {tab === "templates" ? (
+        !templatesReady ? (
+          <ModuleNotReady module="Templat Surat" migration={TEMPLATES_MIGRATION} guide={DOCUMENTS_GUIDE} />
+        ) : (
+          <section className="space-y-4">
+            {canManage ? (
+              <div className="flex flex-wrap gap-2">
+                <TemplateCreateButton types={typeOptions} />
+                <SeedTemplatesButton />
+              </div>
+            ) : null}
+            {templates.length === 0 ? (
+              <EmptyState
+                title="Belum ada templat surat"
+                description="Tambahkan templat standar (Surat Keterangan Kerja, SP-1/2/3, Surat Tugas, SK Pengangkatan) lalu sesuaikan isinya."
+              />
+            ) : (
+              <div className="grid gap-4 lg:grid-cols-2">
+                {templates.map((t) => (
+                  <section key={t.id} className="hris-card flex flex-col gap-2 rounded-[20px] border bg-card p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h2 className="truncate text-[16px] font-semibold">{t.name}</h2>
+                        <p className="text-xs text-muted-foreground">
+                          {t.typeCode} — {t.typeName} · {t.title}
+                        </p>
+                      </div>
+                      <Badge variant={t.active ? "success" : "outline"}>{t.active ? "Aktif" : "Nonaktif"}</Badge>
+                    </div>
+                    <p className="line-clamp-3 text-sm whitespace-pre-line text-muted-foreground">{t.body}</p>
+                    <div className="flex flex-wrap gap-1">
+                      {placeholdersOf(t.body).map((key) => (
+                        <span key={key} className="rounded-full bg-muted px-2 py-0.5 font-mono text-[11px]">
+                          {key}
+                        </span>
+                      ))}
+                    </div>
+                    {canManage ? (
+                      <div className="mt-auto border-t border-[var(--card-border)] pt-2">
+                        <TemplateRowActions
+                          active={t.active}
+                          types={typeOptions}
+                          template={{ id: t.id, documentTypeId: t.documentTypeId, name: t.name, title: t.title, body: t.body }}
+                        />
+                      </div>
+                    ) : null}
+                  </section>
+                ))}
+              </div>
+            )}
+          </section>
+        )
+      ) : tab === "types" ? (
         <section className="space-y-4">
           {canManage ? (
             <div className="flex flex-wrap gap-2">

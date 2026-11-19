@@ -98,12 +98,11 @@ describe("migration 0027 (documents) is additive and RESTRICT-only", () => {
     assert.match(sql, /issued_documents_org_number_unique/);
   });
 
-  it("is journaled last with a fresh, increasing when", () => {
-    const last = journal.entries.at(-1)!;
-    const previous = journal.entries.at(-2)!;
-    assert.equal(last.tag, "0027_documents");
-    assert.equal(last.idx, previous.idx + 1);
-    assert.ok(last.when > previous.when);
+  it("is journaled with a fresh, increasing when", () => {
+    const at = journal.entries.findIndex((e) => e.tag === "0027_documents");
+    assert.ok(at > 0);
+    assert.equal(journal.entries[at].idx, journal.entries[at - 1].idx + 1);
+    assert.ok(journal.entries[at].when > journal.entries[at - 1].when);
   });
 
   it("deletion plans register issued letters as optional", () => {
