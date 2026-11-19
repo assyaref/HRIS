@@ -33,6 +33,13 @@ export const primaryNavigation: NavItem[] = [
     icon: "shield",
   },
   {
+    title: "Persetujuan Tim",
+    href: "/team-approvals",
+    icon: "users",
+    // Direct managers only (two-level approval).
+    teamOnly: true,
+  },
+  {
     title: "Karyawan",
     href: "/employees",
     permission: PERMISSIONS.EMPLOYEES_VIEW,
@@ -310,6 +317,12 @@ export const settingsNavigation: NavItem[] = [
         href: "/settings/employee-fields",
         permission: PERMISSIONS.EMPLOYEE_FIELDS_VIEW,
         icon: "employee-fields",
+      },
+      {
+        title: "Alur Persetujuan",
+        href: "/settings/approval-flow",
+        permission: PERMISSIONS.SETTINGS_MANAGE,
+        icon: "shield",
       },
       {
         title: "Data Uji",

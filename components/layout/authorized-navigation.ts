@@ -1,5 +1,10 @@
 import "server-only";
 
+import { and, eq, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
+
+import { db } from "@/db";
+import { employees } from "@/db/schema";
 import { getUserAuthorization } from "@/lib/auth/rbac";
 import type { NavItem, NavSection } from "@/types/navigation";
 
@@ -20,14 +25,18 @@ export { flattenNavHrefs } from "./navigation";
 export async function getAuthorizedSections(
   userId: string
 ): Promise<NavSection[]> {
-  const authorization = await getUserAuthorization(userId);
+  const [authorization, managesTeam] = await Promise.all([
+    getUserAuthorization(userId),
+    hasDirectReports(userId),
+  ]);
   const granted = new Set(authorization.permissionCodes);
 
   const allowed = (item: NavItem): boolean =>
     (!item.permission || granted.has(item.permission)) &&
     (!item.anyPermission ||
       item.anyPermission.some((code) => granted.has(code))) &&
-    (!item.superadminOnly || authorization.isSuperAdmin);
+    (!item.superadminOnly || authorization.isSuperAdmin) &&
+    (!item.teamOnly || managesTeam);
 
   const resolve = (item: NavItem): NavItem | null => {
     if (!allowed(item)) return null;
@@ -57,4 +66,21 @@ export async function getAuthorizedSections(
   }
 
   return sections;
+}
+
+/** Whether the user's linked employee manages at least one active employee. */
+async function hasDirectReports(userId: string): Promise<boolean> {
+  try {
+    const managers = alias(employees, "managers");
+    const rows = await db
+      .select({ one: sql<number>`1` })
+      .from(employees)
+      .innerJoin(managers, and(eq(managers.id, employees.managerId), eq(managers.organizationId, employees.organizationId)))
+      .where(and(eq(managers.userId, userId), eq(employees.employmentStatus, "active")))
+      .limit(1);
+    return rows.length > 0;
+  } catch (error) {
+    console.error("[navigation] team check failed", error);
+    return false;
+  }
 }

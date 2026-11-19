@@ -50,11 +50,11 @@ describe("migration 0031 (agenda)", () => {
     assert.doesNotMatch(sql, /DROP /);
     assert.deepEqual([...sql.matchAll(/REFERENCES "public"\."employees"\("id"\) ON DELETE (\w+)/g)].map((m) => m[1]), ["restrict"]);
   });
-  it("is journaled last", () => {
-    const last = journal.entries.at(-1)!;
-    assert.equal(last.tag, "0031_agenda");
-    assert.equal(last.idx, journal.entries.at(-2)!.idx + 1);
-    assert.ok(last.when > journal.entries.at(-2)!.when);
+  it("is journaled with a fresh, increasing when", () => {
+    const at = journal.entries.findIndex((e) => e.tag === "0031_agenda");
+    assert.ok(at > 0);
+    assert.equal(journal.entries[at].idx, journal.entries[at - 1].idx + 1);
+    assert.ok(journal.entries[at].when > journal.entries[at - 1].when);
   });
   it("deletion plans register responses as optional", () => {
     for (const p of ["features/employees/queries.ts", "features/employees/test-data-purge.queries.ts"]) {

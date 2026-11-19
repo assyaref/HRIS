@@ -26,6 +26,8 @@ export type ApprovalKind = "leave" | "permission" | "overtime" | "profile" | "ti
 export interface ApprovalItem {
   kind: ApprovalKind;
   id: string;
+  /** Live employee id (null for retained requests of deleted employees). */
+  employeeId?: string | null;
   href: string;
   employeeNumber: string;
   employeeName: string;
@@ -92,6 +94,7 @@ export async function listApprovalInbox(
       ? db
           .select({
             id: leaveRequests.id,
+            employeeId: leaveRequests.employeeId,
             employeeNumber: employeeNumberSql(leaveRequests.employeeNumberSnapshot),
             employeeName: employeeNameSql(leaveRequests.employeeNameSnapshot),
             subject: leaveTypes.name,
@@ -115,6 +118,7 @@ export async function listApprovalInbox(
       ? db
           .select({
             id: permissionRequests.id,
+            employeeId: permissionRequests.employeeId,
             employeeNumber: employeeNumberSql(permissionRequests.employeeNumberSnapshot),
             employeeName: employeeNameSql(permissionRequests.employeeNameSnapshot),
             subject: permissionRequests.permissionType,
@@ -137,6 +141,7 @@ export async function listApprovalInbox(
       ? db
           .select({
             id: overtimeRequests.id,
+            employeeId: overtimeRequests.employeeId,
             employeeNumber: employees.employeeNumber,
             employeeName: sql<string>`TRIM(${employees.firstName} || ' ' || ${employees.lastName})`,
             overtimeDate: overtimeRequests.overtimeDate,
@@ -213,6 +218,7 @@ export async function listApprovalInbox(
     ...leaveRows.map((row) => ({
       kind: "leave" as const,
       id: row.id,
+      employeeId: row.employeeId,
       href: `/leave/${row.id}`,
       employeeNumber: row.employeeNumber,
       employeeName: row.employeeName,
@@ -224,6 +230,7 @@ export async function listApprovalInbox(
     ...permissionRows.map((row) => ({
       kind: "permission" as const,
       id: row.id,
+      employeeId: row.employeeId,
       href: `/permission/${row.id}`,
       employeeNumber: row.employeeNumber,
       employeeName: row.employeeName,
@@ -257,6 +264,7 @@ export async function listApprovalInbox(
     ...overtimeRows.map((row) => ({
       kind: "overtime" as const,
       id: row.id,
+      employeeId: row.employeeId,
       href: `/overtime/management?from=${row.overtimeDate}&to=${row.overtimeDate}`,
       employeeNumber: row.employeeNumber,
       employeeName: row.employeeName,

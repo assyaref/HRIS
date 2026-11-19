@@ -101,6 +101,7 @@ export type LeaveAuditAction =
   | "leave.cancelled"
   | "leave.approved"
   | "leave.rejected"
+  | "leave.manager_approved"
   | "leave.type.created"
   | "leave.type.updated"
   | "leave.type.status_changed"
@@ -113,7 +114,8 @@ export type PermissionAuditAction =
   | "permission.created"
   | "permission.cancelled"
   | "permission.approved"
-  | "permission.rejected";
+  | "permission.rejected"
+  | "permission.manager_approved";
 
 export type PayrollAuditAction =
   | "payroll.period.created"
@@ -217,7 +219,8 @@ export type TimeAuditAction =
   | "overtime.created"
   | "overtime.cancelled"
   | "overtime.approved"
-  | "overtime.rejected";
+  | "overtime.rejected"
+  | "overtime.manager_approved";
 
 export type ProfileChangeAuditAction =
   | "profile_change.submitted"
@@ -266,8 +269,11 @@ export type AgendaAuditAction =
   | "agenda.cancelled"
   | "agenda.responded";
 
+export type ApprovalChainAuditAction = "approval_settings.updated";
+
 export type AuditAction =
   | ReportAuditAction
+  | ApprovalChainAuditAction
   | AgendaAuditAction
   | OrgMasterAuditAction
   | TimesheetAuditAction

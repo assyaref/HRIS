@@ -18,6 +18,12 @@ import {
 } from "@/lib/auth/rbac";
 import type { CurrentUser } from "@/lib/auth/types";
 
+import {
+  finalApprovalBlock,
+  managerStepTypes,
+  recordManagerDecision,
+  resolveManager,
+} from "@/features/approval-chain/chain";
 import type { LinkedEmployee } from "@/features/employees/queries";
 import { getEmployeeByUserId } from "@/features/employees/queries";
 
@@ -110,7 +116,8 @@ async function auditPermission(
       | "permission.created"
       | "permission.cancelled"
       | "permission.approved"
-      | "permission.rejected";
+      | "permission.rejected"
+      | "permission.manager_approved";
     entityId?: string | null;
     /** Null when the employee row was permanently deleted (retained history). */
     employeeNumber: string | null;
@@ -266,6 +273,27 @@ export async function reviewPermissionRequestAction(
   if (request.employeeUserId === user.id) {
     return { ok: false, message: "Anda tidak dapat meninjau pengajuan Anda sendiri." };
   }
+  // Two-level approval (opt-in): the direct manager decides first.
+  const blocked = await finalApprovalBlock(organizationId, "permission", requestId, request.employeeId, user.id);
+  if (blocked) return { ok: false, message: blocked };
+
+  return decidePermissionRequest(user.id, organizationId, requestId, request, decision, reviewerNote ?? null);
+}
+
+/**
+ * Applies a decision to a pending permission request (status, event,
+ * audit). Shared by the approver action and the direct manager's rejection;
+ * callers authorize first. Not exported: never a server action.
+ */
+async function decidePermissionRequest(
+  actorUserId: string,
+  organizationId: string,
+  requestId: string,
+  request: NonNullable<Awaited<ReturnType<typeof loadPermissionRequestForAction>>>,
+  decision: "approved" | "rejected",
+  reviewerNote: string | null
+): Promise<PermissionActionResult> {
+  const user = { id: actorUserId };
 
   try {
     const outcome = await db.transaction(async (tx) => {
@@ -341,6 +369,59 @@ export async function reviewPermissionRequestAction(
       message: "Keputusan gagal disimpan. Silakan coba lagi.",
     };
   }
+}
+
+/**
+ * Two-level approval: the employee's DIRECT MANAGER approves (the request
+ * then waits for the final approver) or rejects (the request is rejected).
+ * Only when the manager step is on for permission requests.
+ */
+export async function managerReviewPermissionAction(
+  requestId: string,
+  input: unknown
+): Promise<PermissionActionResult> {
+  const user = await requireUser();
+  if (!user.organizationId) {
+    return { ok: false, message: "Akun Anda belum terhubung ke organisasi." };
+  }
+  const organizationId = user.organizationId;
+  const parsed = reviewPermissionRequestSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, message: parsed.error.issues[0]?.message ?? "Keputusan tidak valid." };
+  }
+  const { decision, reviewerNote } = parsed.data;
+  if (!(await managerStepTypes(organizationId)).has("permission")) {
+    return { ok: false, message: "Persetujuan atasan tidak aktif untuk izin." };
+  }
+  const request = await loadPermissionRequestForAction(organizationId, requestId);
+  if (!request) forbidden();
+  if (request.status !== "pending" || !request.employeeId) {
+    return { ok: false, message: "Pengajuan ini sudah ditinjau atau dibatalkan." };
+  }
+  if (request.employeeUserId === user.id) {
+    return { ok: false, message: "Anda tidak dapat meninjau pengajuan Anda sendiri." };
+  }
+  const manager = await resolveManager(organizationId, request.employeeId);
+  if (manager.managerUserId !== user.id) {
+    return { ok: false, message: "Hanya atasan langsung karyawan ini yang dapat memberi keputusan." };
+  }
+  if (decision === "rejected" && !reviewerNote) {
+    return { ok: false, message: "Tuliskan alasan penolakan." };
+  }
+  const recorded = await recordManagerDecision(organizationId, "permission", requestId, user.id, decision, reviewerNote ?? null);
+  if (!recorded) return { ok: false, message: "Keputusan atasan untuk pengajuan ini sudah tercatat." };
+  if (decision === "rejected") {
+    return decidePermissionRequest(user.id, organizationId, requestId, request, "rejected", reviewerNote ?? null);
+  }
+  await auditPermission({
+    organizationId,
+    actorUserId: user.id,
+    action: "permission.manager_approved",
+    entityId: requestId,
+    employeeNumber: request.employeeNumber,
+    eventType: "manager_approved",
+  });
+  return { ok: true, message: "Disetujui atasan. Menunggu keputusan HR." };
 }
 
 /** An employee cancels their own pending permission request. */

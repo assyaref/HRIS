@@ -19,6 +19,12 @@ import { requireUser } from "@/lib/auth/auth";
 import { PERMISSIONS, type Permission } from "@/lib/auth/permissions";
 import { getUserAuthorization } from "@/lib/auth/rbac";
 
+import {
+  finalApprovalBlock,
+  managerStepTypes,
+  recordManagerDecision,
+  resolveManager,
+} from "@/features/approval-chain/chain";
 import { getEmployeeByUserId } from "@/features/employees/queries";
 
 import { isTimeModuleReady, TIME_MIGRATION } from "./module";
@@ -535,6 +541,9 @@ export async function reviewOvertimeAction(
   if (self && target[0].employeeId === self.id) {
     return { ok: false, message: "Anda tidak dapat meninjau pengajuan lembur Anda sendiri." };
   }
+  // Two-level approval (opt-in): the direct manager decides first.
+  const blocked = await finalApprovalBlock(ctx.organizationId, "overtime", id, target[0].employeeId, ctx.userId);
+  if (blocked) return { ok: false, message: blocked };
   const updated = await db
     .update(overtimeRequests)
     .set({
@@ -558,4 +567,55 @@ export async function reviewOvertimeAction(
   });
   revalidateTime();
   return { ok: true, message: decision === "approved" ? "Lembur disetujui." : "Lembur ditolak." };
+}
+
+/**
+ * Two-level approval: the employee's DIRECT MANAGER approves (the request
+ * then waits for the final approver) or rejects (the request is rejected).
+ * Only when the manager step is on for overtime.
+ */
+export async function managerReviewOvertimeAction(
+  id: string,
+  decision: "approved" | "rejected",
+  note: string
+): Promise<TimeResult> {
+  const user = await requireUser();
+  const organizationId = user.organizationId;
+  if (!organizationId) return { ok: false, message: "Akun Anda belum terhubung ke organisasi." };
+  if (!(await isTimeModuleReady())) return NOT_READY;
+  if (!UUID.test(id)) return { ok: false, message: "Pengajuan tidak ditemukan." };
+  if (decision !== "approved" && decision !== "rejected") return { ok: false, message: "Keputusan tidak valid." };
+  if (!(await managerStepTypes(organizationId)).has("overtime")) {
+    return { ok: false, message: "Persetujuan atasan tidak aktif untuk lembur." };
+  }
+  const reviewerNote = note.trim().slice(0, 500) || null;
+  if (decision === "rejected" && !reviewerNote) return { ok: false, message: "Tuliskan alasan penolakan." };
+  const target = (
+    await db
+      .select({ employeeId: overtimeRequests.employeeId, status: overtimeRequests.status })
+      .from(overtimeRequests)
+      .where(and(eq(overtimeRequests.id, id), eq(overtimeRequests.organizationId, organizationId)))
+      .limit(1)
+  )[0];
+  if (!target) return { ok: false, message: "Pengajuan tidak ditemukan." };
+  if (target.status !== "pending") return { ok: false, message: "Pengajuan sudah diproses sebelumnya." };
+  const manager = await resolveManager(organizationId, target.employeeId);
+  if (manager.employeeUserId === user.id) return { ok: false, message: "Anda tidak dapat meninjau pengajuan lembur Anda sendiri." };
+  if (manager.managerUserId !== user.id) {
+    return { ok: false, message: "Hanya atasan langsung karyawan ini yang dapat memberi keputusan." };
+  }
+  const recorded = await recordManagerDecision(organizationId, "overtime", id, user.id, decision, reviewerNote);
+  if (!recorded) return { ok: false, message: "Keputusan atasan untuk pengajuan ini sudah tercatat." };
+  const ctx: Context = { userId: user.id, organizationId, granted: new Set() };
+  if (decision === "rejected") {
+    await db
+      .update(overtimeRequests)
+      .set({ status: "rejected", reviewedBy: user.id, reviewedAt: new Date(), reviewerNote, updatedAt: new Date() })
+      .where(and(eq(overtimeRequests.id, id), eq(overtimeRequests.organizationId, organizationId), eq(overtimeRequests.status, "pending")));
+    await audit(ctx, "overtime.rejected", "overtime_request", id, { note: reviewerNote, by: "manager" });
+  } else {
+    await audit(ctx, "overtime.manager_approved", "overtime_request", id, {});
+  }
+  revalidateTime();
+  return { ok: true, message: decision === "approved" ? "Disetujui atasan. Menunggu keputusan HR." : "Lembur ditolak." };
 }

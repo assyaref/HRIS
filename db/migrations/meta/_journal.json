@@ -232,6 +232,13 @@
       "when": 1795074894522,
       "tag": "0031_agenda",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1795076149493,
+      "tag": "0032_approval_chain",
+      "breakpoints": true
     }
   ]
 }

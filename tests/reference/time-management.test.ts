@@ -136,6 +136,13 @@ describe("time management guards", () => {
     assert.ok(exported.length >= 12);
     for (const name of exported) {
       const body = source.slice(source.indexOf(`export async function ${name}`)).split("\nexport ")[0];
+      if (name === "managerReviewOvertimeAction") {
+        // Authorized by relationship: only the employee's direct manager.
+        assert.match(body, /await requireUser\(\)/);
+        assert.match(body, /if \(manager\.managerUserId !== user\.id\)/);
+        assert.match(body, /eq\(overtimeRequests\.organizationId, organizationId\)/);
+        continue;
+      }
       assert.match(body, /await authorize\(/, `${name} must authorize`);
     }
     assert.match(source, /Anda tidak dapat meninjau pengajuan lembur Anda sendiri/);

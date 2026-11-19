@@ -63,6 +63,11 @@ export interface NavItem {
    * holding a catalog code.
    */
   superadminOnly?: boolean;
+  /**
+   * Shown only to users who are the direct manager of at least one active
+   * employee (employees.manager_id). The page re-checks server-side.
+   */
+  teamOnly?: boolean;
   /** Icon shown beside the label in the sidebar / drawer. */
   icon?: NavIconKey;
   /** Live counter rendered as a red pill next to the label. */

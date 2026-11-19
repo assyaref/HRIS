@@ -90,6 +90,12 @@ Pengumuman, Notifikasi, Pengguna / Role / Hak Akses (RBAC), jejak audit
 | --- | --- |
 | Planner / company activity calendar with RSVP | `/agenda` |
 
+## Built with migration 0032 (see docs/approval-chain.md)
+
+| Reference module | Route |
+| --- | --- |
+| Approval chain: direct manager → HR (opt-in per request type) | `/settings/approval-flow`, `/team-approvals` |
+
 ## Next phase (needs migrations)
 
 | Module | New data |
@@ -97,7 +103,7 @@ Pengumuman, Notifikasi, Pengguna / Role / Hak Akses (RBAC), jejak audit
 | MCU doctor notes / consultation requests (from mobile) | doctor-note & consultation tables |
 | Overtime Setup per project (custom rates, caps) | project overtime settings |
 | Area / site master, cost centres | area tables |
-| Multi-level approver chain, family-member change requests | extends `profile_change_requests` |
+| Family-member change requests; configurable chains beyond manager → HR | extends `profile_change_requests` / `approval_steps` |
 
 Recommended order (from the reference roadmap): ~~calendar + shifts →
 overtime → MCU + training → profile-change approval → helpdesk →

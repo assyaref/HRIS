@@ -29,6 +29,7 @@ import {
   listApprovalInbox,
   type ApprovalKind,
 } from "@/features/approvals/queries";
+import { awaitingManager } from "@/features/approval-chain/chain";
 import { PERMISSION_TYPE_LABELS } from "@/features/permission/constants";
 import { dateParam, textParam, todayKey } from "@/features/reference-shared";
 
@@ -109,6 +110,14 @@ export default async function ApprovalsPage({
     kinds: kinds.length ? kinds : available,
     status: status || undefined,
   });
+
+  // Two-level approval: pending requests still waiting for the direct manager.
+  const waitingManager = await awaitingManager(
+    user.organizationId,
+    items
+      .filter((i) => i.status === "pending" && (i.kind === "leave" || i.kind === "permission" || i.kind === "overtime"))
+      .map((i) => ({ type: i.kind as "leave" | "permission" | "overtime", id: i.id, employeeId: i.employeeId ?? null }))
+  );
 
   const href = (next: { status?: string }) => {
     const query = new URLSearchParams({ from, to });
@@ -218,6 +227,9 @@ export default async function ApprovalsPage({
                   <Badge variant={STATUS_BADGE[item.status] ?? "outline"}>
                     {STATUS_LABEL[item.status] ?? item.status}
                   </Badge>
+                  {waitingManager.has(`${item.kind}:${item.id}`) ? (
+                    <p className="mt-1 text-xs text-muted-foreground">Menunggu atasan langsung</p>
+                  ) : null}
                 </TableCell>
                 <TableCell className="text-right">
                   <Link href={item.href} className={buttonVariants({ variant: "ghost", size: "sm" })}>

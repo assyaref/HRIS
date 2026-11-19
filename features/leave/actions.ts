@@ -26,6 +26,13 @@ import {
   createLeaveRequestSchema,
   reviewRequestSchema,
 } from "./schemas";
+import {
+  finalApprovalBlock,
+  managerStepTypes,
+  recordManagerDecision,
+  resolveManager,
+} from "@/features/approval-chain/chain";
+
 import { inclusiveDayCount } from "./format";
 
 /**
@@ -75,7 +82,8 @@ async function auditLeave(
       | "leave.created"
       | "leave.cancelled"
       | "leave.approved"
-      | "leave.rejected";
+      | "leave.rejected"
+      | "leave.manager_approved";
     entityId?: string | null;
     /** Null when the employee row was permanently deleted (retained history). */
     employeeNumber: string | null;
@@ -381,6 +389,27 @@ export async function reviewLeaveRequestAction(
   if (request.employeeUserId === user.id) {
     return { ok: false, message: "Anda tidak dapat meninjau pengajuan Anda sendiri." };
   }
+  // Two-level approval (opt-in): the direct manager decides first.
+  const blocked = await finalApprovalBlock(organizationId, "leave", requestId, request.employeeId, user.id);
+  if (blocked) return { ok: false, message: blocked };
+
+  return decideLeaveRequest(user.id, organizationId, requestId, request, decision, reviewerNote ?? null);
+}
+
+/**
+ * Applies a decision to a pending leave request (status, balance, event,
+ * audit). Shared by the approver action above and the direct manager's
+ * rejection; callers authorize first. Not exported: never a server action.
+ */
+async function decideLeaveRequest(
+  actorUserId: string,
+  organizationId: string,
+  requestId: string,
+  request: LeaveRequestForAction,
+  decision: "approved" | "rejected",
+  reviewerNote: string | null
+): Promise<LeaveActionResult> {
+  const user = { id: actorUserId };
 
   const now = new Date();
   const year = request.startDate.toISOString().slice(0, 4);
@@ -527,6 +556,61 @@ export async function reviewLeaveRequestAction(
   }
 }
 
+
+/**
+ * Two-level approval: the employee's DIRECT MANAGER approves (the request
+ * then waits for the final approver) or rejects (the request is rejected
+ * and the pending balance released, exactly like a final rejection).
+ * Only when the manager step is on for leave.
+ */
+export async function managerReviewLeaveAction(
+  requestId: string,
+  input: unknown
+): Promise<LeaveActionResult> {
+  const user = await requireUser();
+  if (!user.organizationId) {
+    return { ok: false, message: "Akun Anda belum terhubung ke organisasi." };
+  }
+  const organizationId = user.organizationId;
+  const parsed = reviewRequestSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, message: parsed.error.issues[0]?.message ?? "Keputusan tidak valid." };
+  }
+  const { decision, reviewerNote } = parsed.data;
+  if (!(await managerStepTypes(organizationId)).has("leave")) {
+    return { ok: false, message: "Persetujuan atasan tidak aktif untuk cuti." };
+  }
+  const request = await loadLeaveRequestForAction(organizationId, requestId);
+  if (!request) forbidden();
+  if (request.status !== "pending" || !request.employeeId) {
+    return { ok: false, message: "Pengajuan ini sudah ditinjau atau dibatalkan." };
+  }
+  if (request.employeeUserId === user.id) {
+    return { ok: false, message: "Anda tidak dapat meninjau pengajuan Anda sendiri." };
+  }
+  const manager = await resolveManager(organizationId, request.employeeId);
+  if (manager.managerUserId !== user.id) {
+    return { ok: false, message: "Hanya atasan langsung karyawan ini yang dapat memberi keputusan." };
+  }
+  if (decision === "rejected" && !reviewerNote) {
+    return { ok: false, message: "Tuliskan alasan penolakan." };
+  }
+  const recorded = await recordManagerDecision(organizationId, "leave", requestId, user.id, decision, reviewerNote ?? null);
+  if (!recorded) return { ok: false, message: "Keputusan atasan untuk pengajuan ini sudah tercatat." };
+  if (decision === "rejected") {
+    return decideLeaveRequest(user.id, organizationId, requestId, request, "rejected", reviewerNote ?? null);
+  }
+  await auditLeave({
+    organizationId,
+    actorUserId: user.id,
+    action: "leave.manager_approved",
+    entityId: requestId,
+    employeeNumber: request.employeeNumber,
+    eventType: "manager_approved",
+    metadata: { totalDays: request.totalDays },
+  });
+  return { ok: true, message: "Disetujui atasan. Menunggu keputusan HR." };
+}
 
 /** An employee cancels their own pending leave request. */
 export async function cancelLeaveRequestAction(
