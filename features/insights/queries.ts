@@ -3,6 +3,7 @@ import "server-only";
 import { and, eq, sql } from "drizzle-orm";
 
 import { db } from "@/db";
+import { qualified } from "@/lib/db/qualified";
 import { employees } from "@/db/schema";
 
 import type { InsightEmployee } from "./workforce";
@@ -27,9 +28,9 @@ export async function listInsightEmployees(
       workLocationId: employees.workLocationId,
       employmentType: employees.employmentType,
       hireDate: sql<string | null>`to_char(${employees.hireDate}, 'YYYY-MM-DD')`,
-      addressCount: sql<number>`(SELECT count(*)::int FROM employee_addresses a WHERE a.employee_id = ${employees.id})`,
-      bankCount: sql<number>`(SELECT count(*)::int FROM employee_bank_accounts b WHERE b.employee_id = ${employees.id})`,
-      hasInsurance: sql<boolean>`EXISTS (SELECT 1 FROM employee_insurances i WHERE i.employee_id = ${employees.id})`,
+      addressCount: sql<number>`(SELECT count(*)::int FROM employee_addresses a WHERE a.employee_id = ${qualified(employees.id)})`,
+      bankCount: sql<number>`(SELECT count(*)::int FROM employee_bank_accounts b WHERE b.employee_id = ${qualified(employees.id)})`,
+      hasInsurance: sql<boolean>`EXISTS (SELECT 1 FROM employee_insurances i WHERE i.employee_id = ${qualified(employees.id)})`,
     })
     .from(employees)
     .where(

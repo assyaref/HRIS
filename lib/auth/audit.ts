@@ -260,8 +260,15 @@ export type OrgMasterAuditAction =
   | "org_master.imported"
   | "org_master.spelling_unified";
 
+export type AgendaAuditAction =
+  | "agenda.created"
+  | "agenda.updated"
+  | "agenda.cancelled"
+  | "agenda.responded";
+
 export type AuditAction =
   | ReportAuditAction
+  | AgendaAuditAction
   | OrgMasterAuditAction
   | TimesheetAuditAction
   | DocumentAuditAction

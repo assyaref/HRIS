@@ -21,6 +21,9 @@ import { formatDuration } from "@/features/time/rules";
 import { DAY_KIND_LABELS } from "@/features/time/schedule";
 import { parseScheduleParams } from "@/features/time/schedule-params";
 import { buildScheduleReport } from "@/features/time/schedule.queries";
+import { isAgendaReady } from "@/features/agenda/module";
+import { getAgendaEvent, listInvited } from "@/features/agenda/queries";
+import { RESPONSE_LABELS as AGENDA_RESPONSE } from "@/features/agenda/rules";
 import { isTimesheetModuleReady } from "@/features/timesheets/module";
 import { listWeekEntries } from "@/features/timesheets/queries";
 import { STATUS_LABELS as TIMESHEET_STATUS, weekParam } from "@/features/timesheets/rules";
@@ -60,6 +63,8 @@ const REPORT_PERMISSIONS: Record<string, Permission[]> = {
   schedule: [PERMISSIONS.ATTENDANCE_MANAGE],
   // Timesheets (migration 0029): one ISO week, entries + per-employee totals.
   timesheet: [PERMISSIONS.ATTENDANCE_MANAGE],
+  // Agenda RSVP list (migration 0031): publishers only.
+  agenda: [PERMISSIONS.ANNOUNCEMENTS_CREATE],
 };
 
 const LEAVE_STATUS: Record<string, string> = {
@@ -70,7 +75,7 @@ const LEAVE_STATUS: Record<string, string> = {
 };
 
 /**
- * GET /api/reports/export?report=contracts|employees|leave|mcu|trainings|schedule|timesheet&…
+ * GET /api/reports/export?report=contracts|employees|leave|mcu|trainings|schedule|timesheet|agenda&…
  * Authenticated, RBAC-checked server-side, organization-scoped to the
  * caller's (acting) organization; every download is audit-logged.
  */
@@ -177,6 +182,33 @@ export async function GET(request: Request): Promise<Response> {
       { name: "Keluar", columns: personColumns("Tanggal Keluar"), rows: result.left.map(person("exitDate")) },
       { name: "Per Departemen", columns: groupColumns("Departemen"), rows: result.byDepartment.map((g) => ({ ...g })) },
       { name: "Per Lokasi", columns: groupColumns("Lokasi Kerja"), rows: result.byWorkLocation.map((g) => ({ ...g })) },
+    ];
+  } else if (report === "agenda") {
+    if (!(await isAgendaReady())) return text(409, "Modul belum aktif: migrasi 0031 belum dijalankan.");
+    const eventId = get("event") ?? "";
+    if (!/^[0-9a-f-]{36}$/i.test(eventId)) return text(400, "Parameter event tidak valid.");
+    const event = await getAgendaEvent(organizationId, eventId);
+    if (!event) return text(404, "Agenda tidak ditemukan.");
+    const people = await listInvited(organizationId, event);
+    filename = `agenda-${today}.xlsx`;
+    sheets = [
+      {
+        name: "Peserta",
+        columns: [
+          { header: "No. Karyawan", key: "number", width: 16 },
+          { header: "Nama", key: "name", width: 28 },
+          { header: "Departemen", key: "department", width: 22 },
+          { header: "Konfirmasi", key: "response", width: 16 },
+          { header: "Catatan", key: "note", width: 30 },
+        ],
+        rows: people.map((p) => ({
+          number: p.employeeNumber,
+          name: p.name,
+          department: p.department,
+          response: p.response ? (AGENDA_RESPONSE[p.response] ?? p.response) : "Belum menjawab",
+          note: p.note,
+        })),
+      },
     ];
   } else if (report === "timesheet") {
     if (!(await isTimesheetModuleReady())) {

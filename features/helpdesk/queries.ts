@@ -4,6 +4,7 @@ import { and, asc, desc, eq, sql, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 import { db } from "@/db";
+import { qualified } from "@/lib/db/qualified";
 import { employees, helpdeskCategories, helpdeskMessages, helpdeskTickets, users } from "@/db/schema";
 
 export interface CategoryRow {
@@ -19,7 +20,7 @@ export async function listCategories(organizationId: string): Promise<CategoryRo
       id: helpdeskCategories.id,
       name: helpdeskCategories.name,
       active: helpdeskCategories.active,
-      ticketCount: sql<number>`(SELECT COUNT(*)::int FROM ${helpdeskTickets} WHERE ${helpdeskTickets.categoryId} = ${helpdeskCategories.id})`,
+      ticketCount: sql<number>`(SELECT COUNT(*)::int FROM ${helpdeskTickets} WHERE ${helpdeskTickets.categoryId} = ${qualified(helpdeskCategories.id)})`,
     })
     .from(helpdeskCategories)
     .where(eq(helpdeskCategories.organizationId, organizationId))
@@ -72,7 +73,7 @@ function ticketSelect() {
       employeeLastReadAt: helpdeskTickets.employeeLastReadAt,
       resolvedAt: helpdeskTickets.resolvedAt,
       createdAt: helpdeskTickets.createdAt,
-      messageCount: sql<number>`(SELECT COUNT(*)::int FROM ${helpdeskMessages} WHERE ${helpdeskMessages.ticketId} = ${helpdeskTickets.id} AND ${helpdeskMessages.internal} = false)`,
+      messageCount: sql<number>`(SELECT COUNT(*)::int FROM ${helpdeskMessages} WHERE ${helpdeskMessages.ticketId} = ${qualified(helpdeskTickets.id)} AND ${helpdeskMessages.internal} = false)`,
     })
     .from(helpdeskTickets)
     .innerJoin(employees, eq(employees.id, helpdeskTickets.employeeId))

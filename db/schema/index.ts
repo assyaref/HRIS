@@ -33,3 +33,4 @@ export * from "./helpdesk";
 export * from "./documents";
 export * from "./timesheets";
 export * from "./org_master";
+export * from "./agenda";

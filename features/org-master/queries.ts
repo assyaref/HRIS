@@ -3,6 +3,7 @@ import "server-only";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 
 import { db } from "@/db";
+import { qualified } from "@/lib/db/qualified";
 import { departments, employees, jobGrades, jobPositions } from "@/db/schema";
 
 import type { ValueCount } from "./rules";
@@ -34,7 +35,7 @@ export async function listDepartments(organizationId: string) {
       division: departments.division,
       description: departments.description,
       active: departments.active,
-      positionCount: sql<number>`(SELECT COUNT(*)::int FROM ${jobPositions} WHERE ${jobPositions.departmentId} = ${departments.id})`,
+      positionCount: sql<number>`(SELECT COUNT(*)::int FROM ${jobPositions} WHERE ${jobPositions.departmentId} = ${qualified(departments.id)})`,
     })
     .from(departments)
     .where(eq(departments.organizationId, organizationId))
@@ -50,7 +51,7 @@ export async function listGrades(organizationId: string) {
       level: jobGrades.level,
       description: jobGrades.description,
       active: jobGrades.active,
-      positionCount: sql<number>`(SELECT COUNT(*)::int FROM ${jobPositions} WHERE ${jobPositions.gradeId} = ${jobGrades.id})`,
+      positionCount: sql<number>`(SELECT COUNT(*)::int FROM ${jobPositions} WHERE ${jobPositions.gradeId} = ${qualified(jobGrades.id)})`,
     })
     .from(jobGrades)
     .where(eq(jobGrades.organizationId, organizationId))

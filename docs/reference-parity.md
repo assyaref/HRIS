@@ -84,6 +84,12 @@ Pengumuman, Notifikasi, Pengguna / Role / Hak Akses (RBAC), jejak audit
 | --- | --- |
 | Organization master: department, jabatan + job desc, grade | `/organization/master` |
 
+## Built with migration 0031 (see docs/agenda.md)
+
+| Reference module | Route |
+| --- | --- |
+| Planner / company activity calendar with RSVP | `/agenda` |
+
 ## Next phase (needs migrations)
 
 | Module | New data |
@@ -92,7 +98,6 @@ Pengumuman, Notifikasi, Pengguna / Role / Hak Akses (RBAC), jejak audit
 | Overtime Setup per project (custom rates, caps) | project overtime settings |
 | Area / site master, cost centres | area tables |
 | Multi-level approver chain, family-member change requests | extends `profile_change_requests` |
-| Activity, Planner | activities |
 
 Recommended order (from the reference roadmap): ~~calendar + shifts →
 overtime → MCU + training → profile-change approval → helpdesk →

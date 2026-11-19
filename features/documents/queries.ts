@@ -3,6 +3,7 @@ import "server-only";
 import { and, asc, desc, eq, gte, lte, sql, type SQL } from "drizzle-orm";
 
 import { db } from "@/db";
+import { qualified } from "@/lib/db/qualified";
 import {
   documentTypes,
   employeeAddresses,
@@ -34,7 +35,7 @@ export async function listDocumentTypes(organizationId: string): Promise<Documen
       sequencePadding: documentTypes.sequencePadding,
       resetPeriod: documentTypes.resetPeriod,
       active: documentTypes.active,
-      issuedCount: sql<number>`(SELECT COUNT(*)::int FROM ${issuedDocuments} WHERE ${issuedDocuments.documentTypeId} = ${documentTypes.id})`,
+      issuedCount: sql<number>`(SELECT COUNT(*)::int FROM ${issuedDocuments} WHERE ${issuedDocuments.documentTypeId} = ${qualified(documentTypes.id)})`,
     })
     .from(documentTypes)
     .where(eq(documentTypes.organizationId, organizationId))
@@ -143,7 +144,7 @@ export async function getPkwtEmployeeData(organizationId: string, employeeId: st
       address: sql<string | null>`(
         SELECT NULLIF(CONCAT_WS(', ', ${employeeAddresses.address}, ${employeeAddresses.city}, ${employeeAddresses.province}), '')
         FROM ${employeeAddresses}
-        WHERE ${employeeAddresses.employeeId} = ${employees.id} AND ${employeeAddresses.type} = 'ktp'
+        WHERE ${employeeAddresses.employeeId} = ${qualified(employees.id)} AND ${employeeAddresses.type} = 'ktp'
         LIMIT 1
       )`,
     })
@@ -199,7 +200,7 @@ export async function getLetterEmployeeData(organizationId: string, employeeId: 
       address: sql<string | null>`(
         SELECT NULLIF(CONCAT_WS(', ', ${employeeAddresses.address}, ${employeeAddresses.city}, ${employeeAddresses.province}), '')
         FROM ${employeeAddresses}
-        WHERE ${employeeAddresses.employeeId} = ${employees.id} AND ${employeeAddresses.type} = 'ktp'
+        WHERE ${employeeAddresses.employeeId} = ${qualified(employees.id)} AND ${employeeAddresses.type} = 'ktp'
         LIMIT 1
       )`,
     })

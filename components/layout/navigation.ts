@@ -183,6 +183,8 @@ export const primaryNavigation: NavItem[] = [
     ],
   },
   { title: "Pengumuman", href: "/announcements", icon: "megaphone" },
+  // Company agenda: everyone sees the events they are invited to.
+  { title: "Agenda", href: "/agenda", icon: "calendar" },
   // Every signed-in user may ask HR; the page needs a linked employee.
   { title: "Tanya Admin", href: "/helpdesk", icon: "help" },
 ];

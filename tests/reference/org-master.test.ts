@@ -57,11 +57,11 @@ describe("migration 0030 (organization master)", () => {
     assert.doesNotMatch(sql, /"employees"/);
     assert.doesNotMatch(sql, /DROP /);
   });
-  it("is journaled last", () => {
-    const last = journal.entries.at(-1)!;
-    assert.equal(last.tag, "0030_org_master");
-    assert.equal(last.idx, journal.entries.at(-2)!.idx + 1);
-    assert.ok(last.when > journal.entries.at(-2)!.when);
+  it("is journaled with a fresh, increasing when", () => {
+    const at = journal.entries.findIndex((e) => e.tag === "0030_org_master");
+    assert.ok(at > 0);
+    assert.equal(journal.entries[at].idx, journal.entries[at - 1].idx + 1);
+    assert.ok(journal.entries[at].when > journal.entries[at - 1].when);
   });
 });
 

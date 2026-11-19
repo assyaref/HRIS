@@ -3,6 +3,7 @@ import "server-only";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 
 import { db } from "@/db";
+import { qualified } from "@/lib/db/qualified";
 import {
   employeeTrainings,
   employees,
@@ -113,7 +114,7 @@ export async function listTrainingMasters(organizationId: string): Promise<Train
       validityMonths: trainingMasters.validityMonths,
       isMandatory: trainingMasters.isMandatory,
       active: trainingMasters.active,
-      recordCount: sql<number>`(SELECT count(*)::int FROM employee_trainings t WHERE t.training_master_id = ${trainingMasters.id})`,
+      recordCount: sql<number>`(SELECT count(*)::int FROM employee_trainings t WHERE t.training_master_id = ${qualified(trainingMasters.id)})`,
     })
     .from(trainingMasters)
     .where(eq(trainingMasters.organizationId, organizationId))

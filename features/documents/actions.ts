@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { db } from "@/db";
+import { qualified } from "@/lib/db/qualified";
 import { NUMBER_RESET_PERIODS, documentTypes, employees, issuedDocuments, letterTemplates } from "@/db/schema";
 import { getOrganizationName } from "@/features/employees/queries";
 import { writeAuditLog, type AuditAction } from "@/lib/auth/audit";
@@ -133,7 +134,7 @@ export async function saveDocumentTypeAction(id: string | null, formData: FormDa
     if (id) {
       if (!UUID.test(id)) return { ok: false, message: "Jenis surat tidak ditemukan." };
       const current = await db
-        .select({ code: documentTypes.code, used: sql<number>`(SELECT COUNT(*)::int FROM ${issuedDocuments} WHERE ${issuedDocuments.documentTypeId} = ${documentTypes.id})` })
+        .select({ code: documentTypes.code, used: sql<number>`(SELECT COUNT(*)::int FROM ${issuedDocuments} WHERE ${issuedDocuments.documentTypeId} = ${qualified(documentTypes.id)})` })
         .from(documentTypes)
         .where(and(eq(documentTypes.id, id), eq(documentTypes.organizationId, ctx.organizationId)))
         .limit(1);

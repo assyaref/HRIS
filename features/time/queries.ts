@@ -4,6 +4,7 @@ import { and, asc, desc, eq, gte, lte, sql, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 import { db } from "@/db";
+import { qualified } from "@/lib/db/qualified";
 import {
   employees,
   holidays,
@@ -75,7 +76,7 @@ export async function listShifts(organizationId: string): Promise<ShiftRow[]> {
       breakMinutes: shifts.breakMinutes,
       workingDays: shifts.workingDays,
       active: shifts.active,
-      groupCount: sql<number>`(SELECT COUNT(*)::int FROM ${workGroups} WHERE ${workGroups.shiftId} = ${shifts.id})`,
+      groupCount: sql<number>`(SELECT COUNT(*)::int FROM ${workGroups} WHERE ${workGroups.shiftId} = ${qualified(shifts.id)})`,
     })
     .from(shifts)
     .where(eq(shifts.organizationId, organizationId))

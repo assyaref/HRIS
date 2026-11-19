@@ -22,6 +22,9 @@ import { fieldLabel } from "@/features/profile-changes/fields";
 import { isProfileChangeModuleReady } from "@/features/profile-changes/module";
 import { listProfileChanges } from "@/features/profile-changes/queries";
 import { isTimeModuleReady } from "@/features/time/module";
+import { isAgendaReady } from "@/features/agenda/module";
+import { listAgenda, listMyResponses } from "@/features/agenda/queries";
+import { isForDepartment, whenLabel } from "@/features/agenda/rules";
 import { isTimesheetModuleReady } from "@/features/timesheets/module";
 import { listMyDecidedWeeks } from "@/features/timesheets/queries";
 import { hhmm, weekLabel } from "@/features/timesheets/rules";
@@ -81,11 +84,12 @@ export async function listMyNotifications(
 
   // Modules from additive migrations (0024–0026) join the feed once their
   // tables exist; before that they simply contribute nothing.
-  const [timeReady, profileReady, helpdeskReady, timesheetReady] = await Promise.all([
+  const [timeReady, profileReady, helpdeskReady, timesheetReady, agendaReady] = await Promise.all([
     isTimeModuleReady(),
     isProfileChangeModuleReady(),
     isHelpdeskModuleReady(),
     isTimesheetModuleReady(),
+    isAgendaReady(),
   ]);
   const yearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const farFuture = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -195,6 +199,27 @@ export async function listMyNotifications(
       unread: false,
       href: "/settings/account",
     });
+  }
+
+  // Agenda: events in the next 7 days the employee is invited to; unread
+  // while an RSVP is asked and not answered yet.
+  if (agendaReady) {
+    const now = new Date();
+    const soon = (await listAgenda(organizationId, now, new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000))).filter(
+      (e) => !e.cancelled && isForDepartment(e.audienceDepartments, employee.department ?? null)
+    );
+    const answered = await listMyResponses(organizationId, employee.id, soon.map((e) => e.id));
+    for (const event of soon) {
+      items.push({
+        id: `agenda-${event.id}`,
+        category: "announcement",
+        title: `Agenda: ${event.title}`,
+        description: whenLabel(event.startAt, event.endAt, event.allDay) + (event.location ? ` · ${event.location}` : ""),
+        time: event.startAt,
+        unread: event.requireRsvp && !answered.has(event.id),
+        href: `/agenda/${event.id}`,
+      });
+    }
   }
 
   for (const week of timesheetWeeks) {

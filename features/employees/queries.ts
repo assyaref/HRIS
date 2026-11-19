@@ -22,6 +22,7 @@ import {
   employeeTrainings,
   medicalCheckups,
   overtimeRequests,
+  agendaResponses,
   timesheetEntries,
   issuedDocuments,
   helpdeskTickets,
@@ -629,6 +630,7 @@ export interface LinkedEmployee {
   firstName: string;
   lastName: string;
   employmentStatus: string;
+  department: string | null;
 }
 
 /** Resolve the employee record linked to a user account, org-scoped. */
@@ -645,6 +647,7 @@ export async function getEmployeeByUserId(
       firstName: employees.firstName,
       lastName: employees.lastName,
       employmentStatus: employees.employmentStatus,
+      department: employees.department,
     })
     .from(employees)
     .where(
@@ -972,6 +975,12 @@ const EMPLOYEE_DELETE_DEPENDENCY_SOURCES: readonly {
         employeeIdColumn: timesheetEntries.employeeId,
         organizationIdColumn: timesheetEntries.organizationId,
         optionalTable: "timesheet_entries",
+      },
+      {
+        table: agendaResponses,
+        employeeIdColumn: agendaResponses.employeeId,
+        organizationIdColumn: agendaResponses.organizationId,
+        optionalTable: "agenda_responses",
       },
     ],
   },
