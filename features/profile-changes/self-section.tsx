@@ -2,7 +2,7 @@ import { StatusBadge, type StatusTone } from "@/components/employee/status-badge
 
 import { InfoRows, ProfileSection } from "@/features/account/profile-view";
 
-import { displayFieldValue, fieldLabel, MARITAL_OPTIONS } from "./fields";
+import { displayFieldValue, fieldLabel, MARITAL_OPTIONS, maskValue } from "./fields";
 import { isProfileChangeModuleReady } from "./module";
 import { ProfileChangeButton, ProfileChangeCancelButton } from "./profile-change-forms";
 import { getChangeableProfile, listProfileChanges } from "./queries";
@@ -59,6 +59,16 @@ export async function ProfileChangeSelfSection({
             { label: "Tempat, tgl lahir", value: [current.birthPlace, current.birthDate].filter(Boolean).join(", ") || null, icon: "calendar" },
             { label: "Status pernikahan", value: marital, icon: "users" },
             { label: "Agama", value: current.religion ?? null, icon: "sparkles" },
+            {
+              label: "Alamat domisili",
+              value: [current.domicileAddress, current.domicileCity].filter(Boolean).join(", ") || null,
+              icon: "map-pin",
+            },
+            {
+              label: "Rekening gaji",
+              value: current.bankName ? `${current.bankName} ${maskValue(current.bankAccountNumber ?? null) ?? ""}`.trim() : null,
+              icon: "wallet",
+            },
           ]}
         />
         <div className="mt-3 space-y-2">
@@ -87,8 +97,13 @@ export async function ProfileChangeSelfSection({
                   {Object.entries(r.changes).map(([field, change]) => (
                     <li key={field}>
                       <span className="text-muted-foreground">{fieldLabel(field)}:</span>{" "}
-                      <span className="line-through decoration-muted-foreground/60">{displayFieldValue(field, change.from)}</span>{" "}
-                      → <span className="font-semibold">{displayFieldValue(field, change.to)}</span>
+                      <span className="line-through decoration-muted-foreground/60">
+                        {field === "bankAccountNumber" ? maskValue(change.from) ?? "—" : displayFieldValue(field, change.from)}
+                      </span>{" "}
+                      →{" "}
+                      <span className="font-semibold">
+                        {field === "bankAccountNumber" ? maskValue(change.to) ?? "—" : displayFieldValue(field, change.to)}
+                      </span>
                     </li>
                   ))}
                 </ul>

@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
-import { employees, profileChangeRequests } from "@/db/schema";
+import { employeeAddresses, employeeBankAccounts, employees, profileChangeRequests } from "@/db/schema";
 import { writeAuditLog, type AuditAction } from "@/lib/auth/audit";
 import { requireUser } from "@/lib/auth/auth";
 import { PERMISSIONS } from "@/lib/auth/permissions";
@@ -15,7 +15,11 @@ import { getEmployeeByUserId } from "@/features/employees/queries";
 import {
   CHANGEABLE_FIELD_KEYS,
   diffProfile,
+  FIELD_GROUP_LABELS,
   fieldLabel,
+  groupsOf,
+  maskValue,
+  type FieldGroup,
   isChangeableField,
   validateFieldValue,
   type ChangeableField,
@@ -31,6 +35,17 @@ import { getChangeableProfile } from "./queries";
  * Approval re-validates every value and applies it to `employees` in a
  * transaction together with the status change.
  */
+
+class IncompleteBankError extends Error {}
+
+/** Audit metadata never stores full bank account numbers. */
+function maskChangesForAudit(changes: Record<string, { from: string | null; to: string | null }>) {
+  const out: Record<string, { from: string | null; to: string | null }> = {};
+  for (const [field, change] of Object.entries(changes)) {
+    out[field] = field === "bankAccountNumber" ? { from: maskValue(change.from), to: maskValue(change.to) } : change;
+  }
+  return out;
+}
 
 export interface ProfileChangeResult {
   ok: boolean;
@@ -166,10 +181,15 @@ export async function reviewProfileChangeAction(
   const user = await requireUser();
   const authorization = await getUserAuthorization(user.id);
   const granted = new Set<string>(authorization.permissionCodes);
-  const allowed =
-    authorization.isSuperAdmin ||
-    (granted.has(PERMISSIONS.EMPLOYEES_VIEW) && granted.has(PERMISSIONS.EMPLOYEES_PERSONAL_UPDATE));
-  if (!allowed) return { ok: false, message: "Anda tidak memiliki akses untuk tindakan ini." };
+  // Reviewing needs employees.view and, per data group in the request, the
+  // matching update permission (personal / address / bank).
+  const can = (code: string) => authorization.isSuperAdmin || granted.has(code);
+  const GROUP_PERMISSION: Record<FieldGroup, string> = {
+    personal: PERMISSIONS.EMPLOYEES_PERSONAL_UPDATE,
+    address: PERMISSIONS.EMPLOYEES_ADDRESS_UPDATE,
+    bank: PERMISSIONS.EMPLOYEES_BANK_UPDATE,
+  };
+  if (!can(PERMISSIONS.EMPLOYEES_VIEW)) return { ok: false, message: "Anda tidak memiliki akses untuk tindakan ini." };
   if (!user.organizationId) return { ok: false, message: "Akun Anda belum terhubung ke organisasi." };
   const organizationId = user.organizationId;
   if (!(await isProfileChangeModuleReady())) return NOT_READY;
@@ -196,13 +216,27 @@ export async function reviewProfileChangeAction(
     return { ok: false, message: "Anda tidak dapat meninjau perubahan data Anda sendiri." };
   }
 
-  // Re-validate every value (defence in depth) and build the update.
+  const missing = groupsOf(request.changes ?? {}).filter((g) => !can(GROUP_PERMISSION[g]));
+  if (missing.length > 0) {
+    return {
+      ok: false,
+      message: `Anda tidak berhak meninjau perubahan ${missing.map((g) => FIELD_GROUP_LABELS[g].toLowerCase()).join(" dan ")}.`,
+    };
+  }
+
+  // Re-validate every value (defence in depth) and split by destination.
   const update: Record<string, string | Date | null> = {};
+  const address: Partial<Record<"address" | "city" | "province" | "postalCode", string | null>> = {};
+  const bank: Partial<Record<"bankName" | "accountNumber" | "accountHolder" | "branch", string | null>> = {};
+  const ADDRESS_COLUMN = { domicileAddress: "address", domicileCity: "city", domicileProvince: "province", domicilePostalCode: "postalCode" } as const;
+  const BANK_COLUMN = { bankName: "bankName", bankAccountNumber: "accountNumber", bankAccountHolder: "accountHolder", bankBranch: "branch" } as const;
   for (const [field, change] of Object.entries(request.changes ?? {})) {
     if (!isChangeableField(field)) return { ok: false, message: `Kolom ${field} tidak dapat diubah lewat pengajuan.` };
     const error = validateFieldValue(field, change.to);
     if (error) return { ok: false, message: `${fieldLabel(field)}: ${error}` };
-    update[field] = field === "birthDate" && change.to ? new Date(`${change.to}T00:00:00Z`) : change.to;
+    if (field in ADDRESS_COLUMN) address[ADDRESS_COLUMN[field as keyof typeof ADDRESS_COLUMN]] = change.to;
+    else if (field in BANK_COLUMN) bank[BANK_COLUMN[field as keyof typeof BANK_COLUMN]] = change.to;
+    else update[field] = field === "birthDate" && change.to ? new Date(`${change.to}T00:00:00Z`) : change.to;
   }
 
   try {
@@ -219,16 +253,90 @@ export async function reviewProfileChangeAction(
         )
         .returning({ id: profileChangeRequests.id });
       if (!marked[0]) return false;
-      if (decision === "approved" && Object.keys(update).length > 0) {
+      if (decision !== "approved") return true;
+      if (Object.keys(update).length > 0) {
         await tx
           .update(employees)
           .set({ ...update, updatedAt: new Date() })
           .where(and(eq(employees.id, request.employeeId), eq(employees.organizationId, organizationId)));
       }
+      if (Object.keys(address).length > 0) {
+        // Domicile row: update in place, or create it (no longer "same as KTP").
+        const updated = await tx
+          .update(employeeAddresses)
+          .set({ ...address, sameAsKtp: false, updatedAt: new Date() })
+          .where(
+            and(
+              eq(employeeAddresses.organizationId, organizationId),
+              eq(employeeAddresses.employeeId, request.employeeId),
+              eq(employeeAddresses.type, "domicile")
+            )
+          )
+          .returning({ id: employeeAddresses.id });
+        if (!updated[0]) {
+          await tx.insert(employeeAddresses).values({
+            organizationId,
+            employeeId: request.employeeId,
+            type: "domicile",
+            ...address,
+            sameAsKtp: false,
+          });
+        }
+      }
+      if (Object.keys(bank).length > 0) {
+        // Keep the old account for payroll history: retire it, add the new primary.
+        const current = (
+          await tx
+            .select({
+              id: employeeBankAccounts.id,
+              bankName: employeeBankAccounts.bankName,
+              accountNumber: employeeBankAccounts.accountNumber,
+              accountHolder: employeeBankAccounts.accountHolder,
+              branch: employeeBankAccounts.branch,
+            })
+            .from(employeeBankAccounts)
+            .where(
+              and(
+                eq(employeeBankAccounts.organizationId, organizationId),
+                eq(employeeBankAccounts.employeeId, request.employeeId),
+                eq(employeeBankAccounts.isPrimary, true)
+              )
+            )
+            .limit(1)
+        )[0];
+        const next = {
+          bankName: bank.bankName !== undefined ? bank.bankName : (current?.bankName ?? null),
+          accountNumber: bank.accountNumber !== undefined ? bank.accountNumber : (current?.accountNumber ?? null),
+          accountHolder: bank.accountHolder !== undefined ? bank.accountHolder : (current?.accountHolder ?? null),
+          branch: bank.branch !== undefined ? bank.branch : (current?.branch ?? null),
+        };
+        if (!next.bankName || !next.accountNumber || !next.accountHolder) {
+          throw new IncompleteBankError();
+        }
+        if (current) {
+          await tx
+            .update(employeeBankAccounts)
+            .set({ isPrimary: false, status: "inactive", updatedAt: new Date() })
+            .where(eq(employeeBankAccounts.id, current.id));
+        }
+        await tx.insert(employeeBankAccounts).values({
+          organizationId,
+          employeeId: request.employeeId,
+          bankName: next.bankName,
+          accountNumber: next.accountNumber,
+          accountHolder: next.accountHolder,
+          branch: next.branch,
+          status: "active",
+          isPrimary: true,
+        });
+      }
       return true;
     });
     if (!done) return { ok: false, message: "Pengajuan sudah diproses sebelumnya." };
   } catch (error) {
+    if (error instanceof IncompleteBankError) {
+      return { ok: false, message: "Data rekening tidak lengkap (bank, nomor, pemilik wajib)." };
+    }
     const code = (error as { code?: string; cause?: { code?: string } })?.code ??
       (error as { cause?: { code?: string } })?.cause?.code;
     if (code === "23505") return { ok: false, message: "NIK tersebut sudah dipakai karyawan lain." };
@@ -240,10 +348,11 @@ export async function reviewProfileChangeAction(
     user.id,
     decision === "approved" ? "profile_change.approved" : "profile_change.rejected",
     id,
-    { employeeId: request.employeeId, changes: request.changes, note: reviewerNote }
+    { employeeId: request.employeeId, changes: maskChangesForAudit(request.changes ?? {}), note: reviewerNote }
   );
   revalidate();
   revalidatePath(`/employees/${request.employeeId}`);
+  revalidatePath("/payroll");
   return {
     ok: true,
     message: decision === "approved" ? "Perubahan disetujui dan diterapkan ke profil." : "Pengajuan ditolak.",

@@ -91,7 +91,7 @@ Pengumuman, Notifikasi, Pengguna / Role / Hak Akses (RBAC), jejak audit
 | MCU doctor notes / consultation requests (from mobile) | doctor-note & consultation tables |
 | Overtime Setup per project (custom rates, caps) | project overtime settings |
 | Area / site master, cost centres | area tables |
-| Multi-level approver chain, bank-account / address / family change requests | extends `profile_change_requests` |
+| Multi-level approver chain, family-member change requests | extends `profile_change_requests` |
 | Activity, Planner | activities |
 
 Recommended order (from the reference roadmap): ~~calendar + shifts →

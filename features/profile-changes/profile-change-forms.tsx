@@ -21,7 +21,13 @@ import {
   reviewProfileChangeAction,
   submitProfileChangeAction,
 } from "./actions";
-import { CHANGEABLE_FIELD_KEYS, CHANGEABLE_FIELDS, type ProfileValues } from "./fields";
+import {
+  CHANGEABLE_FIELD_KEYS,
+  CHANGEABLE_FIELDS,
+  FIELD_GROUP_LABELS,
+  type FieldGroup,
+  type ProfileValues,
+} from "./fields";
 
 const TEXTAREA =
   "min-h-[76px] w-full rounded-xl border border-input bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/80 focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-ring/15 focus-visible:outline-none";
@@ -41,40 +47,45 @@ export function ProfileChangeButton({ current, disabled }: { current: ProfileVal
           open={open}
           onOpenChange={setOpen}
           title="Ajukan perubahan data"
-          description="Ubah kolom yang perlu diperbarui. HR akan meninjau sebelum data berubah."
+          description="Ubah kolom yang perlu diperbarui (data pribadi, alamat domisili, atau rekening gaji). HR meninjau sebelum data berubah."
           pending={pending}
           error={error}
           onSubmit={(fd) => run(() => submitProfileChangeAction(fd), () => setOpen(false))}
         >
-          {CHANGEABLE_FIELD_KEYS.map((field) => {
-            const spec = CHANGEABLE_FIELDS[field];
-            const id = `pc-${field}`;
-            const value = current[field] ?? "";
-            return (
-              <Field key={field} label={spec.label} htmlFor={id}>
-                {spec.kind === "select" ? (
-                  <NativeSelect id={id} name={field} defaultValue={value}>
-                    <option value="">—</option>
-                    {spec.options?.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </NativeSelect>
-                ) : (
-                  <Input
-                    id={id}
-                    name={field}
-                    type={spec.kind === "date" ? "date" : spec.kind === "email" ? "email" : spec.kind === "phone" ? "tel" : "text"}
-                    inputMode={field === "nik" ? "numeric" : undefined}
-                    maxLength={spec.max}
-                    placeholder={spec.hint}
-                    defaultValue={value}
-                  />
-                )}
-              </Field>
-            );
-          })}
+          {(Object.keys(FIELD_GROUP_LABELS) as FieldGroup[]).map((group) => (
+            <fieldset key={group} className="contents">
+              <legend className="mt-2 border-t border-border pt-3 text-sm font-semibold sm:col-span-2">{FIELD_GROUP_LABELS[group]}</legend>
+              {CHANGEABLE_FIELD_KEYS.filter((f) => CHANGEABLE_FIELDS[f].group === group).map((field) => {
+                const spec = CHANGEABLE_FIELDS[field];
+                const id = `pc-${field}`;
+                const value = current[field] ?? "";
+                return (
+                  <Field key={field} label={spec.label} htmlFor={id} wide={field === "domicileAddress"}>
+                    {spec.kind === "select" ? (
+                      <NativeSelect id={id} name={field} defaultValue={value}>
+                        <option value="">—</option>
+                        {spec.options?.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </NativeSelect>
+                    ) : (
+                      <Input
+                        id={id}
+                        name={field}
+                        type={spec.kind === "date" ? "date" : spec.kind === "email" ? "email" : spec.kind === "phone" ? "tel" : "text"}
+                        inputMode={spec.kind === "digits" || field === "nik" ? "numeric" : undefined}
+                        maxLength={spec.max}
+                        placeholder={spec.hint}
+                        defaultValue={value}
+                      />
+                    )}
+                  </Field>
+                );
+              })}
+            </fieldset>
+          ))}
           <Field label="Keterangan untuk HR (opsional)" htmlFor="pc-note" wide>
             <textarea id="pc-note" name="note" maxLength={500} className={TEXTAREA} placeholder="mis. Nomor HP lama hilang" />
           </Field>

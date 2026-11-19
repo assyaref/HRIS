@@ -7,6 +7,9 @@ import {
   CHANGEABLE_FIELD_KEYS,
   diffProfile,
   displayFieldValue,
+  fieldGroup,
+  groupsOf,
+  maskValue,
   validateFieldValue,
 } from "../../features/profile-changes/fields.ts";
 
@@ -50,6 +53,38 @@ describe("profile change rules", () => {
   });
 });
 
+describe("address and bank change requests", () => {
+  it("groups fields and validates digits", () => {
+    assert.equal(fieldGroup("bankAccountNumber"), "bank");
+    assert.equal(fieldGroup("domicileCity"), "address");
+    assert.equal(fieldGroup("phone"), "personal");
+    assert.deepEqual(groupsOf({ phone: 1, bankName: 1, bankBranch: 1 }), ["personal", "bank"]);
+    assert.equal(validateFieldValue("bankAccountNumber", "1234567890"), null);
+    assert.match(validateFieldValue("bankAccountNumber", "12-34") ?? "", /angka/);
+    assert.match(validateFieldValue("bankAccountNumber", "1234") ?? "", /minimal 5/);
+    assert.equal(validateFieldValue("domicilePostalCode", "40115"), null);
+    assert.match(validateFieldValue("domicilePostalCode", "4011") ?? "", /minimal 5/);
+    assert.match(validateFieldValue("bankName", null) ?? "", /tidak boleh dikosongkan/);
+  });
+
+  it("requires a complete bank account when any bank field changes", () => {
+    const empty = diffProfile({}, { bankAccountNumber: "1234567890" });
+    assert.ok(empty.errors.bankName && empty.errors.bankAccountHolder);
+    const ok = diffProfile(
+      { bankName: "BCA", bankAccountNumber: "111111", bankAccountHolder: "Ani" },
+      { bankAccountNumber: "2222222222" }
+    );
+    assert.deepEqual(ok.errors, {});
+    assert.deepEqual(ok.changes, { bankAccountNumber: { from: "111111", to: "2222222222" } });
+  });
+
+  it("masks account numbers", () => {
+    assert.equal(maskValue("1234567890"), "••••••7890");
+    assert.equal(maskValue("123"), "••••");
+    assert.equal(maskValue(null), null);
+  });
+});
+
 describe("migration 0025 (profile change requests) is additive and RESTRICT-only", () => {
   const root = join(import.meta.dirname, "..", "..");
   const sql = readFileSync(join(root, "db/migrations/0025_profile_change_requests.sql"), "utf8");
@@ -85,10 +120,16 @@ describe("profile change guards", () => {
   const root = join(import.meta.dirname, "..", "..");
   const read = (p: string) => readFileSync(join(root, p), "utf8");
 
-  it("review needs employees.view + personal.update, never one's own", () => {
+  it("review needs employees.view + the update permission of every data group, never one's own", () => {
     const actions = read("features/profile-changes/actions.ts");
     assert.match(actions, /^"use server";/);
-    assert.match(actions, /PERMISSIONS\.EMPLOYEES_VIEW\) && granted\.has\(PERMISSIONS\.EMPLOYEES_PERSONAL_UPDATE\)/);
+    assert.match(actions, /if \(!can\(PERMISSIONS\.EMPLOYEES_VIEW\)\)/);
+    assert.match(actions, /personal: PERMISSIONS\.EMPLOYEES_PERSONAL_UPDATE/);
+    assert.match(actions, /address: PERMISSIONS\.EMPLOYEES_ADDRESS_UPDATE/);
+    assert.match(actions, /bank: PERMISSIONS\.EMPLOYEES_BANK_UPDATE/);
+    assert.match(actions, /groupsOf\(request\.changes \?\? \{\}\)\.filter\(\(g\) => !can\(GROUP_PERMISSION\[g\]\)\)/);
+    assert.match(actions, /changes: maskChangesForAudit\(request\.changes \?\? \{\}\)/);
+    assert.match(actions, /set\(\{ isPrimary: false, status: "inactive"/);
     assert.match(actions, /request\.employeeUserId === user\.id/);
     assert.match(actions, /isChangeableField\(field\)/);
     assert.match(actions, /eq\(profileChangeRequests\.status, "pending"\)/);

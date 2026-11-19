@@ -16,14 +16,31 @@ export type ChangeableField =
   | "religion"
   | "maritalStatus"
   | "nationality"
-  | "nik";
+  | "nik"
+  // Domicile address (employee_addresses, type "domicile")
+  | "domicileAddress"
+  | "domicileCity"
+  | "domicileProvince"
+  | "domicilePostalCode"
+  // Primary bank account (employee_bank_accounts)
+  | "bankName"
+  | "bankAccountNumber"
+  | "bankAccountHolder"
+  | "bankBranch";
+
+/** Which data a field belongs to (decides the reviewer's permission). */
+export type FieldGroup = "personal" | "address" | "bank";
 
 interface FieldSpec {
   label: string;
-  kind: "text" | "email" | "phone" | "date" | "select";
+  kind: "text" | "email" | "phone" | "date" | "select" | "digits";
+  group: FieldGroup;
   max?: number;
+  min?: number;
   options?: readonly { value: string; label: string }[];
   hint?: string;
+  /** Cannot be emptied once set. */
+  required?: boolean;
 }
 
 export const MARITAL_OPTIONS = [
@@ -34,16 +51,45 @@ export const MARITAL_OPTIONS = [
 ] as const;
 
 export const CHANGEABLE_FIELDS: Record<ChangeableField, FieldSpec> = {
-  phone: { label: "Nomor HP", kind: "phone", max: 30 },
-  personalEmail: { label: "Email pribadi", kind: "email", max: 254 },
-  nickname: { label: "Nama panggilan", kind: "text", max: 100 },
-  birthPlace: { label: "Tempat lahir", kind: "text", max: 200 },
-  birthDate: { label: "Tanggal lahir", kind: "date" },
-  religion: { label: "Agama", kind: "text", max: 50 },
-  maritalStatus: { label: "Status pernikahan", kind: "select", options: MARITAL_OPTIONS },
-  nationality: { label: "Kewarganegaraan", kind: "text", max: 50 },
-  nik: { label: "NIK (KTP)", kind: "text", max: 16, hint: "16 digit sesuai KTP" },
+  phone: { label: "Nomor HP", kind: "phone", group: "personal", max: 30, required: true },
+  personalEmail: { label: "Email pribadi", kind: "email", group: "personal", max: 254 },
+  nickname: { label: "Nama panggilan", kind: "text", group: "personal", max: 100 },
+  birthPlace: { label: "Tempat lahir", kind: "text", group: "personal", max: 200 },
+  birthDate: { label: "Tanggal lahir", kind: "date", group: "personal" },
+  religion: { label: "Agama", kind: "text", group: "personal", max: 50 },
+  maritalStatus: { label: "Status pernikahan", kind: "select", group: "personal", options: MARITAL_OPTIONS },
+  nationality: { label: "Kewarganegaraan", kind: "text", group: "personal", max: 50 },
+  nik: { label: "NIK (KTP)", kind: "text", group: "personal", max: 16, hint: "16 digit sesuai KTP" },
+  domicileAddress: { label: "Alamat domisili", kind: "text", group: "address", max: 300 },
+  domicileCity: { label: "Kota domisili", kind: "text", group: "address", max: 100 },
+  domicileProvince: { label: "Provinsi domisili", kind: "text", group: "address", max: 100 },
+  domicilePostalCode: { label: "Kode pos domisili", kind: "digits", group: "address", min: 5, max: 5 },
+  bankName: { label: "Nama bank", kind: "text", group: "bank", max: 100, required: true },
+  bankAccountNumber: { label: "Nomor rekening", kind: "digits", group: "bank", min: 5, max: 20, required: true },
+  bankAccountHolder: { label: "Nama pemilik rekening", kind: "text", group: "bank", max: 100, required: true },
+  bankBranch: { label: "Cabang bank", kind: "text", group: "bank", max: 100 },
 };
+
+export const FIELD_GROUP_LABELS: Record<FieldGroup, string> = {
+  personal: "Data pribadi",
+  address: "Alamat domisili",
+  bank: "Rekening gaji",
+};
+
+export function fieldGroup(field: string): FieldGroup {
+  return isChangeableField(field) ? CHANGEABLE_FIELDS[field].group : "personal";
+}
+
+/** Groups touched by a change set. */
+export function groupsOf(changes: Record<string, unknown>): FieldGroup[] {
+  return [...new Set(Object.keys(changes).map(fieldGroup))];
+}
+
+/** "1234567890" → "••••••7890" (bank numbers for viewers without bank access). */
+export function maskValue(value: string | null): string | null {
+  if (!value) return value;
+  return value.length <= 4 ? "••••" : `${"•".repeat(Math.min(6, value.length - 4))}${value.slice(-4)}`;
+}
 
 export const CHANGEABLE_FIELD_KEYS = Object.keys(CHANGEABLE_FIELDS) as ChangeableField[];
 
@@ -63,8 +109,9 @@ const normalize = (value: string | null | undefined): string | null => {
 export function validateFieldValue(field: ChangeableField, value: string | null): string | null {
   const spec = CHANGEABLE_FIELDS[field];
   if (value === null) {
-    return field === "phone" ? "Nomor HP tidak boleh dikosongkan." : null;
+    return spec.required ? `${spec.label} tidak boleh dikosongkan.` : null;
   }
+  if (spec.min && value.length < spec.min) return `${spec.label} minimal ${spec.min} karakter.`;
   if (spec.max && value.length > spec.max) return `${spec.label} maksimal ${spec.max} karakter.`;
   switch (spec.kind) {
     case "email":
@@ -76,6 +123,8 @@ export function validateFieldValue(field: ChangeableField, value: string | null)
         return "Tanggal tidak valid.";
       }
       return value > new Date().toISOString().slice(0, 10) ? "Tanggal lahir tidak boleh di masa depan." : null;
+    case "digits":
+      return /^\d+$/.test(value) ? null : `${spec.label} hanya boleh berisi angka.`;
     case "select":
       return spec.options?.some((o) => o.value === value) ? null : `${spec.label} tidak valid.`;
     default:
@@ -102,6 +151,13 @@ export function diffProfile(
     const error = validateFieldValue(field, to);
     if (error) errors[field] = error;
     else changes[field] = { from, to };
+  }
+  // A changed bank account must stay complete (bank, number, holder).
+  if (Object.keys(changes).some((f) => fieldGroup(f) === "bank")) {
+    for (const field of ["bankName", "bankAccountNumber", "bankAccountHolder"] as const) {
+      const after = field in changes ? changes[field]!.to : normalize(current[field]);
+      if (!after && !errors[field]) errors[field] = `${CHANGEABLE_FIELDS[field].label} wajib diisi untuk rekening baru.`;
+    }
   }
   return { changes, errors };
 }

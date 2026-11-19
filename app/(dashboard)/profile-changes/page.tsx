@@ -12,7 +12,15 @@ import { PERMISSIONS } from "@/lib/auth/permissions";
 import { hasPermission, requirePermission } from "@/lib/auth/rbac";
 
 import { ModuleNotReady } from "@/features/compliance/module-not-ready";
-import { displayFieldValue, fieldLabel } from "@/features/profile-changes/fields";
+import {
+  displayFieldValue,
+  FIELD_GROUP_LABELS,
+  fieldGroup,
+  fieldLabel,
+  groupsOf,
+  maskValue,
+  type FieldGroup,
+} from "@/features/profile-changes/fields";
 import {
   isProfileChangeModuleReady,
   PROFILE_CHANGE_GUIDE,
@@ -69,7 +77,22 @@ export default async function ProfileChangesPage({
     );
   }
 
-  const canReview = await hasPermission(user.id, PERMISSIONS.EMPLOYEES_PERSONAL_UPDATE);
+  const [canPersonal, canAddressView, canAddress, canBankView, canBank] = await Promise.all([
+    hasPermission(user.id, PERMISSIONS.EMPLOYEES_PERSONAL_UPDATE),
+    hasPermission(user.id, PERMISSIONS.EMPLOYEES_ADDRESS_VIEW),
+    hasPermission(user.id, PERMISSIONS.EMPLOYEES_ADDRESS_UPDATE),
+    hasPermission(user.id, PERMISSIONS.EMPLOYEES_BANK_VIEW),
+    hasPermission(user.id, PERMISSIONS.EMPLOYEES_BANK_UPDATE),
+  ]);
+  const canReviewGroup: Record<FieldGroup, boolean> = { personal: canPersonal, address: canAddress, bank: canBank };
+  const canSeeGroup: Record<FieldGroup, boolean> = { personal: true, address: canAddressView, bank: canBankView };
+  /** Value as this viewer may see it. */
+  const shown = (field: string, value: string | null) => {
+    const group = fieldGroup(field);
+    if (canSeeGroup[group]) return displayFieldValue(field, value);
+    if (value === null) return "—";
+    return group === "bank" && field === "bankAccountNumber" ? (maskValue(value) ?? "—") : "(tersembunyi)";
+  };
   const params = await searchParams;
   const statusParam = textParam(params.status);
   const status = statusParam && STATUS_LABEL[statusParam] ? statusParam : statusParam === "all" ? "" : "pending";
@@ -121,7 +144,14 @@ export default async function ProfileChangesPage({
                     <span className="font-mono">{r.employeeNumber}</span> · {dateTime.format(r.createdAt)}
                   </p>
                 </div>
-                <Badge variant={STATUS_BADGE[r.status] ?? "outline"}>{STATUS_LABEL[r.status] ?? r.status}</Badge>
+                <div className="flex flex-wrap justify-end gap-1">
+                  {groupsOf(r.changes).map((g) => (
+                    <span key={g} className="rounded-full bg-muted px-2 py-0.5 text-[11px]">
+                      {FIELD_GROUP_LABELS[g]}
+                    </span>
+                  ))}
+                  <Badge variant={STATUS_BADGE[r.status] ?? "outline"}>{STATUS_LABEL[r.status] ?? r.status}</Badge>
+                </div>
               </div>
               <div className="overflow-hidden rounded-xl border border-[var(--card-border)]">
                 <table className="w-full text-sm">
@@ -137,9 +167,9 @@ export default async function ProfileChangesPage({
                       <tr key={field}>
                         <td className="px-3 py-2 text-muted-foreground">{fieldLabel(field)}</td>
                         <td className="px-3 py-2 break-all text-muted-foreground line-through decoration-muted-foreground/50">
-                          {displayFieldValue(field, change.from)}
+                          {shown(field, change.from)}
                         </td>
-                        <td className="px-3 py-2 font-semibold break-all">{displayFieldValue(field, change.to)}</td>
+                        <td className="px-3 py-2 font-semibold break-all">{shown(field, change.to)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -152,10 +182,21 @@ export default async function ProfileChangesPage({
                   {r.reviewerNote}
                 </p>
               ) : null}
-              {r.status === "pending" && canReview ? (
-                <div className="mt-auto border-t border-[var(--card-border)] pt-3">
-                  <ProfileChangeReviewActions id={r.id} employeeName={r.employeeName} />
-                </div>
+              {r.status === "pending" ? (
+                groupsOf(r.changes).every((g) => canReviewGroup[g]) ? (
+                  <div className="mt-auto border-t border-[var(--card-border)] pt-3">
+                    <ProfileChangeReviewActions id={r.id} employeeName={r.employeeName} />
+                  </div>
+                ) : (
+                  <p className="mt-auto border-t border-[var(--card-border)] pt-3 text-xs text-muted-foreground">
+                    Perlu peninjau dengan akses{" "}
+                    {groupsOf(r.changes)
+                      .filter((g) => !canReviewGroup[g])
+                      .map((g) => FIELD_GROUP_LABELS[g].toLowerCase())
+                      .join(" dan ")}
+                    .
+                  </p>
+                )
               ) : null}
             </section>
           ))}

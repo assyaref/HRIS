@@ -12,10 +12,21 @@ profile in the same transaction — or rejects with a reason.
 | employees.view + employees.personal.view | open `/profile-changes` |
 | employees.view + employees.personal.update | approve / reject (never their own request) |
 
-Changeable fields (`features/profile-changes/fields.ts`, unit-tested):
-Nomor HP, email pribadi, nama panggilan, tempat & tanggal lahir, agama,
-status pernikahan, kewarganegaraan, NIK (16 digit). Employment, payroll and
-login data stay HR-only. Only fields that really change are stored, as
+Changeable fields (`features/profile-changes/fields.ts`, unit-tested), in
+three groups:
+
+| Group | Fields | Reviewer needs (plus employees.view) | Applied to |
+| --- | --- | --- | --- |
+| Data pribadi | Nomor HP, email pribadi, nama panggilan, tempat & tanggal lahir, agama, status pernikahan, kewarganegaraan, NIK (16 digit) | employees.personal.update | `employees` |
+| Alamat domisili | alamat, kota, provinsi, kode pos (5 digit) | employees.address.update | `employee_addresses` (type domicile; created if missing, no longer "same as KTP") |
+| Rekening gaji | bank, nomor rekening (5–20 digit), nama pemilik, cabang | employees.bank.update | `employee_bank_accounts`: the old primary account is kept as **inactive / not primary** (payroll history) and a new primary account is added |
+
+A request touching several groups can only be approved by someone holding
+every group's permission; others see which access is missing. Viewers
+without employees.address.view / employees.bank.view see "(tersembunyi)" /
+a masked account number (`••••••7890`). A bank change must leave a complete
+account (bank, number, holder). Audit logs store masked account numbers
+only. Employment, payroll and login data stay HR-only. Only fields that really change are stored, as
 `{ field: { from, to } }`; approval re-validates every value, and a NIK
 already used by another employee is refused.
 

@@ -4,7 +4,14 @@ import { and, desc, eq, sql, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 import { db } from "@/db";
-import { employees, profileChangeRequests, users, type ProfileChangeSet } from "@/db/schema";
+import {
+  employeeAddresses,
+  employeeBankAccounts,
+  employees,
+  profileChangeRequests,
+  users,
+  type ProfileChangeSet,
+} from "@/db/schema";
 
 import type { ProfileValues } from "./fields";
 
@@ -74,5 +81,51 @@ export async function getChangeableProfile(
     .from(employees)
     .where(and(eq(employees.id, employeeId), eq(employees.organizationId, organizationId)))
     .limit(1);
-  return rows[0] ?? null;
+  const base = rows[0];
+  if (!base) return null;
+  const [address, bank] = await Promise.all([
+    db
+      .select({
+        address: employeeAddresses.address,
+        city: employeeAddresses.city,
+        province: employeeAddresses.province,
+        postalCode: employeeAddresses.postalCode,
+      })
+      .from(employeeAddresses)
+      .where(
+        and(
+          eq(employeeAddresses.organizationId, organizationId),
+          eq(employeeAddresses.employeeId, employeeId),
+          eq(employeeAddresses.type, "domicile")
+        )
+      )
+      .limit(1),
+    db
+      .select({
+        bankName: employeeBankAccounts.bankName,
+        accountNumber: employeeBankAccounts.accountNumber,
+        accountHolder: employeeBankAccounts.accountHolder,
+        branch: employeeBankAccounts.branch,
+      })
+      .from(employeeBankAccounts)
+      .where(
+        and(
+          eq(employeeBankAccounts.organizationId, organizationId),
+          eq(employeeBankAccounts.employeeId, employeeId),
+          eq(employeeBankAccounts.isPrimary, true)
+        )
+      )
+      .limit(1),
+  ]);
+  return {
+    ...base,
+    domicileAddress: address[0]?.address ?? null,
+    domicileCity: address[0]?.city ?? null,
+    domicileProvince: address[0]?.province ?? null,
+    domicilePostalCode: address[0]?.postalCode ?? null,
+    bankName: bank[0]?.bankName ?? null,
+    bankAccountNumber: bank[0]?.accountNumber ?? null,
+    bankAccountHolder: bank[0]?.accountHolder ?? null,
+    bankBranch: bank[0]?.branch ?? null,
+  };
 }
