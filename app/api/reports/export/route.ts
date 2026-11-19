@@ -21,6 +21,9 @@ import { formatDuration } from "@/features/time/rules";
 import { DAY_KIND_LABELS } from "@/features/time/schedule";
 import { parseScheduleParams } from "@/features/time/schedule-params";
 import { buildScheduleReport } from "@/features/time/schedule.queries";
+import { isTimesheetModuleReady } from "@/features/timesheets/module";
+import { listWeekEntries } from "@/features/timesheets/queries";
+import { STATUS_LABELS as TIMESHEET_STATUS, weekParam } from "@/features/timesheets/rules";
 import { buildEmployeeMovementReport } from "@/features/reports/employee-movement";
 import { listLeaveReport, listMovementEmployees } from "@/features/reports/queries";
 import { buildReportWorkbook, type SheetSpec } from "@/features/reports/workbook";
@@ -55,6 +58,8 @@ const REPORT_PERMISSIONS: Record<string, Permission[]> = {
   ],
   // Shift-aware attendance (migration 0024): same as its page.
   schedule: [PERMISSIONS.ATTENDANCE_MANAGE],
+  // Timesheets (migration 0029): one ISO week, entries + per-employee totals.
+  timesheet: [PERMISSIONS.ATTENDANCE_MANAGE],
 };
 
 const LEAVE_STATUS: Record<string, string> = {
@@ -65,7 +70,7 @@ const LEAVE_STATUS: Record<string, string> = {
 };
 
 /**
- * GET /api/reports/export?report=contracts|employees|leave|mcu|trainings|schedule&…
+ * GET /api/reports/export?report=contracts|employees|leave|mcu|trainings|schedule|timesheet&…
  * Authenticated, RBAC-checked server-side, organization-scoped to the
  * caller's (acting) organization; every download is audit-logged.
  */
@@ -172,6 +177,60 @@ export async function GET(request: Request): Promise<Response> {
       { name: "Keluar", columns: personColumns("Tanggal Keluar"), rows: result.left.map(person("exitDate")) },
       { name: "Per Departemen", columns: groupColumns("Departemen"), rows: result.byDepartment.map((g) => ({ ...g })) },
       { name: "Per Lokasi", columns: groupColumns("Lokasi Kerja"), rows: result.byWorkLocation.map((g) => ({ ...g })) },
+    ];
+  } else if (report === "timesheet") {
+    if (!(await isTimesheetModuleReady())) {
+      return text(409, "Modul belum aktif: migrasi 0029 belum dijalankan.");
+    }
+    const week = weekParam(get("week"), today);
+    const entries = await listWeekEntries(organizationId, week);
+    const totals = new Map<string, { number: string; name: string; minutes: number; entries: number }>();
+    for (const e of entries) {
+      const t = totals.get(e.employeeId) ?? { number: e.employeeNumber, name: e.employeeName, minutes: 0, entries: 0 };
+      t.minutes += e.minutes;
+      t.entries += 1;
+      totals.set(e.employeeId, t);
+    }
+    filename = `timesheet-${week}.xlsx`;
+    sheets = [
+      {
+        name: "Ringkasan",
+        columns: [
+          { header: "No. Karyawan", key: "number", width: 16 },
+          { header: "Nama", key: "name", width: 28 },
+          { header: "Entri", key: "entries" },
+          { header: "Total jam", key: "hours", width: 12 },
+        ],
+        rows: [...totals.values()].map((t) => ({
+          number: t.number,
+          name: t.name,
+          entries: t.entries,
+          hours: Math.round((t.minutes / 60) * 100) / 100,
+        })),
+      },
+      {
+        name: "Entri",
+        columns: [
+          { header: "Tanggal", key: "date", width: 12 },
+          { header: "No. Karyawan", key: "number", width: 16 },
+          { header: "Nama", key: "name", width: 28 },
+          { header: "Proyek", key: "project", width: 28 },
+          { header: "Pekerjaan", key: "task", width: 36 },
+          { header: "Jam", key: "hours" },
+          { header: "Status", key: "status", width: 12 },
+          { header: "Catatan", key: "notes", width: 30 },
+        ],
+        rows: entries.map((e) => ({
+          date: e.workDate,
+          number: e.employeeNumber,
+          name: e.employeeName,
+          project: e.projectName ?? "Internal",
+          task: e.task,
+          hours: Math.round((e.minutes / 60) * 100) / 100,
+          status: TIMESHEET_STATUS[e.status] ?? e.status,
+          notes: e.notes,
+        })),
+      },
     ];
   } else if (report === "schedule") {
     if (!(await isTimeModuleReady())) {

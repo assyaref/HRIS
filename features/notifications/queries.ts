@@ -22,6 +22,9 @@ import { fieldLabel } from "@/features/profile-changes/fields";
 import { isProfileChangeModuleReady } from "@/features/profile-changes/module";
 import { listProfileChanges } from "@/features/profile-changes/queries";
 import { isTimeModuleReady } from "@/features/time/module";
+import { isTimesheetModuleReady } from "@/features/timesheets/module";
+import { listMyDecidedWeeks } from "@/features/timesheets/queries";
+import { hhmm, weekLabel } from "@/features/timesheets/rules";
 import { listOvertime } from "@/features/time/queries";
 import { formatDuration, OVERTIME_STATUS_LABELS } from "@/features/time/rules";
 
@@ -78,15 +81,16 @@ export async function listMyNotifications(
 
   // Modules from additive migrations (0024–0026) join the feed once their
   // tables exist; before that they simply contribute nothing.
-  const [timeReady, profileReady, helpdeskReady] = await Promise.all([
+  const [timeReady, profileReady, helpdeskReady, timesheetReady] = await Promise.all([
     isTimeModuleReady(),
     isProfileChangeModuleReady(),
     isHelpdeskModuleReady(),
+    isTimesheetModuleReady(),
   ]);
   const yearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const farFuture = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
-  const [announcements, leave, permissions, payslips, overtime, profileChanges, tickets] = await Promise.all([
+  const [announcements, leave, permissions, payslips, overtime, profileChanges, tickets, timesheetWeeks] = await Promise.all([
     listMyAnnouncements({ organizationId, employeeId: employee.id }),
     listMyLeaveRequests(organizationId, employee.id),
     listMyPermissionRequests(organizationId, employee.id),
@@ -96,6 +100,7 @@ export async function listMyNotifications(
       : Promise.resolve([]),
     profileReady ? listProfileChanges(organizationId, { employeeId: employee.id }) : Promise.resolve([]),
     helpdeskReady ? listTickets(organizationId, { employeeId: employee.id }) : Promise.resolve([]),
+    timesheetReady ? listMyDecidedWeeks(organizationId, employee.id) : Promise.resolve([]),
   ]);
 
   const items: EmployeeNotification[] = [];
@@ -189,6 +194,18 @@ export async function listMyNotifications(
       time: request.reviewedAt ?? request.createdAt,
       unread: false,
       href: "/settings/account",
+    });
+  }
+
+  for (const week of timesheetWeeks) {
+    items.push({
+      id: `timesheet-${week.weekStart}`,
+      category: "approval",
+      title: week.status === "approved" ? "Timesheet disetujui" : "Timesheet ditolak",
+      description: `${weekLabel(week.weekStart)} · ${hhmm(week.minutes)} jam${week.reviewerNote ? ` · ${week.reviewerNote}` : ""}`,
+      time: week.reviewedAt,
+      unread: false,
+      href: `/timesheet?week=${week.weekStart}`,
     });
   }
 

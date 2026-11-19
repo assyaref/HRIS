@@ -31,6 +31,7 @@ import {
   employeeTrainings,
   medicalCheckups,
   overtimeRequests,
+  timesheetEntries,
   issuedDocuments,
   helpdeskTickets,
   profileChangeRequests,
@@ -371,6 +372,17 @@ const PURGE_SOURCES: readonly {
         employeeIdColumn: issuedDocuments.employeeId,
         organizationIdColumn: issuedDocuments.organizationId,
         optionalTable: "issued_documents",
+      },
+    ],
+  },
+  {
+    category: "Timesheets",
+    tables: [
+      {
+        table: timesheetEntries,
+        employeeIdColumn: timesheetEntries.employeeId,
+        organizationIdColumn: timesheetEntries.organizationId,
+        optionalTable: "timesheet_entries",
       },
     ],
   },

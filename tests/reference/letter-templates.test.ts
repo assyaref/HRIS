@@ -63,11 +63,11 @@ describe("migration 0028 (letter templates)", () => {
     assert.doesNotMatch(sql, /"employees"/);
     assert.doesNotMatch(sql, /DROP /);
   });
-  it("is journaled last", () => {
-    const last = journal.entries.at(-1)!;
-    assert.equal(last.tag, "0028_letter_templates");
-    assert.equal(last.idx, journal.entries.at(-2)!.idx + 1);
-    assert.ok(last.when > journal.entries.at(-2)!.when);
+  it("is journaled with a fresh, increasing when", () => {
+    const at = journal.entries.findIndex((e) => e.tag === "0028_letter_templates");
+    assert.ok(at > 0);
+    assert.equal(journal.entries[at].idx, journal.entries[at - 1].idx + 1);
+    assert.ok(journal.entries[at].when > journal.entries[at - 1].when);
   });
 });
 

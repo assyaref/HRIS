@@ -72,6 +72,12 @@ Pengumuman, Notifikasi, Pengguna / Role / Hak Akses (RBAC), jejak audit
 | Management No Surat (document numbering), PKWT generator | `/documents` |
 | Letter templates (SKK, SP-1/2/3, Surat Tugas, SK) with merge fields (migration 0028) | `/documents?tab=templates` |
 
+## Built with migration 0029 (see docs/timesheets.md)
+
+| Reference module | Route |
+| --- | --- |
+| Timesheet + approval | `/timesheet`, `/timesheet/management`, `/approvals` (type Timesheet) |
+
 ## Next phase (needs migrations)
 
 | Module | New data |
@@ -81,7 +87,6 @@ Pengumuman, Notifikasi, Pengguna / Role / Hak Akses (RBAC), jejak audit
 | Organization master (department, area, grade, jabatan, job desc) | organization master tables |
 | Multi-level approver chain, bank-account / address / family change requests | extends `profile_change_requests` |
 | Activity, Planner | activities |
-| Timesheet | timesheets + approvals |
 
 Recommended order (from the reference roadmap): ~~calendar + shifts →
 overtime → MCU + training → profile-change approval → helpdesk →

@@ -52,6 +52,7 @@ const KIND_LABEL: Record<ApprovalKind, string> = {
   permission: "Izin",
   overtime: "Lembur",
   profile: "Perubahan data",
+  timesheet: "Timesheet",
 };
 
 function shiftDays(day: string, delta: number): string {
@@ -97,7 +98,7 @@ export default async function ApprovalsPage({
   const available: ApprovalKind[] = [
     ...(canLeave ? (["leave"] as const) : []),
     ...(canPermission ? (["permission"] as const) : []),
-    ...(canOvertime ? (["overtime"] as const) : []),
+    ...(canOvertime ? (["overtime", "timesheet"] as const) : []),
     ...(canProfile ? (["profile"] as const) : []),
   ];
   const kinds = available.filter((k) => !requestedKind || k === requestedKind);
@@ -121,7 +122,7 @@ export default async function ApprovalsPage({
     <div className="space-y-6">
       <PageHeader
         title="Persetujuan"
-        description="Kotak masuk semua pengajuan cuti, izin, lembur, dan perubahan data yang perlu ditinjau. Buka pengajuan untuk menyetujui atau menolak."
+        description="Kotak masuk semua pengajuan cuti, izin, lembur, timesheet, dan perubahan data yang perlu ditinjau. Buka pengajuan untuk menyetujui atau menolak."
       />
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
@@ -152,6 +153,7 @@ export default async function ApprovalsPage({
             {canLeave ? <option value="leave">Cuti</option> : null}
             {canPermission ? <option value="permission">Izin</option> : null}
             {canOvertime ? <option value="overtime">Lembur</option> : null}
+            {canOvertime ? <option value="timesheet">Timesheet</option> : null}
             {canProfile ? <option value="profile">Perubahan data</option> : null}
           </NativeSelect>
         </div>

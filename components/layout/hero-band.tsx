@@ -61,6 +61,7 @@ const EMPLOYEE_BAND_TITLES: Array<[string, { title: string; subtitle: string }]>
   ["/permission", { title: "Izin Kegiatan", subtitle: "Ajukan dan pantau izin kegiatan Anda." }],
   ["/overtime", { title: "Lembur", subtitle: "Ajukan dan pantau lembur (SPKL) Anda." }],
   ["/time/calendar", { title: "Kalender Libur", subtitle: "Hari libur nasional, cuti bersama, dan libur perusahaan." }],
+  ["/timesheet", { title: "Timesheet", subtitle: "Catat jam kerja per proyek dan ajukan tiap minggu." }],
   ["/helpdesk", { title: "Tanya Admin", subtitle: "Pertanyaan dan kendala Anda ke HR." }],
   ["/payslip", { title: "Slip Gaji Saya", subtitle: "Lihat dan unduh slip gaji Anda." }],
   ["/announcements", { title: "Pengumuman", subtitle: "Informasi resmi dari perusahaan." }],

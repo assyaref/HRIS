@@ -72,6 +72,7 @@ const ROUTES = [
   "/helpdesk", "/helpdesk/management", "/helpdesk/management?status=all",
   "/helpdesk/management?tab=categories", "/notifications",
   "/documents", "/documents?tab=types", "/documents?tab=templates",
+  "/timesheet", "/timesheet?week=2026-11-09", "/timesheet/management", "/timesheet/management?status=submitted", "/approvals?type=timesheet",
   "/time/schedule-report", "/time/schedule-report?view=matrix", "/payroll/components", "/time/schedule-report?month=2026-02&grace=0",
 ];
 

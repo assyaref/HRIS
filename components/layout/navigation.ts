@@ -75,6 +75,18 @@ export const primaryNavigation: NavItem[] = [
         icon: "clock",
       },
       {
+        title: "Timesheet Saya",
+        href: "/timesheet",
+        permission: PERMISSIONS.ATTENDANCE_VIEW,
+        icon: "clipboard",
+      },
+      {
+        title: "Kelola Timesheet",
+        href: "/timesheet/management",
+        anyPermission: [PERMISSIONS.ATTENDANCE_APPROVE, PERMISSIONS.ATTENDANCE_MANAGE],
+        icon: "clipboard",
+      },
+      {
         title: "Kalender Libur",
         href: "/time/calendar",
         permission: PERMISSIONS.ATTENDANCE_VIEW,

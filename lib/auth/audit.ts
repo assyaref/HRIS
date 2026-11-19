@@ -242,8 +242,16 @@ export type DocumentAuditAction =
   | "letter_template.created"
   | "letter_template.updated";
 
+export type TimesheetAuditAction =
+  | "timesheet.entry_saved"
+  | "timesheet.entry_deleted"
+  | "timesheet.week_submitted"
+  | "timesheet.week_approved"
+  | "timesheet.week_rejected";
+
 export type AuditAction =
   | ReportAuditAction
+  | TimesheetAuditAction
   | DocumentAuditAction
   | HelpdeskAuditAction
   | ProfileChangeAuditAction

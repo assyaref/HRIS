@@ -12,13 +12,16 @@ import {
   overtimeRequests,
   permissionRequests,
   profileChangeRequests,
+  timesheetEntries,
 } from "@/db/schema";
 import { fieldLabel } from "@/features/profile-changes/fields";
 import { isProfileChangeModuleReady } from "@/features/profile-changes/module";
+import { isTimesheetModuleReady } from "@/features/timesheets/module";
+import { hhmm, weekLabel } from "@/features/timesheets/rules";
 import { isTimeModuleReady } from "@/features/time/module";
 import { formatDuration } from "@/features/time/rules";
 
-export type ApprovalKind = "leave" | "permission" | "overtime" | "profile";
+export type ApprovalKind = "leave" | "permission" | "overtime" | "profile" | "timesheet";
 
 export interface ApprovalItem {
   kind: ApprovalKind;
@@ -81,7 +84,10 @@ export async function listApprovalInbox(
   // Profile changes live in migration 0025; same rule.
   const wantProfile = filters.kinds.includes("profile") && (await isProfileChangeModuleReady());
 
-  const [leaveRows, permissionRows, overtimeRows, profileRows] = await Promise.all([
+  // Timesheets live in migration 0029; one item per employee-week.
+  const wantTimesheet = filters.kinds.includes("timesheet") && (await isTimesheetModuleReady());
+
+  const [leaveRows, permissionRows, overtimeRows, profileRows, timesheetRows] = await Promise.all([
     wantLeave
       ? db
           .select({
@@ -170,6 +176,29 @@ export async function listApprovalInbox(
           )
           .orderBy(desc(profileChangeRequests.createdAt))
       : Promise.resolve([]),
+    wantTimesheet
+      ? db
+          .select({
+            employeeId: timesheetEntries.employeeId,
+            weekStart: timesheetEntries.weekStart,
+            employeeNumber: employees.employeeNumber,
+            employeeName: sql<string>`TRIM(${employees.firstName} || ' ' || ${employees.lastName})`,
+            minutes: sql<number>`SUM(${timesheetEntries.minutes})::int`,
+            // Week status: rejected > submitted > approved (drafts are not requests).
+            status: sql<string>`CASE WHEN bool_or(${timesheetEntries.status} = 'rejected') THEN 'rejected' WHEN bool_or(${timesheetEntries.status} = 'submitted') THEN 'pending' ELSE 'approved' END`,
+            submittedAt: sql<Date>`MAX(${timesheetEntries.submittedAt})`,
+          })
+          .from(timesheetEntries)
+          .innerJoin(employees, eq(employees.id, timesheetEntries.employeeId))
+          .where(
+            and(
+              eq(timesheetEntries.organizationId, organizationId),
+              sql`${timesheetEntries.status} <> 'draft'`,
+              ...dayWindow(timesheetEntries.submittedAt, filters.from, filters.to)
+            )
+          )
+          .groupBy(timesheetEntries.employeeId, timesheetEntries.weekStart, employees.employeeNumber, employees.firstName, employees.lastName)
+      : Promise.resolve([]),
   ]);
 
   const dateTime = new Intl.DateTimeFormat("id-ID", {
@@ -202,6 +231,17 @@ export async function listApprovalInbox(
       period: `${dateTime.format(row.startAt)} → ${dateTime.format(row.endAt)}`,
       status: row.status,
       submittedAt: row.submittedAt,
+    })),
+    ...timesheetRows.map((row) => ({
+      kind: "timesheet" as const,
+      id: `${row.employeeId}:${row.weekStart}`,
+      href: `/timesheet/management?week=${row.weekStart}`,
+      employeeNumber: row.employeeNumber,
+      employeeName: row.employeeName,
+      subject: `${hhmm(row.minutes)} jam`,
+      period: weekLabel(row.weekStart),
+      status: row.status,
+      submittedAt: new Date(row.submittedAt),
     })),
     ...profileRows.map((row) => ({
       kind: "profile" as const,
