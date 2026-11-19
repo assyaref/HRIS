@@ -51,6 +51,7 @@ Pengumuman, Notifikasi, Pengguna / Role / Hak Akses (RBAC), jejak audit
 | Overtime / SPKL (self-service) | `/overtime` |
 | Shift-aware attendance (late / early / absent by work-group shift) | `/time/schedule-report` |
 | Overtime approval & recap | `/overtime/management`, `/approvals` (type Lembur) |
+| Overtime → payroll (Kepmenaker rates) | payroll component `lembur`, computed on calculate |
 
 ## Built with migration 0025 (see docs/profile-change-requests.md)
 
@@ -75,7 +76,7 @@ Pengumuman, Notifikasi, Pengguna / Role / Hak Akses (RBAC), jejak audit
 | Module | New data |
 | --- | --- |
 | MCU doctor notes / consultation requests (from mobile) | doctor-note & consultation tables |
-| Overtime Setup (rates, project rules), overtime → payroll | project overtime settings |
+| Overtime Setup per project (custom rates, caps) | project overtime settings |
 | Organization master (department, area, grade, jabatan, job desc) | organization master tables |
 | Multi-level approver chain, bank-account / address / family change requests | extends `profile_change_requests` |
 | Activity, Planner | activities |

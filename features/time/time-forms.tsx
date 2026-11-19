@@ -23,6 +23,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 
+import { createPayrollComponentAction } from "@/features/payroll/actions";
+
+import { OVERTIME_COMPONENT_CODE } from "./overtime-pay";
+
 import {
   cancelOvertimeAction,
   createOvertimeForEmployeeAction,
@@ -549,5 +553,32 @@ export function OvertimeReviewActions({ id, employeeName }: { id: string; employ
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+/** Payroll managers: create the LEMBUR earning component in one click. */
+export function OvertimeComponentSetupButton() {
+  const { pending, run } = useRunner();
+  return (
+    <Button
+      type="button"
+      size="sm"
+      disabled={pending}
+      onClick={() =>
+        run(async () => {
+          const result = await createPayrollComponentAction({
+            code: OVERTIME_COMPONENT_CODE.toLowerCase(),
+            name: "Lembur",
+            type: "earning",
+            calculationMethod: "manual",
+            defaultAmount: 0,
+            description: "Dihitung otomatis dari lembur yang disetujui (Kepmenaker 102/2004).",
+          });
+          return result.ok ? { ok: true, message: "Komponen Lembur dibuat." } : result;
+        })
+      }
+    >
+      Siapkan komponen Lembur
+    </Button>
   );
 }

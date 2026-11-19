@@ -72,7 +72,7 @@ const ROUTES = [
   "/helpdesk", "/helpdesk/management", "/helpdesk/management?status=all",
   "/helpdesk/management?tab=categories", "/notifications",
   "/documents", "/documents?tab=types",
-  "/time/schedule-report", "/time/schedule-report?view=matrix", "/time/schedule-report?month=2026-02&grace=0",
+  "/time/schedule-report", "/time/schedule-report?view=matrix", "/payroll/components", "/time/schedule-report?month=2026-02&grace=0",
 ];
 
 const ERROR_UI =

@@ -33,6 +33,15 @@ import {
 } from "@/lib/payroll/payslip-pdf";
 
 import {
+  OVERTIME_COMPONENT_CODE,
+  overtimeNote,
+  overtimePay,
+  withOvertimeAmount,
+  type OvertimeEntry,
+} from "@/features/time/overtime-pay";
+import { loadApprovedOvertime } from "@/features/time/overtime-payroll.queries";
+
+import {
   calculateEmployeePayroll,
   type CalculationComponent,
   type EmployeeComponentAssignment,
@@ -103,6 +112,7 @@ interface PeriodWithRunRow {
   periodCode: string;
   periodName: string;
   periodStatus: string;
+  periodStart: Date;
   periodEnd: Date;
   runId: string | null;
   runStatus: string | null;
@@ -122,6 +132,7 @@ async function lockPeriod(
       periodCode: payrollPeriods.code,
       periodName: payrollPeriods.name,
       periodStatus: payrollPeriods.status,
+      periodStart: payrollPeriods.periodStart,
       periodEnd: payrollPeriods.periodEnd,
     })
     .from(payrollPeriods)
@@ -155,6 +166,7 @@ async function lockPeriod(
     periodCode: period.periodCode,
     periodName: period.periodName,
     periodStatus: period.periodStatus,
+    periodStart: period.periodStart,
     periodEnd: period.periodEnd,
     runId: run?.runId ?? null,
     runStatus: run?.runStatus ?? null,
@@ -521,13 +533,46 @@ export async function calculatePayrollAction(
       let netTotal = 0;
       let includedCount = 0;
 
+      // Overtime → payroll: when an ACTIVE earning component with code LEMBUR
+      // exists, its amount is computed from the employee's APPROVED overtime
+      // in the period (Kepmenaker 102/2004 rates on 1/173 of the fixed
+      // earnings). Without that component the run is exactly as before.
+      const overtimeComponent = componentRows.find(
+        (c) => c.code.toUpperCase() === OVERTIME_COMPONENT_CODE && c.type === "earning"
+      );
+      const fixedEarningIds = new Set(
+        componentRows
+          .filter((c) => c.type === "earning" && c.calculationMethod === "fixed" && c.id !== overtimeComponent?.id)
+          .map((c) => c.id)
+      );
+      const overtimeByEmployee = overtimeComponent
+        ? await loadApprovedOvertime(
+            tx,
+            organizationId,
+            period.periodStart.toISOString().slice(0, 10),
+            period.periodEnd.toISOString().slice(0, 10)
+          )
+        : new Map<string, OvertimeEntry[]>();
+      let overtimeTotal = 0;
+
       for (const employee of employeeRows) {
-        const result = calculateEmployeePayroll({
+        let result = calculateEmployeePayroll({
           employeeId: employee.id,
           calculationDate: period.periodEnd,
           components: componentRows,
           assignments: assignmentRows,
         });
+        let overtimeNoteText: string | null = null;
+        if (overtimeComponent) {
+          const entries = overtimeByEmployee.get(employee.id) ?? [];
+          const monthlyWage = result.components
+            .filter((c) => fixedEarningIds.has(c.componentId))
+            .reduce((sum, c) => sum + c.amount, 0);
+          const pay = overtimePay(monthlyWage, entries);
+          result = withOvertimeAmount(result, overtimeComponent.id, pay.amount);
+          overtimeTotal += pay.amount;
+          overtimeNoteText = entries.length > 0 ? overtimeNote(pay) : null;
+        }
         const computed = result.components;
         const earnings = result.totalEarnings;
         const deductions = result.totalDeductions;
@@ -565,7 +610,7 @@ export async function calculatePayrollAction(
               componentNameSnapshot: component.componentName,
               componentTypeSnapshot: component.componentType,
               amount: component.amount,
-              notes: null,
+              notes: component.componentId === overtimeComponent?.id ? overtimeNoteText : null,
             }))
           );
         }
@@ -595,6 +640,7 @@ export async function calculatePayrollAction(
           grossTotal,
           deductionTotal,
           netTotal,
+          ...(overtimeComponent ? { overtimeTotal } : {}),
         }),
       });
 

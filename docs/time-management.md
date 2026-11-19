@@ -24,6 +24,31 @@
 - No new permission codes: the module reuses the attendance permissions, so
   no RBAC re-seed is needed.
 
+## Lembur → Payroll
+
+When the organization has an **active earning payroll component with code
+`lembur`** (one click: "Siapkan komponen Lembur" on `/overtime/management`
+for payroll.manage holders, or Komponen Gaji), calculating a payroll period
+fills that component for every employee from their **approved** overtime
+with an overtime date inside the period:
+
+- hourly wage = 1/173 × the employee's resolved **fixed earning** components
+  (basic salary + fixed allowances; `lembur` itself excluded);
+- working day: first hour × 1.5, further hours × 2;
+- rest day (not a working day of the employee's work-group shift; Mon–Fri
+  without a shift) or holiday: 5-day week 8 h × 2, 9th × 3, 10th+ × 4;
+  6-day week 7 h × 2, 8th × 3, 9th+ × 4; minutes count proportionally;
+- the amount is rounded once per employee, the payroll item component gets a
+  note ("7,5 jam lembur = 14,5 jam terhitung × upah/jam"), and the run's
+  `payroll.calculated` event records `overtimeTotal`.
+
+Without that component — or before migration 0024 — the payroll run is
+exactly as before. A manual amount assigned to `lembur` for an employee is
+replaced by the computed value. Recalculating a draft run picks up newly
+approved overtime. `/overtime/management` shows the weighted hours per
+approved request ("Terhitung") and the integration status, never salaries.
+Rules: `features/time/overtime-pay.ts` (unit-tested).
+
 ## Kepatuhan Jadwal (shift-aware attendance)
 
 `/time/schedule-report` (attendance.manage; Excel via
