@@ -232,8 +232,16 @@ export type HelpdeskAuditAction =
   | "helpdesk.category_created"
   | "helpdesk.category_updated";
 
+export type DocumentAuditAction =
+  | "document_type.created"
+  | "document_type.updated"
+  | "document.issued"
+  | "document.voided"
+  | "document.pkwt_generated";
+
 export type AuditAction =
   | ReportAuditAction
+  | DocumentAuditAction
   | HelpdeskAuditAction
   | ProfileChangeAuditAction
   | TimeAuditAction

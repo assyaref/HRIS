@@ -71,6 +71,7 @@ const ROUTES = [
   "/profile-changes", "/profile-changes?status=all", "/approvals?type=profile",
   "/helpdesk", "/helpdesk/management", "/helpdesk/management?status=all",
   "/helpdesk/management?tab=categories", "/notifications",
+  "/documents", "/documents?tab=types",
 ];
 
 const ERROR_UI =

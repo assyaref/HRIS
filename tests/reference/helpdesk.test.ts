@@ -64,12 +64,11 @@ describe("migration 0026 (helpdesk) is additive and RESTRICT-only", () => {
     );
   });
 
-  it("is journaled last with a fresh, increasing when", () => {
-    const last = journal.entries.at(-1)!;
-    const previous = journal.entries.at(-2)!;
-    assert.equal(last.tag, "0026_helpdesk");
-    assert.equal(last.idx, previous.idx + 1);
-    assert.ok(last.when > previous.when);
+  it("is journaled with a fresh, increasing when", () => {
+    const at = journal.entries.findIndex((e) => e.tag === "0026_helpdesk");
+    assert.ok(at > 0);
+    assert.equal(journal.entries[at].idx, journal.entries[at - 1].idx + 1);
+    assert.ok(journal.entries[at].when > journal.entries[at - 1].when);
   });
 
   it("deletion plans register tickets as optional", () => {

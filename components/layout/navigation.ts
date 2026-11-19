@@ -207,6 +207,13 @@ export const managementNavigation: NavItem[] = [
     icon: "help",
   },
   {
+    title: "Surat & PKWT",
+    href: "/documents",
+    permission: PERMISSIONS.EMPLOYEES_DOCUMENT_VIEW,
+    anyPermission: [PERMISSIONS.EMPLOYEES_VIEW],
+    icon: "document",
+  },
+  {
     title: "Kelola Pengumuman",
     href: "/announcements/management",
     permission: PERMISSIONS.ANNOUNCEMENTS_VIEW,

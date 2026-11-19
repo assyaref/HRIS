@@ -63,6 +63,12 @@ Pengumuman, Notifikasi, Pengguna / Role / Hak Akses (RBAC), jejak audit
 | --- | --- |
 | Ask Admin (helpdesk) with categories | `/helpdesk`, `/helpdesk/management` |
 
+## Built with migration 0027 (see docs/documents.md)
+
+| Reference module | Route |
+| --- | --- |
+| Management No Surat (document numbering), PKWT generator | `/documents` |
+
 ## Next phase (needs migrations)
 
 | Module | New data |
@@ -73,10 +79,10 @@ Pengumuman, Notifikasi, Pengguna / Role / Hak Akses (RBAC), jejak audit
 | Organization master (department, area, grade, jabatan, job desc) | organization master tables |
 | Multi-level approver chain, bank-account / address / family change requests | extends `profile_change_requests` |
 | Activity, Planner | activities |
-| Management No Surat (document numbering), PKWT generator | counters, templates |
+| Custom letter templates (SK, SKK, SP) with merge fields | letter templates |
 | Timesheet | timesheets + approvals |
 
 Recommended order (from the reference roadmap): ~~calendar + shifts →
-overtime → MCU + training → profile-change approval → helpdesk~~ (done) →
-documents (No Surat, PKWT). Each: migration + seed for new permission codes + pages +
+overtime → MCU + training → profile-change approval → helpdesk →
+documents (No Surat, PKWT)~~ (done) → timesheet, letter templates. Each: migration + seed for new permission codes + pages +
 tests + `npm run smoke:routes`.

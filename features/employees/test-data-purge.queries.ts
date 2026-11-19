@@ -31,6 +31,7 @@ import {
   employeeTrainings,
   medicalCheckups,
   overtimeRequests,
+  issuedDocuments,
   helpdeskTickets,
   profileChangeRequests,
   workGroupMembers,
@@ -359,6 +360,17 @@ const PURGE_SOURCES: readonly {
         employeeIdColumn: helpdeskTickets.employeeId,
         organizationIdColumn: helpdeskTickets.organizationId,
         optionalTable: "helpdesk_tickets",
+      },
+    ],
+  },
+  {
+    category: "Issued letters",
+    tables: [
+      {
+        table: issuedDocuments,
+        employeeIdColumn: issuedDocuments.employeeId,
+        organizationIdColumn: issuedDocuments.organizationId,
+        optionalTable: "issued_documents",
       },
     ],
   },

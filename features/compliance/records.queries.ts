@@ -199,6 +199,7 @@ export interface ActiveEmployeeOption {
   employeeNumber: string;
   name: string;
   position: string | null;
+  department: string | null;
 }
 
 export async function listActiveEmployeeOptions(
@@ -210,6 +211,7 @@ export async function listActiveEmployeeOptions(
       employeeNumber: employees.employeeNumber,
       name: employeeName,
       position: employees.position,
+      department: employees.department,
     })
     .from(employees)
     .where(and(eq(employees.organizationId, organizationId), eq(employees.employmentStatus, "active")))

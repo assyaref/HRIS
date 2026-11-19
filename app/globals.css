@@ -1333,8 +1333,16 @@ a.hris-glass:hover {
   white-space: nowrap;
 }
 
+/* Generated letters: plain document tables, independent of the app's
+   table styling. */
+:is(.hris-admin, .emp-frame) .hris-letter :is(table, tr, td, th) {
+  border: 0 !important;
+  background: transparent !important;
+}
+
 /* Print: only the page content (org chart "Cetak / PDF", reports). */
 @media print {
+  .hris-no-print,
   .hris-sidebar,
   .hris-admin > div > header,
   .hris-admin .hris-top-card,
@@ -1357,6 +1365,16 @@ a.hris-glass:hover {
   .hris-card {
     box-shadow: none !important;
     break-inside: avoid;
+  }
+  /* Generated letters (PKWT): plain paper, no frame. */
+  .hris-letter {
+    box-shadow: none !important;
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  @page {
+    size: A4;
+    margin: 16mm 18mm;
   }
 }
 

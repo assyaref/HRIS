@@ -126,6 +126,7 @@ export const TEST_DATA_PURGE_CATEGORIES = [
   "Shift & overtime",
   "Profile change requests",
   "Helpdesk tickets",
+  "Issued letters",
 ] as const;
 
 export type TestDataPurgeCategory = (typeof TEST_DATA_PURGE_CATEGORIES)[number];
@@ -196,6 +197,7 @@ export const TEST_DATA_PURGE_DELETABLE_CATEGORIES = [
   "Shift & overtime",
   "Profile change requests",
   "Helpdesk tickets",
+  "Issued letters",
 ] as const satisfies readonly TestDataPurgeCategory[];
 
 const PROTECTED_SET: ReadonlySet<string> = new Set(
