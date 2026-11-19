@@ -249,8 +249,20 @@ export type TimesheetAuditAction =
   | "timesheet.week_approved"
   | "timesheet.week_rejected";
 
+export type OrgMasterAuditAction =
+  | "org_master.department_created"
+  | "org_master.department_updated"
+  | "org_master.position_created"
+  | "org_master.position_updated"
+  | "org_master.grade_created"
+  | "org_master.grade_updated"
+  | "org_master.status_changed"
+  | "org_master.imported"
+  | "org_master.spelling_unified";
+
 export type AuditAction =
   | ReportAuditAction
+  | OrgMasterAuditAction
   | TimesheetAuditAction
   | DocumentAuditAction
   | HelpdeskAuditAction

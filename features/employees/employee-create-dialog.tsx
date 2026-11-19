@@ -91,6 +91,7 @@ function TextField({
   required,
   error,
   autoComplete,
+  list,
 }: {
   label: string;
   name: string;
@@ -100,6 +101,8 @@ function TextField({
   required?: boolean;
   error?: string;
   autoComplete?: string;
+  /** id of a <datalist> with suggestions (e.g. organization master). */
+  list?: string;
 }) {
   const id = `new-${name}`;
   return (
@@ -116,6 +119,7 @@ function TextField({
         placeholder={placeholder}
         required={required}
         autoComplete={autoComplete}
+        list={list}
         invalid={Boolean(error)}
       />
       <FieldError message={error} />
@@ -348,9 +352,9 @@ export function CreateEmployeeDialog({
 
             {canEmployment ? (
               <Section icon="briefcase" title="Employment" description="Sama dengan tab Employment di profil; tercatat sebagai riwayat pertama.">
-                <TextField label="Division" name="division" maxLength={100} error={errors?.division} />
-                <TextField label="Department" name="department" maxLength={100} error={errors?.department} />
-                <TextField label="Position" name="position" maxLength={100} error={errors?.position} />
+                <TextField label="Division" name="division" maxLength={100} error={errors?.division} list="org-master-divisions" />
+                <TextField label="Department" name="department" maxLength={100} error={errors?.department} list="org-master-departments" />
+                <TextField label="Position" name="position" maxLength={100} error={errors?.position} list="org-master-positions" />
                 <SelectField
                   label="Employment type"
                   name="employmentType"

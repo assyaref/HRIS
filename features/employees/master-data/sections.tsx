@@ -320,9 +320,9 @@ export function EmploymentSection({
       submitLabel="Save employment"
     >
       <div className="grid gap-4 sm:grid-cols-2">
-        <FormRow label="Division" name="division" value={employee.division} maxLength={100} />
-        <FormRow label="Department" name="department" value={employee.department} maxLength={100} />
-        <FormRow label="Position" name="position" value={employee.position} maxLength={100} />
+        <FormRow label="Division" name="division" value={employee.division} maxLength={100} list="org-master-divisions" />
+        <FormRow label="Department" name="department" value={employee.department} maxLength={100} list="org-master-departments" />
+        <FormRow label="Position" name="position" value={employee.position} maxLength={100} list="org-master-positions" />
         <SelectRow
           label="Employment type"
           name="employmentType"

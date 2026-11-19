@@ -32,3 +32,4 @@ export * from "./profile_changes";
 export * from "./helpdesk";
 export * from "./documents";
 export * from "./timesheets";
+export * from "./org_master";

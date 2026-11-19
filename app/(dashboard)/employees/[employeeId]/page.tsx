@@ -81,6 +81,7 @@ import {
   OverviewSection,
   PersonalSection,
 } from "@/features/employees/master-data/sections";
+import { OrgMasterSuggestions } from "@/features/org-master/suggestions";
 import {
   AttendanceTab,
   LeaveTab,
@@ -603,6 +604,7 @@ export default async function EmployeeDetailPage({
 
   return (
     <div className="space-y-6">
+      <OrgMasterSuggestions organizationId={organizationId} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">

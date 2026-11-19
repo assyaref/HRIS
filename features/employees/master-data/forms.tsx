@@ -71,6 +71,7 @@ export function FormRow({
   type = "text",
   maxLength,
   required,
+  list,
 }: {
   label: string;
   name: string;
@@ -78,6 +79,8 @@ export function FormRow({
   type?: string;
   maxLength?: number;
   required?: boolean;
+  /** id of a <datalist> with suggestions (e.g. organization master). */
+  list?: string;
 }) {
   return (
     <div className="space-y-2">
@@ -89,6 +92,7 @@ export function FormRow({
         defaultValue={value ?? ""}
         maxLength={maxLength}
         required={required}
+        list={list}
       />
     </div>
   );

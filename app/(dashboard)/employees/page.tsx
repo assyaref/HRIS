@@ -14,6 +14,7 @@ import {
 } from "@/lib/auth/rbac";
 
 import { CreateEmployeeDialog } from "@/features/employees/employee-create-dialog";
+import { OrgMasterSuggestions } from "@/features/org-master/suggestions";
 import { ImportExcelDialog } from "@/features/employees/excel/import-dialog";
 import { EmployeeExcelButtons } from "@/features/employees/export/excel-buttons";
 import { EmployeeFilters } from "@/features/employees/employee-filters";
@@ -378,6 +379,7 @@ export default async function EmployeesPage({
 
   return (
     <div className="space-y-6">
+      <OrgMasterSuggestions organizationId={organizationId} />
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div className="min-w-0 shrink-0">
           <div className="flex flex-wrap items-center gap-2">

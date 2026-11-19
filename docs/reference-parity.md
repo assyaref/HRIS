@@ -78,13 +78,19 @@ Pengumuman, Notifikasi, Pengguna / Role / Hak Akses (RBAC), jejak audit
 | --- | --- |
 | Timesheet + approval | `/timesheet`, `/timesheet/management`, `/approvals` (type Timesheet) |
 
+## Built with migration 0030 (see docs/org-master.md)
+
+| Reference module | Route |
+| --- | --- |
+| Organization master: department, jabatan + job desc, grade | `/organization/master` |
+
 ## Next phase (needs migrations)
 
 | Module | New data |
 | --- | --- |
 | MCU doctor notes / consultation requests (from mobile) | doctor-note & consultation tables |
 | Overtime Setup per project (custom rates, caps) | project overtime settings |
-| Organization master (department, area, grade, jabatan, job desc) | organization master tables |
+| Area / site master, cost centres | area tables |
 | Multi-level approver chain, bank-account / address / family change requests | extends `profile_change_requests` |
 | Activity, Planner | activities |
 

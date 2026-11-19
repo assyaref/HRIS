@@ -211,6 +211,12 @@ export const managementNavigation: NavItem[] = [
     icon: "network",
   },
   {
+    title: "Master Organisasi",
+    href: "/organization/master",
+    permission: PERMISSIONS.EMPLOYEES_VIEW,
+    icon: "layers",
+  },
+  {
     title: "Perubahan Data Karyawan",
     href: "/profile-changes",
     permission: PERMISSIONS.EMPLOYEES_PERSONAL_VIEW,
