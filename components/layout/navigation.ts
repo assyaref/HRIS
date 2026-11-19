@@ -86,6 +86,12 @@ export const primaryNavigation: NavItem[] = [
         permission: PERMISSIONS.ATTENDANCE_MANAGE,
         icon: "users-cog",
       },
+      {
+        title: "Kepatuhan Jadwal",
+        href: "/time/schedule-report",
+        permission: PERMISSIONS.ATTENDANCE_MANAGE,
+        icon: "bar-chart",
+      },
     ],
   },
   {

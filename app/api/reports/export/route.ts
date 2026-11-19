@@ -16,6 +16,11 @@ import {
   MCU_RESULT_LABELS,
   VALIDITY_LABELS,
 } from "@/features/compliance/validity";
+import { isTimeModuleReady } from "@/features/time/module";
+import { formatDuration } from "@/features/time/rules";
+import { DAY_KIND_LABELS } from "@/features/time/schedule";
+import { parseScheduleParams } from "@/features/time/schedule-params";
+import { buildScheduleReport } from "@/features/time/schedule.queries";
 import { buildEmployeeMovementReport } from "@/features/reports/employee-movement";
 import { listLeaveReport, listMovementEmployees } from "@/features/reports/queries";
 import { buildReportWorkbook, type SheetSpec } from "@/features/reports/workbook";
@@ -48,6 +53,8 @@ const REPORT_PERMISSIONS: Record<string, Permission[]> = {
     PERMISSIONS.EMPLOYEES_EXPORT,
     PERMISSIONS.EMPLOYEES_EMPLOYMENT_VIEW,
   ],
+  // Shift-aware attendance (migration 0024): same as its page.
+  schedule: [PERMISSIONS.ATTENDANCE_MANAGE],
 };
 
 const LEAVE_STATUS: Record<string, string> = {
@@ -58,7 +65,7 @@ const LEAVE_STATUS: Record<string, string> = {
 };
 
 /**
- * GET /api/reports/export?report=contracts|employees|leave|mcu|trainings&…
+ * GET /api/reports/export?report=contracts|employees|leave|mcu|trainings|schedule&…
  * Authenticated, RBAC-checked server-side, organization-scoped to the
  * caller's (acting) organization; every download is audit-logged.
  */
@@ -165,6 +172,82 @@ export async function GET(request: Request): Promise<Response> {
       { name: "Keluar", columns: personColumns("Tanggal Keluar"), rows: result.left.map(person("exitDate")) },
       { name: "Per Departemen", columns: groupColumns("Departemen"), rows: result.byDepartment.map((g) => ({ ...g })) },
       { name: "Per Lokasi", columns: groupColumns("Lokasi Kerja"), rows: result.byWorkLocation.map((g) => ({ ...g })) },
+    ];
+  } else if (report === "schedule") {
+    if (!(await isTimeModuleReady())) {
+      return text(409, "Modul belum aktif: migrasi 0024 belum dijalankan.");
+    }
+    const params = Object.fromEntries(url.searchParams.entries());
+    const { from, to, graceMinutes, groupId } = parseScheduleParams(params, today);
+    const result = await buildScheduleReport(organizationId, { from, to, today, graceMinutes, groupId });
+    filename = `kepatuhan-jadwal-${from}_${to}.xlsx`;
+    sheets = [
+      {
+        name: "Ringkasan",
+        columns: [
+          { header: "No. Karyawan", key: "number", width: 16 },
+          { header: "Nama", key: "name", width: 28 },
+          { header: "Grup", key: "group", width: 20 },
+          { header: "Shift", key: "shift", width: 20 },
+          { header: "Terjadwal", key: "scheduled" },
+          { header: "Hadir", key: "present" },
+          { header: "Alpa", key: "absent" },
+          { header: "Cuti", key: "leave" },
+          { header: "Izin", key: "permission" },
+          { header: "Terlambat (kali)", key: "late", width: 16 },
+          { header: "Terlambat (menit)", key: "lateMinutes", width: 18 },
+          { header: "Pulang cepat (kali)", key: "early", width: 18 },
+          { header: "Pulang cepat (menit)", key: "earlyMinutes", width: 20 },
+          { header: "Tanpa absen pulang", key: "missing", width: 18 },
+          { header: "Di luar jadwal", key: "extra", width: 14 },
+          { header: "Kehadiran (%)", key: "rate", width: 14 },
+          { header: "Tepat waktu (%)", key: "punctuality", width: 16 },
+        ],
+        rows: result.rows.map((r) => ({
+          number: r.employeeNumber,
+          name: r.name,
+          group: r.groupName,
+          shift: `${r.shiftName} (${r.shiftHours})`,
+          scheduled: r.summary.scheduled,
+          present: r.summary.present,
+          absent: r.summary.absent,
+          leave: r.summary.leave,
+          permission: r.summary.permission,
+          late: r.summary.late,
+          lateMinutes: r.summary.lateMinutes,
+          early: r.summary.early,
+          earlyMinutes: r.summary.earlyMinutes,
+          missing: r.summary.missingCheckOut,
+          extra: r.summary.extra,
+          rate: r.summary.attendanceRate,
+          punctuality: r.summary.punctualityRate,
+        })),
+      },
+      {
+        name: "Harian",
+        columns: [
+          { header: "Tanggal", key: "day", width: 12 },
+          { header: "No. Karyawan", key: "number", width: 16 },
+          { header: "Nama", key: "name", width: 28 },
+          { header: "Status", key: "kind", width: 20 },
+          { header: "Terlambat", key: "late", width: 12 },
+          { header: "Pulang cepat", key: "early", width: 14 },
+          { header: "Keterangan", key: "note", width: 28 },
+        ],
+        rows: result.rows.flatMap((r) =>
+          r.days
+            .filter((d) => d.kind !== "not_employed")
+            .map((d) => ({
+              day: d.day,
+              number: r.employeeNumber,
+              name: r.name,
+              kind: DAY_KIND_LABELS[d.kind],
+              late: d.lateMinutes ? formatDuration(d.lateMinutes) : null,
+              early: d.earlyMinutes ? formatDuration(d.earlyMinutes) : null,
+              note: [d.missingCheckOut ? "Tanpa absen pulang" : "", d.extra ? "Masuk di luar jadwal" : ""].filter(Boolean).join(", ") || null,
+            }))
+        ),
+      },
     ];
   } else if (report === "mcu" || report === "trainings") {
     if (!(await isComplianceModuleReady())) {

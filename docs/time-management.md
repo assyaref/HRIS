@@ -24,6 +24,29 @@
 - No new permission codes: the module reuses the attendance permissions, so
   no RBAC re-seed is needed.
 
+## Kepatuhan Jadwal (shift-aware attendance)
+
+`/time/schedule-report` (attendance.manage; Excel via
+`/api/reports/export?report=schedule&…`) compares every member of an
+active work group that has a shift with that shift and the holiday calendar,
+for a period of up to 62 days (default: current month):
+
+| Day | Result |
+| --- | --- |
+| holiday / not a shift working day | Libur / Bukan hari kerja (attendance there = "di luar jadwal") |
+| before hire or after termination/resignation | not counted |
+| accepted attendance (`present`, `completed`) | Hadir, with late minutes (check-in after shift start + tolerance, default 5 min) and early-leave minutes (check-out before shift end; an end ≤ start is the next day); no check-out = "tanpa absen pulang" |
+| approved leave / approved permission | Cuti / Izin |
+| today or later | Akan datang |
+| otherwise | Alpa |
+
+`rejected` / `incomplete` attendance does not count as present — the same
+rule as Rekap Absensi. Times use the attendance's work-location time zone
+(fallback Asia/Jakarta). Rates: Kehadiran = hadir / hari terjadwal yang sudah
+lewat; Tepat waktu = hadir tanpa terlambat / hadir. Two views: summary per
+employee (worst first) and a daily calendar grid. Read-only; no migration.
+The engine is pure (`features/time/schedule.ts`) and unit-tested.
+
 ## Database (migration `0024_time_management`)
 
 Additive only — five new tables, nothing else changes:

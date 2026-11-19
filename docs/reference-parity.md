@@ -49,6 +49,7 @@ Pengumuman, Notifikasi, Pengguna / Role / Hak Akses (RBAC), jejak audit
 | Holiday calendar | `/time/calendar` |
 | Shift / Work Schedule, Work Group | `/time/shifts` |
 | Overtime / SPKL (self-service) | `/overtime` |
+| Shift-aware attendance (late / early / absent by work-group shift) | `/time/schedule-report` |
 | Overtime approval & recap | `/overtime/management`, `/approvals` (type Lembur) |
 
 ## Built with migration 0025 (see docs/profile-change-requests.md)
@@ -75,7 +76,6 @@ Pengumuman, Notifikasi, Pengguna / Role / Hak Akses (RBAC), jejak audit
 | --- | --- |
 | MCU doctor notes / consultation requests (from mobile) | doctor-note & consultation tables |
 | Overtime Setup (rates, project rules), overtime → payroll | project overtime settings |
-| Shift-aware attendance (late / early by work group shift) | uses `shifts` + `work_group_members` |
 | Organization master (department, area, grade, jabatan, job desc) | organization master tables |
 | Multi-level approver chain, bank-account / address / family change requests | extends `profile_change_requests` |
 | Activity, Planner | activities |
