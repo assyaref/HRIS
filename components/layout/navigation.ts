@@ -325,6 +325,13 @@ export const settingsNavigation: NavItem[] = [
         icon: "shield",
       },
       {
+        title: "Status Sistem",
+        href: "/settings/system",
+        icon: "shield",
+        // SUPERADMIN-only: the page re-checks requireSuperAdmin.
+        superadminOnly: true,
+      },
+      {
         title: "Data Uji",
         href: "/settings/test-data",
         icon: "test-data",
