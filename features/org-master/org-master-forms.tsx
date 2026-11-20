@@ -121,7 +121,7 @@ function GradeDialog({ open, onOpenChange, initial }: { open: boolean; onOpenCha
       <Field label="Kode" htmlFor="gr-code">
         <Input id="gr-code" name="code" maxLength={16} defaultValue={initial?.code ?? ""} placeholder="mis. G5" required />
       </Field>
-      <Field label="Level" htmlFor="gr-level">
+      <Field label="Tingkat" htmlFor="gr-level">
         <Input id="gr-level" name="level" type="number" min={1} max={99} defaultValue={initial?.level ?? 1} required />
       </Field>
       <Field label="Nama grade" htmlFor="gr-name" wide>

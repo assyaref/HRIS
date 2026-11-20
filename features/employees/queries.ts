@@ -1084,7 +1084,7 @@ function assertEmployeeDeletePlanMatchesPolicy(): void {
   }
   if (planned.size !== EMPLOYEE_DELETABLE_DEPENDENCY_LABELS.length) {
     throw new Error(
-      "Employee permanent delete plan contains a category that the policy does not classify as deletable."
+      "Rencana hapus permanen karyawan berisi kategori yang tidak diklasifikasikan kebijakan sebagai dapat dihapus."
     );
   }
   const planLabels = EMPLOYEE_DELETABLE_DELETE_PLAN.map((entry) => entry.label);
@@ -1443,20 +1443,20 @@ function assertEmployeeSnapshotPlanMatchesPolicy(): void {
   for (const table of protectedTables) {
     if (!plannedTables.includes(table)) {
       throw new Error(
-        "Employee permanent delete snapshot plan is missing a protected table with nullable identity snapshots."
+        "Rencana snapshot hapus permanen tidak mencakup tabel dilindungi yang memiliki snapshot identitas."
       );
     }
   }
   for (const table of deletableTables) {
     if (plannedTables.includes(table)) {
       throw new Error(
-        "Employee permanent delete snapshot plan must not include a deletable table."
+        "Rencana snapshot hapus permanen tidak boleh berisi tabel yang dapat dihapus."
       );
     }
   }
   if (plannedTables.length !== protectedTables.length) {
     throw new Error(
-      "Employee permanent delete snapshot plan contains a table that the policy does not classify as protected."
+      "Rencana snapshot hapus permanen berisi tabel yang tidak diklasifikasikan kebijakan sebagai dilindungi."
     );
   }
 }

@@ -146,7 +146,7 @@ describe("row validation", () => {
       ",Jane Doe,jane@acme.test,2024-01-15,active",
     ]);
     assert.equal(errorRows.length, 1);
-    assert.match(errorRows[0].error ?? "", /employee number/i);
+    assert.match(errorRows[0].error ?? "", /nomor karyawan/i);
   });
 
   it("rejects an invalid employee number format", () => {
@@ -155,7 +155,7 @@ describe("row validation", () => {
       "EMP 1001!,Jane Doe,jane@acme.test,2024-01-15,active",
     ]);
     assert.equal(errorRows.length, 1);
-    assert.match(errorRows[0].error ?? "", /employee number/i);
+    assert.match(errorRows[0].error ?? "", /nomor karyawan/i);
   });
 
   it("rejects a missing name", () => {
@@ -164,7 +164,7 @@ describe("row validation", () => {
       "EMP-1001,,jane@acme.test,2024-01-15,active",
     ]);
     assert.equal(errorRows.length, 1);
-    assert.match(errorRows[0].error ?? "", /name/i);
+    assert.match(errorRows[0].error ?? "", /nama/i);
   });
 
   it("rejects an invalid email", () => {
@@ -182,7 +182,7 @@ describe("row validation", () => {
       "EMP-1001,Jane Doe,jane@acme.test,15-01-2024,active",
     ]);
     assert.equal(errorRows.length, 1);
-    assert.match(errorRows[0].error ?? "", /date/i);
+    assert.match(errorRows[0].error ?? "", /tanggal/i);
   });
 
   it("rejects an invalid status", () => {
@@ -204,7 +204,7 @@ describe("in-file duplicate detection", () => {
     ]);
     assert.equal(validRows.length, 1);
     assert.equal(errorRows.length, 1);
-    assert.match(errorRows[0].error ?? "", /duplicate/i);
+    assert.match(errorRows[0].error ?? "", /ganda/i);
   });
 
   it("rejects a duplicated email (case-insensitive)", () => {
@@ -215,7 +215,7 @@ describe("in-file duplicate detection", () => {
     ]);
     assert.equal(validRows.length, 1);
     assert.equal(errorRows.length, 1);
-    assert.match(errorRows[0].error ?? "", /duplicate/i);
+    assert.match(errorRows[0].error ?? "", /ganda/i);
   });
 });
 

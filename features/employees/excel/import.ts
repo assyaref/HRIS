@@ -161,7 +161,7 @@ export function validateEmployeeCells(cells: Record<string, string>): string[] {
 
   if (cells["contract start"] && cells["contract end"]) {
     if (cells["contract end"] < cells["contract start"]) {
-      errors.push("Contract end cannot be before contract start.");
+      errors.push("Akhir kontrak tidak boleh sebelum mulai kontrak.");
     }
   }
 
@@ -183,7 +183,7 @@ export function validateEmployeeCells(cells: Record<string, string>): string[] {
   }
 
   if (cells["nik"] && !/^\d{1,32}$/.test(cells["nik"])) {
-    errors.push("NIK must contain digits only.");
+    errors.push("NIK hanya boleh berisi angka.");
   }
 
   return errors;
@@ -428,41 +428,41 @@ function validateSecondaryRow(
   employeeNumber: string,
   cells: Record<string, string>
 ): string | null {
-  if (!employeeNumber) return "Employee number is required.";
+  if (!employeeNumber) return "Nomor karyawan wajib diisi.";
   switch (sheet) {
     case ADDRESS_SHEET_NAME: {
       const type = (cells["address type"] ?? "ktp").toLowerCase();
       if (!ADDRESS_TYPES.includes(type)) {
-        return 'Address Type must be "KTP" or "Domicile".';
+        return 'Kolom "Address Type" harus "KTP" atau "Domicile".';
       }
       return null;
     }
     case BANK_SHEET_NAME:
-      if (!cells["bank name"]) return "Bank Name is required.";
-      if (!cells["account number"]) return "Account Number is required.";
-      if (!cells["account holder"]) return "Account Holder is required.";
+      if (!cells["bank name"]) return 'Kolom "Bank Name" wajib diisi.';
+      if (!cells["account number"]) return 'Kolom "Account Number" wajib diisi.';
+      if (!cells["account holder"]) return 'Kolom "Account Holder" wajib diisi.';
       return null;
     case FAMILY_SHEET_NAME:
-      if (!cells["name"]) return "Name is required.";
-      if (!cells["relationship"]) return "Relationship is required.";
+      if (!cells["name"]) return "Nama wajib diisi.";
+      if (!cells["relationship"]) return "Hubungan wajib diisi.";
       if (cells["birth date"] && !isCalendarDate(cells["birth date"])) {
-        return "Birth Date must be a valid date in YYYY-MM-DD format.";
+        return 'Kolom "Birth Date" harus berupa tanggal valid dengan format YYYY-MM-DD.';
       }
       return null;
     case EDUCATION_SHEET_NAME:
-      if (!cells["education level"]) return "Education Level is required.";
-      if (!cells["institution"]) return "Institution is required.";
+      if (!cells["education level"]) return 'Kolom "Education Level" wajib diisi.';
+      if (!cells["institution"]) return "Institusi wajib diisi.";
       if (
         cells["start year"] &&
         !isEducationYear(cells["start year"])
       ) {
-        return "Start Year must be between 1900 and 2200.";
+        return 'Kolom "Start Year" harus antara 1900 dan 2200.';
       }
       if (
         cells["graduation year"] &&
         !isEducationYear(cells["graduation year"])
       ) {
-        return "Graduation Year must be between 1900 and 2200.";
+        return 'Kolom "Graduation Year" harus antara 1900 dan 2200.';
       }
       return null;
     default:
@@ -586,7 +586,7 @@ function collectCustomFieldsSheet(
         employeeNumber: "",
         cells,
         unknownHeaders: [...unknownLabels],
-        error: "Employee number is required.",
+        error: "Nomor karyawan wajib diisi.",
       });
       continue;
     }
@@ -836,7 +836,7 @@ function buildEmployeeRow(
   if (seenNumbers.has(employeeNumber)) {
     rows.push({
       ...base,
-      error: "Duplicate employee number in the file.",
+      error: "Nomor karyawan ganda di dalam berkas.",
       validationStatus: "error",
     });
     return;
@@ -845,7 +845,7 @@ function buildEmployeeRow(
   if (email && seenEmails.has(lowerEmail)) {
     rows.push({
       ...base,
-      error: "Duplicate email in the file.",
+      error: "Email ganda di dalam berkas.",
       validationStatus: "error",
     });
     return;
@@ -961,7 +961,7 @@ export function findDuplicateExistingEmailErrors(
       errors.push({
         rowNumber: row.rowNumber,
         employeeNumber: row.employeeNumber,
-        error: `Email is already assigned to employee ${owner}.`,
+        error: `Email sudah dipakai oleh karyawan ${owner}.`,
       });
     }
   }
@@ -975,7 +975,7 @@ export function buildExcelPreviewErrors(
   const errors: ExcelPreviewError[] = analysis.errorEmployees.map((row) => ({
     rowNumber: row.rowNumber,
     employeeNumber: row.employeeNumber ?? "",
-    error: row.error ?? "Invalid row.",
+    error: row.error ?? "Baris tidak valid.",
   }));
   for (const row of plan.rows) {
     const invalid = row.secondary.filter((secondary) => secondary.error);
@@ -986,7 +986,7 @@ export function buildExcelPreviewErrors(
       error: invalid
         .map(
           (secondary) =>
-            `${secondary.sheet} row ${secondary.rowNumber}: ${secondary.error ?? "Invalid row."}`
+            `${secondary.sheet} row ${secondary.rowNumber}: ${secondary.error ?? "Baris tidak valid."}`
         )
         .join(" "),
     });
@@ -1005,7 +1005,7 @@ export function buildExcelPreviewErrors(
       rowNumber: 0,
       employeeNumber: plan.orphanedSecondaryEmployeeNumbers.join(", "),
       error:
-        "Secondary sheets reference employee numbers that are not on the Employees sheet.",
+        "Sheet lain merujuk nomor karyawan yang tidak ada di sheet Employees.",
     });
   }
   return errors;

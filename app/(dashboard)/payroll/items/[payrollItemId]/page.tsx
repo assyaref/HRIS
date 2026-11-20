@@ -37,7 +37,7 @@ import {
 import { getEmployeeByUserId } from "@/features/employees/queries";
 
 export const metadata: Metadata = {
-  title: "Payroll item",
+  title: "Item payroll",
 };
 
 export default async function PayrollItemDetailPage({
@@ -83,23 +83,23 @@ export default async function PayrollItemDetailPage({
           href={`/payroll/${owningPeriod.id}`}
           className={buttonVariants({ variant: "outline", size: "sm" })}
         >
-          Back to period
+          Kembali ke periode
         </Link>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Employee snapshot</CardTitle>
-            <CardDescription>Historical data preserved for payroll.</CardDescription>
+            <CardTitle>Snapshot karyawan</CardTitle>
+            <CardDescription>Data historis tetap disimpan untuk payroll.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <p className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Employee</span>
+              <span className="text-muted-foreground">Karyawan</span>
               <span className="font-medium">{item.employeeNameSnapshot}</span>
             </p>
             <p className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Employee number</span>
+              <span className="text-muted-foreground">Nomor karyawan</span>
               <span className="font-mono text-xs">{item.employeeNumberSnapshot}</span>
             </p>
             <p className="flex justify-between gap-4">
@@ -111,32 +111,32 @@ export default async function PayrollItemDetailPage({
 
         <Card>
           <CardHeader>
-            <CardTitle>Payroll totals</CardTitle>
+            <CardTitle>Total payroll</CardTitle>
             <CardDescription>Calculated server-side using integer IDR.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <p className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Payroll period</span>
+              <span className="text-muted-foreground">Periode payroll</span>
               <span className="font-medium">{owningPeriod.name}</span>
             </p>
             <p className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Run ID</span>
+              <span className="text-muted-foreground">ID Proses</span>
               <span className="font-mono text-xs">{item.payrollRunId}</span>
             </p>
             <p className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Gross earnings</span>
+              <span className="text-muted-foreground">Pendapatan bruto</span>
               <span className="font-medium">{formatIDR(item.grossAmount)}</span>
             </p>
             <p className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Total earnings</span>
+              <span className="text-muted-foreground">Total pendapatan</span>
               <span className="font-medium">{formatIDR(item.totalEarnings)}</span>
             </p>
             <p className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Total deductions</span>
+              <span className="text-muted-foreground">Total potongan</span>
               <span className="font-medium">{formatIDR(item.totalDeductions)}</span>
             </p>
             <p className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Net amount</span>
+              <span className="text-muted-foreground">Jumlah neto</span>
               <span className="font-semibold">{formatIDR(item.netAmount)}</span>
             </p>
           </CardContent>
@@ -145,9 +145,9 @@ export default async function PayrollItemDetailPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Payroll components</CardTitle>
+          <CardTitle>Komponen payroll</CardTitle>
           <CardDescription>
-            Snapshotted component amounts used in this item calculation.
+            Snapshot nilai komponen yang dipakai dalam perhitungan item ini.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -155,10 +155,10 @@ export default async function PayrollItemDetailPage({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Component</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead>Notes</TableHead>
+                  <TableHead>Komponen</TableHead>
+                  <TableHead>Jenis</TableHead>
+                  <TableHead className="text-right">Jumlah</TableHead>
+                  <TableHead>Catatan</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -187,20 +187,20 @@ export default async function PayrollItemDetailPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>System</CardTitle>
+          <CardTitle>Sistem</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <p className="flex justify-between gap-4">
-            <span className="text-muted-foreground">Item ID</span>
+            <span className="text-muted-foreground">ID Item</span>
             <span className="font-mono text-xs">{item.id}</span>
           </p>
           <p className="flex justify-between gap-4">
-            <span className="text-muted-foreground">Period created</span>
+            <span className="text-muted-foreground">Periode dibuat</span>
             <span className="font-medium">{formatDateTime(owningPeriod.createdAt)}</span>
           </p>
           {myPayslip ? (
             <p className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Published payslip</span>
+              <span className="text-muted-foreground">Slip gaji terbit</span>
               <Link
                 href={`/payroll/payslips/${myPayslip.id}`}
                 className="font-mono text-xs underline underline-offset-4"

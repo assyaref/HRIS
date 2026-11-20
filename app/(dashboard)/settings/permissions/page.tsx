@@ -21,7 +21,7 @@ import { requirePermission } from "@/lib/auth/rbac";
 import { listPermissionCatalog } from "@/features/rbac/queries";
 
 export const metadata: Metadata = {
-  title: "Permissions",
+  title: "Hak akses",
 };
 
 /**
@@ -46,26 +46,25 @@ export default async function PermissionsPage() {
           Hak Akses
         </h1>
         <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-          {rows.length} capabilities across {modules.size} modules. Permissions
-          are assigned to roles, never directly to users.
+          {rows.length} capabilities across {modules.size} modul. Hak akses diberikan ke peran, tidak pernah langsung ke pengguna.
         </p>
       </div>
 
       {rows.length === 0 ? (
         <EmptyState
-          title="Permission catalog is empty"
-          description="Run the RBAC seed (`npm run db:seed:rbac`) to populate the permission catalog."
+          title="Katalog hak akses kosong"
+          description="Jalankan seed RBAC (`npm run db:seed:rbac`) untuk mengisi katalog hak akses."
         />
       ) : (
         <div className="rounded-lg border border-border bg-card">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Code</TableHead>
-                <TableHead>Resource</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>Module</TableHead>
-                <TableHead>Description</TableHead>
+                <TableHead>Kode</TableHead>
+                <TableHead>Sumber daya</TableHead>
+                <TableHead>Aksi</TableHead>
+                <TableHead>Modul</TableHead>
+                <TableHead>Deskripsi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

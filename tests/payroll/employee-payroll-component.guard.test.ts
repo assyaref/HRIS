@@ -54,7 +54,7 @@ describe("evaluateCreateEmployeePayrollComponentGuard", () => {
       ...validBase,
       employee: null,
     });
-    assert.deepEqual(decision, { ok: false, message: "Employee not found." });
+    assert.deepEqual(decision, { ok: false, message: "Karyawan tidak ditemukan." });
   });
 
   it("rejects an employee from another organization (generic not found)", () => {
@@ -66,7 +66,7 @@ describe("evaluateCreateEmployeePayrollComponentGuard", () => {
         employmentStatus: "active",
       },
     });
-    assert.deepEqual(decision, { ok: false, message: "Employee not found." });
+    assert.deepEqual(decision, { ok: false, message: "Karyawan tidak ditemukan." });
   });
 
   it("rejects an inactive employee", () => {
@@ -80,7 +80,7 @@ describe("evaluateCreateEmployeePayrollComponentGuard", () => {
     });
     assert.equal(decision.ok, false);
     if (!decision.ok) {
-      assert.match(decision.message, /Inactive employees/i);
+      assert.match(decision.message, /Karyawan nonaktif/i);
     }
   });
 
@@ -91,7 +91,7 @@ describe("evaluateCreateEmployeePayrollComponentGuard", () => {
     });
     assert.deepEqual(decision, {
       ok: false,
-      message: "Payroll component not found.",
+      message: "Komponen payroll tidak ditemukan.",
     });
   });
 
@@ -107,7 +107,7 @@ describe("evaluateCreateEmployeePayrollComponentGuard", () => {
     });
     assert.deepEqual(decision, {
       ok: false,
-      message: "Payroll component not found.",
+      message: "Komponen payroll tidak ditemukan.",
     });
   });
 
@@ -123,7 +123,7 @@ describe("evaluateCreateEmployeePayrollComponentGuard", () => {
     });
     assert.equal(decision.ok, false);
     if (!decision.ok) {
-      assert.match(decision.message, /Only active payroll components/i);
+      assert.match(decision.message, /Hanya komponen payroll aktif/i);
     }
   });
 
@@ -134,7 +134,7 @@ describe("evaluateCreateEmployeePayrollComponentGuard", () => {
     });
     assert.equal(decision.ok, false);
     if (!decision.ok) {
-      assert.match(decision.message, /already has an active assignment/i);
+      assert.match(decision.message, /sudah memiliki penetapan aktif/i);
     }
   });
 
@@ -151,7 +151,7 @@ describe("evaluateCreateEmployeePayrollComponentGuard", () => {
     });
     assert.equal(decision.ok, false);
     if (!decision.ok) {
-      assert.equal(decision.message, "Percentage must be between 0 and 100.");
+      assert.equal(decision.message, "Persentase harus antara 0 dan 100.");
     }
   });
 
@@ -182,7 +182,7 @@ describe("evaluateCreateEmployeePayrollComponentGuard", () => {
     });
     assert.equal(earlier.ok, false);
     if (!earlier.ok) {
-      assert.equal(earlier.message, "Effective to must be after effective from.");
+      assert.equal(earlier.message, "Tanggal berakhir harus setelah tanggal mulai berlaku.");
     }
   });
 
@@ -222,7 +222,7 @@ describe("evaluateUpdateEmployeePayrollComponentGuard", () => {
     });
     assert.deepEqual(decision, {
       ok: false,
-      message: "Payroll component assignment not found.",
+      message: "Penetapan komponen payroll tidak ditemukan.",
     });
   });
 
@@ -233,7 +233,7 @@ describe("evaluateUpdateEmployeePayrollComponentGuard", () => {
     });
     assert.deepEqual(decision, {
       ok: false,
-      message: "Payroll component assignment not found.",
+      message: "Penetapan komponen payroll tidak ditemukan.",
     });
   });
 
@@ -244,7 +244,7 @@ describe("evaluateUpdateEmployeePayrollComponentGuard", () => {
     });
     assert.equal(decision.ok, false);
     if (!decision.ok) {
-      assert.match(decision.message, /already ended/i);
+      assert.match(decision.message, /sudah berakhir/i);
     }
   });
 
@@ -256,7 +256,7 @@ describe("evaluateUpdateEmployeePayrollComponentGuard", () => {
     });
     assert.equal(decision.ok, false);
     if (!decision.ok) {
-      assert.equal(decision.message, "Percentage must be between 0 and 100.");
+      assert.equal(decision.message, "Persentase harus antara 0 dan 100.");
     }
   });
 
@@ -267,7 +267,7 @@ describe("evaluateUpdateEmployeePayrollComponentGuard", () => {
     });
     assert.equal(decision.ok, false);
     if (!decision.ok) {
-      assert.equal(decision.message, "Effective to must be after effective from.");
+      assert.equal(decision.message, "Tanggal berakhir harus setelah tanggal mulai berlaku.");
     }
   });
 });
@@ -298,7 +298,7 @@ describe("evaluateEndEmployeePayrollComponentGuard", () => {
     });
     assert.deepEqual(decision, {
       ok: false,
-      message: "Payroll component assignment not found.",
+      message: "Penetapan komponen payroll tidak ditemukan.",
     });
   });
 
@@ -309,7 +309,7 @@ describe("evaluateEndEmployeePayrollComponentGuard", () => {
     });
     assert.deepEqual(decision, {
       ok: false,
-      message: "Payroll component assignment not found.",
+      message: "Penetapan komponen payroll tidak ditemukan.",
     });
   });
 
@@ -320,7 +320,7 @@ describe("evaluateEndEmployeePayrollComponentGuard", () => {
     });
     assert.equal(decision.ok, false);
     if (!decision.ok) {
-      assert.match(decision.message, /already ended/i);
+      assert.match(decision.message, /sudah berakhir/i);
     }
   });
 
@@ -337,7 +337,7 @@ describe("evaluateEndEmployeePayrollComponentGuard", () => {
     });
     assert.equal(earlier.ok, false);
     if (!earlier.ok) {
-      assert.equal(earlier.message, "Effective to must be after effective from.");
+      assert.equal(earlier.message, "Tanggal berakhir harus setelah tanggal mulai berlaku.");
     }
   });
 });

@@ -34,7 +34,7 @@ export function SuperAdminUserOrganizationSelector({
         htmlFor="organizationId"
         className="block text-sm font-medium"
       >
-        Organization
+        Organisasi
       </label>
 
       <select

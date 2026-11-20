@@ -157,423 +157,423 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
   {
     code: PERMISSIONS.DASHBOARD_VIEW,
     module: PERMISSION_MODULES.DASHBOARD,
-    description: "View the HRIS dashboard.",
+    description: "Melihat dasbor HRIS.",
   },
   // Profile (own record)
   {
     code: PERMISSIONS.PROFILE_VIEW,
     module: PERMISSION_MODULES.PROFILE,
-    description: "View your own profile.",
+    description: "Melihat profil sendiri.",
   },
   {
     code: PERMISSIONS.PROFILE_UPDATE,
     module: PERMISSION_MODULES.PROFILE,
-    description: "Update your own profile.",
+    description: "Memperbarui profil sendiri.",
   },
   // Users
   {
     code: PERMISSIONS.USERS_VIEW,
     module: PERMISSION_MODULES.USERS,
-    description: "View user accounts.",
+    description: "Melihat akun pengguna.",
   },
   {
     code: PERMISSIONS.USERS_CREATE,
     module: PERMISSION_MODULES.USERS,
-    description: "Create user accounts.",
+    description: "Membuat akun pengguna.",
   },
   {
     code: PERMISSIONS.USERS_UPDATE,
     module: PERMISSION_MODULES.USERS,
-    description: "Update user accounts.",
+    description: "Memperbarui akun pengguna.",
   },
   {
     code: PERMISSIONS.USERS_DELETE,
     module: PERMISSION_MODULES.USERS,
-    description: "Delete user accounts.",
+    description: "Menghapus akun pengguna.",
   },
   {
     code: PERMISSIONS.USERS_PASSWORD_RESET,
     module: PERMISSION_MODULES.USERS,
     description:
-      "Reset a user account password and force a password change on next login.",
+      "Reset kata sandi akun pengguna dan wajibkan penggantian kata sandi saat login berikutnya.",
   },
   // Roles
   {
     code: PERMISSIONS.ROLES_VIEW,
     module: PERMISSION_MODULES.ROLES,
-    description: "View roles and their permission assignments.",
+    description: "Melihat peran dan hak aksesnya.",
   },
   {
     code: PERMISSIONS.ROLES_CREATE,
     module: PERMISSION_MODULES.ROLES,
-    description: "Create custom roles.",
+    description: "Membuat peran kustom.",
   },
   {
     code: PERMISSIONS.ROLES_UPDATE,
     module: PERMISSION_MODULES.ROLES,
-    description: "Edit roles and assign permissions.",
+    description: "Mengubah peran dan menetapkan hak akses.",
   },
   {
     code: PERMISSIONS.ROLES_DELETE,
     module: PERMISSION_MODULES.ROLES,
-    description: "Delete custom roles.",
+    description: "Menghapus peran kustom.",
   },
   // Permissions (catalog)
   {
     code: PERMISSIONS.PERMISSIONS_VIEW,
     module: PERMISSION_MODULES.PERMISSIONS,
-    description: "View the permission catalog.",
+    description: "Melihat katalog hak akses.",
   },
   {
     code: PERMISSIONS.PERMISSIONS_MANAGE,
     module: PERMISSION_MODULES.PERMISSIONS,
-    description: "Manage the permission catalog (system-level).",
+    description: "Kelola katalog hak akses (tingkat sistem).",
   },
   // Employees
   {
     code: PERMISSIONS.EMPLOYEES_VIEW,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "View employee records.",
+    description: "Melihat data karyawan.",
   },
   {
     code: PERMISSIONS.EMPLOYEES_CREATE,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "Create employee records.",
+    description: "Membuat data karyawan.",
   },
   {
     code: PERMISSIONS.EMPLOYEES_UPDATE,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "Update employee records.",
+    description: "Memperbarui data karyawan.",
   },
   {
     code: PERMISSIONS.EMPLOYEES_DELETE,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "Delete employee records.",
+    description: "Menghapus data karyawan.",
   },
   {
     code: PERMISSIONS.EMPLOYEES_PERMANENT_DELETE,
     module: PERMISSION_MODULES.EMPLOYEES,
     description:
-      "Permanently delete an employee record and its deletable related records (Super Administrator only).",
+      "Menghapus permanen data karyawan beserta data terkait yang dapat dihapus (khusus Super Administrator).",
   },
   {
     code: PERMISSIONS.EMPLOYEES_LEGAL_HOLD,
     module: PERMISSION_MODULES.EMPLOYEES,
     description:
-      "Place or release a legal hold on an employee record (Super Administrator only).",
+      "Memasang atau melepas penahanan hukum pada data karyawan (khusus Super Administrator).",
   },
   {
     code: PERMISSIONS.EMPLOYEES_DELETION_APPROVE,
     module: PERMISSION_MODULES.EMPLOYEES,
     description:
-      "Approve or reject a permanent-deletion request (Super Administrator only, never the requester).",
+      "Menyetujui atau menolak permintaan hapus permanen (khusus Super Administrator, bukan pemohon).",
   },
   {
     code: PERMISSIONS.EMPLOYEES_TEST_DATA_PURGE,
     module: PERMISSION_MODULES.EMPLOYEES,
     description:
-      "Permanently remove records identified as TEST data from production (Super Administrator only).",
+      "Menghapus permanen data yang ditandai sebagai data TEST dari produksi (khusus Super Administrator).",
   },
   {
     code: PERMISSIONS.EMPLOYEES_IMPORT,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "Import employees from Excel/CSV.",
+    description: "Mengimpor karyawan dari Excel/CSV.",
   },
   {
     code: PERMISSIONS.EMPLOYEES_EXPORT,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "Export employees to Excel/CSV.",
+    description: "Mengekspor karyawan ke Excel/CSV.",
   },
   {
     code: PERMISSIONS.EMPLOYEES_PERSONAL_VIEW,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "View employee personal data (NIK, family, education).",
+    description: "Melihat data pribadi karyawan (NIK, keluarga, pendidikan).",
   },
   {
     code: PERMISSIONS.EMPLOYEES_PERSONAL_UPDATE,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "Update employee personal data.",
+    description: "Memperbarui data pribadi karyawan.",
   },
   {
     code: PERMISSIONS.EMPLOYEES_EMPLOYMENT_VIEW,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "View employee employment data (position, department, contract).",
+    description: "Melihat data kepegawaian karyawan (jabatan, departemen, kontrak).",
   },
   {
     code: PERMISSIONS.EMPLOYEES_EMPLOYMENT_UPDATE,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "Update employee employment data.",
+    description: "Memperbarui data kepegawaian karyawan.",
   },
   {
     code: PERMISSIONS.EMPLOYEES_ADDRESS_VIEW,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "View employee addresses.",
+    description: "Melihat alamat karyawan.",
   },
   {
     code: PERMISSIONS.EMPLOYEES_ADDRESS_UPDATE,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "Update employee addresses.",
+    description: "Memperbarui alamat karyawan.",
   },
   {
     code: PERMISSIONS.EMPLOYEES_INSURANCE_VIEW,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "View employee insurance and tax identifiers.",
+    description: "Melihat nomor asuransi dan pajak karyawan.",
   },
   {
     code: PERMISSIONS.EMPLOYEES_INSURANCE_UPDATE,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "Update employee insurance and tax identifiers.",
+    description: "Memperbarui nomor asuransi dan pajak karyawan.",
   },
   {
     code: PERMISSIONS.EMPLOYEES_BANK_VIEW,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "View employee bank accounts.",
+    description: "Melihat rekening bank karyawan.",
   },
   {
     code: PERMISSIONS.EMPLOYEES_BANK_UPDATE,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "Update employee bank accounts.",
+    description: "Memperbarui rekening bank karyawan.",
   },
   {
     code: PERMISSIONS.EMPLOYEES_FAMILY_VIEW,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "View employee family/dependents.",
+    description: "Melihat keluarga/tanggungan karyawan.",
   },
   {
     code: PERMISSIONS.EMPLOYEES_FAMILY_UPDATE,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "Update employee family/dependents.",
+    description: "Memperbarui keluarga/tanggungan karyawan.",
   },
   {
     code: PERMISSIONS.EMPLOYEES_EDUCATION_VIEW,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "View employee education history.",
+    description: "Melihat riwayat pendidikan karyawan.",
   },
   {
     code: PERMISSIONS.EMPLOYEES_EDUCATION_UPDATE,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "Update employee education history.",
+    description: "Memperbarui riwayat pendidikan karyawan.",
   },
   {
     code: PERMISSIONS.EMPLOYEES_DOCUMENT_VIEW,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "View employee documents.",
+    description: "Melihat dokumen karyawan.",
   },
   {
     code: PERMISSIONS.EMPLOYEES_DOCUMENT_UPLOAD,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "Upload employee documents.",
+    description: "Mengunggah dokumen karyawan.",
   },
   {
     code: PERMISSIONS.EMPLOYEES_DOCUMENT_DELETE,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "Delete employee documents.",
+    description: "Menghapus dokumen karyawan.",
   },
   {
     code: PERMISSIONS.EMPLOYEE_FIELDS_VIEW,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "View employee custom field definitions.",
+    description: "Melihat definisi field kustom karyawan.",
   },
   {
     code: PERMISSIONS.EMPLOYEE_FIELDS_CREATE,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "Create employee custom field definitions.",
+    description: "Membuat definisi field kustom karyawan.",
   },
   {
     code: PERMISSIONS.EMPLOYEE_FIELDS_UPDATE,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "Update employee custom field definitions.",
+    description: "Memperbarui definisi field kustom karyawan.",
   },
   {
     code: PERMISSIONS.EMPLOYEE_FIELDS_DELETE,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "Archive/delete employee custom field definitions.",
+    description: "Mengarsipkan/menghapus definisi field kustom karyawan.",
   },
   {
     code: PERMISSIONS.EMPLOYEE_CUSTOM_DATA_VIEW,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "View employee custom field values.",
+    description: "Melihat nilai field kustom karyawan.",
   },
   {
     code: PERMISSIONS.EMPLOYEE_CUSTOM_DATA_CREATE,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "Create employee custom field values.",
+    description: "Membuat nilai field kustom karyawan.",
   },
   {
     code: PERMISSIONS.EMPLOYEE_CUSTOM_DATA_UPDATE,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "Update employee custom field values.",
+    description: "Memperbarui nilai field kustom karyawan.",
   },
   {
     code: PERMISSIONS.EMPLOYEE_CUSTOM_DATA_DELETE,
     module: PERMISSION_MODULES.EMPLOYEES,
-    description: "Delete employee custom field values.",
+    description: "Menghapus nilai field kustom karyawan.",
   },
   // Attendance
   {
     code: PERMISSIONS.ATTENDANCE_VIEW,
     module: PERMISSION_MODULES.ATTENDANCE,
-    description: "View attendance records.",
+    description: "Melihat data absensi.",
   },
   {
     code: PERMISSIONS.ATTENDANCE_MANAGE,
     module: PERMISSION_MODULES.ATTENDANCE,
-    description: "Administer attendance records.",
+    description: "Mengelola data absensi.",
   },
   {
     code: PERMISSIONS.ATTENDANCE_APPROVE,
     module: PERMISSION_MODULES.ATTENDANCE,
-    description: "Approve attendance entries.",
+    description: "Menyetujui entri absensi.",
   },
   {
     code: PERMISSIONS.ATTENDANCE_CHECK_IN,
     module: PERMISSION_MODULES.ATTENDANCE,
-    description: "Check in to attendance.",
+    description: "Melakukan absen masuk.",
   },
   {
     code: PERMISSIONS.ATTENDANCE_CHECK_OUT,
     module: PERMISSION_MODULES.ATTENDANCE,
-    description: "Check out of attendance.",
+    description: "Melakukan absen pulang.",
   },
   // Announcements (management publications / employee information center)
   {
     code: PERMISSIONS.ANNOUNCEMENTS_VIEW,
     module: PERMISSION_MODULES.ANNOUNCEMENTS,
-    description: "View announcements.",
+    description: "Melihat pengumuman.",
   },
   {
     code: PERMISSIONS.ANNOUNCEMENTS_CREATE,
     module: PERMISSION_MODULES.ANNOUNCEMENTS,
-    description: "Create announcements.",
+    description: "Membuat pengumuman.",
   },
   {
     code: PERMISSIONS.ANNOUNCEMENTS_UPDATE,
     module: PERMISSION_MODULES.ANNOUNCEMENTS,
-    description: "Update announcements.",
+    description: "Memperbarui pengumuman.",
   },
   {
     code: PERMISSIONS.ANNOUNCEMENTS_DELETE,
     module: PERMISSION_MODULES.ANNOUNCEMENTS,
-    description: "Delete announcements.",
+    description: "Menghapus pengumuman.",
   },
   {
     code: PERMISSIONS.ANNOUNCEMENTS_PUBLISH,
     module: PERMISSION_MODULES.ANNOUNCEMENTS,
-    description: "Publish and unpublish announcements.",
+    description: "Menerbitkan dan menarik pengumuman.",
   },
   // Leave
   {
     code: PERMISSIONS.LEAVE_VIEW,
     module: PERMISSION_MODULES.LEAVE,
-    description: "View leave records.",
+    description: "Melihat data cuti.",
   },
   {
     code: PERMISSIONS.LEAVE_CREATE,
     module: PERMISSION_MODULES.LEAVE,
-    description: "Request leave.",
+    description: "Mengajukan cuti.",
   },
   {
     code: PERMISSIONS.LEAVE_MANAGE,
     module: PERMISSION_MODULES.LEAVE,
-    description: "Administer leave records and balances.",
+    description: "Mengelola data dan saldo cuti.",
   },
   {
     code: PERMISSIONS.LEAVE_APPROVE,
     module: PERMISSION_MODULES.LEAVE,
-    description: "Approve leave requests.",
+    description: "Menyetujui pengajuan cuti.",
   },
   // Permission requests (time-based absences, not the permission catalog)
   {
     code: PERMISSIONS.PERMISSION_VIEW,
     module: PERMISSION_MODULES.PERMISSION,
-    description: "View permission (absence) requests.",
+    description: "Melihat pengajuan izin (ketidakhadiran).",
   },
   {
     code: PERMISSIONS.PERMISSION_CREATE,
     module: PERMISSION_MODULES.PERMISSION,
-    description: "Submit permission (absence) requests.",
+    description: "Mengajukan izin (ketidakhadiran).",
   },
   {
     code: PERMISSIONS.PERMISSION_APPROVE,
     module: PERMISSION_MODULES.PERMISSION,
-    description: "Approve permission (absence) requests.",
+    description: "Menyetujui pengajuan izin (ketidakhadiran).",
   },
   {
     code: PERMISSIONS.PERMISSION_MANAGE,
     module: PERMISSION_MODULES.PERMISSION,
-    description: "Manage permission (absence) requests.",
+    description: "Kelola pengajuan izin (ketidakhadiran).",
   },
   // Payroll
   {
     code: PERMISSIONS.PAYROLL_VIEW,
     module: PERMISSION_MODULES.PAYROLL,
-    description: "View payroll runs.",
+    description: "Melihat proses payroll.",
   },
   {
     code: PERMISSIONS.PAYROLL_PERIOD_VIEW,
     module: PERMISSION_MODULES.PAYROLL,
-    description: "View payroll periods.",
+    description: "Melihat periode payroll.",
   },
   {
     code: PERMISSIONS.PAYROLL_PERIOD_CREATE,
     module: PERMISSION_MODULES.PAYROLL,
-    description: "Create payroll periods.",
+    description: "Membuat periode payroll.",
   },
   {
     code: PERMISSIONS.PAYROLL_PERIOD_UPDATE,
     module: PERMISSION_MODULES.PAYROLL,
-    description: "Update payroll periods.",
+    description: "Memperbarui periode payroll.",
   },
   {
     code: PERMISSIONS.PAYROLL_PERIOD_DELETE,
     module: PERMISSION_MODULES.PAYROLL,
-    description: "Delete payroll periods.",
+    description: "Menghapus periode payroll.",
   },
   {
     code: PERMISSIONS.PAYROLL_CREATE,
     module: PERMISSION_MODULES.PAYROLL,
-    description: "Create payroll periods.",
+    description: "Membuat periode payroll.",
   },
   {
     code: PERMISSIONS.PAYROLL_CALCULATE,
     module: PERMISSION_MODULES.PAYROLL,
-    description: "Calculate payroll.",
+    description: "Menghitung payroll.",
   },
   {
     code: PERMISSIONS.PAYROLL_UPDATE,
     module: PERMISSION_MODULES.PAYROLL,
-    description: "Update payroll periods and runs.",
+    description: "Memperbarui periode dan proses payroll.",
   },
   {
     code: PERMISSIONS.PAYROLL_APPROVE,
     module: PERMISSION_MODULES.PAYROLL,
-    description: "Approve payroll.",
+    description: "Menyetujui payroll.",
   },
   {
     code: PERMISSIONS.PAYROLL_LOCK,
     module: PERMISSION_MODULES.PAYROLL,
-    description: "Lock and finalize payroll.",
+    description: "Kunci dan finalisasi payroll.",
   },
   {
     code: PERMISSIONS.PAYROLL_MANAGE,
     module: PERMISSION_MODULES.PAYROLL,
-    description: "Manage payroll periods and runs.",
+    description: "Kelola periode dan proses payroll.",
   },
   // Payslip
   {
     code: PERMISSIONS.PAYSLIP_VIEW,
     module: PERMISSION_MODULES.PAYSLIP,
-    description: "View payslips.",
+    description: "Melihat slip gaji.",
   },
   {
     code: PERMISSIONS.PAYSLIP_PUBLISH,
     module: PERMISSION_MODULES.PAYSLIP,
-    description: "Publish payslips to employees.",
+    description: "Menerbitkan slip gaji ke karyawan.",
   },
   {
     code: PERMISSIONS.PAYSLIP_MANAGE,
     module: PERMISSION_MODULES.PAYSLIP,
-    description: "Manage payslip issuance.",
+    description: "Kelola penerbitan slip gaji.",
   },
   // Projects (menu is SUPERADMIN-only; every projects page and server action
   // re-checks the system-level SUPERADMIN role server-side, so these codes are
@@ -582,7 +582,7 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
   {
     code: PERMISSIONS.PROJECTS_VIEW,
     module: PERMISSION_MODULES.PROJECTS,
-    description: "View projects (Super Administrator only).",
+    description: "Melihat proyek (khusus Super Administrator).",
   },
   {
     code: PERMISSIONS.PROJECTS_MANAGE,
@@ -593,36 +593,36 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
   {
     code: PERMISSIONS.REPORTS_VIEW,
     module: PERMISSION_MODULES.REPORTS,
-    description: "View reports and dashboards.",
+    description: "Melihat laporan dan dasbor.",
   },
   // Settings
   {
     code: PERMISSIONS.SETTINGS_VIEW,
     module: PERMISSION_MODULES.SETTINGS,
-    description: "View application settings.",
+    description: "Melihat pengaturan aplikasi.",
   },
   {
     code: PERMISSIONS.SETTINGS_MANAGE,
     module: PERMISSION_MODULES.SETTINGS,
-    description: "Manage application settings.",
+    description: "Kelola pengaturan aplikasi.",
   },
   // Work Locations
   {
     code: PERMISSIONS.WORK_LOCATIONS_VIEW,
     module: PERMISSION_MODULES.WORK_LOCATIONS,
-    description: "View organization work locations.",
+    description: "Melihat lokasi kerja organisasi.",
   },
   {
     code: PERMISSIONS.WORK_LOCATIONS_MANAGE,
     module: PERMISSION_MODULES.WORK_LOCATIONS,
-    description: "Manage organization work locations.",
+    description: "Kelola lokasi kerja organisasi.",
   },
 
   // Audit
   {
     code: PERMISSIONS.AUDIT_VIEW,
     module: PERMISSION_MODULES.AUDIT,
-    description: "View audit logs.",
+    description: "Melihat log audit.",
   },
   // Organizations (SUPERADMIN-only tenant administration, R19).
   // These codes exist so the capability is expressible in the catalog and
@@ -633,22 +633,22 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
   {
     code: PERMISSIONS.ORGANIZATIONS_VIEW,
     module: PERMISSION_MODULES.ORGANIZATIONS,
-    description: "View tenant organizations (Super Administrator only).",
+    description: "Melihat organisasi tenant (khusus Super Administrator).",
   },
   {
     code: PERMISSIONS.ORGANIZATIONS_CREATE,
     module: PERMISSION_MODULES.ORGANIZATIONS,
-    description: "Create tenant organizations (Super Administrator only).",
+    description: "Membuat organisasi tenant (khusus Super Administrator).",
   },
   {
     code: PERMISSIONS.ORGANIZATIONS_UPDATE,
     module: PERMISSION_MODULES.ORGANIZATIONS,
-    description: "Update tenant organizations (Super Administrator only).",
+    description: "Memperbarui organisasi tenant (khusus Super Administrator).",
   },
   {
     code: PERMISSIONS.ORGANIZATIONS_DELETE,
     module: PERMISSION_MODULES.ORGANIZATIONS,
-    description: "Delete tenant organizations (Super Administrator only).",
+    description: "Menghapus organisasi tenant (khusus Super Administrator).",
   },
 ];
 

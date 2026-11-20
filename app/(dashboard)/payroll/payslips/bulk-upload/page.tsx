@@ -23,7 +23,7 @@ import {
 } from "@/features/payroll/payslip-bulk.guard";
 
 export const metadata: Metadata = {
-  title: "Bulk upload payslips",
+  title: "Unggah massal slip gaji",
 };
 
 const CLOSED_PERIOD_STATUSES = new Set(["cancelled", "locked"]);
@@ -68,7 +68,7 @@ export default async function BulkUploadPayslipsPage({
             Unggah Massal Slip Gaji
           </h1>
           <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-            Distribute many payslip PDFs for one payroll period at once.
+            Distribusikan banyak PDF slip gaji untuk satu periode payroll sekaligus.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -76,30 +76,29 @@ export default async function BulkUploadPayslipsPage({
             href="/payroll/payslips/upload"
             className={buttonVariants({ variant: "outline", size: "sm" })}
           >
-            Single upload
+            Unggah satuan
           </Link>
           <Link
             href="/payroll/payslips"
             className={buttonVariants({ variant: "outline", size: "sm" })}
           >
-            Back
+            Kembali
           </Link>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Payslip PDFs</CardTitle>
+          <CardTitle>PDF slip gaji</CardTitle>
           <CardDescription>
-            Each file is matched to an employee by the leading employee number
-            in its filename. Every file is reported individually.
+            Setiap berkas dicocokkan ke karyawan berdasarkan nomor karyawan di awal nama berkasnya. Setiap berkas dilaporkan satu per satu.
           </CardDescription>
         </CardHeader>
         <CardContent>
           {eligiblePeriods.length === 0 ? (
             <EmptyState
-              title="No open payroll periods"
-              description="Create a payroll period that is not locked or cancelled before uploading distribution payslips."
+              title="Tidak ada periode payroll terbuka"
+              description="Buat periode payroll yang tidak terkunci atau dibatalkan sebelum mengunggah slip gaji distribusi."
             />
           ) : (
             <BulkDistributionPayslipUpload
@@ -112,17 +111,14 @@ export default async function BulkUploadPayslipsPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Filename contract</CardTitle>
+          <CardTitle>Aturan nama berkas</CardTitle>
           <CardDescription>
-            Up to {PAYSLIP_BULK_MAX_FILES} files per batch.
+            Maksimal {PAYSLIP_BULK_MAX_FILES} berkas per batch.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
           <p className="text-muted-foreground">
-            Each PDF must be named with the employee number first, followed by
-            an optional separator and label. Rows that cannot be matched
-            (unknown employee, duplicate, missing birth date, or an invalid
-            filename) are reported individually and never silently skipped.
+            Setiap PDF harus diberi nama dengan nomor karyawan di depan, diikuti pemisah dan label opsional. Baris yang tidak dapat dicocokkan (karyawan tidak dikenal, ganda, tanggal lahir kosong, atau nama berkas tidak valid) dilaporkan satu per satu dan tidak pernah dilewati diam-diam.
           </p>
 
           <ul className="space-y-1 rounded-md bg-muted px-4 py-3 font-mono text-xs">

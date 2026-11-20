@@ -41,7 +41,7 @@ export function RemoveAttachmentButton({
       aria-label={`Remove ${filename}`}
       onClick={remove}
     >
-      Remove
+      Hapus
     </Button>
   );
 }

@@ -15,7 +15,7 @@ import {
 import { listRolesByOrganization } from "@/features/rbac/queries";
 
 export const metadata: Metadata = {
-  title: "Employee Fields",
+  title: "Field Karyawan",
 };
 
 /**
@@ -76,10 +76,7 @@ export default async function EmployeeFieldsPage() {
           Field Karyawan
         </h1>
         <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-          Custom tabs and custom field definitions are the single source of
-          truth: tabs and fields created here appear automatically on employee
-          detail, the Excel template, import and export — no code changes
-          needed.
+          Tab kustom dan definisi field kustom adalah satu sumber kebenaran: tab dan field yang dibuat di sini otomatis tampil di detail karyawan, template Excel, impor, dan ekspor — tanpa perubahan kode.
         </p>
       </div>
 

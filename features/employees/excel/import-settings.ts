@@ -38,7 +38,7 @@ export async function validateImportSettings(
   // For non-superadmin, enforce their own organization
   if (!isSuperAdmin) {
     if (!user.organizationId) {
-      return "Your account is not assigned to an organization.";
+      return "Akun Anda belum ditetapkan ke organisasi.";
     }
     if (settings.organizationId !== user.organizationId) {
       return "You can only import into your own organization.";
@@ -54,7 +54,7 @@ export async function validateImportSettings(
     )
     .limit(1);
   if (!org[0]) {
-    return "Selected organization is not available.";
+    return "Organisasi yang dipilih tidak tersedia.";
   }
 
   // Validate project belongs to organization and is active
@@ -391,7 +391,7 @@ export async function provisionEmployeeAssignments(
       results.push({
         employeeNumber: emp.employeeNumber,
         operation: "failed",
-        error: error instanceof Error ? error.message : "Failed to create assignment",
+        error: error instanceof Error ? error.message : "Penugasan gagal dibuat",
       });
     }
   }

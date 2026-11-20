@@ -30,7 +30,7 @@ export function PayslipDocumentView({
           aria-expanded={open}
           aria-controls={`payslip-pdf-${payslipId}`}
         >
-          {open ? "Hide PDF" : "View PDF"}
+          {open ? "Sembunyikan PDF" : "Lihat PDF"}
         </Button>
 
         <a
@@ -39,7 +39,7 @@ export function PayslipDocumentView({
           rel="noopener noreferrer"
           className={buttonVariants({ size: "sm" })}
         >
-          Open PDF
+          Buka PDF
         </a>
       </div>
 

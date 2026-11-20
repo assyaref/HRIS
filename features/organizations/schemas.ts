@@ -20,10 +20,10 @@ import {
 const nameSchema = z
   .string()
   .trim()
-  .min(1, "Organization name is required.")
+  .min(1, "Nama organisasi wajib diisi.")
   .max(
     ORGANIZATION_NAME_MAX_LENGTH,
-    `Organization name must be ${ORGANIZATION_NAME_MAX_LENGTH} characters or fewer.`
+    `Nama organisasi maksimal ${ORGANIZATION_NAME_MAX_LENGTH} karakter.`
   );
 
 /**
@@ -37,15 +37,15 @@ const codeSchema = z
   .transform((value) => value.toUpperCase())
   .refine(
     (value) => value.length >= ORGANIZATION_CODE_MIN_LENGTH,
-    `Code must be at least ${ORGANIZATION_CODE_MIN_LENGTH} characters.`
+    `Kode minimal ${ORGANIZATION_CODE_MIN_LENGTH} karakter.`
   )
   .refine(
     (value) => value.length <= ORGANIZATION_CODE_MAX_LENGTH,
-    `Code must be ${ORGANIZATION_CODE_MAX_LENGTH} characters or fewer.`
+    `Kode maksimal ${ORGANIZATION_CODE_MAX_LENGTH} karakter.`
   )
   .refine(
     (value) => ORGANIZATION_CODE_PATTERN.test(value),
-    "Code may contain only letters, digits, dash and underscore, and must start with a letter or digit."
+    "Kode hanya boleh berisi huruf, angka, tanda hubung, dan garis bawah, serta harus diawali huruf atau angka."
   );
 
 const statusSchema = z.enum(ORGANIZATION_STATUSES);
@@ -70,7 +70,7 @@ export const updateOrganizationSchema = z
       value.name !== undefined ||
       value.code !== undefined ||
       value.status !== undefined,
-    { message: "Provide at least one field to update." }
+    { message: "Isi minimal satu field untuk diperbarui." }
   );
 
 export type CreateOrganizationInput = z.infer<

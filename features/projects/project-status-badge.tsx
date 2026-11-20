@@ -6,8 +6,8 @@ export function isProjectStatus(value: string): value is ProjectStatus {
 }
 
 const STATUS_LABELS: Record<ProjectStatus, string> = {
-  active: "Active",
-  inactive: "Inactive",
+  active: "Aktif",
+  inactive: "Nonaktif",
   completed: "Completed",
 };
 

@@ -53,7 +53,7 @@ function SaveButton() {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending}>
-      {pending ? "Saving..." : "Save changes"}
+      {pending ? "Menyimpan..." : "Simpan perubahan"}
     </Button>
   );
 }
@@ -84,10 +84,9 @@ export function EmployeeEditor({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Edit employee</CardTitle>
+        <CardTitle>Ubah data karyawan</CardTitle>
         <CardDescription>
-          Update profile information, employment status and the optional linked
-          sign-in account.
+          Perbarui informasi profil, status kepegawaian, dan akun login tertaut (opsional).
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -108,7 +107,7 @@ export function EmployeeEditor({
           <input type="hidden" name="employeeId" value={employeeId} />
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="edit-employee-number">Employee number</Label>
+              <Label htmlFor="edit-employee-number">Nomor karyawan</Label>
               <Input
                 id="edit-employee-number"
                 name="employeeNumber"
@@ -136,15 +135,15 @@ export function EmployeeEditor({
               </select>
               <p className="text-xs text-muted-foreground">
                 {canDeactivate
-                  ? "Setting a status to Inactive deactivates the employee (audited)."
-                  : "Deactivating (Inactive) requires an administrator."}
+                  ? "Mengubah status menjadi Nonaktif akan menonaktifkan karyawan (diaudit)."
+                  : "Menonaktifkan (Nonaktif) memerlukan administrator."}
               </p>
             </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="edit-first-name">First name</Label>
+              <Label htmlFor="edit-first-name">Nama depan</Label>
               <Input
                 id="edit-first-name"
                 name="firstName"
@@ -156,7 +155,7 @@ export function EmployeeEditor({
               <FieldError message={errors?.firstName} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-last-name">Last name</Label>
+              <Label htmlFor="edit-last-name">Nama belakang</Label>
               <Input
                 id="edit-last-name"
                 name="lastName"
@@ -183,7 +182,7 @@ export function EmployeeEditor({
               <FieldError message={errors?.email} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-phone">Phone</Label>
+              <Label htmlFor="edit-phone">Telepon</Label>
               <Input
                 id="edit-phone"
                 name="phone"
@@ -198,7 +197,7 @@ export function EmployeeEditor({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="edit-hire-date">Hire date</Label>
+              <Label htmlFor="edit-hire-date">Tanggal masuk</Label>
               <Input
                 id="edit-hire-date"
                 name="hireDate"
@@ -210,14 +209,14 @@ export function EmployeeEditor({
               <FieldError message={errors?.hireDate} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-linked-user">Linked account</Label>
+              <Label htmlFor="edit-linked-user">Akun tertaut</Label>
               <select
                 id="edit-linked-user"
                 name="userId"
                 defaultValue={userId}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               >
-                <option value="">No linked account</option>
+                <option value="">Tidak ada akun tertaut</option>
                 {linkableUsers.map((user) => (
                   <option key={user.id} value={user.id}>
                     {user.email}
@@ -225,8 +224,7 @@ export function EmployeeEditor({
                 ))}
               </select>
               <p className="text-xs text-muted-foreground">
-                Optional. Links this employee to an existing sign-in account in
-                your organization.
+                Opsional. Menautkan karyawan ini ke akun login yang sudah ada di organisasi Anda.
               </p>
             </div>
           </div>

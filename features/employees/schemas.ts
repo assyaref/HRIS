@@ -45,8 +45,8 @@ function isFutureDate(value: string): boolean {
 const employeeNumberSchema = z
   .string()
   .trim()
-  .min(1, "Enter an employee number.")
-  .max(32, "Employee number must be 32 characters or fewer.")
+  .min(1, "Masukkan nomor karyawan.")
+  .max(32, "Nomor karyawan maksimal 32 karakter.")
   .regex(
     EMPLOYEE_NUMBER_PATTERN,
     "Employee number may contain letters, digits and . _ / - only."
@@ -55,47 +55,47 @@ const employeeNumberSchema = z
 const nameSchema = z
   .string()
   .trim()
-  .min(1, "Enter a name.")
-  .max(100, "Name must be 100 characters or fewer.");
+  .min(1, "Masukkan nama.")
+  .max(100, "Nama maksimal 100 karakter.");
 
 /** Last name may be empty (optional). Only length is capped when present. */
 const lastNameSchema = z
   .string()
   .trim()
-  .max(100, "Name must be 100 characters or fewer.")
+  .max(100, "Nama maksimal 100 karakter.")
   .optional()
   .default("");
 
 const optionalEmailSchema = z
-  .email("Enter a valid email address.")
-  .max(254, "Email must be 254 characters or fewer.");
+  .email("Masukkan alamat email yang valid.")
+  .max(254, "Email maksimal 254 karakter.");
 
 const optionalPhoneSchema = z
   .string()
   .trim()
   .min(1)
-  .max(30, "Phone must be 30 characters or fewer.");
+  .max(30, "Telepon maksimal 30 karakter.");
 
 const optionalDateSchema = z
   .string()
-  .regex(DATE_PATTERN, "Use the YYYY-MM-DD date format.");
+  .regex(DATE_PATTERN, "Gunakan format tanggal YYYY-MM-DD.");
 
 const optionalUserLinkSchema = z
   .string()
-  .regex(UUID_PATTERN, "The selected user account is invalid.");
+  .regex(UUID_PATTERN, "Akun pengguna yang dipilih tidak valid.");
 
 /** NIK (National Identity Number): 1 to 32 digits, numeric only. */
 const optionalNikSchema = z
   .string()
   .trim()
-  .regex(NIK_PATTERN, "NIK must be 1 to 32 digits.");
+  .regex(NIK_PATTERN, "NIK harus berisi 1–32 digit.");
 
 /** Date of birth: valid calendar date, never in the future. */
 const optionalBirthDateSchema = z
   .string()
-  .regex(DATE_PATTERN, "Use the YYYY-MM-DD date format.")
-  .refine(isValidCalendarDate, "Not a valid calendar date.")
-  .refine((value) => !isFutureDate(value), "Birth date cannot be in the future.");
+  .regex(DATE_PATTERN, "Gunakan format tanggal YYYY-MM-DD.")
+  .refine(isValidCalendarDate, "Bukan tanggal kalender yang valid.")
+  .refine((value) => !isFutureDate(value), "Tanggal lahir tidak boleh di masa depan.");
 
 /** Shared employee profile fields. */
 const employeeFieldsSchema = z.object({
@@ -130,7 +130,7 @@ export const employeeListSearchSchema = z.object({
    * server-side by the page/route (and again by the organization-scoped
    * EXISTS predicate in the query), so a cross-tenant id can never match.
    */
-  projectId: z.string().regex(UUID_PATTERN, "Invalid project id.").optional(),
+  projectId: z.string().regex(UUID_PATTERN, "ID proyek tidak valid.").optional(),
 });
 
 export type CreateEmployeeInput = z.infer<typeof createEmployeeSchema>;

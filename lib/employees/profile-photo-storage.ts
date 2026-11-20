@@ -37,11 +37,11 @@ function resolvePhotoPath(organizationId: string, employeeId: string): string {
     !UUID_PATH_SEGMENT.test(organizationId) ||
     !UUID_PATH_SEGMENT.test(employeeId)
   ) {
-    throw new Error("Refusing to resolve a profile photo outside the private root.");
+    throw new Error("Menolak membaca foto profil di luar root privat.");
   }
   const resolved = path.resolve(PRIVATE_ROOT, organizationId, `${employeeId}.jpg`);
   if (!resolved.startsWith(`${PRIVATE_ROOT}${path.sep}`)) {
-    throw new Error("Resolved profile photo path escapes the private root.");
+    throw new Error("Path foto profil keluar dari root privat.");
   }
   return resolved;
 }

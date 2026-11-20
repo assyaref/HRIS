@@ -127,7 +127,7 @@ export async function createCustomTabAction(
   await requirePermission(user.id, PERMISSIONS.EMPLOYEE_FIELDS_CREATE);
 
   if (!user.organizationId) {
-    return toStateError("Your account is not assigned to an organization.");
+    return toStateError("Akun Anda belum ditetapkan ke organisasi.");
   }
   const organizationId = user.organizationId;
   const allowedRoleCodes = (await listRolesByOrganization(organizationId)).map(
@@ -145,7 +145,7 @@ export async function createCustomTabAction(
   );
   if (visibilityRoles.invalid.length > 0) {
     return toStateError(undefined, {
-      form: "One or more selected roles do not exist in this organization.",
+      form: "Satu atau lebih peran yang dipilih tidak ada di organisasi ini.",
     });
   }
   const status = value(formData, "status");
@@ -168,7 +168,7 @@ export async function createCustomTabAction(
     .limit(1);
   if (existingByKey.length > 0) {
     return toStateError(undefined, {
-      tabKey: `Tab key "${input.tabKey}" already exists.`,
+      tabKey: `Kunci tab "${input.tabKey}" sudah ada.`,
     });
   }
 
@@ -189,7 +189,7 @@ export async function createCustomTabAction(
       })
       .returning({ id: employeeCustomTabs.id });
     const row = inserted[0];
-    if (!row) throw new Error("Tab insert returned no row.");
+    if (!row) throw new Error("Tab gagal disimpan.");
     tabId = row.id;
   } catch (error) {
     if (
@@ -199,11 +199,11 @@ export async function createCustomTabAction(
       (error as { code?: unknown }).code === DB_UNIQUE_VIOLATION
     ) {
       return toStateError(undefined, {
-        tabKey: `Tab key "${input.tabKey}" already exists.`,
+        tabKey: `Kunci tab "${input.tabKey}" sudah ada.`,
       });
     }
     console.error("[employee-tabs] create failed", error);
-    return toStateError("Could not create the tab. Please try again.");
+    return toStateError("Tab gagal dibuat. Silakan coba lagi.");
   }
 
   try {
@@ -226,7 +226,7 @@ export async function createCustomTabAction(
 
   revalidatePath("/settings/employee-fields");
   revalidatePath("/employees");
-  return { status: "success", message: "Tab created." };
+  return { status: "success", message: "Tab dibuat." };
 }
 
 /** Update a tab (key stays immutable once created, mirroring field keys). */
@@ -239,7 +239,7 @@ export async function updateCustomTabAction(
   await requirePermission(user.id, PERMISSIONS.EMPLOYEE_FIELDS_UPDATE);
 
   if (!user.organizationId) {
-    return toStateError("Your account is not assigned to an organization.");
+    return toStateError("Akun Anda belum ditetapkan ke organisasi.");
   }
   const organizationId = user.organizationId;
 
@@ -258,7 +258,7 @@ export async function updateCustomTabAction(
   }
   if (input.tabKey !== existing.tabKey) {
     return toStateError(undefined, {
-      tabKey: "The tab key is immutable so assigned fields stay linked.",
+      tabKey: "Kunci tab tidak dapat diubah agar field yang ditetapkan tetap tertaut.",
     });
   }
   const visibilityRoles = roleCodesFromField(
@@ -268,7 +268,7 @@ export async function updateCustomTabAction(
   );
   if (visibilityRoles.invalid.length > 0) {
     return toStateError(undefined, {
-      form: "One or more selected roles do not exist in this organization.",
+      form: "Satu atau lebih peran yang dipilih tidak ada di organisasi ini.",
     });
   }
   const rawStatus = value(formData, "status");
@@ -296,7 +296,7 @@ export async function updateCustomTabAction(
       );
   } catch (error) {
     console.error("[employee-tabs] update failed", error);
-    return toStateError("Could not update the tab. Please try again.");
+    return toStateError("Tab gagal diperbarui. Silakan coba lagi.");
   }
 
   try {
@@ -319,7 +319,7 @@ export async function updateCustomTabAction(
 
   revalidatePath("/settings/employee-fields");
   revalidatePath("/employees");
-  return { status: "success", message: "Tab updated." };
+  return { status: "success", message: "Tab diperbarui." };
 }
 
 /** Activate / deactivate a tab (no deletion path exists by design). */
@@ -331,14 +331,14 @@ export async function setCustomTabStatusAction(
   await requirePermission(user.id, PERMISSIONS.EMPLOYEE_FIELDS_UPDATE);
 
   if (!user.organizationId) {
-    return toStateError("Your account is not assigned to an organization.");
+    return toStateError("Akun Anda belum ditetapkan ke organisasi.");
   }
   const organizationId = user.organizationId;
 
   const existing = await getCustomTab(tabId, organizationId);
   if (!existing) forbidden();
   if (existing.status === status) {
-    return { status: "success", message: `Tab is already ${status}.` };
+    return { status: "success", message: `Tab sudah berstatus ${status}.` };
   }
 
   try {
@@ -353,7 +353,7 @@ export async function setCustomTabStatusAction(
       );
   } catch (error) {
     console.error("[employee-tabs] status change failed", error);
-    return toStateError("Could not update the tab status. Please try again.");
+    return toStateError("Status tab gagal diubah. Silakan coba lagi.");
   }
 
   try {
@@ -378,7 +378,7 @@ export async function setCustomTabStatusAction(
   revalidatePath("/employees");
   return {
     status: "success",
-    message: `Tab ${status === "active" ? "activated" : "deactivated"}.`,
+    message: `Tab ${status === "active" ? "diaktifkan" : "dinonaktifkan"}.`,
   };
 }
 
@@ -394,29 +394,29 @@ export async function reorderCustomTabsAction(
   await requirePermission(user.id, PERMISSIONS.EMPLOYEE_FIELDS_UPDATE);
 
   if (!user.organizationId) {
-    return toStateError("Your account is not assigned to an organization.");
+    return toStateError("Akun Anda belum ditetapkan ke organisasi.");
   }
   const organizationId = user.organizationId;
 
   const raw = formData.get("order");
   if (typeof raw !== "string" || raw.trim() === "") {
-    return toStateError("Missing reorder payload.");
+    return toStateError("Data pengurutan tidak ada.");
   }
   let ids: unknown;
   try {
     ids = JSON.parse(raw);
   } catch {
-    return toStateError("Invalid reorder payload.");
+    return toStateError("Data pengurutan tidak valid.");
   }
   if (!Array.isArray(ids) || ids.length === 0 || ids.length > 100) {
-    return toStateError("Invalid reorder payload.");
+    return toStateError("Data pengurutan tidak valid.");
   }
   const tabIds = ids.filter(
     (entry): entry is string =>
       typeof entry === "string" && entry.length > 0 && entry.length <= 64
   );
   if (tabIds.length !== ids.length) {
-    return toStateError("Invalid reorder payload.");
+    return toStateError("Data pengurutan tidak valid.");
   }
 
   const owned = await db
@@ -448,7 +448,7 @@ export async function reorderCustomTabsAction(
     });
   } catch (error) {
     console.error("[employee-tabs] reorder failed", error);
-    return toStateError("Could not reorder the tabs. Please try again.");
+    return toStateError("Urutan tab gagal diubah. Silakan coba lagi.");
   }
 
   try {
@@ -466,5 +466,5 @@ export async function reorderCustomTabsAction(
 
   revalidatePath("/settings/employee-fields");
   revalidatePath("/employees");
-  return { status: "success", message: "Tab order saved." };
+  return { status: "success", message: "Urutan tab disimpan." };
 }

@@ -204,7 +204,7 @@ export default async function McuPage({
               <TableHead>Berlaku sampai</TableHead>
               <TableHead>Sisa</TableHead>
               <TableHead>Hasil</TableHead>
-              <TableHead>Provider</TableHead>
+              <TableHead>Penyedia</TableHead>
               <TableHead>Status</TableHead>
               {canManage ? <TableHead className="text-right">Aksi</TableHead> : null}
             </TableRow>

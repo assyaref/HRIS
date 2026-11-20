@@ -88,7 +88,7 @@ export function WorkLocationEditForm({
       router.refresh();
     } else {
       setToggleError(
-        result.message ?? "Could not change the location status."
+        result.message ?? "Status lokasi gagal diubah."
       );
     }
   }
@@ -132,12 +132,12 @@ export function WorkLocationEditForm({
         <div className="flex items-center gap-4">
           <div className="flex flex-col items-start gap-1">
             <Badge variant={savedIsActive ? "primary" : "secondary"}>
-              {savedIsActive ? "Active" : "Inactive"}
+              {savedIsActive ? "Aktif" : "Nonaktif"}
             </Badge>
             <span className="text-xs text-muted-foreground">
               {savedIsActive
-                ? "Available for attendance resolution"
-                : "Not available for attendance"}
+                ? "Dapat dipakai untuk absensi"
+                : "Tidak dapat dipakai absensi"}
             </span>
           </div>
           <Button
@@ -145,7 +145,7 @@ export function WorkLocationEditForm({
             variant="secondary"
             onClick={() => handleToggleStatus(savedIsActive ? "inactive" : "active")}
           >
-            {savedIsActive ? "Mark inactive" : "Mark active"}
+            {savedIsActive ? "Tandai nonaktif" : "Tandai aktif"}
           </Button>
         </div>
         {canDelete ? (
@@ -194,13 +194,13 @@ export function WorkLocationEditForm({
 
         <div className="space-y-2">
           <Label htmlFor="wl-edit-name">
-            Work location name <span className="text-destructive">*</span>
+            Nama lokasi kerja <span className="text-destructive">*</span>
           </Label>
           <Input
             id="wl-edit-name"
             name="name"
             defaultValue={location.name}
-            placeholder="Head Office Jakarta"
+            placeholder="Kantor Pusat Jakarta"
             required
             invalid={Boolean(fieldErrors.name)}
             aria-invalid={Boolean(fieldErrors.name)}
@@ -212,7 +212,7 @@ export function WorkLocationEditForm({
 
         <div className="space-y-2">
           <Label htmlFor="wl-edit-project">
-            Project <span className="text-destructive">*</span>
+            Proyek <span className="text-destructive">*</span>
           </Label>
           <select
             id="wl-edit-project"
@@ -223,7 +223,7 @@ export function WorkLocationEditForm({
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <option value="" disabled>
-              Select a project
+              Pilih proyek
             </option>
             {location.projectId &&
             location.projectName &&
@@ -241,8 +241,7 @@ export function WorkLocationEditForm({
           </select>
           {!location.projectId ? (
             <p className="text-xs text-muted-foreground">
-              This location is not assigned to a project yet. Select one to make
-              it available for attendance check-ins.
+              Lokasi ini belum terikat ke proyek. Pilih proyek agar lokasi dapat dipakai untuk absen masuk.
             </p>
           ) : null}
           {fieldErrors.projectId && (
@@ -268,7 +267,7 @@ export function WorkLocationEditForm({
               aria-invalid={Boolean(fieldErrors.latitude)}
             />
             <p className="text-xs text-muted-foreground">
-              Contoh: -6.2088 (between -90 and 90)
+              Contoh: -6.2088 (antara -90 dan 90)
             </p>
             {fieldErrors.latitude && (
               <p className="text-xs text-destructive">{fieldErrors.latitude}</p>
@@ -291,7 +290,7 @@ export function WorkLocationEditForm({
               aria-invalid={Boolean(fieldErrors.longitude)}
             />
             <p className="text-xs text-muted-foreground">
-              Contoh: 106.8456 (between -180 and 180)
+              Contoh: 106.8456 (antara -180 dan 180)
             </p>
             {fieldErrors.longitude && (
               <p className="text-xs text-destructive">{fieldErrors.longitude}</p>
@@ -338,7 +337,7 @@ export function WorkLocationEditForm({
               aria-invalid={Boolean(fieldErrors.maxGpsAccuracyMeters)}
             />
             <p className="text-xs text-muted-foreground">
-              Contoh: 100 meter (default 100 m when empty)
+              Contoh: 100 meter (bawaan 100 m jika kosong)
             </p>
             {fieldErrors.maxGpsAccuracyMeters && (
               <p className="text-xs text-destructive">{fieldErrors.maxGpsAccuracyMeters}</p>
@@ -348,7 +347,7 @@ export function WorkLocationEditForm({
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="wl-edit-timezone">Timezone</Label>
+            <Label htmlFor="wl-edit-timezone">Zona waktu</Label>
             <select
               id="wl-edit-timezone"
               name="timezone"
@@ -377,8 +376,8 @@ export function WorkLocationEditForm({
               aria-invalid={Boolean(fieldErrors.status)}
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+              <option value="active">Aktif</option>
+              <option value="inactive">Nonaktif</option>
             </select>
             {fieldErrors.status && (
               <p className="text-xs text-destructive">{fieldErrors.status}</p>

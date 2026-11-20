@@ -24,7 +24,7 @@ import {
 describe("create organization schema", () => {
   it("accepts a valid name/code/status payload and uppercases the code", () => {
     const input: CreateOrganizationInput = {
-      name: "Acme Corp",
+      name: "PT Contoh Sejahtera",
       code: "acme",
       status: "active",
     };
@@ -32,7 +32,7 @@ describe("create organization schema", () => {
     assert.equal(result.success, true);
     if (result.success) {
       assert.equal(result.data.code, "ACME");
-      assert.equal(result.data.name, "Acme Corp");
+      assert.equal(result.data.name, "PT Contoh Sejahtera");
       assert.equal(result.data.status, "active");
     }
   });
@@ -70,13 +70,13 @@ describe("create organization schema", () => {
   });
 
   it("rejects a missing code", () => {
-    const result = createOrganizationSchema.safeParse({ name: "Acme Corp" });
+    const result = createOrganizationSchema.safeParse({ name: "PT Contoh Sejahtera" });
     assert.equal(result.success, false);
   });
 
   it("rejects a code that is too short", () => {
     const result = createOrganizationSchema.safeParse({
-      name: "Acme Corp",
+      name: "PT Contoh Sejahtera",
       code: "A",
     });
     assert.equal(result.success, false);
@@ -84,7 +84,7 @@ describe("create organization schema", () => {
 
   it("rejects a code with illegal characters", () => {
     const result = createOrganizationSchema.safeParse({
-      name: "Acme Corp",
+      name: "PT Contoh Sejahtera",
       code: "AC ME!",
     });
     assert.equal(result.success, false);
@@ -92,7 +92,7 @@ describe("create organization schema", () => {
 
   it("rejects an unknown status value", () => {
     const result = createOrganizationSchema.safeParse({
-      name: "Acme Corp",
+      name: "PT Contoh Sejahtera",
       code: "ACME",
       status: "banana",
     });
@@ -101,7 +101,7 @@ describe("create organization schema", () => {
 
   it("rejects unknown keys (.strict)", () => {
     const result = createOrganizationSchema.safeParse({
-      name: "Acme Corp",
+      name: "PT Contoh Sejahtera",
       code: "ACME",
       description: "not a schema field",
     });

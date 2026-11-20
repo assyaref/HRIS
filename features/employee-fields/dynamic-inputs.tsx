@@ -121,7 +121,7 @@ function renderControl(spec: DynamicCustomFieldSpec, id: string) {
             value="true"
             className="h-4 w-4 rounded border-input"
           />
-          Yes
+          Ya
         </label>
       );
     case "date":

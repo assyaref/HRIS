@@ -32,7 +32,7 @@ describe("createProjectSchema: organization selector", () => {
     const parsed = createProjectSchema.safeParse({
       organizationId: ORG_A,
       code: "PROJECT-001",
-      name: "New Project",
+      name: "Proyek Baru",
       status: "active",
       startDate: "2026-01-01",
       endDate: "2026-12-31",
@@ -43,7 +43,7 @@ describe("createProjectSchema: organization selector", () => {
   it("rejects a missing organizationId (organization is required)", () => {
     const parsed = createProjectSchema.safeParse({
       code: "PROJECT-001",
-      name: "New Project",
+      name: "Proyek Baru",
     });
     assert.equal(parsed.success, false);
   });
@@ -52,7 +52,7 @@ describe("createProjectSchema: organization selector", () => {
     const parsed = createProjectSchema.safeParse({
       organizationId: "",
       code: "PROJECT-001",
-      name: "New Project",
+      name: "Proyek Baru",
     });
     assert.equal(parsed.success, false);
   });
@@ -61,7 +61,7 @@ describe("createProjectSchema: organization selector", () => {
     const parsed = createProjectSchema.safeParse({
       organizationId: "not-a-uuid",
       code: "PROJECT-001",
-      name: "New Project",
+      name: "Proyek Baru",
     });
     assert.equal(parsed.success, false);
   });
@@ -70,7 +70,7 @@ describe("createProjectSchema: organization selector", () => {
     const parsed = createProjectSchema.safeParse({
       organizationId: ORG_A,
       code: "PROJECT-001",
-      name: "New Project",
+      name: "Proyek Baru",
       isAdmin: true,
     });
     assert.equal(parsed.success, false);
@@ -80,7 +80,7 @@ describe("createProjectSchema: organization selector", () => {
     const parsed = createProjectSchema.safeParse({
       organizationId: ORG_A,
       code: "PROJECT-001",
-      name: "New Project",
+      name: "Proyek Baru",
     });
     assert.equal(parsed.success, true);
     if (parsed.success) {
@@ -92,7 +92,7 @@ describe("createProjectSchema: organization selector", () => {
 describe("createProjectSchema: field contracts", () => {
   const base = {
     organizationId: ORG_A,
-    name: "New Project",
+    name: "Proyek Baru",
   };
 
   it("rejects an invalid project code pattern", () => {

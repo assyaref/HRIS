@@ -16,7 +16,7 @@ import { listEmployeesFlatByOrganization } from "@/features/employees/queries";
 import { AnnouncementForm } from "@/features/announcements/announcement-form";
 
 export const metadata: Metadata = {
-  title: "New Announcement",
+  title: "Pengumuman Baru",
 };
 
 /** Management form to create a draft announcement (R18). */
@@ -45,17 +45,15 @@ export default async function NewAnnouncementPage() {
           Pengumuman Baru
         </h1>
         <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-          Draft an announcement for all employees or a selected audience, then
-          publish it from the management view.
+          Susun draf pengumuman untuk semua karyawan atau audiens terpilih, lalu terbitkan dari tampilan manajemen.
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Announcement details</CardTitle>
+          <CardTitle>Detail pengumuman</CardTitle>
           <CardDescription>
-            Plain-text content, optional attachments (up to 3 files, 10 MB
-            each).
+            Isi berupa teks biasa, lampiran opsional (maks. 3 berkas, masing-masing 10 MB).
           </CardDescription>
         </CardHeader>
         <CardContent>

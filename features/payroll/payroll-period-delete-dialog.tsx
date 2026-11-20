@@ -52,8 +52,8 @@ export function PayrollPeriodDeleteDialog({
   function openConfirmation() {
     notifier.warning(
       isLocked
-        ? `Locked Payroll Period: '${periodName}' is currently LOCKED. Deleting it is a destructive action and cannot be undone.`
-        : `Warning: You are about to delete payroll period '${periodName}'. This action cannot be undone.`
+        ? `Periode Payroll Terkunci: '${periodName}' sedang TERKUNCI. Menghapusnya adalah tindakan destruktif dan tidak dapat dibatalkan.`
+        : `Peringatan: Anda akan menghapus periode payroll '${periodName}'. Tindakan ini tidak dapat dibatalkan.`
     );
     setError(null);
     setOpen(true);
@@ -65,7 +65,7 @@ export function PayrollPeriodDeleteDialog({
       const result = await deletePayrollPeriodAction(periodId);
       if (result.ok) {
         setOpen(false);
-        notifier.success("Payroll period deleted successfully.");
+        notifier.success("Periode payroll berhasil dihapus.");
         router.refresh();
       } else {
         setError(result.message);
@@ -82,34 +82,34 @@ export function PayrollPeriodDeleteDialog({
         size="sm"
         onClick={openConfirmation}
       >
-        Delete
+        Hapus
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {isLocked ? "Delete locked payroll period?" : "Delete payroll period?"}
+              {isLocked ? "Hapus periode payroll yang terkunci?" : "Hapus periode payroll?"}
             </DialogTitle>
             <DialogDescription>
               {isLocked
-                ? "This payroll period is locked. Deleting it is a destructive action and cannot be undone."
-                : "This payroll period will be permanently deleted. This action cannot be undone."}
+                ? "Periode payroll ini terkunci. Menghapusnya adalah tindakan destruktif dan tidak dapat dibatalkan."
+                : "Periode payroll ini akan dihapus permanen. Tindakan ini tidak dapat dibatalkan."}
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-3 rounded-xl border border-border bg-muted/60 p-4">
             <div className="grid grid-cols-[8rem_1fr] gap-2 text-sm">
-              <span className="text-muted-foreground">Period name</span>
+              <span className="text-muted-foreground">Nama periode</span>
               <span className="font-semibold text-foreground">{periodName}</span>
 
-              <span className="text-muted-foreground">Period window</span>
+              <span className="text-muted-foreground">Rentang periode</span>
               <span className="font-medium text-foreground/85">
                 {periodStart}
                 <span className="mx-1 text-muted-foreground/80">→</span>
                 {periodEnd}
               </span>
 
-              <span className="text-muted-foreground">Payment date</span>
+              <span className="text-muted-foreground">Tanggal pembayaran</span>
               <span className="font-medium text-foreground/85">{paymentDate}</span>
 
               <span className="text-muted-foreground">Status</span>
@@ -133,7 +133,7 @@ export function PayrollPeriodDeleteDialog({
               onClick={() => setOpen(false)}
               disabled={pending}
             >
-              Cancel
+              Batal
             </Button>
             <Button
               type="button"
@@ -141,7 +141,7 @@ export function PayrollPeriodDeleteDialog({
               disabled={pending}
               onClick={confirmDelete}
             >
-              {pending ? "Deleting…" : "Delete"}
+              {pending ? "Menghapus…" : "Hapus"}
             </Button>
           </DialogFooter>
         </DialogContent>

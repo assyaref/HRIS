@@ -65,7 +65,7 @@ export async function listWorkLocationsAction(): Promise<{
     if (!user.organizationId) {
       return {
         ok: false,
-        message: "Your account is not assigned to an organization.",
+        message: "Akun Anda belum ditetapkan ke organisasi.",
         locations: [],
       };
     }
@@ -112,14 +112,14 @@ export async function listWorkLocationsAction(): Promise<{
 
     return {
       ok: true,
-      message: "Work locations loaded successfully.",
+      message: "Daftar lokasi kerja berhasil dimuat.",
       locations: locations as WorkLocationListItem[],
     };
   } catch (error) {
     console.error("[work-locations] list error:", error);
     return {
       ok: false,
-      message: "Failed to load work locations.",
+      message: "Daftar lokasi kerja gagal dimuat.",
       locations: [],
     };
   }
@@ -141,7 +141,7 @@ export async function getWorkLocationAction(locationId: string): Promise<{
     if (!user.organizationId) {
       return {
         ok: false,
-        message: "Your account is not assigned to an organization.",
+        message: "Akun Anda belum ditetapkan ke organisasi.",
         location: null,
       };
     }
@@ -194,21 +194,21 @@ export async function getWorkLocationAction(locationId: string): Promise<{
     if (!location) {
       return {
         ok: false,
-        message: "Work location not found.",
+        message: "Lokasi kerja tidak ditemukan.",
         location: null,
       };
     }
 
     return {
       ok: true,
-      message: "Work location loaded successfully.",
+      message: "Lokasi kerja berhasil dimuat.",
       location: location as WorkLocationListItem,
     };
   } catch (error) {
     console.error("[work-locations] get error:", error);
     return {
       ok: false,
-      message: "Failed to load work location.",
+      message: "Lokasi kerja gagal dimuat.",
       location: null,
     };
   }
@@ -230,7 +230,7 @@ export async function createWorkLocationAction(
     if (!user.organizationId) {
       return {
         status: "error",
-        message: "Your account is not assigned to an organization.",
+        message: "Akun Anda belum ditetapkan ke organisasi.",
       };
     }
 
@@ -252,7 +252,7 @@ export async function createWorkLocationAction(
       const fieldErrors = workLocationZodFieldErrors(parsed.error.issues);
       return {
         status: "error",
-        message: "Please correct the errors below.",
+        message: "Silakan perbaiki kesalahan di bawah.",
         fieldErrors,
       };
     }
@@ -283,7 +283,7 @@ export async function createWorkLocationAction(
       // Unreachable: the guard above rejects a missing project. Kept for TS.
       return {
         status: "error",
-        message: "The selected project is not available.",
+        message: "Proyek yang dipilih tidak tersedia.",
       };
     }
 
@@ -319,13 +319,13 @@ export async function createWorkLocationAction(
 
     return {
       status: "success",
-      message: "Work location created successfully.",
+      message: "Lokasi kerja berhasil dibuat.",
     };
   } catch (error) {
     console.error("[work-locations] create error:", error);
     return {
       status: "error",
-      message: "Failed to create work location. Please try again.",
+      message: "Lokasi kerja gagal dibuat. Silakan coba lagi.",
     };
   }
 }
@@ -347,7 +347,7 @@ export async function updateWorkLocationAction(
     if (!user.organizationId) {
       return {
         status: "error",
-        message: "Your account is not assigned to an organization.",
+        message: "Akun Anda belum ditetapkan ke organisasi.",
       };
     }
 
@@ -368,7 +368,7 @@ export async function updateWorkLocationAction(
       const fieldErrors = workLocationZodFieldErrors(parsed.error.issues);
       return {
         status: "error",
-        message: "Please correct the errors below.",
+        message: "Silakan perbaiki kesalahan di bawah.",
         fieldErrors,
       };
     }
@@ -396,7 +396,7 @@ export async function updateWorkLocationAction(
     if (!existing[0]) {
       return {
         status: "error",
-        message: "Work location not found.",
+        message: "Lokasi kerja tidak ditemukan.",
       };
     }
 
@@ -428,7 +428,7 @@ export async function updateWorkLocationAction(
       // Unreachable: the guard above rejects a missing project. Kept for TS.
       return {
         status: "error",
-        message: "The selected project is not available.",
+        message: "Proyek yang dipilih tidak tersedia.",
       };
     }
 
@@ -451,7 +451,7 @@ export async function updateWorkLocationAction(
         .join(", ");
       return {
         status: "error",
-        message: `Cannot save an active work location without: ${missingLabels}. Deactivate it first or complete the configuration.`,
+        message: `Lokasi kerja aktif tidak dapat disimpan tanpa: ${missingLabels}. Nonaktifkan dulu atau lengkapi konfigurasinya.`,
       };
     }
 
@@ -492,13 +492,13 @@ export async function updateWorkLocationAction(
 
     return {
       status: "success",
-      message: "Work location updated successfully.",
+      message: "Lokasi kerja berhasil diperbarui.",
     };
   } catch (error) {
     console.error("[work-locations] update error:", error);
     return {
       status: "error",
-      message: "Failed to update work location. Please try again.",
+      message: "Lokasi kerja gagal diperbarui. Silakan coba lagi.",
     };
   }
 }
@@ -519,7 +519,7 @@ export async function toggleWorkLocationStatusAction(
       return {
         status: "error",
         ok: false,
-        message: "Your account is not assigned to an organization.",
+        message: "Akun Anda belum ditetapkan ke organisasi.",
       };
     }
 
@@ -534,7 +534,7 @@ export async function toggleWorkLocationStatusAction(
       return {
         status: "error",
         ok: false,
-        message: "Invalid status value.",
+        message: "Nilai status tidak valid.",
       };
     }
 
@@ -562,7 +562,7 @@ export async function toggleWorkLocationStatusAction(
       return {
         status: "error",
         ok: false,
-        message: "Work location not found.",
+        message: "Lokasi kerja tidak ditemukan.",
       };
     }
 
@@ -571,7 +571,7 @@ export async function toggleWorkLocationStatusAction(
       return {
         status: "success",
         ok: true,
-        message: `Location is already ${newStatus}.`,
+        message: `Lokasi sudah berstatus ${newStatus}.`,
       };
     }
 
@@ -593,7 +593,7 @@ export async function toggleWorkLocationStatusAction(
         return {
           status: "error",
           ok: false,
-          message: `Cannot activate an incomplete work location. Complete the following first: ${missingLabels}.`,
+          message: `Lokasi kerja yang belum lengkap tidak dapat diaktifkan. Lengkapi terlebih dahulu: ${missingLabels}.`,
         };
       }
     }
@@ -632,7 +632,7 @@ export async function toggleWorkLocationStatusAction(
     return {
       status: "error",
       ok: false,
-      message: "Failed to update location status.",
+      message: "Status lokasi gagal diubah.",
     };
   }
 }
@@ -659,14 +659,14 @@ export async function deleteWorkLocationAction(
     if (!(await isSuperAdmin(user.id))) {
       return {
         status: "error",
-        message: "Only a Super Administrator can delete work locations. Deactivate it instead.",
+        message: "Hanya Super Administrator yang dapat menghapus lokasi kerja. Nonaktifkan saja.",
       };
     }
 
     if (!user.organizationId) {
       return {
         status: "error",
-        message: "Your account is not assigned to an organization.",
+        message: "Akun Anda belum ditetapkan ke organisasi.",
       };
     }
 
@@ -690,7 +690,7 @@ export async function deleteWorkLocationAction(
     if (!location) {
       return {
         status: "error",
-        message: "Work location not found.",
+        message: "Lokasi kerja tidak ditemukan.",
       };
     }
 
@@ -785,7 +785,7 @@ export async function deleteWorkLocationAction(
     console.error("[work-locations] delete error:", error);
     return {
       status: "error",
-      message: "Failed to delete work location.",
+      message: "Lokasi kerja gagal dihapus.",
     };
   }
 }

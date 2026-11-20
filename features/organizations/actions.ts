@@ -150,13 +150,13 @@ export async function createOrganizationAction(
   if (await isOrganizationCodeTaken(code)) {
     return {
       status: "error",
-      fieldErrors: { code: `An organization with code "${code}" already exists.` },
+      fieldErrors: { code: `Organisasi dengan kode "${code}" sudah ada.` },
     };
   }
   if (await isOrganizationNameTaken(name)) {
     return {
       status: "error",
-      fieldErrors: { name: `An organization named "${name}" already exists.` },
+      fieldErrors: { name: `Organisasi bernama "${name}" sudah ada.` },
     };
   }
 
@@ -167,16 +167,16 @@ export async function createOrganizationAction(
       .values({ name, code, status })
       .returning({ id: organizations.id });
     const row = inserted[0];
-    if (!row) throw new Error("Organization insert returned no row.");
+    if (!row) throw new Error("Organisasi gagal disimpan.");
     organizationId = row.id;
   } catch (unknownError) {
     if (isDuplicateOrganizationError(unknownError)) {
       return errorState(
-        "An organization with that code already exists."
+        "Organisasi dengan kode tersebut sudah ada."
       );
     }
     console.error("[organizations] create failed", unknownError);
-    return errorState("The organization could not be created. Please try again.");
+    return errorState("Organisasi gagal dibuat. Silakan coba lagi.");
   }
 
   await audit(organizationId, actor.userId, "organization.created", organizationId, {
@@ -201,12 +201,12 @@ export async function updateOrganizationAction(
   const actor = await requireSuperAdminActor();
 
   if (!isUuid(organizationId)) {
-    return errorState("Invalid organization.");
+    return errorState("Organisasi tidak valid.");
   }
 
   const existing = await loadOrganization(organizationId);
   if (!existing) {
-    return errorState("Organization not found.");
+    return errorState("Organisasi tidak ditemukan.");
   }
 
   const parsed = updateOrganizationSchema.safeParse({
@@ -227,7 +227,7 @@ export async function updateOrganizationAction(
     actorIsSuperAdmin: true,
   });
   if (!decision.allowed) {
-    return errorState(decision.message ?? "Operation not allowed.");
+    return errorState(decision.message ?? "Operasi tidak diizinkan.");
   }
 
   /*
@@ -240,7 +240,7 @@ export async function updateOrganizationAction(
       return {
         status: "error",
         fieldErrors: {
-          code: "The reserved system organization code cannot be changed.",
+          code: "Kode organisasi sistem yang dicadangkan tidak dapat diubah.",
         },
       };
     }
@@ -248,7 +248,7 @@ export async function updateOrganizationAction(
       return {
         status: "error",
         fieldErrors: {
-          status: "The SYSTEM organization must remain active.",
+          status: "Organisasi SYSTEM harus tetap aktif.",
         },
       };
     }
@@ -259,7 +259,7 @@ export async function updateOrganizationAction(
       return {
         status: "error",
         fieldErrors: {
-          code: `An organization with code "${updates.code}" already exists.`,
+          code: `Organisasi dengan kode "${updates.code}" sudah ada.`,
         },
       };
     }
@@ -269,7 +269,7 @@ export async function updateOrganizationAction(
       return {
         status: "error",
         fieldErrors: {
-          name: `An organization named "${updates.name}" already exists.`,
+          name: `Organisasi bernama "${updates.name}" sudah ada.`,
         },
       };
     }
@@ -288,10 +288,10 @@ export async function updateOrganizationAction(
       .where(eq(organizations.id, organizationId));
   } catch (unknownError) {
     if (isDuplicateOrganizationError(unknownError)) {
-      return errorState("An organization with that code already exists.");
+      return errorState("Organisasi dengan kode tersebut sudah ada.");
     }
     console.error("[organizations] update failed", unknownError);
-    return errorState("The organization could not be updated. Please try again.");
+    return errorState("Organisasi gagal diperbarui. Silakan coba lagi.");
   }
 
   const nextStatus: OrganizationStatus | string =
@@ -317,7 +317,7 @@ export async function updateOrganizationAction(
   }
   revalidateOrganizations();
 
-  return { status: "success", message: "Organization updated." };
+  return { status: "success", message: "Organisasi diperbarui." };
 }
 
 /** Deactivate an organization (the sanctioned alternative to deletion). */
@@ -327,11 +327,11 @@ export async function deactivateOrganizationAction(
   const actor = await requireSuperAdminActor();
 
   if (!isUuid(organizationId)) {
-    return errorState("Invalid organization.");
+    return errorState("Organisasi tidak valid.");
   }
   const existing = await loadOrganization(organizationId);
   if (!existing) {
-    return errorState("Organization not found.");
+    return errorState("Organisasi tidak ditemukan.");
   }
 
   const decision = evaluateOrganizationAction({
@@ -340,7 +340,7 @@ export async function deactivateOrganizationAction(
     actorIsSuperAdmin: true,
   });
   if (!decision.allowed) {
-    return errorState(decision.message ?? "Operation not allowed.");
+    return errorState(decision.message ?? "Operasi tidak diizinkan.");
   }
 
   await db
@@ -353,7 +353,7 @@ export async function deactivateOrganizationAction(
     name: existing.name,
   });
   revalidateOrganizations();
-  return { status: "success", message: "Organization deactivated." };
+  return { status: "success", message: "Organisasi dinonaktifkan." };
 }
 
 /** Reactivate a previously deactivated organization. */
@@ -363,11 +363,11 @@ export async function activateOrganizationAction(
   const actor = await requireSuperAdminActor();
 
   if (!isUuid(organizationId)) {
-    return errorState("Invalid organization.");
+    return errorState("Organisasi tidak valid.");
   }
   const existing = await loadOrganization(organizationId);
   if (!existing) {
-    return errorState("Organization not found.");
+    return errorState("Organisasi tidak ditemukan.");
   }
 
   const decision = evaluateOrganizationAction({
@@ -376,7 +376,7 @@ export async function activateOrganizationAction(
     actorIsSuperAdmin: true,
   });
   if (!decision.allowed) {
-    return errorState(decision.message ?? "Operation not allowed.");
+    return errorState(decision.message ?? "Operasi tidak diizinkan.");
   }
 
   await db
@@ -389,7 +389,7 @@ export async function activateOrganizationAction(
     name: existing.name,
   });
   revalidateOrganizations();
-  return { status: "success", message: "Organization activated." };
+  return { status: "success", message: "Organisasi diaktifkan." };
 }
 
 /**
@@ -404,12 +404,12 @@ export async function deleteOrganizationAction(
   const actor = await requireSuperAdminActor();
 
   if (!isUuid(organizationId)) {
-    return errorState("Invalid organization.");
+    return errorState("Organisasi tidak valid.");
   }
 
   const existing = await loadOrganization(organizationId);
   if (!existing) {
-    return errorState("Organization not found.");
+    return errorState("Organisasi tidak ditemukan.");
   }
 
   const dependencyCounts: OrganizationDependencyCounts =
@@ -425,12 +425,12 @@ export async function deleteOrganizationAction(
     const summary = summarizeDependencies(dependencyCounts);
     if (decision.reason === "dependent.records" && summary.hasAny) {
       return errorState(
-        `${decision.message} It still contains ${summary.total} dependent record(s) (${summary.categories
+        `${decision.message} Masih ada ${summary.total} data terkait (${summary.categories
           .map(({ category, count: value }) => `${category}: ${value}`)
-          .join(", ")}). Deactivate the organization instead.`
+          .join(", ")}). Nonaktifkan organisasi saja.`
       );
     }
-    return errorState(decision.message ?? "Operation not allowed.");
+    return errorState(decision.message ?? "Operasi tidak diizinkan.");
   }
 
   try {
@@ -448,11 +448,11 @@ export async function deleteOrganizationAction(
       (unknownError as { code?: unknown }).code === "23503"
     ) {
       return errorState(
-        "Organization cannot be deleted because it still contains dependent records."
+        "Organisasi tidak dapat dihapus karena masih memiliki data terkait."
       );
     }
     console.error("[organizations] delete failed", unknownError);
-    return errorState("The organization could not be deleted. Please try again.");
+    return errorState("Organisasi gagal dihapus. Silakan coba lagi.");
   }
 
   // The organization row is gone, so the audit row cannot reference it (FK):
@@ -462,7 +462,7 @@ export async function deleteOrganizationAction(
     name: existing.name,
   });
   revalidateOrganizations();
-  return { status: "success", message: "Organization deleted." };
+  return { status: "success", message: "Organisasi dihapus." };
 }
 
 /**

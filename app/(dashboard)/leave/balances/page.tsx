@@ -13,7 +13,7 @@ import { formatDayCount } from "@/features/leave/format";
 import { listLeaveBalances } from "@/features/leave/queries";
 
 export const metadata: Metadata = {
-  title: "Leave balances",
+  title: "Saldo cuti",
 };
 
 /** Employee leave balances (self-service). */
@@ -27,8 +27,8 @@ export default async function LeaveBalancesPage() {
   if (!employee) {
     return (
       <EmptyState
-        title="No employee profile linked"
-        description="Your account is not linked to an employee record."
+        title="Profil karyawan belum tertaut"
+        description="Akun Anda belum tertaut ke data karyawan."
       />
     );
   }
@@ -50,14 +50,14 @@ export default async function LeaveBalancesPage() {
           href="/leave"
           className={buttonVariants({ variant: "outline", size: "sm" })}
         >
-          Back to leave
+          Kembali ke cuti
         </Link>
       </div>
 
       {balances.length === 0 ? (
         <EmptyState
-          title="No balances configured"
-          description="Leave balances for your account are not configured yet."
+          title="Belum ada saldo"
+          description="Saldo cuti untuk akun Anda belum dikonfigurasi."
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -72,23 +72,23 @@ export default async function LeaveBalancesPage() {
               </p>
               <dl className="mt-4 space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Entitlement</dt>
+                  <dt className="text-muted-foreground">Jatah</dt>
                   <dd>{formatDayCount(balance.entitlement)}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Used</dt>
+                  <dt className="text-muted-foreground">Terpakai</dt>
                   <dd>{formatDayCount(balance.used)}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Pending</dt>
+                  <dt className="text-muted-foreground">Menunggu</dt>
                   <dd>{formatDayCount(balance.pending)}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Adjustment</dt>
+                  <dt className="text-muted-foreground">Penyesuaian</dt>
                   <dd>{formatDayCount(balance.adjustment)}</dd>
                 </div>
                 <div className="flex justify-between border-t border-border pt-2">
-                  <dt className="font-medium">Available</dt>
+                  <dt className="font-medium">Tersedia</dt>
                   <dd className="font-semibold">
                     {formatDayCount(balance.available)}
                   </dd>

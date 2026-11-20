@@ -152,7 +152,7 @@ export default async function AccountSettingsPage({
         <div className="divide-y divide-border border-t border-border">
           <ExpandableRow
             icon="key"
-            title="Ganti Password"
+            title="Ganti Kata Sandi"
             description="Perbarui password Anda secara berkala."
           >
             <div className="rounded-2xl bg-muted/40 p-3.5">

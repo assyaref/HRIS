@@ -102,7 +102,7 @@ describe("evaluateCreateAssignmentGuard", () => {
 
   it("rejects when the employee does not exist", () => {
     const decision = evaluateCreateAssignmentGuard({ ...validBase, employee: null });
-    assert.deepEqual(decision, { ok: false, message: "Employee not found." });
+    assert.deepEqual(decision, { ok: false, message: "Karyawan tidak ditemukan." });
   });
 
   it("rejects an employee from another organization (generic not found)", () => {
@@ -110,7 +110,7 @@ describe("evaluateCreateAssignmentGuard", () => {
       ...validBase,
       employee: { id: EMPLOYEE_A, organizationId: ORG_B, employmentStatus: "active" },
     });
-    assert.deepEqual(decision, { ok: false, message: "Employee not found." });
+    assert.deepEqual(decision, { ok: false, message: "Karyawan tidak ditemukan." });
   });
 
   it("rejects an inactive employee", () => {
@@ -120,13 +120,13 @@ describe("evaluateCreateAssignmentGuard", () => {
     });
     assert.equal(decision.ok, false);
     if (!decision.ok) {
-      assert.match(decision.message, /Inactive employees/i);
+      assert.match(decision.message, /Karyawan nonaktif/i);
     }
   });
 
   it("rejects when the project does not exist", () => {
     const decision = evaluateCreateAssignmentGuard({ ...validBase, project: null });
-    assert.deepEqual(decision, { ok: false, message: "Project not found." });
+    assert.deepEqual(decision, { ok: false, message: "Proyek tidak ditemukan." });
   });
 
   it("rejects a project from another organization (generic not found)", () => {
@@ -134,7 +134,7 @@ describe("evaluateCreateAssignmentGuard", () => {
       ...validBase,
       project: { id: PROJECT_A, organizationId: ORG_B, status: "active" },
     });
-    assert.deepEqual(decision, { ok: false, message: "Project not found." });
+    assert.deepEqual(decision, { ok: false, message: "Proyek tidak ditemukan." });
   });
 
   it("rejects an inactive/completed project", () => {
@@ -143,7 +143,7 @@ describe("evaluateCreateAssignmentGuard", () => {
       project: { id: PROJECT_A, organizationId: ORG_A, status: "inactive" },
     });
     assert.equal(inactive.ok, false);
-    if (!inactive.ok) assert.match(inactive.message, /Only active projects/i);
+    if (!inactive.ok) assert.match(inactive.message, /Hanya proyek aktif/i);
 
     const completed = evaluateCreateAssignmentGuard({
       ...validBase,
@@ -159,7 +159,7 @@ describe("evaluateCreateAssignmentGuard", () => {
     });
     assert.equal(decision.ok, false);
     if (!decision.ok) {
-      assert.match(decision.message, /already actively assigned/i);
+      assert.match(decision.message, /sudah aktif ditugaskan/i);
     }
   });
 
@@ -195,7 +195,7 @@ describe("evaluateEndAssignmentGuard", () => {
 
   it("rejects when the assignment does not exist", () => {
     const decision = evaluateEndAssignmentGuard({ ...validBase, assignment: null });
-    assert.deepEqual(decision, { ok: false, message: "Assignment not found." });
+    assert.deepEqual(decision, { ok: false, message: "Penugasan tidak ditemukan." });
   });
 
   it("rejects a cross-organization assignment (generic not found)", () => {
@@ -203,7 +203,7 @@ describe("evaluateEndAssignmentGuard", () => {
       ...validBase,
       assignment: { id: ASSIGNMENT_A, organizationId: ORG_B, active: true },
     });
-    assert.deepEqual(decision, { ok: false, message: "Assignment not found." });
+    assert.deepEqual(decision, { ok: false, message: "Penugasan tidak ditemukan." });
   });
 
   it("rejects an already-ended assignment", () => {
@@ -213,7 +213,7 @@ describe("evaluateEndAssignmentGuard", () => {
     });
     assert.equal(decision.ok, false);
     if (!decision.ok) {
-      assert.match(decision.message, /already ended/i);
+      assert.match(decision.message, /sudah berakhir/i);
     }
   });
 });

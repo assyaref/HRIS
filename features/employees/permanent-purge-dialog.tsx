@@ -55,7 +55,7 @@ export function PermanentPurgeDialog({
     if (confirmedEmployeeNumber !== employeeNumber) {
       setState({
         status: "error",
-        message: "Employee number confirmation does not match.",
+        message: "Konfirmasi nomor karyawan tidak cocok.",
       });
       return;
     }
@@ -63,7 +63,7 @@ export function PermanentPurgeDialog({
     if (!password) {
       setState({
         status: "error",
-        message: "SUPERADMIN password is required.",
+        message: "Kata sandi SUPERADMIN wajib diisi.",
       });
       return;
     }
@@ -100,7 +100,7 @@ export function PermanentPurgeDialog({
           setOpen(true);
         }}
       >
-        Permanent purge
+        Pembersihan permanen
       </Button>
 
       <Dialog
@@ -119,12 +119,11 @@ export function PermanentPurgeDialog({
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="text-destructive">
-              Permanently purge employee identity
+              Hapus permanen identitas karyawan
             </DialogTitle>
 
             <DialogDescription>
-              This is a destructive identity-purge operation and cannot be
-              undone.
+              Ini adalah operasi pembersihan identitas yang destruktif dan tidak dapat dibatalkan.
             </DialogDescription>
           </DialogHeader>
 
@@ -135,11 +134,11 @@ export function PermanentPurgeDialog({
               </p>
 
               <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
-                <li>The employee login account will be deleted.</li>
-                <li>Face enrollment and biometric templates will be deleted.</li>
-                <li>Personal identity fields will be anonymized.</li>
-                <li>HRIS business history will be retained.</li>
-                <li>This operation cannot be reversed automatically.</li>
+                <li>Akun login karyawan akan dihapus.</li>
+                <li>Pendaftaran wajah dan template biometrik akan dihapus.</li>
+                <li>Field identitas pribadi akan dianonimkan.</li>
+                <li>Riwayat bisnis HRIS akan tetap disimpan.</li>
+                <li>Operasi ini tidak dapat dibatalkan secara otomatis.</li>
               </ul>
             </div>
 
@@ -148,7 +147,7 @@ export function PermanentPurgeDialog({
                 htmlFor="purge-employee-number"
                 className="text-sm font-medium"
               >
-                Confirm employee number
+                Konfirmasi nomor karyawan
               </label>
 
               <Input
@@ -175,7 +174,7 @@ export function PermanentPurgeDialog({
                 htmlFor="purge-superadmin-password"
                 className="text-sm font-medium"
               >
-                SUPERADMIN password
+                Kata sandi SUPERADMIN
               </label>
 
               <Input
@@ -190,8 +189,7 @@ export function PermanentPurgeDialog({
               />
 
               <p className="text-xs text-muted-foreground">
-                Your current SUPERADMIN password is required to authorize
-                this operation.
+                Kata sandi SUPERADMIN Anda saat ini diperlukan untuk mengotorisasi operasi ini.
               </p>
             </div>
 
@@ -216,7 +214,7 @@ export function PermanentPurgeDialog({
               disabled={pending}
               onClick={closeDialog}
             >
-              Cancel
+              Batal
             </Button>
 
             <Button

@@ -17,12 +17,12 @@ export const PAYROLL_PERIOD_STATUS_LABELS: Record<
   PayrollPeriodStatus,
   string
 > = {
-  draft: "Draft",
-  processing: "Processing",
-  pending_approval: "Pending approval",
-  approved: "Approved",
-  locked: "Locked",
-  cancelled: "Cancelled",
+  draft: "Draf",
+  processing: "Diproses",
+  pending_approval: "Menunggu persetujuan",
+  approved: "Disetujui",
+  locked: "Terkunci",
+  cancelled: "Dibatalkan",
 };
 
 export const PAYROLL_RUN_STATUSES = [
@@ -37,13 +37,13 @@ export const PAYROLL_RUN_STATUSES = [
 export type PayrollRunStatus = (typeof PAYROLL_RUN_STATUSES)[number];
 
 export const PAYROLL_RUN_STATUS_LABELS: Record<PayrollRunStatus, string> = {
-  draft: "Draft",
-  calculated: "Calculated",
-  submitted: "Submitted",
-  approved: "Approved",
-  locked: "Locked",
-  rejected: "Rejected",
-  cancelled: "Cancelled",
+  draft: "Draf",
+  calculated: "Terhitung",
+  submitted: "Diajukan",
+  approved: "Disetujui",
+  locked: "Terkunci",
+  rejected: "Ditolak",
+  cancelled: "Dibatalkan",
 };
 
 export const PAYROLL_COMPONENT_TYPES = ["earning", "deduction"] as const;
@@ -54,8 +54,8 @@ export const PAYROLL_COMPONENT_TYPE_LABELS: Record<
   PayrollComponentType,
   string
 > = {
-  earning: "Earning",
-  deduction: "Deduction",
+  earning: "Pendapatan",
+  deduction: "Potongan",
 };
 
 export const PAYROLL_COMPONENT_METHODS = [
@@ -70,8 +70,8 @@ export const PAYROLL_COMPONENT_METHOD_LABELS: Record<
   PayrollComponentMethod,
   string
 > = {
-  fixed: "Fixed amount",
-  percentage: "Percentage of fixed earnings",
+  fixed: "Jumlah tetap",
+  percentage: "Persentase pendapatan tetap",
   manual: "Manual",
 };
 
@@ -79,9 +79,9 @@ export const PAYROLL_ITEM_STATUSES = ["processing", "included", "excluded"] as c
 export type PayrollItemStatus = (typeof PAYROLL_ITEM_STATUSES)[number];
 
 export const PAYROLL_ITEM_STATUS_LABELS: Record<PayrollItemStatus, string> = {
-  processing: "Processing",
-  included: "Included",
-  excluded: "Excluded",
+  processing: "Diproses",
+  included: "Disertakan",
+  excluded: "Dikecualikan",
 };
 
 export const PAYSLIP_STATUSES = [
@@ -92,9 +92,9 @@ export const PAYSLIP_STATUSES = [
 export type PayslipStatus = (typeof PAYSLIP_STATUSES)[number];
 
 export const PAYSLIP_STATUS_LABELS: Record<PayslipStatus, string> = {
-  generated: "Generated",
-  published: "Published",
-  revoked: "Revoked",
+  generated: "Dibuat",
+  published: "Terbit",
+  revoked: "Dicabut",
 };
 
 export const PAYROLL_EVENT_TYPES = [

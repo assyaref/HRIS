@@ -24,7 +24,7 @@ function normalizeDigits(value: string, label: string): string {
   const normalized = value.trim();
 
   if (!IDENTITY_PATTERN.test(normalized)) {
-    throw new Error(`${label} must contain 1–32 digits.`);
+    throw new Error(`${label} harus berisi 1–32 digit.`);
   }
 
   return normalized;
@@ -122,7 +122,7 @@ export function buildPayslipPasswordV1(
   nik: string,
   birthDate: PayslipBirthDate
 ): string {
-  const normalizedNik = normalizeDigits(nik, "Employee NIK");
+  const normalizedNik = normalizeDigits(nik, "NIK karyawan");
   const { day, year } = resolveCalendarDate(
     birthDate,
     "Employee birth date"
@@ -154,7 +154,7 @@ export function buildPayslipPassword(
 ): string {
   const normalizedEmployeeNumber = normalizeDigits(
     employeeNumber,
-    "Employee number"
+    "Nomor karyawan"
   );
   const { day, month, year } = resolveCalendarDate(
     birthDate,

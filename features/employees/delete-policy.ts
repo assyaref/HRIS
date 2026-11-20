@@ -32,7 +32,7 @@ export type EmployeeProtectedCategory =
   (typeof EMPLOYEE_DELETE_PROTECTED_CATEGORIES)[number];
 
 export const EMPLOYEE_DELETE_PROTECTED_HISTORY_MESSAGE =
-  "Physical employee deletion is disabled. Deactivate the employee instead.";
+  "Penghapusan fisik karyawan dinonaktifkan. Nonaktifkan karyawan saja.";
 
 /** Safe message identifying the dependency categories that block deletion. */
 export function buildProtectedHistoryMessage(
@@ -86,7 +86,7 @@ export function evaluateEmployeeDeletion(
     return {
       allowed: false,
       code: "SELF_LINKED",
-      message: "You cannot deactivate your own linked employee record.",
+      message: "Anda tidak dapat menonaktifkan data karyawan yang tertaut ke akun Anda.",
     };
   }
 

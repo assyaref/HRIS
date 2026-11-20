@@ -96,7 +96,7 @@ export function FaceVerificationPanel({
       case "REVOKED":
         return "Revoked";
       default:
-        return "Not enrolled";
+        return "Belum terdaftar";
     }
   })();
 
@@ -106,7 +106,7 @@ export function FaceVerificationPanel({
         <div>
           <p className="font-medium">{employeeName}</p>
           <p className="text-xs text-muted-foreground">
-            One-shot face verification against the active enrollment.
+            Verifikasi wajah sekali jalan terhadap pendaftaran yang aktif.
           </p>
         </div>
         <Badge variant={isActive ? "primary" : "outline"}>{statusLabel}</Badge>
@@ -137,8 +137,7 @@ export function FaceVerificationPanel({
 
       {!engineConfigured ? (
         <p className="text-sm text-muted-foreground">
-          The face-recognition engine is not configured on this deployment. No
-          verification can run until it is enabled.
+          Mesin pengenalan wajah belum dikonfigurasi di instalasi ini. Verifikasi tidak dapat berjalan sampai diaktifkan.
         </p>
       ) : null}
 

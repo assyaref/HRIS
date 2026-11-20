@@ -29,7 +29,7 @@ const PRIVATE_ROOT = path.join(
 function resolveWithinRoot(root: string, relativePath: string): string {
   const resolved = path.resolve(root, relativePath);
   if (!resolved.startsWith(`${root}${path.sep}`)) {
-    throw new Error("Resolved path escapes the private root.");
+    throw new Error("Path keluar dari root privat.");
   }
   return resolved;
 }
@@ -65,11 +65,11 @@ function resolveEmployeeDocumentFolder(
     !UUID_PATH_SEGMENT.test(organizationId) ||
     !UUID_PATH_SEGMENT.test(employeeId)
   ) {
-    throw new Error("Refusing to remove a document folder outside the private root.");
+    throw new Error("Menolak menghapus folder dokumen di luar root privat.");
   }
   const resolved = path.resolve(PRIVATE_ROOT, organizationId, employeeId);
   if (!resolved.startsWith(`${PRIVATE_ROOT}${path.sep}`)) {
-    throw new Error("Resolved path escapes the private root.");
+    throw new Error("Path keluar dari root privat.");
   }
   return resolved;
 }

@@ -24,7 +24,7 @@ export function SelectAllEmployees() {
 
   return (
     <label className="flex items-center">
-      <span className="sr-only">Select all employees on this page</span>
+      <span className="sr-only">Pilih semua karyawan di halaman ini</span>
       <input
         type="checkbox"
         checked={checked}

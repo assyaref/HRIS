@@ -74,7 +74,7 @@ export async function uploadPayslipPdfAction(
   if (!user.organizationId) {
     return {
       ok: false,
-      message: "Your account is not assigned to an organization.",
+      message: "Akun Anda belum ditetapkan ke organisasi.",
     };
   }
 
@@ -86,7 +86,7 @@ export async function uploadPayslipPdfAction(
     if (!allowedFields.has(key)) {
       return {
         ok: false,
-        message: "Invalid payslip upload request.",
+        message: "Permintaan unggah slip gaji tidak valid.",
       };
     }
   }
@@ -100,7 +100,7 @@ export async function uploadPayslipPdfAction(
   ) {
     return {
       ok: false,
-      message: "Invalid payslip identifier.",
+      message: "ID slip gaji tidak valid.",
     };
   }
 
@@ -114,7 +114,7 @@ export async function uploadPayslipPdfAction(
   ) {
     return {
       ok: false,
-      message: "Please select a PDF payslip.",
+      message: "Pilih slip gaji PDF.",
     };
   }
 
@@ -179,7 +179,7 @@ export async function uploadPayslipPdfAction(
       return {
         ok: false,
         message:
-          "Only generated payslips can receive a PDF document.",
+          "Hanya slip gaji berstatus dibuat yang dapat menerima dokumen PDF.",
       };
     }
 
@@ -190,7 +190,7 @@ export async function uploadPayslipPdfAction(
       return {
         ok: false,
         message:
-          "The payroll run must be approved or locked before uploading payslips.",
+          "Proses payroll harus disetujui atau dikunci sebelum slip gaji diunggah.",
       };
     }
 
@@ -201,7 +201,7 @@ export async function uploadPayslipPdfAction(
       return {
         ok: false,
         message:
-          "The employee record for this payslip was permanently deleted. The payslip is retained as a historical record and cannot receive a new PDF document.",
+          "Data karyawan untuk slip gaji ini telah dihapus permanen. Slip gaji disimpan sebagai data historis dan tidak dapat menerima dokumen PDF baru.",
       };
     }
 
@@ -251,7 +251,7 @@ export async function uploadPayslipPdfAction(
       return {
         ok: false,
         message:
-          "A PDF document already exists for this payslip.",
+          "Dokumen PDF untuk slip gaji ini sudah ada.",
       };
     }
 
@@ -275,7 +275,7 @@ export async function uploadPayslipPdfAction(
       return {
         ok: false,
         message:
-          "The payslip is missing the historical employee number or birth date required for its PDF password.",
+          "Slip gaji tidak memiliki nomor karyawan atau tanggal lahir historis yang diperlukan untuk kata sandi PDF-nya.",
       };
     }
 
@@ -352,7 +352,7 @@ export async function uploadPayslipPdfAction(
         const documentId = insertedDocument[0]?.id;
 
         if (!documentId) {
-          throw new Error("Payslip document insert returned no id.");
+          throw new Error("Dokumen slip gaji gagal disimpan.");
         }
 
         /*
@@ -390,7 +390,7 @@ export async function uploadPayslipPdfAction(
         return {
           ok: false,
           message:
-            "A PDF document already exists for this payslip.",
+            "Dokumen PDF untuk slip gaji ini sudah ada.",
         };
       }
 
@@ -402,7 +402,7 @@ export async function uploadPayslipPdfAction(
         return {
           ok: false,
           message:
-            "The payslip status changed before the document could be saved.",
+            "Status slip gaji berubah sebelum dokumen disimpan.",
         };
       }
 
@@ -432,7 +432,7 @@ export async function uploadPayslipPdfAction(
 
     return {
       ok: true,
-      message: "Payslip PDF uploaded and securely stored.",
+      message: "PDF slip gaji diunggah dan disimpan dengan aman.",
       payslipId: payslip.id,
     };
   } catch (error) {
@@ -441,7 +441,7 @@ export async function uploadPayslipPdfAction(
     return {
       ok: false,
       message:
-        "The payslip PDF could not be uploaded. Please try again.",
+        "PDF slip gaji gagal diunggah. Silakan coba lagi.",
     };
   }
 }
@@ -477,7 +477,7 @@ export async function replacePayslipPdfAction(
   if (!user.organizationId) {
     return {
       ok: false,
-      message: "Your account is not assigned to an organization.",
+      message: "Akun Anda belum ditetapkan ke organisasi.",
     };
   }
 
@@ -489,7 +489,7 @@ export async function replacePayslipPdfAction(
     if (!allowedFields.has(key)) {
       return {
         ok: false,
-        message: "Invalid payslip replacement request.",
+        message: "Permintaan penggantian slip gaji tidak valid.",
       };
     }
   }
@@ -504,14 +504,14 @@ export async function replacePayslipPdfAction(
   ) {
     return {
       ok: false,
-      message: "Invalid payslip identifier.",
+      message: "ID slip gaji tidak valid.",
     };
   }
 
   if (typeof reasonValue !== "string") {
     return {
       ok: false,
-      message: "A reason for replacing the payslip PDF is required.",
+      message: "Alasan penggantian PDF slip gaji wajib diisi.",
     };
   }
 
@@ -525,7 +525,7 @@ export async function replacePayslipPdfAction(
   ) {
     return {
       ok: false,
-      message: "Please select a PDF payslip.",
+      message: "Pilih slip gaji PDF.",
     };
   }
 
@@ -698,7 +698,7 @@ export async function replacePayslipPdfAction(
       return {
         ok: false,
         message:
-          "The payslip is missing the historical employee number or birth date required for its PDF password.",
+          "Slip gaji tidak memiliki nomor karyawan atau tanggal lahir historis yang diperlukan untuk kata sandi PDF-nya.",
       };
     }
 
@@ -838,7 +838,7 @@ export async function replacePayslipPdfAction(
       ) {
         return {
           ok: false,
-          message: "There is no payslip document to replace.",
+          message: "Tidak ada dokumen slip gaji untuk diganti.",
         };
       }
 
@@ -849,7 +849,7 @@ export async function replacePayslipPdfAction(
         return {
           ok: false,
           message:
-            "The payslip status changed before the replacement could be saved.",
+            "Status slip gaji berubah sebelum pengganti disimpan.",
         };
       }
 
@@ -883,7 +883,7 @@ export async function replacePayslipPdfAction(
 
     return {
       ok: true,
-      message: `Payslip PDF replaced and securely stored (version ${newVersion}).`,
+      message: `PDF slip gaji diganti dan disimpan dengan aman (versi ${newVersion}).`,
       payslipId: payslip.id,
     };
   } catch (error) {
@@ -892,7 +892,7 @@ export async function replacePayslipPdfAction(
     return {
       ok: false,
       message:
-        "The payslip PDF could not be replaced. Please try again.",
+        "PDF slip gaji gagal diganti. Silakan coba lagi.",
     };
   }
 }
@@ -930,7 +930,7 @@ export async function uploadDistributionPayslipPdfAction(
   if (!user.organizationId) {
     return {
       ok: false,
-      message: "Your account is not assigned to an organization.",
+      message: "Akun Anda belum ditetapkan ke organisasi.",
     };
   }
 
@@ -942,7 +942,7 @@ export async function uploadDistributionPayslipPdfAction(
     if (!allowedFields.has(key)) {
       return {
         ok: false,
-        message: "Invalid payslip upload request.",
+        message: "Permintaan unggah slip gaji tidak valid.",
       };
     }
   }
@@ -957,7 +957,7 @@ export async function uploadDistributionPayslipPdfAction(
   ) {
     return {
       ok: false,
-      message: "Invalid payroll period identifier.",
+      message: "ID periode payroll tidak valid.",
     };
   }
 
@@ -967,7 +967,7 @@ export async function uploadDistributionPayslipPdfAction(
   ) {
     return {
       ok: false,
-      message: "Invalid employee identifier.",
+      message: "ID karyawan tidak valid.",
     };
   }
 
@@ -981,7 +981,7 @@ export async function uploadDistributionPayslipPdfAction(
   ) {
     return {
       ok: false,
-      message: "Please select a PDF payslip.",
+      message: "Pilih slip gaji PDF.",
     };
   }
 
@@ -1100,7 +1100,7 @@ export async function uploadDistributionPayslipPdfAction(
       return {
         ok: false,
         message:
-          "Employee number and birth date are required before the payslip PDF can be uploaded.",
+          "Nomor karyawan dan tanggal lahir wajib ada sebelum PDF slip gaji dapat diunggah.",
       };
     }
 
@@ -1190,7 +1190,7 @@ export async function uploadDistributionPayslipPdfAction(
         const insertedPayslipId = insertedPayslip[0]?.id;
 
         if (!insertedPayslipId) {
-          throw new Error("Payslip insert returned no id.");
+          throw new Error("Slip gaji gagal disimpan.");
         }
 
         const insertedDocument = await tx
@@ -1210,7 +1210,7 @@ export async function uploadDistributionPayslipPdfAction(
         const documentId = insertedDocument[0]?.id;
 
         if (!documentId) {
-          throw new Error("Payslip document insert returned no id.");
+          throw new Error("Dokumen slip gaji gagal disimpan.");
         }
 
         await tx.insert(payslipDocumentVersions).values({
@@ -1261,7 +1261,7 @@ export async function uploadDistributionPayslipPdfAction(
         return {
           ok: false,
           message:
-            "This employee already has a payslip for this payroll period.",
+            "Karyawan ini sudah memiliki slip gaji untuk periode payroll ini.",
         };
       }
 
@@ -1272,7 +1272,7 @@ export async function uploadDistributionPayslipPdfAction(
         return {
           ok: false,
           message:
-            "The payroll period changed before the payslip could be saved.",
+            "Periode payroll berubah sebelum slip gaji disimpan.",
         };
       }
 
@@ -1305,7 +1305,7 @@ export async function uploadDistributionPayslipPdfAction(
 
     return {
       ok: true,
-      message: "Payslip PDF uploaded and securely stored.",
+      message: "PDF slip gaji diunggah dan disimpan dengan aman.",
       payslipId,
     };
   } catch (error) {
@@ -1314,7 +1314,7 @@ export async function uploadDistributionPayslipPdfAction(
     return {
       ok: false,
       message:
-        "The payslip PDF could not be uploaded. Please try again.",
+        "PDF slip gaji gagal diunggah. Silakan coba lagi.",
     };
   }
 }
@@ -1342,14 +1342,14 @@ export async function publishPayslipAction(
   if (!user.organizationId) {
     return {
       ok: false,
-      message: "Your account is not assigned to an organization.",
+      message: "Akun Anda belum ditetapkan ke organisasi.",
     };
   }
 
   const organizationId = user.organizationId;
 
   if (!isPayslipUuid(payslipId)) {
-    return { ok: false, message: "Invalid payslip identifier." };
+    return { ok: false, message: "ID slip gaji tidak valid." };
   }
 
   try {
@@ -1373,7 +1373,7 @@ export async function publishPayslipAction(
       const located = locatedRows[0];
 
       if (!located) {
-        return { kind: "error" as const, message: "Payslip not found." };
+        return { kind: "error" as const, message: "Slip gaji tidak ditemukan." };
       }
 
       // A distribution payslip links the period directly; a calculated
@@ -1397,7 +1397,7 @@ export async function publishPayslipAction(
       }
 
       if (!periodId) {
-        return { kind: "error" as const, message: "Payslip not found." };
+        return { kind: "error" as const, message: "Slip gaji tidak ditemukan." };
       }
 
       const period = await lockPeriodTxForPublish(
@@ -1406,7 +1406,7 @@ export async function publishPayslipAction(
         periodId
       );
       if (!period) {
-        return { kind: "error" as const, message: "Payslip not found." };
+        return { kind: "error" as const, message: "Slip gaji tidak ditemukan." };
       }
 
       const lockedRows = await tx
@@ -1424,7 +1424,7 @@ export async function publishPayslipAction(
       const lockedPayslip = lockedRows[0];
 
       if (!lockedPayslip) {
-        return { kind: "error" as const, message: "Payslip not found." };
+        return { kind: "error" as const, message: "Slip gaji tidak ditemukan." };
       }
 
       const documentRows = await tx
@@ -1494,13 +1494,13 @@ export async function publishPayslipAction(
       );
     });
 
-    return { ok: true, message: "Payslip published." };
+    return { ok: true, message: "Slip gaji diterbitkan." };
   } catch (error) {
     console.error("[payroll] publish payslip failed", error);
 
     return {
       ok: false,
-      message: "The payslip could not be published. Please try again.",
+      message: "Slip gaji gagal diterbitkan. Silakan coba lagi.",
     };
   }
 }
@@ -1599,7 +1599,7 @@ export async function bulkUploadDistributionPayslipsAction(
   ]);
 
   if (!user.organizationId) {
-    return emptyResult("Your account is not assigned to an organization.");
+    return emptyResult("Akun Anda belum ditetapkan ke organisasi.");
   }
 
   const organizationId = user.organizationId;
@@ -1608,7 +1608,7 @@ export async function bulkUploadDistributionPayslipsAction(
 
   for (const key of formData.keys()) {
     if (!allowedFields.has(key)) {
-      return emptyResult("Invalid bulk payslip upload request.");
+      return emptyResult("Permintaan unggah massal slip gaji tidak valid.");
     }
   }
 
@@ -1618,13 +1618,13 @@ export async function bulkUploadDistributionPayslipsAction(
     typeof periodIdValue !== "string" ||
     !isPayslipUuid(periodIdValue)
   ) {
-    return emptyResult("Invalid payroll period identifier.");
+    return emptyResult("ID periode payroll tidak valid.");
   }
 
   const rawFiles = formData.getAll("files");
 
   if (rawFiles.length === 0) {
-    return emptyResult("Please select at least one PDF payslip.");
+    return emptyResult("Pilih minimal satu slip gaji PDF.");
   }
 
   if (rawFiles.length > PAYSLIP_BULK_MAX_FILES) {
@@ -1644,7 +1644,7 @@ export async function bulkUploadDistributionPayslipsAction(
       !("type" in value) ||
       !("name" in value)
     ) {
-      return emptyResult("One of the selected files is not a valid PDF.");
+      return emptyResult("Salah satu berkas yang dipilih bukan PDF yang valid.");
     }
 
     files.push(value as File);
@@ -1935,7 +1935,7 @@ export async function bulkUploadDistributionPayslipsAction(
 
         result.ok = true;
         result.status = "created";
-        result.message = "Payslip PDF uploaded and securely stored.";
+        result.message = "PDF slip gaji diunggah dan disimpan dengan aman.";
         result.payslipId = createdPayslipId;
         result.payslipNumber = payslipNumber;
 
@@ -1978,7 +1978,7 @@ export async function bulkUploadDistributionPayslipsAction(
           error.message === "EMPLOYEE_ALREADY_HAS_DISTRIBUTION_PAYSLIP"
         ) {
           result.status = "duplicate_employee";
-          result.message = `Employee ${employee.employeeNumber} already has a payslip for this payroll period.`;
+          result.message = `Karyawan ${employee.employeeNumber} sudah memiliki slip gaji untuk periode payroll ini.`;
           continue;
         }
 
@@ -1988,7 +1988,7 @@ export async function bulkUploadDistributionPayslipsAction(
         ) {
           result.status = "write_failed";
           result.message =
-            "The payroll period was locked or cancelled before this payslip could be saved.";
+            "Periode payroll dikunci atau dibatalkan sebelum slip gaji ini disimpan.";
           continue;
         }
 
@@ -1996,7 +1996,7 @@ export async function bulkUploadDistributionPayslipsAction(
 
         result.status = "write_failed";
         result.message =
-          "The payslip PDF could not be uploaded. Please try again.";
+          "PDF slip gaji gagal diunggah. Silakan coba lagi.";
       }
     }
 
@@ -2007,12 +2007,8 @@ export async function bulkUploadDistributionPayslipsAction(
       ok: createdCount > 0,
       message:
         createdCount > 0
-          ? `Uploaded ${createdCount} payslip${
-              createdCount === 1 ? "" : "s"
-            }${problemCount > 0 ? `, ${problemCount} problem${
-              problemCount === 1 ? "" : "s"
-            }` : ""}.`
-          : "No payslips were uploaded. Review the problems below.",
+          ? `${createdCount} slip gaji diunggah${problemCount > 0 ? `, ${problemCount} bermasalah` : ""}.`
+          : "Tidak ada slip gaji yang diunggah. Periksa masalah di bawah.",
       periodId: period.id,
       total: results.length,
       createdCount,
@@ -2023,7 +2019,7 @@ export async function bulkUploadDistributionPayslipsAction(
     console.error("[payroll] bulk payslip PDF upload failed", error);
 
     return emptyResult(
-      "The bulk payslip upload could not be completed. Please try again.",
+      "Unggah massal slip gaji tidak dapat diselesaikan. Silakan coba lagi.",
       periodIdValue
     );
   }

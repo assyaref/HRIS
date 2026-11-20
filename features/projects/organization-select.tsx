@@ -37,13 +37,13 @@ interface OrganizationSelectProps {
  */
 export function OrganizationSelect({
   name,
-  label = "Organization",
+  label = "Organisasi",
   organizations,
   value,
   onChange,
   disabled = false,
   searchable = true,
-  emptyMessage = "No active organizations found.",
+  emptyMessage = "Tidak ada organisasi aktif.",
 }: OrganizationSelectProps) {
   const searchId = useId();
   const [query, setQuery] = useState("");
@@ -69,7 +69,7 @@ export function OrganizationSelect({
         <Input
           id={searchId}
           type="search"
-          placeholder="Search organization…"
+          placeholder="Cari organisasi…"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           disabled={disabled}
@@ -86,7 +86,7 @@ export function OrganizationSelect({
         </p>
       ) : filtered.length === 0 ? (
         <p className="border-input bg-background rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
-          No organizations match “{query.trim()}”.
+          Tidak ada organisasi yang cocok dengan “{query.trim()}”.
         </p>
       ) : (
         <div
@@ -128,7 +128,7 @@ export function OrganizationSelect({
 
       {selected ? (
         <p className="text-muted-foreground text-xs">
-          Selected: <span className="font-medium text-foreground">{selected.name}</span>{" "}
+          Terpilih: <span className="font-medium text-foreground">{selected.name}</span>{" "}
           <span className="font-mono">({selected.code})</span>
           {selected.status && selected.status !== "active" ? (
             <span className="text-destructive"> — inactive organization</span>
@@ -136,7 +136,7 @@ export function OrganizationSelect({
         </p>
       ) : (
         <p className="text-muted-foreground text-xs">
-          Select the organization this project belongs to.
+          Pilih organisasi pemilik proyek ini.
         </p>
       )}
     </div>

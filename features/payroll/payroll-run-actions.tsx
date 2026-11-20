@@ -127,7 +127,7 @@ export function PayrollRunActions({
 
       <div className="rounded-2xl border border-primary/15 bg-surface-primary/60 p-4">
         <p className="mb-3 text-xs font-bold uppercase tracking-wide text-primary">
-          Available workflow actions
+          Tindakan alur kerja yang tersedia
         </p>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
@@ -138,7 +138,7 @@ export function PayrollRunActions({
               disabled={pending}
               className={`${actionBase} bg-primary text-white hover:bg-primary/90`}
             >
-              {pending ? "Working…" : "Calculate run"}
+              {pending ? "Working…" : "Hitung proses"}
             </Button>
           ) : null}
 
@@ -150,7 +150,7 @@ export function PayrollRunActions({
               disabled={pending}
               className={`${actionBase} bg-card text-primary ring-1 ring-primary/25 hover:bg-surface-primary`}
             >
-              Submit for approval
+              Ajukan persetujuan
             </Button>
           ) : null}
 
@@ -161,7 +161,7 @@ export function PayrollRunActions({
               disabled={pending}
               className={`${actionBase} bg-emerald-600 text-white hover:bg-emerald-700`}
             >
-              Approve
+              Setujui
             </Button>
           ) : null}
 
@@ -173,7 +173,7 @@ export function PayrollRunActions({
               disabled={pending}
               className={`${actionBase} bg-red-50 text-red-700 ring-1 ring-red-200 hover:bg-red-100`}
             >
-              Reject
+              Tolak
             </Button>
           ) : null}
 
@@ -185,7 +185,7 @@ export function PayrollRunActions({
               disabled={pending}
               className={`${actionBase} bg-card text-foreground/85 ring-1 ring-slate-200 hover:bg-muted`}
             >
-              Lock and finalize
+              Kunci dan finalisasi
             </Button>
           ) : null}
 
@@ -197,7 +197,7 @@ export function PayrollRunActions({
               disabled={pending}
               className={`${actionBase} border-violet-200 bg-card text-violet-700 hover:bg-violet-50`}
             >
-              Generate payslips
+              Buat slip gaji
             </Button>
           ) : null}
 
@@ -208,7 +208,7 @@ export function PayrollRunActions({
               disabled={pending}
               className={`${actionBase} bg-primary text-white hover:bg-primary/90`}
             >
-              Publish payslips
+              Terbitkan slip gaji
             </Button>
           ) : null}
 
@@ -220,7 +220,7 @@ export function PayrollRunActions({
               disabled={pending}
               className={`${actionBase} bg-card text-red-700 ring-1 ring-red-200 hover:bg-red-50`}
             >
-              Cancel period
+              Batalkan periode
             </Button>
           ) : null}
         </div>
@@ -233,16 +233,16 @@ export function PayrollRunActions({
         >
           <div>
             <p className="text-sm font-bold text-red-800">
-              Reject payroll run
+              Tolak proses payroll
             </p>
             <p className="mt-1 text-xs text-red-600">
-              Provide a reason that will be recorded with the workflow event.
+              Isi alasan yang akan dicatat bersama kejadian alur kerja.
             </p>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="reject-reason" className="text-red-900">
-              Reason for rejection
+              Alasan penolakan
             </Label>
             <textarea
               id="reject-reason"
@@ -262,7 +262,7 @@ export function PayrollRunActions({
               disabled={pending}
               className="min-h-11 rounded-xl"
             >
-              Keep payroll
+              Simpan data payroll
             </Button>
 
             <Button
@@ -272,7 +272,7 @@ export function PayrollRunActions({
               disabled={pending}
               className="min-h-11 rounded-xl bg-red-600 px-4 font-semibold text-white hover:bg-red-700"
             >
-              {pending ? "Rejecting…" : "Confirm rejection"}
+              {pending ? "Menolak…" : "Konfirmasi penolakan"}
             </Button>
           </div>
         </form>

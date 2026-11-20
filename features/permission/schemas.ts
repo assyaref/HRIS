@@ -22,15 +22,15 @@ export const createPermissionRequestSchema = z.object({
   permissionType: z.enum(PERMISSION_TYPES),
   startAt: z
     .string()
-    .regex(ISO_DATETIME_PATTERN, "Start time must be a valid date-time."),
+    .regex(ISO_DATETIME_PATTERN, "Waktu mulai harus berupa tanggal dan jam yang valid."),
   endAt: z
     .string()
-    .regex(ISO_DATETIME_PATTERN, "End time must be a valid date-time."),
+    .regex(ISO_DATETIME_PATTERN, "Waktu selesai harus berupa tanggal dan jam yang valid."),
   reason: z
     .string()
     .trim()
-    .min(1, "Enter a reason.")
-    .max(1000, "Reason must be 1000 characters or fewer."),
+    .min(1, "Masukkan alasan.")
+    .max(1000, "Alasan maksimal 1000 karakter."),
 });
 export type CreatePermissionRequestInput = z.infer<
   typeof createPermissionRequestSchema
@@ -41,7 +41,7 @@ export const reviewPermissionRequestSchema = z.object({
   reviewerNote: z
     .string()
     .trim()
-    .max(500, "Reviewer note must be 500 characters or fewer.")
+    .max(500, "Catatan peninjau maksimal 500 karakter.")
     .optional(),
 });
 export type ReviewPermissionRequestInput = z.infer<

@@ -57,42 +57,42 @@ export const ROLE_CATALOG: Record<RoleCode, RoleDefinition> = {
     code: ROLE_CODES.SUPERADMIN,
     name: "Super Administrator",
     description:
-      "System-level administration: unrestricted administrative access across the HRIS platform.",
+      "Administrasi tingkat sistem: akses administratif tanpa batas di seluruh platform HRIS.",
   },
   [ROLE_CODES.ADMIN]: {
     code: ROLE_CODES.ADMIN,
     name: "Organization Administrator",
     description:
-      "Organization-level administration of the HRIS and its operational configuration.",
+      "Administrasi HRIS tingkat organisasi dan konfigurasi operasionalnya.",
   },
   [ROLE_CODES.MANAGEMENT]: {
     code: ROLE_CODES.MANAGEMENT,
     name: "Management",
     description:
-      "Management dashboards, reports and organization-scoped visibility.",
+      "Dasbor manajemen, laporan, dan visibilitas sesuai organisasi.",
   },
   [ROLE_CODES.HR]: {
     code: ROLE_CODES.HR,
     name: "Human Resources",
     description:
-      "Employee and HR administration: records, attendance and leave administration.",
+      "Administrasi karyawan dan HR: data, absensi, dan cuti.",
   },
   [ROLE_CODES.FINANCE]: {
     code: ROLE_CODES.FINANCE,
     name: "Finance",
     description:
-      "Payroll and financial HRIS capabilities, payslips and financial reports.",
+      "Fitur payroll dan keuangan HRIS, slip gaji, dan laporan keuangan.",
   },
   [ROLE_CODES.SUPERVISOR]: {
     code: ROLE_CODES.SUPERVISOR,
     name: "Supervisor",
     description:
-      "Operational access to subordinate/team information and approvals.",
+      "Akses operasional ke informasi dan persetujuan bawahan/tim.",
   },
   [ROLE_CODES.EMPLOYEE]: {
     code: ROLE_CODES.EMPLOYEE,
     name: "Employee",
-    description: "Self-service access to your own HRIS records.",
+    description: "Akses swalayan ke data HRIS Anda sendiri.",
   },
 };
 

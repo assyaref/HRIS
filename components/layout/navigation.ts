@@ -354,7 +354,7 @@ export const settingsNavigation: NavItem[] = [
         icon: "users",
       },
       {
-        title: "Role",
+        title: "Peran",
         href: "/settings/roles",
         permission: PERMISSIONS.ROLES_VIEW,
         icon: "roles",

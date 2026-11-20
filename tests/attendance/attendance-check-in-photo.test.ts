@@ -130,8 +130,8 @@ describe("attendance + photo atomicity and expiry", () => {
 
   it("geofence and duplicate checks happen before any photo write", () => {
     const geofenceAt = indexOfCode("evaluateGeofence(");
-    const duplicateMessageAt = indexOfCode("You already have an open check-in.");
-    const dayDuplicateAt = indexOfCode("You have already checked in for this day.");
+    const duplicateMessageAt = indexOfCode("Anda masih memiliki absen masuk yang terbuka.");
+    const dayDuplicateAt = indexOfCode("Anda sudah absen masuk untuk hari ini.");
     assert.ok(geofenceAt >= 0 && duplicateMessageAt >= 0 && dayDuplicateAt >= 0);
     assert.equal(geofenceAt < photoInsertAt, true);
     assert.equal(duplicateMessageAt < photoInsertAt, true);

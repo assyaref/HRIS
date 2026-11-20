@@ -62,20 +62,19 @@ export function ProjectCreateDialog({ organizations }: ProjectCreateDialogProps)
         disabled={organizations.length === 0}
         title={
           organizations.length === 0
-            ? "Create an active organization first."
+            ? "Buat organisasi aktif terlebih dahulu."
             : undefined
         }
       >
-        New Project
+        Proyek Baru
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Create Project</DialogTitle>
+            <DialogTitle>Buat Proyek</DialogTitle>
             <DialogDescription>
-              Create a project inside the selected organization. The project
-              code must be unique within that organization.
+              Buat proyek di organisasi yang dipilih. Kode proyek harus unik di organisasi tersebut.
             </DialogDescription>
           </DialogHeader>
 
@@ -89,7 +88,7 @@ export function ProjectCreateDialog({ organizations }: ProjectCreateDialogProps)
             />
 
             <div className="space-y-2">
-              <Label htmlFor="project-code">Project Code</Label>
+              <Label htmlFor="project-code">Kode Proyek</Label>
               <Input
                 id="project-code"
                 name="code"
@@ -101,11 +100,11 @@ export function ProjectCreateDialog({ organizations }: ProjectCreateDialogProps)
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="project-name">Project Name</Label>
+              <Label htmlFor="project-name">Nama Proyek</Label>
               <Input
                 id="project-name"
                 name="name"
-                placeholder="Project Name"
+                placeholder="Nama Proyek"
                 required
                 maxLength={150}
                 disabled={pending}
@@ -121,15 +120,15 @@ export function ProjectCreateDialog({ organizations }: ProjectCreateDialogProps)
                 disabled={pending}
                 className="border-input bg-background flex h-10 w-full rounded-md border px-3 py-2 text-sm"
               >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="completed">Completed</option>
+                <option value="active">Aktif</option>
+                <option value="inactive">Nonaktif</option>
+                <option value="completed">Selesai</option>
               </select>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="project-start-date">Start Date</Label>
+                <Label htmlFor="project-start-date">Tanggal Mulai</Label>
                 <Input
                   id="project-start-date"
                   name="startDate"
@@ -139,7 +138,7 @@ export function ProjectCreateDialog({ organizations }: ProjectCreateDialogProps)
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="project-end-date">End Date</Label>
+                <Label htmlFor="project-end-date">Tanggal Selesai</Label>
                 <Input
                   id="project-end-date"
                   name="endDate"
@@ -162,11 +161,11 @@ export function ProjectCreateDialog({ organizations }: ProjectCreateDialogProps)
                 onClick={() => setOpen(false)}
                 disabled={pending}
               >
-                Cancel
+                Batal
               </Button>
 
               <Button type="submit" disabled={pending || !organizationId}>
-                {pending ? "Creating..." : "Create Project"}
+                {pending ? "Membuat..." : "Buat Proyek"}
               </Button>
             </DialogFooter>
           </form>

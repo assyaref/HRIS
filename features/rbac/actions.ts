@@ -77,7 +77,7 @@ export async function createRoleAction(
   await requirePermission(user.id, PERMISSIONS.ROLES_CREATE);
 
   if (!user.organizationId) {
-    return toStateError("Your account is not assigned to an organization.");
+    return toStateError("Akun Anda belum ditetapkan ke organisasi.");
   }
 
   const parsed = createRoleSchema.safeParse({
@@ -103,7 +103,7 @@ export async function createRoleAction(
   const actorAuthorization = await getUserAuthorization(user.id);
   if (!actorAuthorization.isSuperAdmin && (actorAuthorization.roleCodes as readonly string[]).includes(code)) {
     return toStateError(undefined, {
-      code: `You cannot create a role with code "${code}" that is already assigned to your account.`,
+      code: `Anda tidak dapat membuat peran dengan kode "${code}" yang sudah ditetapkan ke akun Anda.`,
     });
   }
 
@@ -136,11 +136,11 @@ export async function createRoleAction(
       })
       .returning({ id: roles.id });
     const row = inserted[0];
-    if (!row) throw new Error("Role insert returned no row.");
+    if (!row) throw new Error("Peran gagal disimpan.");
     roleId = row.id;
   } catch (error) {
     console.error("[rbac] create role failed", error);
-    return toStateError("Could not create the role. Please try again.");
+    return toStateError("Peran gagal dibuat. Silakan coba lagi.");
   }
 
   try {
@@ -170,7 +170,7 @@ export async function updateRoleAction(
   await requirePermission(user.id, PERMISSIONS.ROLES_UPDATE);
 
   if (!user.organizationId) {
-    return toStateError("Your account is not assigned to an organization.");
+    return toStateError("Akun Anda belum ditetapkan ke organisasi.");
   }
 
   // Org-scoped load: roles owned by another organization are unreachable.
@@ -206,7 +206,7 @@ export async function updateRoleAction(
     const actorRoleIdSet = new Set(actorRoleIds.map(r => r.roleId));
     if (actorRoleIdSet.has(role.id)) {
       return toStateError(
-        "You cannot modify a role that is assigned to your own account."
+        "Anda tidak dapat mengubah peran yang ditetapkan ke akun Anda sendiri."
       );
     }
   }
@@ -216,7 +216,7 @@ export async function updateRoleAction(
   if (role.code === SUPERADMIN_ROLE_CODE) {
     if (!actorAuthorization.isSuperAdmin) forbidden();
     if (permissionCodes.length === 0) {
-      return toStateError("SUPERADMIN must retain at least one permission.");
+      return toStateError("SUPERADMIN harus memiliki minimal satu hak akses.");
     }
   }
 
@@ -230,7 +230,7 @@ export async function updateRoleAction(
       for (const code of permissionCodes) {
         if (!delegatable.has(code)) {
           return toStateError(
-            "You can only assign permissions that you are allowed to delegate."
+            "Anda hanya dapat menetapkan hak akses yang boleh Anda delegasikan."
           );
         }
       }
@@ -276,7 +276,7 @@ export async function updateRoleAction(
     role.name !== name || (role.description ?? "") !== (description ?? "");
 
   if (!permissionsChanged && !profileChanged) {
-    return { status: "success", message: "No changes were made to this role." };
+    return { status: "success", message: "Tidak ada perubahan pada peran ini." };
   }
 
   try {
@@ -301,7 +301,7 @@ export async function updateRoleAction(
     });
   } catch (error) {
     console.error("[rbac] update role failed", error);
-    return toStateError("Could not update the role. Please try again.");
+    return toStateError("Peran gagal diperbarui. Silakan coba lagi.");
   }
 
   try {
@@ -332,7 +332,7 @@ export async function updateRoleAction(
 
   revalidatePath(`/settings/roles/${role.id}`);
   revalidatePath("/settings/roles");
-  return { status: "success", message: "Role updated." };
+  return { status: "success", message: "Peran diperbarui." };
 }
 
 /** Delete a custom role in the actor's organization. */
@@ -343,7 +343,7 @@ export async function deleteRoleAction(
   await requirePermission(user.id, PERMISSIONS.ROLES_DELETE);
 
   if (!user.organizationId) {
-    return toStateError("Your account is not assigned to an organization.");
+    return toStateError("Akun Anda belum ditetapkan ke organisasi.");
   }
 
   const role = await getRoleInOrganization(roleId, user.organizationId);
@@ -352,10 +352,10 @@ export async function deleteRoleAction(
   // System roles (including SUPERADMIN) are part of the seeded catalog and
   // cannot be deleted through the UI.
   if (role.code === SUPERADMIN_ROLE_CODE) {
-    return toStateError("The SUPERADMIN role cannot be deleted.");
+    return toStateError("Peran SUPERADMIN tidak dapat dihapus.");
   }
   if (role.isSystem) {
-    return toStateError("System roles cannot be deleted.");
+    return toStateError("Peran sistem tidak dapat dihapus.");
   }
 
   // Additional protection: Cannot delete a role that is assigned to the actor's own account
@@ -369,7 +369,7 @@ export async function deleteRoleAction(
     const actorRoleIdSet = new Set(actorRoleIds.map(r => r.roleId));
     if (actorRoleIdSet.has(role.id)) {
       return toStateError(
-        "You cannot delete a role that is assigned to your own account."
+        "Anda tidak dapat menghapus peran yang ditetapkan ke akun Anda sendiri."
       );
     }
   }
@@ -380,7 +380,7 @@ export async function deleteRoleAction(
     .where(eq(userRoles.roleId, role.id));
   if (members.length > 0) {
     return toStateError(
-      "This role is assigned to users. Reassign those users before deleting it."
+      "Peran ini ditetapkan ke beberapa pengguna. Pindahkan pengguna tersebut sebelum menghapusnya."
     );
   }
 
@@ -393,7 +393,7 @@ export async function deleteRoleAction(
     });
   } catch (error) {
     console.error("[rbac] delete role failed", error);
-    return toStateError("Could not delete the role. Please try again.");
+    return toStateError("Peran gagal dihapus. Silakan coba lagi.");
   }
 
   try {

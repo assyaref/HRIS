@@ -22,7 +22,7 @@ import {
 } from "@/features/payroll/queries";
 
 export const metadata: Metadata = {
-  title: "Upload distribution payslip",
+  title: "Unggah slip gaji distribusi",
 };
 
 const CLOSED_PERIOD_STATUSES = new Set(["cancelled", "locked"]);
@@ -69,31 +69,29 @@ export default async function UploadDistributionPayslipPage({
             Unggah Slip Gaji Distribusi
           </h1>
           <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-            Publish a payslip PDF without running the payroll calculation
-            engine.
+            Terbitkan PDF slip gaji tanpa menjalankan mesin perhitungan payroll.
           </p>
         </div>
         <Link
           href="/payroll"
           className={buttonVariants({ variant: "outline", size: "sm" })}
         >
-          Back
+          Kembali
         </Link>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Payslip PDF</CardTitle>
+          <CardTitle>PDF slip gaji</CardTitle>
           <CardDescription>
-            One payslip per employee per period. The PDF password is derived
-            from the employee number and birth date and is never stored.
+            Satu slip gaji per karyawan per periode. Kata sandi PDF berasal dari nomor karyawan dan tanggal lahir, dan tidak pernah disimpan.
           </CardDescription>
         </CardHeader>
         <CardContent>
           {eligiblePeriods.length === 0 ? (
             <EmptyState
-              title="No open payroll periods"
-              description="Create a payroll period that is not locked or cancelled before uploading a distribution payslip."
+              title="Tidak ada periode payroll terbuka"
+              description="Buat periode payroll yang tidak terkunci atau dibatalkan sebelum mengunggah slip gaji distribusi."
             />
           ) : (
             <DistributionPayslipUpload

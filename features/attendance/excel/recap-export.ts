@@ -59,19 +59,19 @@ export const RECAP_EXPORT_SHEET_NAME = "Attendance Recap";
 export const RECAP_EXPORT_SUMMARY_SHEET_NAME = "Summary";
 
 const RECAP_EXPORT_HEADERS = [
-  "Employee No",
-  "Employee Name",
-  "Department",
-  "Work Location",
-  "Manager",
-  "Working Days",
-  "Present",
-  "Late",
-  "Leave",
-  "Sick",
-  "Permission",
-  "Absent",
-  "Attendance Rate (%)",
+  "No. Karyawan",
+  "Nama Karyawan",
+  "Departemen",
+  "Lokasi Kerja",
+  "Atasan",
+  "Hari Kerja",
+  "Hadir",
+  "Terlambat",
+  "Cuti",
+  "Sakit",
+  "Izin",
+  "Alpa",
+  "Tingkat Kehadiran (%)",
 ] as const;
 
 const HEADER_FILL = {
@@ -124,10 +124,10 @@ export async function buildAttendanceRecapWorkbook(
   // -- Summary -------------------------------------------------------------
   const summarySheet = workbook.addWorksheet(RECAP_EXPORT_SUMMARY_SHEET_NAME);
   const summaryPairs: [string, string][] = [
-    ["Report", "Attendance Recap"],
-    ["Organization", metadata.organizationName ?? "—"],
-    ["Period", metadata.periodLabel],
-    ["Generated At", metadata.generatedAtLabel],
+    ["Laporan", "Rekap Absensi"],
+    ["Organisasi", metadata.organizationName ?? "—"],
+    ["Periode", metadata.periodLabel],
+    ["Dibuat Pada", metadata.generatedAtLabel],
     ...metadata.filterSummary.map((line) => ["Filter", line] as [string, string]),
   ];
   for (const [label, value] of summaryPairs) {
@@ -136,15 +136,15 @@ export async function buildAttendanceRecapWorkbook(
   }
   summarySheet.addRow([]);
   const kpiPairs: [string, string][] = [
-    ["Total Employees", String(kpi.totalEmployees)],
-    ["Working Days", String(kpi.workingDays)],
-    ["Attendance Rate", formatAttendanceRate(kpi.attendanceRate)],
-    ["Present", String(kpi.present)],
-    ["Late", String(kpi.late)],
-    ["Absent", String(kpi.absent)],
-    ["Leave", String(kpi.leave)],
-    ["Sick", String(kpi.sick)],
-    ["Permission", String(kpi.permission)],
+    ["Total Karyawan", String(kpi.totalEmployees)],
+    ["Hari Kerja", String(kpi.workingDays)],
+    ["Tingkat Kehadiran", formatAttendanceRate(kpi.attendanceRate)],
+    ["Hadir", String(kpi.present)],
+    ["Terlambat", String(kpi.late)],
+    ["Alpa", String(kpi.absent)],
+    ["Cuti", String(kpi.leave)],
+    ["Sakit", String(kpi.sick)],
+    ["Izin", String(kpi.permission)],
   ];
   for (const [label, value] of kpiPairs) {
     const row = summarySheet.addRow([label, value]);

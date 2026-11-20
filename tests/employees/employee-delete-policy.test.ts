@@ -228,7 +228,7 @@ describe("delete action: guards in source", () => {
   it("returns the deactivation success message", () => {
     assert.equal(
       actionsCode.includes(
-        'message: "Employee deactivated successfully."'
+        'message: "Karyawan berhasil dinonaktifkan."'
       ),
       true
     );
@@ -347,8 +347,8 @@ describe("UI surface: destructive delete only when permitted", () => {
   it("dialog warns before deactivation and states history is retained", () => {
     assert.equal(dialogSource.includes("notifier.warning"), true);
     assert.equal(dialogSource.includes("notifier.success"), true);
-    assert.equal(dialogSource.includes("Historical records will be retained"), true);
-    assert.equal(dialogSource.includes("employment history remain linked"), true);
+    assert.equal(dialogSource.includes("Data historis tetap disimpan"), true);
+    assert.equal(dialogSource.includes("riwayat kepegawaian tetap tertaut"), true);
     assert.equal(dialogSource.includes("deleteEmployeeAction"), true);
   });
 

@@ -130,7 +130,7 @@ export function DialogContent({
         <button
           type="button"
           onClick={() => onOpenChange(false)}
-          aria-label="Close dialog"
+          aria-label="Tutup dialog"
           className="absolute top-4 right-4 inline-flex size-9 shrink-0 items-center justify-center rounded-[10px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           <svg

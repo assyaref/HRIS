@@ -41,11 +41,11 @@ export async function deleteAttendanceRecordAction(
     };
   }
   if (!user.organizationId) {
-    return { ok: false, message: "Your account is not assigned to an organization." };
+    return { ok: false, message: "Akun Anda belum ditetapkan ke organisasi." };
   }
   const organizationId = user.organizationId;
   if (!UUID_PATTERN.test(attendanceId)) {
-    return { ok: false, message: "Invalid attendance identifier." };
+    return { ok: false, message: "ID absensi tidak valid." };
   }
 
   const rows = await db
@@ -65,7 +65,7 @@ export async function deleteAttendanceRecordAction(
     )
     .limit(1);
   const record = rows[0];
-  if (!record) return { ok: false, message: "Attendance record not found." };
+  if (!record) return { ok: false, message: "Data absensi tidak ditemukan." };
 
   let eventCount = 0;
   try {

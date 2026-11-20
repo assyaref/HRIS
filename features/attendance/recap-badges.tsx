@@ -46,13 +46,13 @@ const DAY_BUCKET_BADGE_CLASS: Partial<Record<RecapDayBucket, string>> = {
 };
 
 const DAY_BUCKET_LABELS: Record<RecapDayBucket, string> = {
-  present: "Present",
-  sick: "Sick",
-  leave: "Leave",
-  permission: "Permission",
-  absent: "Absent",
-  extra: "Extra",
-  none: "Not counted",
+  present: "Hadir",
+  sick: "Sakit",
+  leave: "Cuti",
+  permission: "Izin",
+  absent: "Alpa",
+  extra: "Ekstra",
+  none: "Tidak dihitung",
 };
 
 /** One classified recap day in the employee drill-down. */
@@ -68,9 +68,9 @@ export function RecapDayStatusBadge({
       <Badge
         variant="secondary"
         className="border-amber/20 bg-surface-amber text-warning"
-        title="Checked in after the work-start cutoff"
+        title="Absen masuk setelah batas jam mulai kerja"
       >
-        Late
+        Terlambat
       </Badge>
     );
   }

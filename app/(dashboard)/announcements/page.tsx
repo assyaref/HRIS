@@ -17,7 +17,7 @@ import { ANNOUNCEMENT_TARGET_LABELS } from "@/features/announcements/constants";
 import { formatDateTime } from "@/features/payroll/format";
 
 export const metadata: Metadata = {
-  title: "Announcements",
+  title: "Pengumuman",
 };
 
 /**
@@ -70,7 +70,7 @@ export default async function AnnouncementsPage() {
             })}
           >
             <HrisIcon name="announcements" className="size-4" />
-            Management view
+            Tampilan manajemen
           </Link>
         ) : null}
       </div>

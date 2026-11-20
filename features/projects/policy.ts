@@ -40,12 +40,12 @@ export interface ProjectDecision {
 export const PROJECT_DECISION_MESSAGES: Record<ProjectDecisionReason, string> =
   {
     "superadmin.required":
-      "Project administration is restricted to Super Administrators.",
+      "Administrasi proyek hanya untuk Super Administrator.",
     "dependent.records":
-      "Project cannot be deleted because it is still referenced by other records.",
+      "Proyek tidak dapat dihapus karena masih dirujuk oleh data lain.",
     "organization.change.blocked":
-      "The project cannot be moved to another organization while it is referenced by assignments, attendance records or work locations.",
-    "not.found": "Project not found.",
+      "Proyek tidak dapat dipindah ke organisasi lain selama masih dirujuk oleh penugasan, absensi, atau lokasi kerja.",
+    "not.found": "Proyek tidak ditemukan.",
   };
 
 /** Per-category dependency counts collected server-side before a decision. */

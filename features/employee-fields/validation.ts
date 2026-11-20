@@ -155,21 +155,21 @@ export function validateCustomFieldDefinition(
     typeof input.label === "string" &&
       input.label.trim().length > 0 &&
       input.label.trim().length <= LIMITS.label,
-    `Label must be 1-${LIMITS.label} characters.`
+    `Label harus 1–${LIMITS.label} karakter.`
   );
 
   if (input.description != null) {
     push(
       errors,
       input.description.length <= LIMITS.description,
-      `Description must be at most ${LIMITS.description} characters.`
+      `Deskripsi maksimal ${LIMITS.description} karakter.`
     );
   }
 
   push(
     errors,
     CUSTOM_FIELD_TYPES.includes(input.fieldType),
-    `Field type must be one of: ${CUSTOM_FIELD_TYPES.join(", ")}.`
+    `Jenis field harus salah satu dari: ${CUSTOM_FIELD_TYPES.join(", ")}.`
   );
 
   if (input.section != null) {
@@ -177,7 +177,7 @@ export function validateCustomFieldDefinition(
       errors,
       input.section.trim().length > 0 &&
         input.section.trim().length <= LIMITS.section,
-      `Section must be 1-${LIMITS.section} characters.`
+      `Bagian harus 1–${LIMITS.section} karakter.`
     );
   }
 
@@ -185,7 +185,7 @@ export function validateCustomFieldDefinition(
     push(
       errors,
       Number.isInteger(input.displayOrder) && input.displayOrder >= 0,
-      "Display order must be a non-negative integer."
+      "Urutan tampilan harus bilangan bulat tidak negatif."
     );
   }
 
@@ -199,12 +199,12 @@ export function validateCustomFieldDefinition(
     push(
       errors,
       options.length > 0,
-      `Options are required for ${input.fieldType} fields.`
+      `Pilihan wajib diisi untuk field ${input.fieldType}.`
     );
     push(
       errors,
       options.length <= LIMITS.maxOptions,
-      `A field can have at most ${LIMITS.maxOptions} options.`
+      `Satu field maksimal memiliki ${LIMITS.maxOptions} pilihan.`
     );
     push(
       errors,
@@ -212,12 +212,12 @@ export function validateCustomFieldDefinition(
         (option) =>
           option.length > 0 && option.length <= LIMITS.optionLabel
       ),
-      `Each option must be 1-${LIMITS.optionLabel} characters.`
+      `Setiap pilihan harus 1–${LIMITS.optionLabel} karakter.`
     );
     push(
       errors,
       new Set(options).size === options.length,
-      "Options must be unique."
+      "Pilihan tidak boleh ganda."
     );
   }
 
@@ -310,7 +310,7 @@ export function parseCustomFieldValue(
     case "textarea": {
       const max = fieldType === "textarea" ? LIMITS.textarea : LIMITS.text;
       if (text.length > max) {
-        return fail(`Value must be at most ${max} characters.`);
+        return fail(`Nilai maksimal ${max} karakter.`);
       }
       return success((value) => {
         value.valueText = text;
@@ -319,7 +319,7 @@ export function parseCustomFieldValue(
 
     case "email": {
       if (text.length > LIMITS.email || !EMAIL_PATTERN.test(text)) {
-        return fail("Value must be a valid email address.");
+        return fail("Nilai harus berupa alamat email yang valid.");
       }
       return success((value) => {
         value.valueText = text;
@@ -328,7 +328,7 @@ export function parseCustomFieldValue(
 
     case "phone": {
       if (text.length > LIMITS.phone || !/^\+?[0-9()\-\s]{5,}$/.test(text)) {
-        return fail("Value must be a valid phone number.");
+        return fail("Nilai harus berupa nomor telepon yang valid.");
       }
       return success((value) => {
         value.valueText = text;
@@ -337,7 +337,7 @@ export function parseCustomFieldValue(
 
     case "url": {
       if (text.length > LIMITS.url || !isValidUrl(text)) {
-        return fail("Value must be a valid http(s) URL.");
+        return fail("Nilai harus berupa URL http(s) yang valid.");
       }
       return success((value) => {
         value.valueText = text;
@@ -348,12 +348,12 @@ export function parseCustomFieldValue(
     case "currency": {
       const numeric = Number(text);
       if (!Number.isFinite(numeric)) {
-        return fail("Value must be a number.");
+        return fail("Nilai harus berupa angka.");
       }
       if (fieldType === "currency") {
         const rounded = Math.round(numeric * 100) / 100;
         if (Math.abs(rounded) > Number.MAX_SAFE_INTEGER / 100) {
-          return fail("Value is too large.");
+          return fail("Nilai terlalu besar.");
         }
         return success((value) => {
           value.valueNumber = rounded.toFixed(2);
@@ -366,7 +366,7 @@ export function parseCustomFieldValue(
 
     case "date": {
       if (!isValidIsoDate(text)) {
-        return fail("Value must be a valid date in YYYY-MM-DD format.");
+        return fail("Nilai harus berupa tanggal valid dengan format YYYY-MM-DD.");
       }
       return success((value) => {
         value.valueDate = new Date(`${text}T00:00:00.000Z`);
@@ -376,7 +376,7 @@ export function parseCustomFieldValue(
     case "datetime": {
       const parsed = new Date(text);
       if (Number.isNaN(parsed.getTime())) {
-        return fail("Value must be a valid date-time.");
+        return fail("Nilai harus berupa tanggal dan jam yang valid.");
       }
       return success((value) => {
         value.valueDate = parsed;
@@ -386,7 +386,7 @@ export function parseCustomFieldValue(
     case "checkbox": {
       const normalized = text.toLowerCase();
       if (!["true", "false", "1", "0", "yes", "no"].includes(normalized)) {
-        return fail("Value must be a boolean (true/false).");
+        return fail("Nilai harus boolean (true/false).");
       }
       return success((value) => {
         value.valueBoolean = ["true", "1", "yes"].includes(normalized);
@@ -397,7 +397,7 @@ export function parseCustomFieldValue(
     case "radio": {
       if (!options.includes(text)) {
         return fail(
-          `Value must be one of: ${options.slice(0, 10).join(", ")}.`
+          `Nilai harus salah satu dari: ${options.slice(0, 10).join(", ")}.`
         );
       }
       return success((value) => {
@@ -412,12 +412,12 @@ export function parseCustomFieldValue(
         .filter((part) => part.length > 0);
       if (selected.length > LIMITS.maxSelectedOptions) {
         return fail(
-          `At most ${LIMITS.maxSelectedOptions} options may be selected.`
+          `Maksimal ${LIMITS.maxSelectedOptions} pilihan yang dapat dipilih.`
         );
       }
       for (const option of selected) {
         if (!options.includes(option)) {
-          return fail(`Unknown option "${option}".`);
+          return fail(`Pilihan "${option}" tidak dikenal.`);
         }
       }
       return success((value) => {

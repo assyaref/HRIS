@@ -31,17 +31,17 @@ function statusLabel(status: BulkDistributionPayslipEntryResult["status"]) {
     case "created":
       return "Uploaded";
     case "invalid_filename":
-      return "Invalid filename";
+      return "Nama berkas tidak valid";
     case "unknown_employee":
-      return "Unknown employee";
+      return "Karyawan tidak dikenal";
     case "duplicate_employee":
-      return "Duplicate";
+      return "Duplikasi";
     case "missing_birth_date":
-      return "Missing birth date";
+      return "Tanggal lahir belum diisi";
     case "invalid_file":
-      return "Invalid file";
+      return "Berkas tidak valid";
     case "write_failed":
-      return "Failed";
+      return "Gagal";
     default:
       return status;
   }
@@ -126,9 +126,7 @@ export function BulkDistributionPayslipUpload({
 
     if (problems.length > 0) {
       setFileError(
-        `${problems.length} file${
-          problems.length === 1 ? "" : "s"
-        } cannot be uploaded and will be skipped:\n${problems.join("\n")}`
+        `${problems.length} berkas tidak dapat diunggah dan akan dilewati:\n${problems.join("\n")}`
       );
     }
   }
@@ -138,12 +136,12 @@ export function BulkDistributionPayslipUpload({
     setFileError(null);
 
     if (!periodId) {
-      setFileError("Please select a payroll period.");
+      setFileError("Pilih periode payroll.");
       return;
     }
 
     if (files.length === 0) {
-      setFileError("Please select at least one PDF payslip.");
+      setFileError("Pilih minimal satu slip gaji PDF.");
       return;
     }
 
@@ -184,7 +182,7 @@ export function BulkDistributionPayslipUpload({
   return (
     <div className="space-y-5">
       <div className="space-y-1.5">
-        <Label htmlFor="bulk-period">Payroll period</Label>
+        <Label htmlFor="bulk-period">Periode payroll</Label>
         <select
           id="bulk-period"
           value={periodId}
@@ -192,7 +190,7 @@ export function BulkDistributionPayslipUpload({
           onChange={(event) => setPeriodId(event.target.value)}
           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <option value="">Select a period…</option>
+          <option value="">Pilih periode…</option>
           {periods.map((period) => (
             <option key={period.id} value={period.id}>
               {period.code} · {period.name}
@@ -202,7 +200,7 @@ export function BulkDistributionPayslipUpload({
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="bulk-files">Payslip PDFs</Label>
+        <Label htmlFor="bulk-files">PDF slip gaji</Label>
         <input
           id="bulk-files"
           ref={inputRef}
@@ -214,15 +212,13 @@ export function BulkDistributionPayslipUpload({
           className="block w-full cursor-pointer rounded-md border border-input bg-background px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm file:font-medium disabled:cursor-not-allowed disabled:opacity-50"
         />
         <p className="text-xs text-muted-foreground">
-          Up to {PAYSLIP_BULK_MAX_FILES} PDFs. Each filename must start with the
-          employee number, e.g. 03233.pdf. The PDF password (employee number +
-          birth date DDMMYYYY) is applied on the server and never stored.
+          Maksimal {PAYSLIP_BULK_MAX_FILES} PDF. Setiap nama berkas harus diawali nomor karyawan, mis. 03233.pdf. Kata sandi PDF (nomor karyawan + tanggal lahir DDMMYYYY) diterapkan di server dan tidak pernah disimpan.
         </p>
       </div>
 
       {files.length > 0 ? (
         <p className="text-sm text-muted-foreground">
-          {files.length} file{files.length === 1 ? "" : "s"} ready to upload.
+          {files.length} berkas siap diunggah.
         </p>
       ) : null}
 
@@ -243,15 +239,13 @@ export function BulkDistributionPayslipUpload({
             disabled={pending}
             onClick={reset}
           >
-            Clear
+            Bersihkan
           </Button>
         ) : null}
         <Button type="button" disabled={pending} onClick={submit}>
           {pending
-            ? "Uploading…"
-            : `Upload ${files.length > 0 ? files.length : ""} payslip${
-                files.length === 1 ? "" : "s"
-              }`}
+            ? "Mengunggah…"
+            : `Unggah ${files.length > 0 ? files.length : ""} slip gaji`}
         </Button>
       </div>
 
@@ -273,10 +267,10 @@ export function BulkDistributionPayslipUpload({
               <thead className="bg-muted">
                 <tr>
                   <th className="px-3 py-2 font-semibold text-muted-foreground">
-                    File
+                    Berkas
                   </th>
                   <th className="px-3 py-2 font-semibold text-muted-foreground">
-                    Employee
+                    Karyawan
                   </th>
                   <th className="px-3 py-2 font-semibold text-muted-foreground">
                     Status

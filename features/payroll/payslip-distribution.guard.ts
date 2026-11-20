@@ -59,14 +59,14 @@ export function buildDistributionPayslipNumber(
   const normalizedEmployeeNumber = employeeNumber.trim();
 
   if (!EMPLOYEE_NUMBER_PATTERN.test(normalizedEmployeeNumber)) {
-    throw new Error("Employee number must contain 1–32 digits.");
+    throw new Error("Nomor karyawan harus berisi 1–32 digit.");
   }
 
   const payslipNumber = `PS-${normalizedPeriodCode}-D-${normalizedEmployeeNumber}`;
 
   if (!DISTRIBUTION_PAYSLIP_NUMBER_PATTERN.test(payslipNumber)) {
     throw new Error(
-      "The payroll period code cannot be used for a distribution payslip."
+      "Kode periode payroll tidak dapat dipakai untuk slip gaji distribusi."
     );
   }
 
@@ -109,14 +109,14 @@ export function buildDistributionPayslipUploadDecision(
   if (!input.employeeNumber || input.employeeNumber.length === 0) {
     return {
       allowed: false,
-      message: "Employee number is required before a payslip can be uploaded.",
+      message: "Nomor karyawan wajib ada sebelum slip gaji dapat diunggah.",
     };
   }
 
   if (!input.birthDate) {
     return {
       allowed: false,
-      message: "Employee birth date is required before a payslip can be uploaded.",
+      message: "Tanggal lahir karyawan diperlukan sebelum slip gaji dapat diunggah.",
     };
   }
 
@@ -124,7 +124,7 @@ export function buildDistributionPayslipUploadDecision(
     return {
       allowed: false,
       message:
-        "Distribution payslips cannot be uploaded for a cancelled payroll period.",
+        "Slip gaji distribusi tidak dapat diunggah untuk periode payroll yang dibatalkan.",
     };
   }
 
@@ -132,7 +132,7 @@ export function buildDistributionPayslipUploadDecision(
     return {
       allowed: false,
       message:
-        "Distribution payslips cannot be uploaded for a locked payroll period.",
+        "Slip gaji distribusi tidak dapat diunggah untuk periode payroll yang terkunci.",
     };
   }
 
@@ -140,7 +140,7 @@ export function buildDistributionPayslipUploadDecision(
     return {
       allowed: false,
       message:
-        "This employee already has a payslip for this payroll period.",
+        "Karyawan ini sudah memiliki slip gaji untuk periode payroll ini.",
     };
   }
 
@@ -171,7 +171,7 @@ export function buildPayslipPublishDecision(
     return {
       allowed: false,
       message:
-        "Only generated payslips can be published. Published or revoked payslips are immutable.",
+        "Hanya slip gaji berstatus dibuat yang dapat diterbitkan. Slip gaji terbit atau dicabut tidak dapat diubah.",
     };
   }
 
@@ -179,7 +179,7 @@ export function buildPayslipPublishDecision(
     return {
       allowed: false,
       message:
-        "The payslip cannot be published without an encrypted PDF document.",
+        "Slip gaji tidak dapat diterbitkan tanpa dokumen PDF terenkripsi.",
     };
   }
 

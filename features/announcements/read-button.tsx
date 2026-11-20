@@ -29,7 +29,7 @@ export function MarkAnnouncementReadButton({
       disabled={pending}
       onClick={markRead}
     >
-      {pending ? "Marking…" : "Mark as read"}
+      {pending ? "Marking…" : "Tandai sudah dibaca"}
     </Button>
   );
 }

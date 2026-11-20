@@ -41,8 +41,8 @@ export function OrganizationsManager({
   if (organizations.length === 0) {
     return (
       <EmptyState
-        title="No organizations found"
-        description="Adjust the search or status filter, or add the first organization."
+        title="Organisasi tidak ditemukan"
+        description="Ubah pencarian atau filter status, atau tambahkan organisasi pertama."
       />
     );
   }
@@ -53,14 +53,14 @@ export function OrganizationsManager({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Organization</TableHead>
-              <TableHead>Code</TableHead>
+              <TableHead>Organisasi</TableHead>
+              <TableHead>Kode</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Employees</TableHead>
-              <TableHead>Users</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead>Updated</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>Karyawan</TableHead>
+              <TableHead>Pengguna</TableHead>
+              <TableHead>Dibuat</TableHead>
+              <TableHead>Diperbarui</TableHead>
+              <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -93,7 +93,7 @@ export function OrganizationsManager({
                     </span>
                     {isSystem ? (
                       <span className="ml-2 rounded bg-secondary px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
-                        Reserved
+                        Dicadangkan
                       </span>
                     ) : null}
                   </TableCell>
@@ -121,7 +121,7 @@ export function OrganizationsManager({
                           size: "sm",
                         })}
                       >
-                        View
+                        Lihat
                       </Link>
                       <OrganizationLogoDialog
                         organizationId={organization.id}
@@ -177,27 +177,27 @@ export function OrganizationsManager({
               </div>
               <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
                 <div>
-                  <dt className="text-xs text-muted-foreground">Employees</dt>
+                  <dt className="text-xs text-muted-foreground">Karyawan</dt>
                   <dd className="tabular-nums">
                     {organization.employeeCount}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-muted-foreground">Users</dt>
+                  <dt className="text-xs text-muted-foreground">Pengguna</dt>
                   <dd className="tabular-nums">{organization.userCount}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-muted-foreground">Created</dt>
+                  <dt className="text-xs text-muted-foreground">Dibuat</dt>
                   <dd>{formatDate(organization.createdAt)}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-muted-foreground">Updated</dt>
+                  <dt className="text-xs text-muted-foreground">Diperbarui</dt>
                   <dd>{formatDate(organization.updatedAt)}</dd>
                 </div>
               </dl>
               {isSystem ? (
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Reserved system organization — protected.
+                  Organisasi sistem yang dicadangkan — dilindungi.
                 </p>
               ) : null}
               <div className="mt-3 flex justify-end gap-1">
@@ -208,7 +208,7 @@ export function OrganizationsManager({
                     size: "sm",
                   })}
                 >
-                  View
+                  Lihat
                 </Link>
                 <OrganizationLogoDialog
                   organizationId={organization.id}

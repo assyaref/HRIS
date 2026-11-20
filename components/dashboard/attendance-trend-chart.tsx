@@ -82,7 +82,7 @@ export function AttendanceTrendChart({
         viewBox={`0 0 ${viewW} ${height}`}
         preserveAspectRatio="xMidYMid meet"
         className="block"
-        aria-label="Attendance trend"
+        aria-label="Tren kehadiran"
         onMouseMove={() => setActiveIndex(null)}
         onMouseLeave={() => setActiveIndex(null)}
       >

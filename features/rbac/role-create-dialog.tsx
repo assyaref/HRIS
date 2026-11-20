@@ -23,7 +23,7 @@ function SubmitButton() {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending}>
-      {pending ? "Creating..." : "Create role"}
+      {pending ? "Membuat..." : "Buat peran"}
     </Button>
   );
 }
@@ -43,12 +43,12 @@ export function CreateRoleDialog() {
   return (
     <>
       <Button type="button" onClick={() => setOpen(true)}>
-        New role
+        Peran baru
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create role</DialogTitle>
+            <DialogTitle>Buat peran</DialogTitle>
             <DialogDescription>
               Roles group permissions. System catalog roles are pre-seeded;
               use this to add organization-specific custom roles.
@@ -66,7 +66,7 @@ export function CreateRoleDialog() {
 
           <form action={formAction} noValidate className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="role-code">Code</Label>
+              <Label htmlFor="role-code">Kode</Label>
               <Input
                 id="role-code"
                 name="code"
@@ -84,14 +84,13 @@ export function CreateRoleDialog() {
                 </p>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  Uppercase letters, digits and underscores. Reserved system
-                  role codes cannot be used.
+                  Huruf kapital, angka, dan garis bawah. Kode peran sistem yang dicadangkan tidak dapat dipakai.
                 </p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="role-name">Name</Label>
+              <Label htmlFor="role-name">Nama</Label>
               <Input
                 id="role-name"
                 name="name"
@@ -109,11 +108,11 @@ export function CreateRoleDialog() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="role-description">Description</Label>
+              <Label htmlFor="role-description">Deskripsi</Label>
               <Input
                 id="role-description"
                 name="description"
-                placeholder="What is this role responsible for?"
+                placeholder="Apa tanggung jawab peran ini?"
               />
             </div>
 
@@ -123,7 +122,7 @@ export function CreateRoleDialog() {
                 variant="ghost"
                 onClick={() => setOpen(false)}
               >
-                Cancel
+                Batal
               </Button>
               <SubmitButton />
             </DialogFooter>

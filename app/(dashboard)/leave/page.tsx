@@ -107,7 +107,7 @@ export default async function LeavePage({
             href="/leave/management"
             className={buttonVariants({ variant: "outline", size: "sm" })}
           >
-            Management
+            Manajemen
           </Link>
         ) : null}
       </div>

@@ -54,7 +54,7 @@ describe("validateNormalizedEmployee", () => {
       status: "active",
     });
     assert.equal(result.valid, false);
-    if (!result.valid) assert.equal(result.error, "First name is required.");
+    if (!result.valid) assert.equal(result.error, "Nama depan wajib diisi.");
   });
 
   it("FAIL: Both names empty", () => {
@@ -67,7 +67,7 @@ describe("validateNormalizedEmployee", () => {
       status: "active",
     });
     assert.equal(result.valid, false);
-    if (!result.valid) assert.equal(result.error, "First name is required.");
+    if (!result.valid) assert.equal(result.error, "Nama depan wajib diisi.");
   });
 
   it("rejects missing employee number", () => {
@@ -80,7 +80,7 @@ describe("validateNormalizedEmployee", () => {
       status: "active",
     });
     assert.equal(result.valid, false);
-    if (!result.valid) assert.equal(result.error, "Employee number is required.");
+    if (!result.valid) assert.equal(result.error, "Nomor karyawan wajib diisi.");
   });
 
   it("trims whitespace on names", () => {
@@ -177,7 +177,7 @@ describe("payloadRowToImportedEmployee", () => {
       status: "active",
     });
     assert.equal(result.employee, null);
-    assert.equal(result.error, "First name is required.");
+    assert.equal(result.error, "Nama depan wajib diisi.");
   });
 
   it("FAIL: Both names empty", () => {
@@ -190,7 +190,7 @@ describe("payloadRowToImportedEmployee", () => {
       status: "active",
     });
     assert.equal(result.employee, null);
-    assert.equal(result.error, "First name is required.");
+    assert.equal(result.error, "Nama depan wajib diisi.");
   });
 });
 

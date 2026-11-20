@@ -13,7 +13,7 @@ import { listTestDataEmployees } from "@/features/employees/test-data-purge.quer
 import { TEST_DATA_EMPLOYEE_NUMBER_PREFIX } from "@/features/employees/test-data-purge-policy";
 
 export const metadata: Metadata = {
-  title: "Test Data",
+  title: "Data Uji",
 };
 
 /**
@@ -48,7 +48,7 @@ export default async function TestDataPage() {
             Data Uji
           </h1>
           <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-            Remove records this organization created as test data.
+            Hapus data yang dibuat organisasi ini sebagai data uji.
           </p>
         </div>
         <div
@@ -81,35 +81,31 @@ export default async function TestDataPage() {
       <div className="space-y-3 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
           <p className="font-medium text-destructive">
-            Permanent deletion — this cannot be undone
+            Hapus permanen — tindakan ini tidak dapat dibatalkan
           </p>
-          <Badge variant="destructive">SUPERADMIN only</Badge>
+          <Badge variant="destructive">Khusus SUPERADMIN</Badge>
         </div>
         <ul className="space-y-1 text-sm text-destructive/90">
           <li>
-            Nothing outside that prefix is ever eligible, and the filter runs in
-            the database.
+            Di luar awalan tersebut tidak ada yang memenuhi syarat, dan penyaringan berjalan di database.
           </li>
           <li>
-            Test Data Purge is restricted to employees whose employee number
-            starts with{" "}
+            Pembersihan Data Uji hanya untuk karyawan yang nomor karyawannya diawali{" "}
             <span className="font-mono">{TEST_DATA_EMPLOYEE_NUMBER_PREFIX}</span>.
             Only records classified as eligible TEST data can be removed.
             Protected production records and unrelated records will block the
             purge.
           </li>
           <li>
-            Employment history belonging to eligible{" "}
+            Riwayat kepegawaian milik data{" "}
             <span className="font-mono">{TEST_DATA_EMPLOYEE_NUMBER_PREFIX}</span>
-            records may be removed as part of the TEST DATA exception. This does
-            not change the normal Permanent Delete policy.
+            yang memenuhi syarat dapat dihapus sebagai bagian dari pengecualian DATA UJI. Ini tidak mengubah kebijakan Hapus Permanen yang biasa.
           </li>
           <li>
-            Deletion runs in a single transaction. If any protected record is
-            found, nothing is deleted at all.
+            Penghapusan berjalan dalam satu transaksi. Jika ditemukan data yang dilindungi, tidak ada yang dihapus sama sekali.
           </li>
           <li>
-            Every attempt is recorded in the audit log, including refusals.
+            Setiap percobaan dicatat di log audit, termasuk yang ditolak.
           </li>
         </ul>
       </div>

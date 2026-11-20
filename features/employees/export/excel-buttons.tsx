@@ -38,7 +38,7 @@ export function EmployeeExcelButtons({
     <a
       href={`/api/employees/export?${params.toString()}`}
       className={buttonVariants({ variant: "outline" })}
-      aria-label="Export employees to Excel"
+      aria-label="Ekspor karyawan ke Excel"
     >
       <HrisIcon name="download" className="size-4" />
       Export Excel

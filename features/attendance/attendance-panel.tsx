@@ -201,7 +201,7 @@ export function AttendancePanel({
   }
 
   const isCheckIn = mode === "check_in";
-  const actionLabel = isCheckIn ? "Check in" : "Check out";
+  const actionLabel = isCheckIn ? "Absen masuk" : "Absen pulang";
   const submitEnabled = isAttendanceSubmitEnabled({
     mode,
     disabled,
@@ -215,10 +215,10 @@ export function AttendancePanel({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{isCheckIn ? "Check in" : "Check out"}</CardTitle>
+        <CardTitle>{isCheckIn ? "Absen masuk" : "Absen pulang"}</CardTitle>
         <CardDescription>
           {isCheckIn
-            ? "Select your project and work location, then capture your location."
+            ? "Pilih proyek dan lokasi kerja, lalu ambil lokasi Anda."
             : "Capture your location again to complete today's attendance."}
         </CardDescription>
       </CardHeader>
@@ -243,7 +243,7 @@ export function AttendancePanel({
         {isCheckIn && options.length > 0 ? (
           <div className="space-y-3">
             <div className="space-y-2">
-              <Label htmlFor="attendance-work-location">Work location</Label>
+              <Label htmlFor="attendance-work-location">Lokasi kerja</Label>
               <select
                 id="attendance-work-location"
                 value={selectedWorkLocationId}
@@ -271,7 +271,7 @@ export function AttendancePanel({
         ) : null}
 
         <div className="space-y-2">
-          <Label>GPS status</Label>
+          <Label>Status GPS</Label>
           <LocationCapture
             onAcquired={onAcquired}
             onIssue={onIssue}
@@ -294,13 +294,13 @@ export function AttendancePanel({
         ) : null}
 
         <div className="space-y-2">
-          <Label htmlFor="attendance-notes">Notes (optional)</Label>
+          <Label htmlFor="attendance-notes">Catatan (opsional)</Label>
           <Input
             id="attendance-notes"
             value={notes}
             onChange={(event) => setNotes(event.target.value)}
             maxLength={500}
-            placeholder="Optional note for this attendance"
+            placeholder="Catatan opsional untuk absensi ini"
             disabled={disabled || pending}
           />
         </div>

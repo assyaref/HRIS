@@ -102,7 +102,7 @@ const LEGEND: Array<{
   { key: "hadir", label: "Hadir", dot: "bg-[#22C55E]" },
   { key: "izin", label: "Izin", dot: "bg-[#F5B400]" },
   { key: "cuti", label: "Cuti", dot: "bg-[#8B5CF6]" },
-  { key: "alpha", label: "Alpha", dot: "bg-[#EF4444]" },
+  { key: "alpha", label: "Alpa", dot: "bg-[#EF4444]" },
 ];
 
 /**

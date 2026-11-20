@@ -72,9 +72,9 @@ export function warningForDetail(detail: ImportResultDetail): string {
     case "created":
       return "Initial password configured as Employee Number; change required on first login.";
     case "skipped_no_email":
-      return "No user account created - no email address.";
+      return "Akun pengguna tidak dibuat - tidak ada alamat email.";
     case "skipped_inactive":
-      return "No user account created - employee is inactive.";
+      return "Akun pengguna tidak dibuat - karyawan nonaktif.";
     case "skipped_not_enabled":
       return "Account provisioning disabled for this import.";
     default:

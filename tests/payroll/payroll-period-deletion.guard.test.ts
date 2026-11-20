@@ -117,7 +117,7 @@ describe("buildLockedPayrollPeriodDeletionDecision", () => {
 
     assert.equal(
       decision.message,
-      "This locked payroll period has generated payslips and cannot be deleted. Revoke the payslips first."
+      "Periode payroll terkunci ini memiliki slip gaji berstatus dibuat (generated) dan tidak dapat dihapus. Cabut slip gajinya terlebih dahulu."
     );
   });
 });

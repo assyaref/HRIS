@@ -433,7 +433,7 @@ describe("Project eligibility guard", () => {
       projectIsUnchanged: false,
     });
     assert.equal(decision.ok, false);
-    if (!decision.ok) assert.match(decision.message, /not available/i);
+    if (!decision.ok) assert.match(decision.message, /tidak tersedia/i);
   });
 
   it("rejects a cross-organization project (generic, existence hidden)", () => {
@@ -442,7 +442,7 @@ describe("Project eligibility guard", () => {
       project: { id: PROJECT_A, organizationId: ORG_B, status: "active" },
       projectIsUnchanged: false,
     });
-    assert.deepEqual(decision, { ok: false, message: "The selected project is not available." });
+    assert.deepEqual(decision, { ok: false, message: "Proyek yang dipilih tidak tersedia." });
   });
 
   it("rejects binding to an inactive/completed project when the binding changes", () => {
@@ -452,7 +452,7 @@ describe("Project eligibility guard", () => {
       projectIsUnchanged: false,
     });
     assert.equal(inactive.ok, false);
-    if (!inactive.ok) assert.match(inactive.message, /Only active projects/i);
+    if (!inactive.ok) assert.match(inactive.message, /Hanya proyek aktif/i);
 
     const completed = evaluateWorkLocationProjectEligibility({
       actorOrganizationId: ORG_A,
@@ -508,7 +508,7 @@ describe("Operational warnings (warnings, not blockers)", () => {
       hasActiveAssignments: true,
     });
     assert.equal(warnings.length, 1);
-    assert.match(warnings[0], /inactive/i);
+    assert.match(warnings[0], /nonaktif/i);
   });
 
   it("warns when the bound project is no longer active", () => {
@@ -517,7 +517,7 @@ describe("Operational warnings (warnings, not blockers)", () => {
       projectStatus: "inactive",
       hasActiveAssignments: true,
     });
-    assert.ok(warnings.some((warning) => /no longer active/i.test(warning)));
+    assert.ok(warnings.some((warning) => /sudah tidak aktif/i.test(warning)));
   });
 
   it("warns when no active employee assignment exists for the project", () => {
@@ -527,7 +527,7 @@ describe("Operational warnings (warnings, not blockers)", () => {
       hasActiveAssignments: false,
     });
     assert.ok(
-      warnings.some((warning) => /active employee project assignment/i.test(warning))
+      warnings.some((warning) => /penugasan proyek karyawan yang aktif/i.test(warning))
     );
   });
 

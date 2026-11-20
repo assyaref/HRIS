@@ -66,7 +66,7 @@ function isUniqueViolation(error: unknown): boolean {
 }
 
 function messageFromIssues(error: { issues: { message: string }[] }): string {
-  return error.issues[0]?.message ?? "Invalid input.";
+  return error.issues[0]?.message ?? "Isian tidak valid.";
 }
 
 /** UTC midnight for today (used as the default end date). */
@@ -85,7 +85,7 @@ export async function createEmployeePayrollComponentAction(
   if (!user.organizationId) {
     return {
       ok: false,
-      message: "Your account is not assigned to an organization.",
+      message: "Akun Anda belum ditetapkan ke organisasi.",
     };
   }
   const organizationId = user.organizationId;
@@ -139,7 +139,7 @@ export async function createEmployeePayrollComponentAction(
 
     const assignmentId = inserted[0]?.id;
     if (!assignmentId) {
-      return { ok: false, message: "The payroll component could not be assigned." };
+      return { ok: false, message: "Komponen payroll gagal ditetapkan." };
     }
 
     await writeAuditLog({
@@ -163,7 +163,7 @@ export async function createEmployeePayrollComponentAction(
     revalidatePath(`/employees/${values.employeeId}`);
     return {
       ok: true,
-      message: "Payroll component assigned to the employee.",
+      message: "Komponen payroll ditetapkan ke karyawan.",
       assignmentId,
     };
   } catch (error) {
@@ -172,13 +172,13 @@ export async function createEmployeePayrollComponentAction(
       return {
         ok: false,
         message:
-          "This employee already has an active assignment for this payroll component.",
+          "Karyawan ini sudah memiliki penetapan aktif untuk komponen payroll ini.",
       };
     }
     console.error("[payroll] create employee payroll component failed", error);
     return {
       ok: false,
-      message: "The payroll component could not be assigned. Please try again.",
+      message: "Komponen payroll gagal ditetapkan. Silakan coba lagi.",
     };
   }
 }
@@ -193,7 +193,7 @@ export async function updateEmployeePayrollComponentAction(
   if (!user.organizationId) {
     return {
       ok: false,
-      message: "Your account is not assigned to an organization.",
+      message: "Akun Anda belum ditetapkan ke organisasi.",
     };
   }
   const organizationId = user.organizationId;
@@ -241,7 +241,7 @@ export async function updateEmployeePayrollComponentAction(
       .returning({ id: employeePayrollComponents.id });
 
     if (!updated[0]) {
-      return { ok: false, message: "Payroll component assignment not found." };
+      return { ok: false, message: "Penetapan komponen payroll tidak ditemukan." };
     }
 
     await writeAuditLog({
@@ -262,12 +262,12 @@ export async function updateEmployeePayrollComponentAction(
     });
 
     revalidatePath(`/employees/${assignment?.employeeId ?? ""}`);
-    return { ok: true, message: "Payroll component assignment updated." };
+    return { ok: true, message: "Penetapan komponen payroll diperbarui." };
   } catch (error) {
     console.error("[payroll] update employee payroll component failed", error);
     return {
       ok: false,
-      message: "The payroll component assignment could not be updated. Please try again.",
+      message: "Penetapan komponen payroll gagal diperbarui. Silakan coba lagi.",
     };
   }
 }
@@ -285,7 +285,7 @@ export async function endEmployeePayrollComponentAction(
   if (!user.organizationId) {
     return {
       ok: false,
-      message: "Your account is not assigned to an organization.",
+      message: "Akun Anda belum ditetapkan ke organisasi.",
     };
   }
   const organizationId = user.organizationId;
@@ -340,12 +340,12 @@ export async function endEmployeePayrollComponentAction(
     });
 
     revalidatePath(`/employees/${assignment?.employeeId ?? ""}`);
-    return { ok: true, message: "Payroll component assignment ended." };
+    return { ok: true, message: "Penetapan komponen payroll diakhiri." };
   } catch (error) {
     console.error("[payroll] end employee payroll component failed", error);
     return {
       ok: false,
-      message: "The payroll component assignment could not be ended. Please try again.",
+      message: "Penetapan komponen payroll gagal diakhiri. Silakan coba lagi.",
     };
   }
 }

@@ -42,7 +42,7 @@ import { AttendancePhotoView } from "@/features/attendance/attendance-photo-view
 import { AttendanceDeleteButton } from "@/features/attendance/attendance-delete-button";
 
 export const metadata: Metadata = {
-  title: "Attendance details",
+  title: "Detail absensi",
 };
 
 /**
@@ -102,7 +102,7 @@ export default async function AttendanceDetailPage({
             href={isManager ? "/attendance/management" : "/attendance"}
             className={buttonVariants({ variant: "outline", size: "sm" })}
           >
-            Back
+            Kembali
           </Link>
         </div>
       </div>
@@ -114,14 +114,14 @@ export default async function AttendanceDetailPage({
             <AttendanceStatusBadge status={record.status} />
           </CardTitle>
           <CardDescription>
-            {record.projectName ?? "No project"} /{" "}
-            {record.workLocationName ?? "No work location"}
+            {record.projectName ?? "Tanpa proyek"} /{" "}
+            {record.workLocationName ?? "Tanpa lokasi kerja"}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6 text-sm">
           <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
             <div>
-              <p className="text-muted-foreground">Check-in</p>
+              <p className="text-muted-foreground">Absen masuk</p>
               <p className="font-medium">
                 {record.checkInAt
                   ? formatDateTime(record.checkInAt, timeZone)
@@ -129,7 +129,7 @@ export default async function AttendanceDetailPage({
               </p>
             </div>
             <div>
-              <p className="text-muted-foreground">Check-out</p>
+              <p className="text-muted-foreground">Absen pulang</p>
               <p className="font-medium">
                 {record.checkOutAt
                   ? formatDateTime(record.checkOutAt, timeZone)
@@ -146,13 +146,13 @@ export default async function AttendanceDetailPage({
 
           <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
             <div>
-              <p className="text-muted-foreground">Check-in location</p>
+              <p className="text-muted-foreground">Lokasi absen masuk</p>
               <p>
                 <LocationStatusBadge status={record.checkInLocationStatus} />
               </p>
             </div>
             <div>
-              <p className="text-muted-foreground">Check-in distance</p>
+              <p className="text-muted-foreground">Jarak absen masuk</p>
               <p className="font-medium">
                 {record.checkInDistanceMeters !== null
                   ? `${Math.round(record.checkInDistanceMeters)} m`
@@ -160,7 +160,7 @@ export default async function AttendanceDetailPage({
               </p>
             </div>
             <div>
-              <p className="text-muted-foreground">Check-in accuracy</p>
+              <p className="text-muted-foreground">Akurasi absen masuk</p>
               <p className="font-medium">
                 {record.checkInAccuracyMeters !== null
                   ? `±${Math.round(record.checkInAccuracyMeters)} m`
@@ -171,7 +171,7 @@ export default async function AttendanceDetailPage({
 
           <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
             <div>
-              <p className="text-muted-foreground">Check-in verification</p>
+              <p className="text-muted-foreground">Verifikasi absen masuk</p>
               <p>
                 <VerificationStatusBadge
                   status={record.checkInVerificationStatus}
@@ -179,7 +179,7 @@ export default async function AttendanceDetailPage({
               </p>
             </div>
             <div>
-              <p className="text-muted-foreground">Check-out verification</p>
+              <p className="text-muted-foreground">Verifikasi absen pulang</p>
               <p>
                 <VerificationStatusBadge
                   status={record.checkOutVerificationStatus}
@@ -187,7 +187,7 @@ export default async function AttendanceDetailPage({
               </p>
             </div>
             <div>
-              <p className="text-muted-foreground">Check-out location</p>
+              <p className="text-muted-foreground">Lokasi absen pulang</p>
               <p>
                 <LocationStatusBadge status={record.checkOutLocationStatus} />
               </p>
@@ -196,7 +196,7 @@ export default async function AttendanceDetailPage({
 
           <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
             <div>
-              <p className="text-muted-foreground">Check-out distance</p>
+              <p className="text-muted-foreground">Jarak absen pulang</p>
               <p className="font-medium">
                 {record.checkOutDistanceMeters !== null
                   ? `${Math.round(record.checkOutDistanceMeters)} m`
@@ -204,7 +204,7 @@ export default async function AttendanceDetailPage({
               </p>
             </div>
             <div>
-              <p className="text-muted-foreground">Check-out accuracy</p>
+              <p className="text-muted-foreground">Akurasi absen pulang</p>
               <p className="font-medium">
                 {record.checkOutAccuracyMeters !== null
                   ? `±${Math.round(record.checkOutAccuracyMeters)} m`
@@ -212,7 +212,7 @@ export default async function AttendanceDetailPage({
               </p>
             </div>
             <div>
-              <p className="text-muted-foreground">Check-out time</p>
+              <p className="text-muted-foreground">Jam pulang</p>
               <p className="font-medium">
                 {formatTime(record.checkOutAt, timeZone)}
               </p>
@@ -241,25 +241,25 @@ export default async function AttendanceDetailPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Event history</CardTitle>
+          <CardTitle>Riwayat kejadian</CardTitle>
           <CardDescription>
-            Immutable attendance events. This log is append-only.
+            Riwayat kejadian absensi yang tidak dapat diubah (hanya bertambah).
           </CardDescription>
         </CardHeader>
         <CardContent>
           {detail.events.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No events recorded.
+              Belum ada kejadian.
             </p>
           ) : (
             <div className="rounded-lg border border-border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Event</TableHead>
-                    <TableHead>Time</TableHead>
-                    <TableHead>Verification</TableHead>
-                    <TableHead>Reason</TableHead>
+                    <TableHead>Kejadian</TableHead>
+                    <TableHead>Waktu</TableHead>
+                    <TableHead>Verifikasi</TableHead>
+                    <TableHead>Alasan</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

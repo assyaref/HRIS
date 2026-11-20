@@ -51,7 +51,7 @@ test("rejects a non-numeric employee number", () => {
         "0323A",
         new Date("1995-08-25T00:00:00.000Z")
       ),
-    /Employee number/
+    /Nomor\ karyawan/
   );
 });
 
@@ -62,7 +62,7 @@ test("rejects an employee number longer than 32 digits", () => {
         "123456789012345678901234567890123",
         new Date("1995-08-25T00:00:00.000Z")
       ),
-    /Employee number/
+    /Nomor\ karyawan/
   );
 });
 
@@ -73,7 +73,7 @@ test("rejects an employee number with separators (no slashes, dashes, spaces)", 
         "03233-1",
         new Date("1995-08-25T00:00:00.000Z")
       ),
-    /Employee number/
+    /Nomor\ karyawan/
   );
 });
 

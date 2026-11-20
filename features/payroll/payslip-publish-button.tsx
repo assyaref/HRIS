@@ -59,7 +59,7 @@ export function PayslipPublishButton({
         className={className}
         aria-label={`Publish ${payslipNumber}`}
       >
-        {pending ? "Publishing…" : "Publish"}
+        {pending ? "Menerbitkan…" : "Terbitkan"}
       </Button>
 
       {message ? (

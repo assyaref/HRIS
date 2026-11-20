@@ -29,25 +29,25 @@ const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 /** YYYY-MM-DD date string (matches features/payroll/schemas.ts). */
 const dateStringSchema = z
   .string()
-  .regex(DATE_PATTERN, "Use the YYYY-MM-DD date format.");
+  .regex(DATE_PATTERN, "Gunakan format tanggal YYYY-MM-DD.");
 
 const employeeIdSchema = z
   .string()
-  .regex(UUID_PATTERN, "Employee is required.");
+  .regex(UUID_PATTERN, "Karyawan wajib dipilih.");
 
 const componentIdSchema = z
   .string()
-  .regex(UUID_PATTERN, "Payroll component is required.");
+  .regex(UUID_PATTERN, "Komponen payroll wajib dipilih.");
 
 const amountSchema = z
   .number()
-  .int("Amount must be a whole number.")
-  .min(0, "Amount must be non-negative.");
+  .int("Jumlah harus bilangan bulat.")
+  .min(0, "Jumlah tidak boleh negatif.");
 
 const notesSchema = z
   .string()
   .trim()
-  .max(500, "Notes must be 500 characters or fewer.")
+  .max(500, "Catatan maksimal 500 karakter.")
   .optional();
 
 /** Optional YYYY-MM-DD date; an empty string from a form normalizes to absent. */
@@ -64,7 +64,7 @@ function assertDateRange<T extends { effectiveFrom: string; effectiveTo?: string
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["effectiveTo"],
-      message: "Effective to must be after effective from.",
+      message: "Tanggal berakhir harus setelah tanggal mulai berlaku.",
     });
   }
 }

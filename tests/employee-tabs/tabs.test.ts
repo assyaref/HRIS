@@ -68,18 +68,18 @@ test("system tabs cover every required employee profile tab", () => {
 test("system tab labels match the product wording", () => {
   const labels = SYSTEM_TABS.map((entry) => entry.label);
   for (const label of [
-    "Personal",
-    "Employment",
-    "Address",
-    "Insurance",
-    "Bank Account",
-    "Family",
-    "Education",
-    "Documents",
-    "Attendance",
-    "Leave",
+    "Pribadi",
+    "Kepegawaian",
+    "Alamat",
+    "Asuransi",
+    "Rekening Bank",
+    "Keluarga",
+    "Pendidikan",
+    "Dokumen",
+    "Absensi",
+    "Cuti",
     "Payroll",
-    "History",
+    "Riwayat",
   ]) {
     assert.ok(labels.includes(label), `missing system tab label ${label}`);
   }
@@ -574,7 +574,7 @@ test("suggested display order advances by ten and is capped", () => {
   assert.equal(suggestedCustomTabDisplayOrder(1), 80);
   assert.equal(suggestedCustomTabDisplayOrder(3), 100);
   assert.ok(suggestedCustomTabDisplayOrder(1000) <= 9999);
-  // The first two suggestions land in the gap after "Bank Account" (60) and
+  // The first two suggestions land in the gap after "Rekening Bank" (60) and
   // before "Family" (90). The third ties with Family at 90, which is a
   // documented, supported case: mergeTabStrip puts the custom tab first on a
   // tie. Beyond that, suggestions continue into the 100s and simply interleave

@@ -28,7 +28,7 @@ const optionalLocalDateTime = z.preprocess(
       (value) =>
         localDateTimePattern.test(value) &&
         !Number.isNaN(new Date(value).getTime()),
-      { message: "Must be a valid date and time." }
+      { message: "Harus berupa tanggal dan jam yang valid." }
     )
     .nullable()
 );
@@ -47,27 +47,27 @@ function isPlainText(value: string): boolean {
 const titleField = z
   .string()
   .trim()
-  .min(1, { message: "Title is required." })
+  .min(1, { message: "Judul wajib diisi." })
   .max(ANNOUNCEMENT_TITLE_MAX_LENGTH, {
-    message: `Title may not exceed ${ANNOUNCEMENT_TITLE_MAX_LENGTH} characters.`,
+    message: `Judul maksimal ${ANNOUNCEMENT_TITLE_MAX_LENGTH} karakter.`,
   })
-  .refine(isPlainText, { message: "Title may not contain HTML tags." });
+  .refine(isPlainText, { message: "Judul tidak boleh berisi tag HTML." });
 
 const contentField = z
   .string()
   .trim()
-  .min(1, { message: "Content is required." })
+  .min(1, { message: "Isi wajib diisi." })
   .max(ANNOUNCEMENT_CONTENT_MAX_LENGTH, {
-    message: `Content may not exceed ${ANNOUNCEMENT_CONTENT_MAX_LENGTH} characters.`,
+    message: `Isi maksimal ${ANNOUNCEMENT_CONTENT_MAX_LENGTH} karakter.`,
   })
-  .refine(isPlainText, { message: "Content may not contain HTML tags." });
+  .refine(isPlainText, { message: "Isi tidak boleh mengandung tag HTML." });
 
 const priorityField = z.enum(ANNOUNCEMENT_PRIORITIES, {
-  message: "Invalid priority.",
+  message: "Prioritas tidak valid.",
 });
 
 const targetTypeField = z.enum(ANNOUNCEMENT_TARGET_TYPES, {
-  message: "Invalid target.",
+  message: "Target tidak valid.",
 });
 
 export const createAnnouncementSchema = z
@@ -81,18 +81,18 @@ export const createAnnouncementSchema = z
     targetType: targetTypeField,
     employeeIds: z
       .array(z.string().uuid())
-      .max(1000, { message: "Too many recipients selected." }),
+      .max(1000, { message: "Terlalu banyak penerima yang dipilih." }),
   })
   .refine((data) => {
     if (data.targetType !== "selected_employees") return true;
     return data.employeeIds.length > 0;
-  }, "Select at least one employee when targeting selected employees.")
+  }, "Pilih minimal satu karyawan saat menargetkan karyawan terpilih.")
   .refine(
     (data) =>
       !data.scheduledAt ||
       !data.expiresAt ||
       new Date(data.scheduledAt) <= new Date(data.expiresAt),
-    "Scheduled time must not be after the expiry time."
+    "Waktu terjadwal tidak boleh setelah waktu kedaluwarsa."
   );
 
 export type CreateAnnouncementInput = z.infer<
@@ -117,7 +117,7 @@ export const updateAnnouncementSchema = z
       !data.scheduledAt ||
       !data.expiresAt ||
       new Date(data.scheduledAt) <= new Date(data.expiresAt),
-    "Scheduled time must not be after the expiry time."
+    "Waktu terjadwal tidak boleh setelah waktu kedaluwarsa."
   );
 
 export type UpdateAnnouncementInput = z.infer<

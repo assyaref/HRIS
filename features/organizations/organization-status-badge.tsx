@@ -7,8 +7,8 @@ const STATUS_VARIANTS: Record<string, BadgeVariant> = {
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  active: "Active",
-  inactive: "Inactive",
+  active: "Aktif",
+  inactive: "Nonaktif",
 };
 
 export function OrganizationStatusBadge({ status }: { status: string }) {

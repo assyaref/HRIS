@@ -287,7 +287,7 @@ export default async function OrgMasterPage({
                 <TableRow>
                   <TableHead>Kode</TableHead>
                   <TableHead>Nama</TableHead>
-                  <TableHead className="text-right">Level</TableHead>
+                  <TableHead className="text-right">Tingkat</TableHead>
                   <TableHead className="text-right">Jabatan</TableHead>
                   <TableHead>Status</TableHead>
                   {canManage ? <TableHead className="text-right">Aksi</TableHead> : null}

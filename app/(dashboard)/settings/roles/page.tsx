@@ -23,7 +23,7 @@ import { listRolesByOrganization } from "@/features/rbac/queries";
 import { CreateRoleDialog } from "@/features/rbac/role-create-dialog";
 
 export const metadata: Metadata = {
-  title: "Roles",
+  title: "Peran",
 };
 
 /**
@@ -48,10 +48,10 @@ export default async function RolesPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            Role
+            Peran
           </h1>
           <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-            Roles define what users in this organization are allowed to do.
+            Peran menentukan apa saja yang boleh dilakukan pengguna di organisasi ini.
           </p>
         </div>
         {canCreate ? <CreateRoleDialog /> : null}
@@ -59,25 +59,25 @@ export default async function RolesPage() {
 
       {!user.organizationId ? (
         <EmptyState
-          title="No organization assigned"
-          description="Your account is not linked to an organization, so there are no roles to administer."
+          title="Belum ada organisasi"
+          description="Akun Anda belum tertaut ke organisasi, sehingga tidak ada peran untuk dikelola."
         />
       ) : roles.length === 0 ? (
         <EmptyState
-          title="No roles yet"
-          description="Run the RBAC seed (`npm run db:seed:rbac`) to create the system role catalog, then customize from here."
+          title="Belum ada peran"
+          description="Jalankan seed RBAC (`npm run db:seed:rbac`) untuk membuat katalog peran sistem, lalu sesuaikan dari sini."
         />
       ) : (
         <div className="rounded-lg border border-border bg-card">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Role</TableHead>
-                <TableHead>Code</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead className="text-right">Permissions</TableHead>
-                <TableHead className="text-right">Users</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>Peran</TableHead>
+                <TableHead>Kode</TableHead>
+                <TableHead>Jenis</TableHead>
+                <TableHead className="text-right">Hak akses</TableHead>
+                <TableHead className="text-right">Pengguna</TableHead>
+                <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -86,7 +86,7 @@ export default async function RolesPage() {
                   <TableCell className="font-medium">
                     {role.name}
                     <span className="block text-xs font-normal text-muted-foreground">
-                      {role.description || "No description"}
+                      {role.description || "Tanpa deskripsi"}
                     </span>
                   </TableCell>
                   <TableCell>
@@ -94,9 +94,9 @@ export default async function RolesPage() {
                   </TableCell>
                   <TableCell>
                     {role.isSystem ? (
-                      <Badge variant="secondary">System</Badge>
+                      <Badge variant="secondary">Sistem</Badge>
                     ) : (
-                      <Badge variant="primary">Custom</Badge>
+                      <Badge variant="primary">Kustom</Badge>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
@@ -113,7 +113,7 @@ export default async function RolesPage() {
                         size: "sm",
                       })}
                     >
-                      View role
+                      Lihat peran
                     </Link>
                   </TableCell>
                 </TableRow>

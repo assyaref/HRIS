@@ -206,7 +206,7 @@ async function auditControlEvent(input: {
 /* ------------------------------------------------------------------ */
 
 const LEGAL_HOLD_FORBIDDEN_MESSAGE =
-  "You do not have permission to manage legal holds.";
+  "Anda tidak berhak mengelola penahanan hukum.";
 
 /** Place an active legal hold. Requires reason. Never deletes anything. */
 export async function placeEmployeeLegalHoldAction(
@@ -256,7 +256,7 @@ export async function placeEmployeeLegalHoldAction(
         reason: "NOT_FOUND",
       },
     });
-    return { status: "error", code: "NOT_FOUND", message: "Employee not found." };
+    return { status: "error", code: "NOT_FOUND", message: "Karyawan tidak ditemukan." };
   }
 
   const reason = field(formData, "reason");
@@ -309,7 +309,7 @@ export async function placeEmployeeLegalHoldAction(
     return {
       status: "error",
       code: "HOLD_EXISTS",
-      message: "An active legal hold already exists for this employee.",
+      message: "Penahanan hukum aktif untuk karyawan ini sudah ada.",
     };
   }
 
@@ -346,7 +346,7 @@ export async function placeEmployeeLegalHoldAction(
     });
     return {
       status: "success",
-      message: "Legal hold placed.",
+      message: "Penahanan hukum dipasang.",
       holdId: holdId ?? undefined,
     };
   } catch (error) {
@@ -367,7 +367,7 @@ export async function placeEmployeeLegalHoldAction(
       return {
         status: "error",
         code: "HOLD_EXISTS",
-        message: "An active legal hold already exists for this employee.",
+        message: "Penahanan hukum aktif untuk karyawan ini sudah ada.",
       };
     }
     console.error("[employees] place legal hold failed", error);
@@ -386,7 +386,7 @@ export async function placeEmployeeLegalHoldAction(
     return {
       status: "error",
       code: "FAILED",
-      message: "Could not place the legal hold.",
+      message: "Penahanan hukum gagal diterapkan.",
     };
   }
 }
@@ -521,7 +521,7 @@ export async function releaseEmployeeLegalHoldAction(
     return {
       status: "error",
       code: "FAILED",
-      message: "Could not release the legal hold.",
+      message: "Penahanan hukum gagal dilepas.",
     };
   }
 
@@ -540,7 +540,7 @@ export async function releaseEmployeeLegalHoldAction(
     });
     return {
       status: "success",
-      message: "Legal hold released.",
+      message: "Penahanan hukum dilepas.",
       holdId: outcome.holdId,
     };
   }
@@ -560,7 +560,7 @@ export async function releaseEmployeeLegalHoldAction(
   return {
     status: "error",
     code: "NOT_FOUND",
-    message: "Legal hold not found or already released.",
+    message: "Penahanan hukum tidak ditemukan atau sudah dilepas.",
   };
 }
 
@@ -612,7 +612,7 @@ export async function requestEmployeeDeletionAction(
       status: "error",
       code: "FORBIDDEN",
       message:
-        "You do not have permission to request permanent deletion.",
+        "Anda tidak berhak meminta hapus permanen.",
     };
   }
 
@@ -657,7 +657,7 @@ export async function requestEmployeeDeletionAction(
         reason: "NOT_FOUND",
       },
     });
-    return { status: "error", code: "NOT_FOUND", message: "Employee not found." };
+    return { status: "error", code: "NOT_FOUND", message: "Karyawan tidak ditemukan." };
   }
 
   const confirmation = field(formData, "confirmEmployeeNumber");
@@ -679,7 +679,7 @@ export async function requestEmployeeDeletionAction(
     return {
       status: "error",
       code: "CONFIRMATION_MISMATCH",
-      message: "Employee number confirmation does not match.",
+      message: "Konfirmasi nomor karyawan tidak cocok.",
     };
   }
 
@@ -787,7 +787,7 @@ export async function requestEmployeeDeletionAction(
     return {
       status: "error",
       code: "FAILED",
-      message: "Could not record the deletion request.",
+      message: "Permintaan penghapusan gagal dicatat.",
     };
   }
 
@@ -853,8 +853,8 @@ export async function requestEmployeeDeletionAction(
     code: outcome.code,
     message:
       outcome.code === "NOT_FOUND"
-        ? "Employee not found."
-        : "Employee number confirmation does not match.",
+        ? "Karyawan tidak ditemukan."
+        : "Konfirmasi nomor karyawan tidak cocok.",
   };
 }
 
@@ -877,7 +877,7 @@ type DecisionOutcome =
     };
 
 const DECISION_FORBIDDEN_MESSAGE =
-  "You do not have permission to decide deletion requests.";
+  "Anda tidak berhak memutuskan permintaan penghapusan.";
 
 /** Approve or reject a pending deletion request. Self-approval is refused. */
 export async function decideEmployeeDeletionRequestAction(
@@ -926,7 +926,7 @@ export async function decideEmployeeDeletionRequestAction(
     return {
       status: "error",
       code: "NOT_PENDING",
-      message: "A valid decision (approve or reject) is required.",
+      message: "Keputusan yang valid (setujui atau tolak) wajib dipilih.",
     };
   }
   const decisionValue = rawDecision === "approve" ? "approved" : "rejected";
@@ -1049,7 +1049,7 @@ export async function decideEmployeeDeletionRequestAction(
     return {
       status: "error",
       code: "FAILED",
-      message: "Could not record the decision.",
+      message: "Keputusan gagal dicatat.",
     };
   }
 
@@ -1081,7 +1081,7 @@ export async function decideEmployeeDeletionRequestAction(
         outcome.decision === "approved"
           ? "Deletion request approved. Execution remains disabled pending retention-policy sign-off."
           : outcome.decision === "rejected"
-            ? "Deletion request rejected."
+            ? "Permintaan penghapusan ditolak."
             : "Decision recorded; awaiting further approvals.",
     };
   }
@@ -1139,8 +1139,8 @@ export async function decideEmployeeDeletionRequestAction(
     code: outcome.code === "NOT_FOUND" ? "NOT_FOUND" : "NOT_PENDING",
     message:
       outcome.code === "NOT_FOUND"
-        ? "Deletion request not found."
-        : "This deletion request is no longer pending.",
+        ? "Permintaan penghapusan tidak ditemukan."
+        : "Permintaan penghapusan ini sudah tidak menunggu.",
   };
 }
 
@@ -1183,7 +1183,7 @@ export async function executeApprovedEmployeeDeletionAction(
       status: "error",
       code: "FORBIDDEN",
       message:
-        "You do not have permission to execute permanent deletion.",
+        "Anda tidak berhak menjalankan hapus permanen.",
     };
   }
 
@@ -1226,7 +1226,7 @@ export async function executeApprovedEmployeeDeletionAction(
     return {
       status: "error",
       code: "FAILED",
-      message: "Could not evaluate the deletion request.",
+      message: "Permintaan penghapusan gagal dievaluasi.",
     };
   }
 
@@ -1246,7 +1246,7 @@ export async function executeApprovedEmployeeDeletionAction(
     return {
       status: "error",
       code: "NOT_FOUND",
-      message: "Deletion request not found.",
+      message: "Permintaan penghapusan tidak ditemukan.",
     };
   }
 
@@ -1267,7 +1267,7 @@ export async function executeApprovedEmployeeDeletionAction(
     return {
       status: "error",
       code: "NOT_APPROVED",
-      message: "The deletion request is not approved.",
+      message: "Permintaan penghapusan belum disetujui.",
     };
   }
 

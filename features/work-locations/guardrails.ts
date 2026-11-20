@@ -48,9 +48,9 @@ export const WORK_LOCATION_GPS_ACCURACY_MAX_METERS = 500;
 /** Status copy for the ACTIVE/INACTIVE legend (Phase 9.5 step 7). */
 export const WORK_LOCATION_STATUS_SUMMARY: Record<string, string> = {
   [WORK_LOCATION_STATUS_ACTIVE]:
-    "ACTIVE — this location is available for attendance resolution.",
+    "AKTIF — lokasi ini dapat dipakai untuk absensi.",
   [WORK_LOCATION_STATUS_INACTIVE]:
-    "INACTIVE — this location is not available for attendance.",
+    "NONAKTIF — lokasi ini tidak dapat dipakai untuk absensi.",
 };
 
 /**
@@ -69,7 +69,7 @@ export interface ActiveRequiredWorkLocationField {
 
 export const ACTIVE_WORK_LOCATION_REQUIRED_FIELDS: readonly ActiveRequiredWorkLocationField[] =
   [
-    { key: "projectId", label: "Project" },
+    { key: "projectId", label: "Proyek" },
     { key: "latitude", label: "Latitude" },
     { key: "longitude", label: "Longitude" },
     { key: "radiusMeters", label: "Radius (meters)" },
@@ -168,7 +168,7 @@ export function evaluateWorkLocationProjectEligibility(
   const { project } = context;
 
   if (!project || project.organizationId !== context.actorOrganizationId) {
-    return { ok: false, message: "The selected project is not available." };
+    return { ok: false, message: "Proyek yang dipilih tidak tersedia." };
   }
 
   if (
@@ -177,7 +177,7 @@ export function evaluateWorkLocationProjectEligibility(
   ) {
     return {
       ok: false,
-      message: "Only active projects can be bound to a work location.",
+      message: "Hanya proyek aktif yang dapat dikaitkan ke lokasi kerja.",
     };
   }
 
@@ -204,7 +204,7 @@ export function collectWorkLocationWarnings(
 
   if (context.status === WORK_LOCATION_STATUS_INACTIVE) {
     warnings.push(
-      "This Work Location is inactive. Employees assigned to this project cannot use this location for attendance until it is activated."
+      "Lokasi Kerja ini nonaktif. Karyawan di proyek ini tidak dapat memakai lokasi ini untuk absensi sampai diaktifkan."
     );
   }
 
@@ -213,7 +213,7 @@ export function collectWorkLocationWarnings(
     context.projectStatus !== WORK_LOCATION_STATUS_ACTIVE
   ) {
     warnings.push(
-      "The project linked to this Work Location is no longer active. Employees cannot use this location for attendance until the project is active again or the location is moved to an active project."
+      "Proyek yang terkait dengan Lokasi Kerja ini sudah tidak aktif. Karyawan tidak dapat memakai lokasi ini untuk absensi sampai proyek aktif kembali atau lokasi dipindah ke proyek aktif."
     );
   }
 
@@ -226,7 +226,7 @@ export function collectWorkLocationWarnings(
     !context.hasActiveAssignments
   ) {
     warnings.push(
-      "This Work Location is not associated with any active employee project assignment. Employees cannot check in here until at least one employee is actively assigned to this project."
+      "Lokasi Kerja ini tidak terkait dengan penugasan proyek karyawan yang aktif. Karyawan tidak dapat absen masuk di sini sampai minimal satu karyawan aktif ditugaskan ke proyek ini."
     );
   }
 

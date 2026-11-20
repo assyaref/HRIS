@@ -72,7 +72,7 @@ function formError(message: string): AnnouncementFormState {
 }
 
 function firstZodMessage(error: z.ZodError): string {
-  return error.issues[0]?.message ?? "Invalid input.";
+  return error.issues[0]?.message ?? "Isian tidak valid.";
 }
 
 function toDateValue(value: string | null): Date | null {
@@ -254,7 +254,7 @@ export async function createAnnouncementAction(
   formData: FormData
 ): Promise<AnnouncementFormState> {
   const { user, perms } = await requireAnnouncementContext();
-  if (!user.organizationId) return formError("Your account has no organization.");
+  if (!user.organizationId) return formError("Akun Anda tidak memiliki organisasi.");
   if (
     !buildAnnouncementActionDecision({
       action: "create",
@@ -265,7 +265,7 @@ export async function createAnnouncementAction(
       canPublish: perms.canPublish,
     }).allowed
   ) {
-    return formError("You do not have permission to create announcements.");
+    return formError("Anda tidak berhak membuat pengumuman.");
   }
 
   const parsed = createAnnouncementSchema.safeParse(
@@ -292,7 +292,7 @@ export async function createAnnouncementAction(
     const missing = data.employeeIds.filter((id) => !found.has(id));
     if (missing.length > 0) {
       return formError(
-        "One or more selected employees do not exist in your organization."
+        "Satu atau lebih karyawan yang dipilih tidak ada di organisasi Anda."
       );
     }
     recipientEmployeeIds = data.employeeIds;
@@ -346,7 +346,7 @@ export async function createAnnouncementAction(
       .delete(announcementRecipients)
       .where(eq(announcementRecipients.announcementId, announcementId));
     await db.delete(announcements).where(eq(announcements.id, announcementId));
-    throw new Error("Failed to save the announcement. Please try again.");
+    throw new Error("Pengumuman gagal disimpan. Silakan coba lagi.");
   }
 
   await audit(
@@ -360,7 +360,7 @@ export async function createAnnouncementAction(
 
   return {
     ok: true,
-    message: "Announcement created.",
+    message: "Pengumuman dibuat.",
     announcementId,
   };
 }
@@ -371,16 +371,16 @@ export async function updateAnnouncementAction(
   formData: FormData
 ): Promise<AnnouncementFormState> {
   const { user, perms } = await requireAnnouncementContext();
-  if (!user.organizationId) return formError("Your account has no organization.");
+  if (!user.organizationId) return formError("Akun Anda tidak memiliki organisasi.");
 
   const announcementId = String(formData.get("announcementId") ?? "");
-  if (!announcementId) return formError("Announcement id is missing.");
+  if (!announcementId) return formError("ID pengumuman tidak ada.");
 
   const row = await loadAnnouncementForOrganization({
     announcementId,
     organizationId: user.organizationId,
   });
-  if (!row) return formError("Announcement not found.");
+  if (!row) return formError("Pengumuman tidak ditemukan.");
 
   const decision = buildAnnouncementActionDecision({
     action: "update",
@@ -394,8 +394,8 @@ export async function updateAnnouncementAction(
   if (!decision.allowed) {
     return formError(
       row.status === "published"
-        ? "Published announcements can only be edited by a publish holder."
-        : "You do not have permission to update announcements."
+        ? "Pengumuman yang sudah terbit hanya dapat diubah oleh pemegang hak terbit."
+        : "Anda tidak berhak memperbarui pengumuman."
     );
   }
 
@@ -420,7 +420,7 @@ export async function updateAnnouncementAction(
     });
     if (!attachmentDecision.allowed) {
       return formError(
-        "Attachments can only be added to draft or unpublished announcements."
+        "Lampiran hanya dapat ditambahkan pada pengumuman draf atau yang belum diterbitkan."
       );
     }
   }
@@ -451,7 +451,7 @@ export async function updateAnnouncementAction(
   });
   revalidateAnnouncement(announcementId);
 
-  return { ok: true, message: "Announcement updated.", announcementId };
+  return { ok: true, message: "Pengumuman diperbarui.", announcementId };
 }
 
 /** Re-select the audience of a draft/unpublished announcement. */
@@ -461,13 +461,13 @@ export async function updateAnnouncementTargetAction(input: {
   employeeIds: string[];
 }): Promise<AnnouncementFormState> {
   const { user, perms } = await requireAnnouncementContext();
-  if (!user.organizationId) return formError("Your account has no organization.");
+  if (!user.organizationId) return formError("Akun Anda tidak memiliki organisasi.");
 
   const row = await loadAnnouncementForOrganization({
     announcementId: input.announcementId,
     organizationId: user.organizationId,
   });
-  if (!row) return formError("Announcement not found.");
+  if (!row) return formError("Pengumuman tidak ditemukan.");
 
   const decision = buildAnnouncementActionDecision({
     action: "change_target",
@@ -481,19 +481,19 @@ export async function updateAnnouncementTargetAction(input: {
   if (!decision.allowed) {
     return formError(
       decision.reason === "published.locked"
-        ? "The audience of a published announcement cannot be changed."
-        : "You do not have permission to change the audience."
+        ? "Audiens pengumuman yang sudah terbit tidak dapat diubah."
+        : "Anda tidak berhak mengubah audiens."
     );
   }
 
   if (!isAnnouncementTargetType(input.targetType)) {
-    return formError("Invalid target type.");
+    return formError("Jenis target tidak valid.");
   }
 
   let employeeIds: string[] = [];
   if (input.targetType === "selected_employees") {
     if (input.employeeIds.length === 0) {
-      return formError("Select at least one employee when targeting selected employees.");
+      return formError("Pilih minimal satu karyawan saat menargetkan karyawan terpilih.");
     }
     const selected = await db
       .select({ id: employees.id })
@@ -507,7 +507,7 @@ export async function updateAnnouncementTargetAction(input: {
     const found = new Set(selected.map((r) => r.id));
     const missing = input.employeeIds.filter((id) => !found.has(id));
     if (missing.length > 0) {
-      return formError("One or more selected employees do not exist in your organization.");
+      return formError("Satu atau lebih karyawan yang dipilih tidak ada di organisasi Anda.");
     }
     employeeIds = input.employeeIds;
   }
@@ -537,7 +537,7 @@ export async function updateAnnouncementTargetAction(input: {
   });
   revalidateAnnouncement(input.announcementId);
 
-  return { ok: true, message: "Audience updated.", announcementId: input.announcementId };
+  return { ok: true, message: "Audiens diperbarui.", announcementId: input.announcementId };
 }
 
 /** Publish a draft/unpublished announcement (or re-apply the published state). */
@@ -545,13 +545,13 @@ export async function publishAnnouncementAction(input: {
   announcementId: string;
 }): Promise<AnnouncementFormState> {
   const { user, perms } = await requireAnnouncementContext();
-  if (!user.organizationId) return formError("Your account has no organization.");
+  if (!user.organizationId) return formError("Akun Anda tidak memiliki organisasi.");
 
   const row = await loadAnnouncementForOrganization({
     announcementId: input.announcementId,
     organizationId: user.organizationId,
   });
-  if (!row) return formError("Announcement not found.");
+  if (!row) return formError("Pengumuman tidak ditemukan.");
 
   const decision = buildAnnouncementActionDecision({
     action: "publish",
@@ -563,7 +563,7 @@ export async function publishAnnouncementAction(input: {
     canPublish: perms.canPublish,
   });
   if (!decision.allowed) {
-    return formError("You do not have permission to publish announcements.");
+    return formError("Anda tidak berhak menerbitkan pengumuman.");
   }
 
   await db
@@ -583,7 +583,7 @@ export async function publishAnnouncementAction(input: {
   );
   revalidateAnnouncement(input.announcementId);
 
-  return { ok: true, message: "Announcement published.", announcementId: input.announcementId };
+  return { ok: true, message: "Pengumuman diterbitkan.", announcementId: input.announcementId };
 }
 
 /** Unpublish a published announcement (keeps its read history). */
@@ -591,13 +591,13 @@ export async function unpublishAnnouncementAction(input: {
   announcementId: string;
 }): Promise<AnnouncementFormState> {
   const { user, perms } = await requireAnnouncementContext();
-  if (!user.organizationId) return formError("Your account has no organization.");
+  if (!user.organizationId) return formError("Akun Anda tidak memiliki organisasi.");
 
   const row = await loadAnnouncementForOrganization({
     announcementId: input.announcementId,
     organizationId: user.organizationId,
   });
-  if (!row) return formError("Announcement not found.");
+  if (!row) return formError("Pengumuman tidak ditemukan.");
 
   const decision = buildAnnouncementActionDecision({
     action: "unpublish",
@@ -611,8 +611,8 @@ export async function unpublishAnnouncementAction(input: {
   if (!decision.allowed) {
     return formError(
       row.status !== "published"
-        ? "Only published announcements can be unpublished."
-        : "You do not have permission to unpublish announcements."
+        ? "Hanya pengumuman terbit yang dapat ditarik."
+        : "Anda tidak berhak menarik pengumuman."
     );
   }
 
@@ -624,7 +624,7 @@ export async function unpublishAnnouncementAction(input: {
   await audit(user.organizationId, user.id, "announcement.unpublished", input.announcementId);
   revalidateAnnouncement(input.announcementId);
 
-  return { ok: true, message: "Announcement unpublished.", announcementId: input.announcementId };
+  return { ok: true, message: "Pengumuman ditarik dari publikasi.", announcementId: input.announcementId };
 }
 
 /**
@@ -635,13 +635,13 @@ export async function deleteAnnouncementAction(input: {
   announcementId: string;
 }): Promise<AnnouncementFormState> {
   const { user, perms, isSuperAdmin } = await requireAnnouncementContext();
-  if (!user.organizationId) return formError("Your account has no organization.");
+  if (!user.organizationId) return formError("Akun Anda tidak memiliki organisasi.");
 
   const row = await loadAnnouncementForOrganization({
     announcementId: input.announcementId,
     organizationId: user.organizationId,
   });
-  if (!row) return formError("Announcement not found.");
+  if (!row) return formError("Pengumuman tidak ditemukan.");
 
   const decision = buildAnnouncementDeletionDecision({
     status: row.status,
@@ -661,7 +661,7 @@ export async function deleteAnnouncementAction(input: {
     };
     return formError(
       messages[decision.reason] ??
-        "You do not have permission to delete announcements."
+        "Anda tidak berhak menghapus pengumuman."
     );
   }
 
@@ -691,7 +691,7 @@ export async function removeAnnouncementAttachmentAction(input: {
   announcementId: string;
 }): Promise<AnnouncementFormState> {
   const { user, perms } = await requireAnnouncementContext();
-  if (!user.organizationId) return formError("Your account has no organization.");
+  if (!user.organizationId) return formError("Akun Anda tidak memiliki organisasi.");
 
   const rows = await db
     .select({
@@ -715,7 +715,7 @@ export async function removeAnnouncementAttachmentAction(input: {
     .limit(1);
 
   const row = rows[0];
-  if (!row) return formError("Attachment not found.");
+  if (!row) return formError("Lampiran tidak ditemukan.");
 
   const decision = buildAnnouncementActionDecision({
     action: "remove_attachment",
@@ -729,8 +729,8 @@ export async function removeAnnouncementAttachmentAction(input: {
   if (!decision.allowed) {
     return formError(
       decision.reason === "published.locked"
-        ? "Attachments of a published announcement cannot be removed."
-        : "You do not have permission to remove attachments."
+        ? "Lampiran pengumuman yang sudah diterbitkan tidak dapat dihapus."
+        : "Anda tidak berhak menghapus lampiran."
     );
   }
 
@@ -743,7 +743,7 @@ export async function removeAnnouncementAttachmentAction(input: {
   });
   revalidateAnnouncement(input.announcementId);
 
-  return { ok: true, message: "Attachment removed.", announcementId: input.announcementId };
+  return { ok: true, message: "Lampiran dihapus.", announcementId: input.announcementId };
 }
 
 /**
@@ -755,16 +755,16 @@ export async function markAnnouncementReadAction(input: {
   announcementId: string;
 }): Promise<AnnouncementFormState> {
   const user = await requireUser();
-  if (!user.organizationId) return formError("Your account has no organization.");
+  if (!user.organizationId) return formError("Akun Anda tidak memiliki organisasi.");
 
   const employee = await getEmployeeByUserId(user.id, user.organizationId);
-  if (!employee) return formError("Your account is not linked to an employee record.");
+  if (!employee) return formError("Akun Anda belum tertaut ke data karyawan.");
 
   const row = await loadAnnouncementForOrganization({
     announcementId: input.announcementId,
     organizationId: user.organizationId,
   });
-  if (!row) return formError("Announcement not found.");
+  if (!row) return formError("Pengumuman tidak ditemukan.");
 
   const recipientRows = await db
     .select({ readAt: announcementRecipients.readAt })
@@ -785,7 +785,7 @@ export async function markAnnouncementReadAction(input: {
     hasRecipient: Boolean(recipientRows[0]),
     asOf: new Date(),
   });
-  if (!visible) return formError("This announcement is not available to you.");
+  if (!visible) return formError("Pengumuman ini tidak tersedia untuk Anda.");
 
   const readAt = new Date();
   const inserted = await db

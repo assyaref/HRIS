@@ -35,7 +35,7 @@ import { ManageAnnouncementActions } from "@/features/announcements/manage-actio
 import { formatDate } from "@/features/payroll/format";
 
 export const metadata: Metadata = {
-  title: "Announcement Management",
+  title: "Kelola Pengumuman",
 };
 
 function readParam(value: string | string[] | undefined): string | undefined {
@@ -84,8 +84,7 @@ export default async function AnnouncementManagementPage({
             Pengumuman
           </h1>
           <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-            Publish official information to all employees or a selected
-            audience.
+            Terbitkan informasi resmi ke semua karyawan atau audiens terpilih.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -97,7 +96,7 @@ export default async function AnnouncementManagementPage({
               type="search"
               name="q"
               defaultValue={query ?? ""}
-              placeholder="Search title or content"
+              placeholder="Cari judul atau isi"
               className="border-input bg-background h-9 w-44 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:w-56"
             />
           </form>
@@ -106,7 +105,7 @@ export default async function AnnouncementManagementPage({
               href="/announcements/management/new"
               className={buttonVariants({ size: "sm" })}
             >
-              New announcement
+              Pengumuman baru
             </Link>
           ) : null}
         </div>
@@ -132,10 +131,10 @@ export default async function AnnouncementManagementPage({
 
       {announcements.length === 0 ? (
         <EmptyState
-          title="No announcements found"
+          title="Tidak ada pengumuman"
           description={
             perms.canCreate
-              ? "Create the first announcement to keep your team informed."
+              ? "Buat pengumuman pertama agar tim tetap mendapat informasi."
               : "Announcements created by management will appear here."
           }
         />
@@ -146,13 +145,13 @@ export default async function AnnouncementManagementPage({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Title</TableHead>
+                    <TableHead>Judul</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Audience</TableHead>
-                    <TableHead>Reads</TableHead>
-                    <TableHead>Published</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
+                    <TableHead>Prioritas</TableHead>
+                    <TableHead>Penerima</TableHead>
+                    <TableHead>Dibaca</TableHead>
+                    <TableHead>Terbit</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -177,7 +176,7 @@ export default async function AnnouncementManagementPage({
                       <TableCell className="text-sm">
                         {announcement.targetType === "all_employees"
                           ? "All employees"
-                          : "Selected"}
+                          : "Terpilih"}
                       </TableCell>
                       <TableCell className="text-sm tabular-nums">
                         {announcement.readCount}
@@ -208,7 +207,7 @@ export default async function AnnouncementManagementPage({
                                 size: "sm",
                               })}
                             >
-                              Edit
+                              Ubah
                             </Link>
                           ) : null}
                           <ManageAnnouncementActions

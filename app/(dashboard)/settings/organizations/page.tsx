@@ -20,7 +20,7 @@ import { OrganizationsManager } from "@/features/organizations/organizations-man
 import { CreateOrganizationDialog } from "@/features/organizations/organization-create-dialog";
 
 export const metadata: Metadata = {
-  title: "Organizations",
+  title: "Organisasi",
 };
 
 function readParam(value: string | string[] | undefined): string | undefined {
@@ -72,8 +72,7 @@ export default async function OrganizationsSettingsPage({
             Organisasi
           </h1>
           <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-            Create and manage tenant organizations. Reserved for Super
-            Administrators.
+            Buat dan kelola organisasi tenant. Khusus Super Administrator.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -88,7 +87,7 @@ export default async function OrganizationsSettingsPage({
               type="search"
               name="q"
               defaultValue={search ?? ""}
-              placeholder="Search name or code"
+              placeholder="Cari nama atau kode"
               className="border-input bg-background h-9 w-44 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:w-56"
             />
             {search ? (
@@ -96,7 +95,7 @@ export default async function OrganizationsSettingsPage({
                 type="submit"
                 className={buttonVariants({ variant: "outline", size: "sm" })}
               >
-                Search
+                Cari
               </button>
             ) : null}
           </form>
@@ -114,7 +113,7 @@ export default async function OrganizationsSettingsPage({
             size: "sm",
           })}
         >
-          All
+          Semua
         </Link>
         {ORGANIZATION_STATUSES.map((value) => (
           <Link
@@ -136,8 +135,8 @@ export default async function OrganizationsSettingsPage({
         <CardContent className="pt-6">
           {organizations.length === 0 ? (
             <EmptyState
-              title="No organizations found"
-              description="Adjust the search or status filter, or create the first tenant organization."
+              title="Organisasi tidak ditemukan"
+              description="Ubah pencarian atau filter status, atau buat organisasi tenant pertama."
             />
           ) : (
             <OrganizationsManager

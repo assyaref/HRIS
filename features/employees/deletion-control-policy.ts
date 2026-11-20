@@ -37,25 +37,25 @@ import {
 /* ------------------------------------------------------------------ */
 
 export const DELETION_LEGAL_HOLD_MESSAGE =
-  "Employee cannot be permanently deleted because an active legal hold applies.";
+  "Karyawan tidak dapat dihapus permanen karena ada penahanan hukum yang aktif.";
 
 export const DELETION_RETENTION_BOUND_MESSAGE =
-  "Employee cannot be permanently deleted because protected records are still subject to a retention obligation that has not been approved for deletion.";
+  "Karyawan tidak dapat dihapus permanen karena ada data dilindungi yang masih terikat kewajiban retensi dan belum disetujui untuk dihapus.";
 
 export const DELETION_ACTIVE_REQUEST_MESSAGE =
-  "Employee cannot be permanently deleted because a pending or approved deletion request exists. Resolve or cancel that request first.";
+  "Karyawan tidak dapat dihapus permanen karena ada permintaan penghapusan yang menunggu atau sudah disetujui. Selesaikan atau batalkan permintaan itu terlebih dahulu.";
 
 export const DELETION_REASON_REQUIRED_MESSAGE =
-  "A deletion reason is required (at least 10 characters).";
+  "Alasan penghapusan wajib diisi (minimal 10 karakter).";
 
 export const DELETION_SELF_APPROVAL_MESSAGE =
-  "You cannot approve your own deletion request.";
+  "Anda tidak dapat menyetujui permintaan penghapusan Anda sendiri.";
 
 export const DELETION_EXECUTION_DISABLED_MESSAGE =
-  "Execution of an approved permanent deletion is disabled pending retention-policy sign-off. No data has been deleted.";
+  "Eksekusi hapus permanen yang sudah disetujui dinonaktifkan sampai kebijakan retensi disahkan. Tidak ada data yang dihapus.";
 
 export const DELETION_RETENTION_POLICY_ADVICE =
-  "Deactivate/archive the employee, or obtain the required retention-policy approval.";
+  "Nonaktifkan/arsipkan karyawan, atau dapatkan persetujuan kebijakan retensi yang diperlukan.";
 
 /* ------------------------------------------------------------------ */
 /* Tiers                                                              */
@@ -317,7 +317,7 @@ export function evaluateDeletionApproval(
     return {
       status: "invalid",
       code: "INVALID_REQUIREMENT",
-      message: "This request is not approvable.",
+      message: "Pengajuan ini tidak dapat disetujui.",
     };
   }
 
@@ -327,7 +327,7 @@ export function evaluateDeletionApproval(
       return {
         status: "invalid",
         code: "DUPLICATE_APPROVER",
-        message: "An approver may only decide once per request.",
+        message: "Penyetuju hanya dapat memutuskan satu kali per pengajuan.",
         offenderUserId: approval.approverUserId,
       };
     }

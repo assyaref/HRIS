@@ -51,22 +51,22 @@ export interface PayrollPeriodDeletionDecision {
  */
 function describeBlockingPayslipStatus(status: string): string {
   if (status === "generated") {
-    return "generated";
+    return "berstatus dibuat (generated)";
   }
   if (status === "published") {
-    return "published";
+    return "berstatus terbit (published)";
   }
-  return `with status "${status}"`;
+  return `berstatus "${status}"`;
 }
 
 /**
- * Joins a list into natural English (`a`, `a and b`, `a, b and c`).
+ * Joins a list into natural Indonesian (`a`, `a and b`, `a, b and c`).
  */
 function joinNaturalLabels(labels: readonly string[]): string {
   if (labels.length <= 1) {
     return labels[0] ?? "";
   }
-  return `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
+  return `${labels.slice(0, -1).join(", ")} dan ${labels[labels.length - 1]}`;
 }
 
 /**
@@ -95,6 +95,6 @@ export function buildLockedPayrollPeriodDeletionDecision(
 
   return {
     allowed: false,
-    message: `This locked payroll period has ${description} payslips and cannot be deleted. Revoke the payslips first.`,
+    message: `Periode payroll terkunci ini memiliki slip gaji ${description} dan tidak dapat dihapus. Cabut slip gajinya terlebih dahulu.`,
   };
 }

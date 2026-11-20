@@ -28,7 +28,7 @@ import { listOrganizationPermissionRequests } from "@/features/permission/querie
 import { permissionManagementFilterSchema } from "@/features/permission/schemas";
 
 export const metadata: Metadata = {
-  title: "Permission management",
+  title: "Manajemen hak akses",
 };
 
 function readParam(
@@ -90,7 +90,7 @@ export default async function PermissionManagementPage({
           Persetujuan Izin
         </h1>
         <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-          {total} {total === 1 ? "request" : "requests"}.
+          {total} pengajuan.
         </p>
       </div>
 
@@ -101,19 +101,19 @@ export default async function PermissionManagementPage({
       >
         <div className="space-y-2">
           <label htmlFor="perm-mgmt-q" className="text-sm font-medium">
-            Search
+            Cari
           </label>
           <input
             id="perm-mgmt-q"
             name="q"
             defaultValue={filters.q ?? ""}
-            placeholder="Name or employee number"
+            placeholder="Nama atau nomor karyawan"
             className="flex h-10 w-full min-w-44 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           />
         </div>
         <div className="space-y-2">
           <label htmlFor="perm-mgmt-type" className="text-sm font-medium">
-            Type
+            Jenis
           </label>
           <select
             id="perm-mgmt-type"
@@ -121,7 +121,7 @@ export default async function PermissionManagementPage({
             defaultValue={filters.permissionType ?? ""}
             className="flex h-10 w-full min-w-40 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
-            <option value="">All types</option>
+            <option value="">Semua jenis</option>
             {PERMISSION_TYPES.map((type) => (
               <option key={type} value={type}>
                 {PERMISSION_TYPE_LABELS[type]}
@@ -139,7 +139,7 @@ export default async function PermissionManagementPage({
             defaultValue={filters.status ?? ""}
             className="flex h-10 w-full min-w-36 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
-            <option value="">All statuses</option>
+            <option value="">Semua status</option>
             {Object.entries(PERMISSION_REQUEST_STATUS_LABELS).map(
               ([value, label]) => (
                 <option key={value} value={value}>
@@ -160,14 +160,14 @@ export default async function PermissionManagementPage({
             href="/permission/management"
             className={buttonVariants({ variant: "ghost" })}
           >
-            Clear
+            Bersihkan
           </Link>
         ) : null}
       </form>
       {items.length === 0 ? (
         <EmptyState
-          title="No permission requests"
-          description="No requests match the current filters."
+          title="Tidak ada pengajuan izin"
+          description="Tidak ada pengajuan yang sesuai filter."
         />
       ) : (
         <>
@@ -175,11 +175,11 @@ export default async function PermissionManagementPage({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Employee</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Window</TableHead>
+                  <TableHead>Karyawan</TableHead>
+                  <TableHead>Jenis</TableHead>
+                  <TableHead>Rentang</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -211,7 +211,7 @@ export default async function PermissionManagementPage({
                           size: "sm",
                         })}
                       >
-                        Review
+                        Tinjau
                       </Link>
                     </TableCell>
                   </TableRow>
@@ -222,7 +222,7 @@ export default async function PermissionManagementPage({
           {totalPages > 1 ? (
             <nav className="flex items-center justify-between gap-3">
               <p className="text-sm text-muted-foreground">
-                Page {page} of {totalPages}
+                Halaman {page} dari {totalPages}
               </p>
               <div className="flex gap-2">
                 {page > 1 ? (
@@ -233,7 +233,7 @@ export default async function PermissionManagementPage({
                       size: "sm",
                     })}
                   >
-                    Previous
+                    Sebelumnya
                   </Link>
                 ) : null}
                 {page < totalPages ? (
@@ -244,7 +244,7 @@ export default async function PermissionManagementPage({
                       size: "sm",
                     })}
                   >
-                    Next
+                    Berikutnya
                   </Link>
                 ) : null}
               </div>

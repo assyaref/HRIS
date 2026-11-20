@@ -34,12 +34,12 @@ export const ORGANIZATION_DECISION_MESSAGES: Record<
   string
 > = {
   "superadmin.required":
-    "Organization administration is restricted to Super Administrators.",
+    "Administrasi organisasi hanya untuk Super Administrator.",
   "system.reserved":
-    "The SYSTEM organization is reserved for platform roles and cannot be modified.",
+    "Organisasi SYSTEM dicadangkan untuk peran platform dan tidak dapat diubah.",
   "dependent.records":
-    "Organization cannot be deleted because it still contains dependent records.",
-  "not.found": "Organization not found.",
+    "Organisasi tidak dapat dihapus karena masih memiliki data terkait.",
+  "not.found": "Organisasi tidak ditemukan.",
 };
 
 /** Per-category dependency counts collected server-side before deletion. */

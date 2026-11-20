@@ -45,7 +45,7 @@ export async function assignRoleForSuperAdminAction(
   ).trim();
 
   if (!isUuid(targetUserId) || !isUuid(roleId) || !isUuid(organizationId)) {
-    return error("Invalid user, role, or organization.");
+    return error("Pengguna, peran, atau organisasi tidak valid.");
   }
 
   try {
@@ -180,23 +180,23 @@ export async function assignRoleForSuperAdminAction(
       message: `Role ${result.roleCode} assigned successfully.`,
     };
   } catch (caught) {
-    const message = caught instanceof Error ? caught.message : "UNKNOWN";
+    const message = caught instanceof Error ? caught.message : "TIDAK DIKETAHUI";
 
     switch (message) {
       case "TARGET_USER_NOT_FOUND":
-        return error("Target user was not found in the selected organization.");
+        return error("Pengguna tujuan tidak ditemukan di organisasi yang dipilih.");
       case "TARGET_ROLE_NOT_FOUND":
-        return error("Target role was not found in the selected organization.");
+        return error("Peran tujuan tidak ditemukan di organisasi yang dipilih.");
       case "SUPERADMIN_ROLE_PROTECTED":
-        return error("The SUPERADMIN role cannot be delegated.");
+        return error("Peran SUPERADMIN tidak dapat didelegasikan.");
       case "ROLE_ALREADY_ASSIGNED":
-        return error("This role is already assigned to the user.");
+        return error("Peran ini sudah ditetapkan ke pengguna tersebut.");
       default:
         console.error(
           "[rbac] SUPERADMIN role assignment failed",
           caught
         );
-        return error("Could not assign the role. Please try again.");
+        return error("Peran gagal ditetapkan. Silakan coba lagi.");
     }
   }
 }
@@ -219,7 +219,7 @@ export async function removeRoleForSuperAdminAction(
   ).trim();
 
   if (!isUuid(userId) || !isUuid(roleId) || !isUuid(organizationId)) {
-    return error("Invalid user, role, or organization.");
+    return error("Pengguna, peran, atau organisasi tidak valid.");
   }
 
   try {
@@ -325,23 +325,23 @@ export async function removeRoleForSuperAdminAction(
       message: `Role ${result.roleCode} removed successfully.`,
     };
   } catch (caught) {
-    const message = caught instanceof Error ? caught.message : "UNKNOWN";
+    const message = caught instanceof Error ? caught.message : "TIDAK DIKETAHUI";
 
     switch (message) {
       case "TARGET_USER_NOT_FOUND":
-        return error("Target user was not found in the selected organization.");
+        return error("Pengguna tujuan tidak ditemukan di organisasi yang dipilih.");
       case "ASSIGNMENT_NOT_FOUND":
-        return error("The role assignment was not found.");
+        return error("Penetapan peran tidak ditemukan.");
       case "SUPERADMIN_ROLE_PROTECTED":
-        return error("The SUPERADMIN role cannot be delegated or removed.");
+        return error("Peran SUPERADMIN tidak dapat didelegasikan atau dihapus.");
       case "EMPLOYEE_ROLE_PROTECTED":
-        return error("The base EMPLOYEE role cannot be removed.");
+        return error("Peran dasar EMPLOYEE tidak dapat dihapus.");
       default:
         console.error(
           "[rbac] SUPERADMIN role removal failed",
           caught
         );
-        return error("Could not remove the role. Please try again.");
+        return error("Peran gagal dicabut. Silakan coba lagi.");
     }
   }
 }

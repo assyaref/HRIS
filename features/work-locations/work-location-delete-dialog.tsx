@@ -73,14 +73,14 @@ export function WorkLocationDeleteDialog({
       );
 
       if (result.status === "success") {
-        notifier.success(result.message ?? "Work location deleted.");
+        notifier.success(result.message ?? "Lokasi kerja dihapus.");
         setOpen(false);
         if (redirectTo) router.push(redirectTo);
         else router.refresh();
         return;
       }
 
-      const text = result.message ?? "Failed to delete work location.";
+      const text = result.message ?? "Lokasi kerja gagal dihapus.";
       setMessage(text);
       if (result.requiresConfirmation) {
         setNeedsConfirmation(true);
@@ -108,7 +108,7 @@ export function WorkLocationDeleteDialog({
         }}
         aria-label={`Delete ${location.name}`}
       >
-        {compact ? "Delete" : "Delete location"}
+        {compact ? "Hapus" : "Hapus lokasi"}
       </Button>
 
       <Dialog
@@ -120,12 +120,12 @@ export function WorkLocationDeleteDialog({
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-destructive">
-              Delete work location
+              Hapus lokasi kerja
             </DialogTitle>
             <DialogDescription>
               {needsConfirmation
                 ? "Lokasi ini masih digunakan. Menghapusnya akan melepas lokasi dari catatan absensi dan data karyawan (datanya tetap tersimpan). Tindakan ini tidak dapat dibatalkan."
-                : "This permanently removes the work location. This action cannot be undone."}
+                : "Lokasi kerja akan dihapus permanen. Tindakan ini tidak dapat dibatalkan."}
             </DialogDescription>
           </DialogHeader>
 
@@ -143,14 +143,14 @@ export function WorkLocationDeleteDialog({
           ) : null}
 
           <div className="grid grid-cols-[6rem_1fr] gap-x-3 gap-y-2 rounded-md border border-destructive/40 p-4 text-left text-sm">
-            <span className="text-muted-foreground">Name</span>
+            <span className="text-muted-foreground">Nama</span>
             <span className="truncate font-medium">{location.name}</span>
-            <span className="text-muted-foreground">Project</span>
+            <span className="text-muted-foreground">Proyek</span>
             <span className="truncate">
-              {location.projectName ?? "Not Assigned"}
+              {location.projectName ?? "Belum Ditetapkan"}
             </span>
             <span className="text-muted-foreground">Status</span>
-            <span>{location.status === "active" ? "Active" : "Inactive"}</span>
+            <span>{location.status === "active" ? "Aktif" : "Nonaktif"}</span>
           </div>
 
           {needsConfirmation ? (
@@ -178,7 +178,7 @@ export function WorkLocationDeleteDialog({
               onClick={() => setOpen(false)}
               disabled={pending}
             >
-              Cancel
+              Batal
             </Button>
             <Button
               type="button"
@@ -187,10 +187,10 @@ export function WorkLocationDeleteDialog({
               onClick={confirmDelete}
             >
               {pending
-                ? "Deleting..."
+                ? "Menghapus..."
                 : needsConfirmation
                   ? "Hapus lokasi"
-                  : "Delete location"}
+                  : "Hapus lokasi"}
             </Button>
           </DialogFooter>
         </DialogContent>

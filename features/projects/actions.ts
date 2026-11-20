@@ -120,7 +120,7 @@ export async function createProjectAction(
   if (!parsed.success) {
     return {
       success: false,
-      message: parsed.error.issues[0]?.message ?? "Invalid project data.",
+      message: parsed.error.issues[0]?.message ?? "Data proyek tidak valid.",
     };
   }
 
@@ -135,14 +135,14 @@ export async function createProjectAction(
     return {
       success: false,
       message:
-        "Organization not found or inactive. Select an active organization.",
+        "Organisasi tidak ditemukan atau nonaktif. Pilih organisasi yang aktif.",
     };
   }
 
   if (await isProjectCodeTaken(organizationId, code)) {
     return {
       success: false,
-      message: `Project code "${code}" already exists in organization "${organization.name}".`,
+      message: `Kode proyek "${code}" sudah ada di organisasi "${organization.name}".`,
     };
   }
 
@@ -170,7 +170,7 @@ export async function createProjectAction(
     if (!project) {
       return {
         success: false,
-        message: "Failed to create project.",
+        message: "Proyek gagal dibuat.",
       };
     }
 
@@ -179,13 +179,13 @@ export async function createProjectAction(
     if (isDuplicateProjectError(unknownError)) {
       return {
         success: false,
-        message: `Project code "${code}" already exists in organization "${organization.name}".`,
+        message: `Kode proyek "${code}" sudah ada di organisasi "${organization.name}".`,
       };
     }
     console.error("[projects] create failed", unknownError);
     return {
       success: false,
-      message: "The project could not be created. Please try again.",
+      message: "Proyek gagal dibuat. Silakan coba lagi.",
     };
   }
 
@@ -222,7 +222,7 @@ export async function updateProjectAction(
   if (!isUuid(projectId)) {
     return {
       success: false,
-      message: "Invalid project.",
+      message: "Proyek tidak valid.",
     };
   }
 
@@ -231,7 +231,7 @@ export async function updateProjectAction(
   if (!parsed.success) {
     return {
       success: false,
-      message: parsed.error.issues[0]?.message ?? "Invalid project data.",
+      message: parsed.error.issues[0]?.message ?? "Data proyek tidak valid.",
     };
   }
 
@@ -240,7 +240,7 @@ export async function updateProjectAction(
   if (!existing) {
     return {
       success: false,
-      message: "Project not found.",
+      message: "Proyek tidak ditemukan.",
     };
   }
 
@@ -284,7 +284,7 @@ export async function updateProjectAction(
       return {
         success: false,
         message:
-          "Target organization not found or inactive. Select an active organization.",
+          "Organisasi tujuan tidak ditemukan atau nonaktif. Pilih organisasi yang aktif.",
       };
     }
 
@@ -304,7 +304,7 @@ export async function updateProjectAction(
     ) {
       return {
         success: false,
-        message: `Project code "${code}" already exists in this organization.`,
+        message: `Kode proyek "${code}" sudah ada di organisasi ini.`,
       };
     }
 
@@ -343,20 +343,20 @@ export async function updateProjectAction(
     if (!updated) {
       return {
         success: false,
-        message: "Project not found.",
+        message: "Proyek tidak ditemukan.",
       };
     }
   } catch (unknownError) {
     if (isDuplicateProjectError(unknownError)) {
       return {
         success: false,
-        message: "Project code already exists in this organization.",
+        message: "Kode proyek sudah ada di organisasi ini.",
       };
     }
     console.error("[projects] update failed", unknownError);
     return {
       success: false,
-      message: "The project could not be updated. Please try again.",
+      message: "Proyek gagal diperbarui. Silakan coba lagi.",
     };
   }
 
@@ -377,8 +377,8 @@ export async function updateProjectAction(
   return {
     success: true,
     message: organizationChange
-      ? `Project moved to organization "${targetOrganization?.name}".`
-      : "Project updated successfully.",
+      ? `Proyek dipindahkan ke organisasi "${targetOrganization?.name}".`
+      : "Proyek berhasil diperbarui.",
     projectId,
   };
 }
@@ -393,7 +393,7 @@ export async function updateProjectStatusAction(
   if (!isUuid(projectId)) {
     return {
       success: false,
-      message: "Invalid project.",
+      message: "Proyek tidak valid.",
     };
   }
 
@@ -402,7 +402,7 @@ export async function updateProjectStatusAction(
   if (!parsed.success) {
     return {
       success: false,
-      message: parsed.error.issues[0]?.message ?? "Invalid project status.",
+      message: parsed.error.issues[0]?.message ?? "Status proyek tidak valid.",
     };
   }
 
@@ -411,14 +411,14 @@ export async function updateProjectStatusAction(
   if (!existing) {
     return {
       success: false,
-      message: "Project not found.",
+      message: "Proyek tidak ditemukan.",
     };
   }
 
   if (existing.status === parsed.data.status) {
     return {
       success: true,
-      message: "Project status is already set to the requested value.",
+      message: "Status proyek sudah sesuai dengan yang diminta.",
       projectId,
     };
   }
@@ -437,7 +437,7 @@ export async function updateProjectStatusAction(
   if (!updated) {
     return {
       success: false,
-      message: "Failed to update project status.",
+      message: "Status proyek gagal diubah.",
     };
   }
 
@@ -450,7 +450,7 @@ export async function updateProjectStatusAction(
 
   return {
     success: true,
-    message: "Project status updated successfully.",
+    message: "Status proyek berhasil diperbarui.",
     projectId,
   };
 }
@@ -477,7 +477,7 @@ export async function deleteProjectAction(
   if (!isUuid(projectId)) {
     return {
       success: false,
-      message: "Invalid project.",
+      message: "Proyek tidak valid.",
     };
   }
 
@@ -486,7 +486,7 @@ export async function deleteProjectAction(
   if (!existing) {
     return {
       success: false,
-      message: "Project not found.",
+      message: "Proyek tidak ditemukan.",
     };
   }
 
@@ -517,7 +517,7 @@ export async function deleteProjectAction(
     }
     return {
       success: false,
-      message: decision.message ?? "Operation not allowed.",
+      message: decision.message ?? "Operasi tidak diizinkan.",
     };
   }
 
@@ -555,13 +555,13 @@ export async function deleteProjectAction(
       return {
         success: false,
         message:
-          "Project cannot be deleted because it is still referenced by other records. Set it to Inactive instead.",
+          "Proyek tidak dapat dihapus karena masih dirujuk oleh data lain. Ubah statusnya menjadi Nonaktif.",
       };
     }
     console.error("[projects] delete failed", unknownError);
     return {
       success: false,
-      message: "The project could not be deleted. Please try again.",
+      message: "Proyek gagal dihapus. Silakan coba lagi.",
     };
   }
 

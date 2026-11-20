@@ -65,7 +65,7 @@ import {
 import { SwitchOrganizationButton } from "@/features/acting-organization/switch-button";
 
 export const metadata: Metadata = {
-  title: "Employees",
+  title: "Karyawan",
 };
 
 function readParam(
@@ -387,17 +387,17 @@ export default async function EmployeesPage({
               Karyawan
             </h1>
             {authorization.isSuperAdmin && activeOrganizationName ? (
-              <Badge variant="outline" aria-label="Active organization">
+              <Badge variant="outline" aria-label="Organisasi aktif">
                 {activeOrganizationName}
               </Badge>
             ) : null}
           </div>
           <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-            {total} {total === 1 ? "employee" : "employees"}
-            {hasActiveFilters ? " match your filters" : ""}
+            {total} karyawan
+            {hasActiveFilters ? " sesuai filter" : ""}
             {activeOrganizationName
-              ? ` in ${activeOrganizationName}.`
-              : " in your organization."}
+              ? ` di ${activeOrganizationName}.`
+              : " di organisasi Anda."}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 xl:justify-end">
@@ -467,11 +467,11 @@ export default async function EmployeesPage({
 
       {items.length === 0 ? (
         <EmptyState
-          title={hasActiveFilters ? "No matching employees" : "No employees yet"}
+          title={hasActiveFilters ? "Tidak ada karyawan yang cocok" : "Belum ada karyawan"}
           description={
             hasActiveFilters
-              ? "Try adjusting your search or filters."
-              : "Create your first employee record to get started."
+              ? "Coba ubah pencarian atau filter."
+              : "Buat data karyawan pertama untuk memulai."
           }
         />
       ) : (
@@ -488,11 +488,11 @@ export default async function EmployeesPage({
 
           {totalPages > 1 ? (
             <nav
-              aria-label="Employee list pagination"
+              aria-label="Halaman daftar karyawan"
               className="flex items-center justify-between gap-3"
             >
               <p className="text-sm text-muted-foreground">
-                Page {page} of {totalPages}
+                Halaman {page} dari {totalPages}
               </p>
               <div className="flex gap-2">
                 {page > 1 ? (
@@ -509,7 +509,7 @@ export default async function EmployeesPage({
                       size: "sm",
                     })}
                   >
-                    Previous
+                    Sebelumnya
                   </Link>
                 ) : null}
                 {page < totalPages ? (
@@ -526,7 +526,7 @@ export default async function EmployeesPage({
                       size: "sm",
                     })}
                   >
-                    Next
+                    Berikutnya
                   </Link>
                 ) : null}
               </div>

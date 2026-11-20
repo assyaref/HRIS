@@ -29,7 +29,7 @@ import {
 import { leaveManagementFilterSchema } from "@/features/leave/schemas";
 
 export const metadata: Metadata = {
-  title: "Leave management",
+  title: "Manajemen cuti",
 };
 
 function readParam(
@@ -90,7 +90,7 @@ export default async function LeaveManagementPage({
           Persetujuan Cuti
         </h1>
         <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-          {total} {total === 1 ? "request" : "requests"}.
+          {total} pengajuan.
         </p>
       </div>
 
@@ -101,19 +101,19 @@ export default async function LeaveManagementPage({
       >
         <div className="space-y-2">
           <label htmlFor="leave-mgmt-q" className="text-sm font-medium">
-            Search
+            Cari
           </label>
           <input
             id="leave-mgmt-q"
             name="q"
             defaultValue={filters.q ?? ""}
-            placeholder="Name or employee number"
+            placeholder="Nama atau nomor karyawan"
             className="flex h-10 w-full min-w-44 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           />
         </div>
         <div className="space-y-2">
           <label htmlFor="leave-mgmt-type" className="text-sm font-medium">
-            Leave type
+            Jenis cuti
           </label>
           <select
             id="leave-mgmt-type"
@@ -121,7 +121,7 @@ export default async function LeaveManagementPage({
             defaultValue={filters.leaveTypeId ?? ""}
             className="flex h-10 w-full min-w-40 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
-            <option value="">All types</option>
+            <option value="">Semua jenis</option>
             {leaveTypes.map((type) => (
               <option key={type.id} value={type.id}>
                 {type.name}
@@ -139,7 +139,7 @@ export default async function LeaveManagementPage({
             defaultValue={filters.status ?? ""}
             className="flex h-10 w-full min-w-36 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
-            <option value="">All statuses</option>
+            <option value="">Semua status</option>
             {Object.entries(LEAVE_REQUEST_STATUS_LABELS).map(
               ([value, label]) => (
                 <option key={value} value={value}>
@@ -160,14 +160,14 @@ export default async function LeaveManagementPage({
             href="/leave/management"
             className={buttonVariants({ variant: "ghost" })}
           >
-            Clear
+            Bersihkan
           </Link>
         ) : null}
       </form>
       {items.length === 0 ? (
         <EmptyState
-          title="No leave requests"
-          description="No requests match the current filters."
+          title="Tidak ada pengajuan cuti"
+          description="Tidak ada pengajuan yang sesuai filter."
         />
       ) : (
         <>
@@ -175,12 +175,12 @@ export default async function LeaveManagementPage({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Employee</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Dates</TableHead>
-                  <TableHead>Days</TableHead>
+                  <TableHead>Karyawan</TableHead>
+                  <TableHead>Jenis</TableHead>
+                  <TableHead>Tanggal</TableHead>
+                  <TableHead>Hari</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -209,7 +209,7 @@ export default async function LeaveManagementPage({
                           size: "sm",
                         })}
                       >
-                        Review
+                        Tinjau
                       </Link>
                     </TableCell>
                   </TableRow>
@@ -220,7 +220,7 @@ export default async function LeaveManagementPage({
           {totalPages > 1 ? (
             <nav className="flex items-center justify-between gap-3">
               <p className="text-sm text-muted-foreground">
-                Page {page} of {totalPages}
+                Halaman {page} dari {totalPages}
               </p>
               <div className="flex gap-2">
                 {page > 1 ? (
@@ -231,7 +231,7 @@ export default async function LeaveManagementPage({
                       size: "sm",
                     })}
                   >
-                    Previous
+                    Sebelumnya
                   </Link>
                 ) : null}
                 {page < totalPages ? (
@@ -242,7 +242,7 @@ export default async function LeaveManagementPage({
                       size: "sm",
                     })}
                   >
-                    Next
+                    Berikutnya
                   </Link>
                 ) : null}
               </div>

@@ -65,13 +65,13 @@ export function ProjectTable({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Code</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Organization</TableHead>
+              <TableHead>Kode</TableHead>
+              <TableHead>Nama</TableHead>
+              <TableHead>Organisasi</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Start Date</TableHead>
-              <TableHead>End Date</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>Tanggal Mulai</TableHead>
+              <TableHead>Tanggal Selesai</TableHead>
+              <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -113,7 +113,7 @@ export function ProjectTable({
                           size: "sm",
                         })}
                       >
-                        View
+                        Lihat
                       </Link>
                       <ProjectEditDialog
                         project={project}
@@ -164,17 +164,17 @@ export function ProjectTable({
               </div>
               <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
                 <div>
-                  <dt className="text-xs text-muted-foreground">Start</dt>
+                  <dt className="text-xs text-muted-foreground">Mulai</dt>
                   <dd>{formatDate(project.startDate)}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-muted-foreground">End</dt>
+                  <dt className="text-xs text-muted-foreground">Selesai</dt>
                   <dd>{formatDate(project.endDate)}</dd>
                 </div>
               </dl>
               {dependencyTotal > 0 ? (
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Referenced by {dependencyTotal} record(s).
+                  Dirujuk oleh {dependencyTotal} data.
                 </p>
               ) : null}
               <div className="mt-3 flex justify-end gap-1">

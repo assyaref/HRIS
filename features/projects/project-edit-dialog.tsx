@@ -132,16 +132,15 @@ export function ProjectEditDialog({
         }}
         aria-label={`Edit ${project.name}`}
       >
-        Edit
+        Ubah
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit Project</DialogTitle>
+            <DialogTitle>Ubah Proyek</DialogTitle>
             <DialogDescription>
-              Update project information. The project code must remain unique
-              within the selected organization.
+              Perbarui informasi proyek. Kode proyek harus tetap unik di organisasi yang dipilih.
             </DialogDescription>
           </DialogHeader>
 
@@ -153,30 +152,27 @@ export function ProjectEditDialog({
             className="space-y-4"
           >
             <OrganizationSelect
-              label="Organization"
+              label="Organisasi"
               organizations={organizations}
               value={organizationId}
               onChange={setOrganizationId}
               disabled={pending || !canChangeOrganization}
-              emptyMessage="No active organizations found."
+              emptyMessage="Tidak ada organisasi aktif."
             />
 
             {!canChangeOrganization ? (
               <p className="text-muted-foreground text-xs">
-                This project is referenced by assignments, attendance records
-                or work locations, so its organization is locked. Remove
-                those references first to move it.
+                Proyek ini dirujuk oleh penugasan, absensi, atau lokasi kerja, sehingga organisasinya dikunci. Hapus rujukan tersebut terlebih dahulu untuk memindahkannya.
               </p>
             ) : organizationChanging ? (
               <p className="text-muted-foreground text-xs">
-                Moving the project to another organization is allowed because
-                it has no referenced records.
+                Proyek boleh dipindah ke organisasi lain karena tidak memiliki data yang dirujuk.
               </p>
             ) : null}
 
             <div className="space-y-2">
               <Label htmlFor={`edit-project-code-${project.id}`}>
-                Project Code
+                Kode Proyek
               </Label>
 
               <Input
@@ -191,7 +187,7 @@ export function ProjectEditDialog({
 
             <div className="space-y-2">
               <Label htmlFor={`edit-project-name-${project.id}`}>
-                Project Name
+                Nama Proyek
               </Label>
 
               <Input
@@ -216,16 +212,16 @@ export function ProjectEditDialog({
                 disabled={pending}
                 className="border-input bg-background flex h-10 w-full rounded-md border px-3 py-2 text-sm"
               >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="completed">Completed</option>
+                <option value="active">Aktif</option>
+                <option value="inactive">Nonaktif</option>
+                <option value="completed">Selesai</option>
               </select>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor={`edit-project-start-date-${project.id}`}>
-                  Start Date
+                  Tanggal Mulai
                 </Label>
 
                 <Input
@@ -239,7 +235,7 @@ export function ProjectEditDialog({
 
               <div className="space-y-2">
                 <Label htmlFor={`edit-project-end-date-${project.id}`}>
-                  End Date
+                  Tanggal Selesai
                 </Label>
 
                 <Input
@@ -272,11 +268,11 @@ export function ProjectEditDialog({
                 onClick={() => setOpen(false)}
                 disabled={pending}
               >
-                Cancel
+                Batal
               </Button>
 
               <Button type="submit" disabled={pending}>
-                {pending ? "Saving..." : "Save Changes"}
+                {pending ? "Menyimpan..." : "Simpan Perubahan"}
               </Button>
             </DialogFooter>
           </form>

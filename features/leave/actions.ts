@@ -185,7 +185,7 @@ export async function createLeaveRequestAction(
         return {
           kind: "error",
           message:
-            "You already have a pending or approved request overlapping these dates.",
+            "Anda sudah memiliki pengajuan menunggu atau disetujui yang tumpang tindih dengan tanggal ini.",
         };
       }
 
@@ -251,7 +251,7 @@ export async function createLeaveRequestAction(
         })
         .returning({ id: leaveRequests.id });
       const requestId = inserted[0]?.id;
-      if (!requestId) throw new Error("Leave request insert returned no row.");
+      if (!requestId) throw new Error("Pengajuan cuti gagal disimpan.");
 
       if (balance) {
         await tx
@@ -449,7 +449,7 @@ async function decideLeaveRequest(
         return {
           kind: "error",
           message:
-            "This request belongs to a permanently deleted employee and can no longer be reviewed.",
+            "Pengajuan ini milik karyawan yang telah dihapus permanen dan tidak dapat ditinjau lagi.",
         };
       }
 
@@ -545,7 +545,7 @@ async function decideLeaveRequest(
     });
     return {
       ok: true,
-      message: decision === "approved" ? "Leave approved." : "Leave rejected.",
+      message: decision === "approved" ? "Cuti disetujui." : "Cuti ditolak.",
     };
   } catch (error) {
     console.error("[leave] review failed", error);

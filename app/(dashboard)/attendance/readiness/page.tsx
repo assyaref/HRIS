@@ -34,7 +34,7 @@ import {
 import { getOrganizationAttendanceReadiness } from "@/features/attendance/reconciliation.queries";
 
 export const metadata: Metadata = {
-  title: "Attendance readiness",
+  title: "Kesiapan absensi",
 };
 
 const UUID_PATTERN =
@@ -74,14 +74,14 @@ function ReadinessBadge({ status }: { status: ReconciliationStatus }) {
   if (status === "WARNING") {
     return <Badge variant="secondary">WARNING</Badge>;
   }
-  return <Badge variant="destructive">NOT READY</Badge>;
+  return <Badge variant="destructive">BELUM SIAP</Badge>;
 }
 
 function AssignmentBadge({ assignment }: { assignment: "Active" | "None" }) {
   if (assignment === "Active") {
-    return <Badge variant="primary">Active</Badge>;
+    return <Badge variant="primary">Aktif</Badge>;
   }
-  return <Badge variant="outline">None</Badge>;
+  return <Badge variant="outline">Tidak ada</Badge>;
 }
 
 function SummaryCard({
@@ -157,41 +157,40 @@ export default async function AttendanceReadinessPage({
             Kesiapan Absensi
           </h1>
           <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-            Operational readiness of employees, project assignments, and work
-            locations for attendance. Read-only diagnostic.
+            Kesiapan operasional karyawan, penugasan proyek, dan lokasi kerja untuk absensi. Diagnostik hanya-baca.
           </p>
         </div>
         <Link
           href="/attendance/management"
           className={buttonVariants({ variant: "outline", size: "sm" })}
         >
-          Back to attendance management
+          Kembali ke kelola absensi
         </Link>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <SummaryCard
-          label="Ready employees"
+          label="Karyawan siap"
           value={summary.readyEmployees}
           tone="ready"
         />
         <SummaryCard
-          label="Not ready employees"
+          label="Karyawan belum siap"
           value={summary.notReadyEmployees}
           tone="danger"
         />
         <SummaryCard
-          label="Warning conditions"
+          label="Kondisi peringatan"
           value={summary.warningConditions}
           tone="warning"
         />
         <SummaryCard
-          label="Projects without active location"
+          label="Proyek tanpa lokasi aktif"
           value={summary.projectsWithoutActiveWorkLocation}
           tone="warning"
         />
         <SummaryCard
-          label="Work locations without active assignment"
+          label="Lokasi kerja tanpa penugasan aktif"
           value={summary.workLocationsWithoutActiveEmployeeAssignment}
           tone="warning"
         />
@@ -212,15 +211,15 @@ export default async function AttendanceReadinessPage({
             defaultValue={status ?? ""}
             className="flex h-10 w-full min-w-36 rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
-            <option value="">All statuses</option>
+            <option value="">Semua status</option>
             <option value="READY">READY</option>
             <option value="WARNING">WARNING</option>
-            <option value="NOT_READY">NOT READY</option>
+            <option value="NOT_READY">BELUM SIAP</option>
           </select>
         </div>
         <div className="space-y-2">
           <label htmlFor="readiness-project" className="text-sm font-medium">
-            Project
+            Proyek
           </label>
           <select
             id="readiness-project"
@@ -228,7 +227,7 @@ export default async function AttendanceReadinessPage({
             defaultValue={projectId ?? ""}
             className="flex h-10 w-full min-w-44 rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
-            <option value="">All projects</option>
+            <option value="">Semua proyek</option>
             {data.projects.map((project) => (
               <option key={project.id} value={project.id}>
                 {project.name}
@@ -238,7 +237,7 @@ export default async function AttendanceReadinessPage({
         </div>
         <div className="space-y-2">
           <label htmlFor="readiness-employee" className="text-sm font-medium">
-            Employee
+            Karyawan
           </label>
           <select
             id="readiness-employee"
@@ -246,7 +245,7 @@ export default async function AttendanceReadinessPage({
             defaultValue={employeeId ?? ""}
             className="flex h-10 w-full min-w-44 rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
-            <option value="">All employees</option>
+            <option value="">Semua karyawan</option>
             {data.employees.map((employee) => (
               <option key={employee.id} value={employee.id}>
                 {employee.name}
@@ -256,7 +255,7 @@ export default async function AttendanceReadinessPage({
         </div>
         <div className="space-y-2">
           <label htmlFor="readiness-location" className="text-sm font-medium">
-            Work location
+            Lokasi kerja
           </label>
           <select
             id="readiness-location"
@@ -264,7 +263,7 @@ export default async function AttendanceReadinessPage({
             defaultValue={workLocationId ?? ""}
             className="flex h-10 w-full min-w-44 rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
-            <option value="">All work locations</option>
+            <option value="">Semua lokasi kerja</option>
             {data.workLocations.map((location) => (
               <option key={location.id} value={location.id}>
                 {location.name}
@@ -283,7 +282,7 @@ export default async function AttendanceReadinessPage({
             href="/attendance/readiness"
             className={buttonVariants({ variant: "ghost" })}
           >
-            Clear
+            Bersihkan
           </Link>
         ) : null}
       </form>
@@ -291,20 +290,20 @@ export default async function AttendanceReadinessPage({
 
       {rows.length === 0 ? (
         <EmptyState
-          title="No readiness results"
-          description="No employees, projects, or work locations match the current filters."
+          title="Tidak ada hasil kesiapan"
+          description="Tidak ada karyawan, proyek, atau lokasi kerja yang sesuai filter."
         />
       ) : (
         <div className="rounded-lg border border-border bg-card">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Employee</TableHead>
-                <TableHead>Project</TableHead>
-                <TableHead>Work location</TableHead>
-                <TableHead>Assignment</TableHead>
-                <TableHead>Readiness</TableHead>
-                <TableHead>Reason</TableHead>
+                <TableHead>Karyawan</TableHead>
+                <TableHead>Proyek</TableHead>
+                <TableHead>Lokasi kerja</TableHead>
+                <TableHead>Penugasan</TableHead>
+                <TableHead>Kesiapan</TableHead>
+                <TableHead>Alasan</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

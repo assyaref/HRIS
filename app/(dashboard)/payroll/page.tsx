@@ -161,8 +161,7 @@ export default async function PayrollPage() {
           </h1>
 
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-            Manage payroll periods, processing runs and payroll components
-            from one workspace.
+            Kelola periode payroll, proses perhitungan, dan komponen payroll dari satu ruang kerja.
           </p>
         </div>
 
@@ -171,7 +170,7 @@ export default async function PayrollPage() {
           className="w-fit rounded-full border-emerald-200 bg-emerald-50 px-3 py-1.5 text-emerald-700"
         >
           <StatusDot />
-          <span className="ml-2">Payroll workspace</span>
+          <span className="ml-2">Ruang kerja payroll</span>
         </Badge>
       </section>
 
@@ -185,12 +184,11 @@ export default async function PayrollPage() {
           </div>
 
           <h2 className="mt-5 text-2xl font-bold tracking-tight sm:text-3xl">
-            Payroll management
+            Manajemen payroll
           </h2>
 
           <p className="mt-2 max-w-2xl text-sm leading-6 text-white/85 sm:text-base">
-            Review payroll cycles, monitor workflow status and access
-            organization payroll configuration.
+            Tinjau siklus payroll, pantau status alur kerja, dan akses konfigurasi payroll organisasi.
           </p>
 
           <div className="mt-6 flex flex-wrap gap-3">
@@ -202,7 +200,7 @@ export default async function PayrollPage() {
                 className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-white/15 px-4 py-2.5 text-sm font-semibold text-white ring-1 ring-white/30 transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
               >
                 <PayrollIcon type="settings" className="size-4" />
-                Components
+                Komponen
               </Link>
             ) : null}
 
@@ -211,7 +209,7 @@ export default async function PayrollPage() {
               className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-white/15 px-4 py-2.5 text-sm font-semibold text-white ring-1 ring-white/30 transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
             >
               <PayrollIcon type="wallet" className="size-4" />
-              Payslips
+              Slip gaji
             </Link>
 
             {canManagePayslips ? (
@@ -220,7 +218,7 @@ export default async function PayrollPage() {
                 className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-white/15 px-4 py-2.5 text-sm font-semibold text-white ring-1 ring-white/30 transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
               >
                 <PayrollIcon type="arrow" className="size-4" />
-                Upload payslip
+                Unggah slip gaji
               </Link>
             ) : null}
           </div>
@@ -251,7 +249,7 @@ export default async function PayrollPage() {
 
               <div>
                 <p className="text-xs font-medium text-muted-foreground">
-                  Payroll periods
+                  Periode payroll
                 </p>
 
                 <p className="mt-0.5 text-2xl font-semibold text-foreground">
@@ -261,7 +259,7 @@ export default async function PayrollPage() {
             </div>
 
             <p className="mt-4 text-xs text-muted-foreground">
-              Organization-scoped payroll cycles.
+              Siklus payroll per organisasi.
             </p>
           </CardContent>
         </Card>
@@ -275,11 +273,11 @@ export default async function PayrollPage() {
 
               <div className="min-w-0">
                 <p className="text-xs font-medium text-muted-foreground">
-                  Latest period
+                  Periode terbaru
                 </p>
 
                 <p className="mt-0.5 truncate text-lg font-semibold text-foreground">
-                  {latestPeriod?.name ?? "No period"}
+                  {latestPeriod?.name ?? "Tanpa periode"}
                 </p>
               </div>
             </div>
@@ -293,13 +291,13 @@ export default async function PayrollPage() {
                     <PayrollRunStatusBadge status={latestPeriod.run.status} />
                   ) : (
                     <span className="text-xs text-muted-foreground">
-                      Run not started
+                      Proses belum dimulai
                     </span>
                   )}
                 </div>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  Create a payroll period to begin.
+                  Buat periode payroll untuk memulai.
                 </p>
               )}
             </div>
@@ -313,18 +311,18 @@ export default async function PayrollPage() {
       <section>
         <div className="mb-4">
           <h2 className="text-lg font-bold text-foreground">
-            Payroll Periods
+            Periode Payroll
           </h2>
 
           <p className="mt-1 text-sm text-muted-foreground">
-            Review payroll cycles and open their processing workspace.
+            Tinjau siklus payroll dan buka ruang kerja pemrosesannya.
           </p>
         </div>
 
         {periods.length === 0 ? (
           <EmptyState
-            title="No payroll periods yet"
-            description="Create your first payroll period to start the payroll workflow."
+            title="Belum ada periode payroll"
+            description="Buat periode payroll pertama untuk memulai alur penggajian."
           />
         ) : (
           <>
@@ -352,7 +350,7 @@ export default async function PayrollPage() {
             <div className="mt-4 grid grid-cols-2 gap-3 surface-group">
               <div className="rounded-[16px] p-3">
                 <p className="text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
-                  Payroll window
+                  Jendela payroll
                 </p>
 
                 <p className="mt-1 text-xs font-medium leading-5 text-foreground">
@@ -364,7 +362,7 @@ export default async function PayrollPage() {
 
               <div className="rounded-[16px] p-3">
                 <p className="text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
-                  Payment date
+                  Tanggal pembayaran
                 </p>
 
                 <p className="mt-1 text-xs font-medium text-foreground">
@@ -376,7 +374,7 @@ export default async function PayrollPage() {
 <div className="mt-4 flex items-center justify-between gap-3 border-t border-border pt-4">
                         <div>
                           <p className="text-[10px] font-semibold tracking-wide text-muted-foreground/80 uppercase">
-                            Run
+                            Proses
                           </p>
 
                           <div className="mt-1">
@@ -384,7 +382,7 @@ export default async function PayrollPage() {
                               <PayrollRunStatusBadge status={period.run.status} />
                             ) : (
                               <span className="text-xs text-muted-foreground">
-                                Not started
+                                Belum dimulai
                               </span>
                             )}
                           </div>
@@ -395,7 +393,7 @@ export default async function PayrollPage() {
                             href={`/payroll/${period.id}`}
                             className="inline-flex min-h-10 items-center gap-1.5 rounded-[10px] bg-surface-soft-blue px-3.5 py-2 text-xs font-semibold text-primary ring-1 ring-primary/20 transition hover:bg-surface-soft-blue/90"
                           >
-                            Open
+                            Buka
                             <PayrollIcon type="arrow" className="size-3.5" />
                           </Link>
 
@@ -438,27 +436,27 @@ export default async function PayrollPage() {
                 <TableHeader>
                   <TableRow className="bg-muted/80 hover:bg-muted/80">
                     <TableHead className="h-12 pl-5">
-                      Period
+                      Periode
                     </TableHead>
 
                     <TableHead className="h-12">
-                      Window
+                      Rentang
                     </TableHead>
 
                     <TableHead className="h-12">
-                      Payment date
+                      Tanggal pembayaran
                     </TableHead>
 
                     <TableHead className="h-12">
-                      Period status
+                      Status periode
                     </TableHead>
 
                     <TableHead className="h-12">
-                      Run status
+                      Status proses
                     </TableHead>
 
                     <TableHead className="h-12 pr-5 text-right">
-                      Actions
+                      Aksi
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -498,7 +496,7 @@ export default async function PayrollPage() {
                           <PayrollRunStatusBadge status={period.run.status} />
                         ) : (
                           <span className="text-sm text-muted-foreground">
-                            Not started
+                            Belum dimulai
                           </span>
                         )}
                       </TableCell>
@@ -512,7 +510,7 @@ export default async function PayrollPage() {
                               size: "sm",
                             })}
                           >
-                            View
+                            Lihat
                             <PayrollIcon type="arrow" className="ml-1 size-3.5" />
                           </Link>
 
@@ -563,22 +561,20 @@ export default async function PayrollPage() {
 
             <div>
               <h3 className="text-sm font-bold text-foreground">
-                Payroll controls
+                Kontrol payroll
               </h3>
 
               <div className="mt-2 space-y-1.5 text-xs leading-5 text-muted-foreground sm:text-sm">
                 <p>
-                  Payroll periods and runs remain organization-scoped.
+                  Periode dan proses payroll tetap per organisasi.
                 </p>
 
                 <p>
-                  Workflow transitions remain server-controlled and
-                  permission-validated.
+                  Transisi alur kerja dikendalikan server dan divalidasi hak akses.
                 </p>
 
                 <p>
-                  Historical payroll items, components and payslips remain
-                  stable through snapshots.
+                  Item payroll, komponen, dan slip gaji historis tetap stabil melalui snapshot.
                 </p>
               </div>
             </div>

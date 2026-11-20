@@ -432,7 +432,7 @@ describe("buildPayslipPdfUploadDecision", () => {
 
     assert.deepEqual(decision, {
       allowed: false,
-      message: "The selected PDF is empty.",
+      message: "PDF yang dipilih kosong.",
     });
   });
 
@@ -441,7 +441,7 @@ describe("buildPayslipPdfUploadDecision", () => {
       const decision = buildPayslipPdfUploadDecision({ ...valid, size });
 
       assert.equal(decision.allowed, false, String(size));
-      assert.equal(decision.message, "The selected PDF is empty.");
+      assert.equal(decision.message, "PDF yang dipilih kosong.");
     }
   });
 
@@ -453,7 +453,7 @@ describe("buildPayslipPdfUploadDecision", () => {
 
     assert.deepEqual(decision, {
       allowed: false,
-      message: "The payslip PDF must not exceed 20 MB.",
+      message: "PDF slip gaji maksimal 20 MB.",
     });
   });
 
@@ -464,7 +464,7 @@ describe("buildPayslipPdfUploadDecision", () => {
     });
 
     assert.equal(decision.allowed, false);
-    assert.equal(decision.message, "Only PDF files are allowed.");
+    assert.equal(decision.message, "Hanya berkas PDF yang diperbolehkan.");
   });
 
   it("rejects a file without a .pdf extension", () => {
@@ -476,7 +476,7 @@ describe("buildPayslipPdfUploadDecision", () => {
     assert.equal(decision.allowed, false);
     assert.equal(
       decision.message,
-      "The payslip file must have a .pdf extension."
+      "Berkas slip gaji harus berekstensi .pdf."
     );
   });
 
@@ -492,8 +492,8 @@ describe("buildPayslipPdfUploadDecision", () => {
       size: 0,
     });
 
-    assert.equal(nonPdf.message, "The payslip PDF must not exceed 20 MB.");
-    assert.equal(oversizedEmpty.message, "The selected PDF is empty.");
+    assert.equal(nonPdf.message, "PDF slip gaji maksimal 20 MB.");
+    assert.equal(oversizedEmpty.message, "PDF yang dipilih kosong.");
   });
 });
 
@@ -542,7 +542,7 @@ describe("buildPayslipPdfReplaceDecision", () => {
     assert.equal(decision.allowed, false);
     assert.equal(
       decision.message,
-      "There is no payslip document to replace."
+      "Tidak ada dokumen slip gaji untuk diganti."
     );
   });
 
@@ -578,35 +578,35 @@ describe("buildPayslipPdfReplaceDecision", () => {
   it("reuses the shared file validation (empty, oversized, MIME, extension)", () => {
     assert.equal(
       buildPayslipPdfReplaceDecision({ ...validReplace, size: 0 }).message,
-      "The selected PDF is empty."
+      "PDF yang dipilih kosong."
     );
     assert.equal(
       buildPayslipPdfReplaceDecision({
         ...validReplace,
         size: PAYSLIP_PDF_MAX_SIZE_BYTES + 1,
       }).message,
-      "The payslip PDF must not exceed 20 MB."
+      "PDF slip gaji maksimal 20 MB."
     );
     assert.equal(
       buildPayslipPdfReplaceDecision({
         ...validReplace,
         mimeType: "text/plain",
       }).message,
-      "Only PDF files are allowed."
+      "Hanya berkas PDF yang diperbolehkan."
     );
     assert.equal(
       buildPayslipPdfReplaceDecision({
         ...validReplace,
         filename: "payslip.txt",
       }).message,
-      "The payslip file must have a .pdf extension."
+      "Berkas slip gaji harus berekstensi .pdf."
     );
   });
 
   it("requires a non-empty (trimmed) reason", () => {
     assert.equal(
       buildPayslipPdfReplaceDecision({ ...validReplace, reason: "" }).message,
-      "A reason for replacing the payslip PDF is required."
+      "Alasan penggantian PDF slip gaji wajib diisi."
     );
     assert.equal(
       buildPayslipPdfReplaceDecision({
@@ -635,7 +635,7 @@ describe("buildPayslipPdfReplaceDecision", () => {
     });
 
     assert.equal(decision.allowed, false);
-    assert.match(decision.message, /1000 characters/);
+    assert.match(decision.message, /1000 karakter/);
   });
 
   it("reports the first failing rule only (state before file)", () => {
@@ -645,7 +645,7 @@ describe("buildPayslipPdfReplaceDecision", () => {
       mimeType: "text/plain",
     });
 
-    assert.match(decision.message, /Only generated payslips/);
+    assert.match(decision.message, /Hanya slip gaji berstatus dibuat/);
   });
 
   it("allows a distribution replacement when the period is open", () => {
@@ -668,7 +668,7 @@ describe("buildPayslipPdfReplaceDecision", () => {
     });
 
     assert.equal(decision.allowed, false);
-    assert.match(decision.message, /cancelled or locked/);
+    assert.match(decision.message, /dibatalkan atau terkunci/);
   });
 
   it("denies a distribution replacement for a cancelled period", () => {

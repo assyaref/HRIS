@@ -44,13 +44,13 @@ export function EmployeeDeleteDialog({
   );
 
   if (state.status === "success" && open) {
-    notifier.success(state.message ?? "Employee deactivated successfully.");
+    notifier.success(state.message ?? "Karyawan berhasil dinonaktifkan.");
     setOpen(false);
   }
 
   function openWithWarning() {
     notifier.warning(
-      `Warning: You are about to deactivate employee '${employee.firstName} ${employee.lastName}'. Historical records will be retained.`
+      `Peringatan: Anda akan menonaktifkan karyawan '${employee.firstName} ${employee.lastName}'. Data historis tetap disimpan.`
     );
     setOpen(true);
   }
@@ -63,15 +63,15 @@ export function EmployeeDeleteDialog({
         size="sm"
         className="text-destructive hover:bg-destructive/10 hover:text-destructive"
         onClick={openWithWarning}
-        aria-label={`Deactivate ${employee.firstName} ${employee.lastName}`}
+        aria-label={`Nonaktifkan ${employee.firstName} ${employee.lastName}`}
       >
-        Deactivate
+        Nonaktifkan
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-destructive">
-              Deactivate employee?
+              Nonaktifkan karyawan?
             </DialogTitle>
             <DialogDescription>
               This changes the employee status to inactive and retains all
@@ -90,11 +90,11 @@ export function EmployeeDeleteDialog({
 
           <div className="space-y-3 rounded-md border border-destructive/40 p-4">
             <div className="grid grid-cols-[9rem_1fr] gap-x-3 gap-y-2 text-sm">
-              <span className="text-muted-foreground">Employee</span>
+              <span className="text-muted-foreground">Karyawan</span>
               <span className="truncate font-medium">
                 {employee.firstName} {employee.lastName}
               </span>
-              <span className="text-muted-foreground">Employee No.</span>
+              <span className="text-muted-foreground">No. Karyawan</span>
               <span className="truncate font-mono text-xs">
                 {employee.employeeNumber}
               </span>
@@ -106,12 +106,11 @@ export function EmployeeDeleteDialog({
               <span>
                 <EmployeeStatusBadge status={employee.employmentStatus} />
               </span>
-              <span className="text-muted-foreground">Hire date</span>
+              <span className="text-muted-foreground">Tanggal masuk</span>
               <span className="truncate">{formatDate(employee.hireDate)}</span>
             </div>
             <p className="text-xs text-muted-foreground">
-              Attendance, payroll, leave, documents, custom values, and
-              employment history remain linked to this employee.
+              Absensi, payroll, cuti, dokumen, nilai kustom, dan riwayat kepegawaian tetap tertaut ke karyawan ini.
             </p>
           </div>
 
@@ -122,7 +121,7 @@ export function EmployeeDeleteDialog({
               onClick={() => setOpen(false)}
               disabled={isPending}
             >
-              Cancel
+              Batal
             </Button>
             <Button
               type="button"
@@ -130,7 +129,7 @@ export function EmployeeDeleteDialog({
               disabled={isPending}
               onClick={() => formAction()}
             >
-              {isPending ? "Deactivating..." : "Deactivate employee"}
+              {isPending ? "Menonaktifkan..." : "Nonaktifkan karyawan"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -93,7 +93,7 @@ export default async function OvertimePage() {
         <div className="flex gap-2">
           {canReview ? (
             <Link href="/overtime/management" className={buttonVariants({ variant: "outline", size: "sm" })}>
-              Management
+              Manajemen
             </Link>
           ) : null}
           <OvertimeSubmitButton defaultDate={today} />

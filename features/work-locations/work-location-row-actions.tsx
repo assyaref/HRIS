@@ -36,10 +36,10 @@ export function WorkLocationRowActions({
         isActive ? "inactive" : "active"
       );
       if (result.ok) {
-        notifier.success(result.message ?? "Status updated.");
+        notifier.success(result.message ?? "Status diperbarui.");
         router.refresh();
       } else {
-        notifier.error(result.message ?? "Could not change the location status.");
+        notifier.error(result.message ?? "Status lokasi gagal diubah.");
       }
     });
   }
@@ -50,7 +50,7 @@ export function WorkLocationRowActions({
         href={`/settings/work-locations/${location.id}`}
         className={buttonVariants({ variant: "secondary", size: "sm" })}
       >
-        Edit
+        Ubah
       </Link>
       <Button
         type="button"
@@ -59,7 +59,7 @@ export function WorkLocationRowActions({
         disabled={togglePending}
         onClick={toggleStatus}
       >
-        {togglePending ? "Saving..." : isActive ? "Deactivate" : "Activate"}
+        {togglePending ? "Menyimpan..." : isActive ? "Nonaktifkan" : "Aktifkan"}
       </Button>
       {canDelete ? <WorkLocationDeleteDialog location={location} compact /> : null}
     </div>

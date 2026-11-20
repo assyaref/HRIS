@@ -84,7 +84,7 @@ export default async function PermissionPage() {
               href="/permission/management"
               className={buttonVariants({ variant: "outline", size: "sm" })}
             >
-              Management
+              Manajemen
             </Link>
           ) : null}
           {canCreate ? <PermissionCreateDialog /> : null}

@@ -100,29 +100,29 @@ export function OverviewSection({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Overview</CardTitle>
-          <CardDescription>Key employee facts at a glance.</CardDescription>
+          <CardTitle>Ringkasan</CardTitle>
+          <CardDescription>Ringkasan data utama karyawan.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 text-sm sm:grid-cols-2">
-          <Fact label="Name" value={`${employee.firstName} ${employee.lastName}`} />
-          <Fact label="Employee No." value={employee.employeeNumber} mono />
+          <Fact label="Nama" value={`${employee.firstName} ${employee.lastName}`} />
+          <Fact label="No. Karyawan" value={employee.employeeNumber} mono />
           <Fact label="Status" value={employee.employmentStatus} />
-          <Fact label="Organization" value={organizationName ?? "—"} />
-          <Fact label="Position" value={employee.position ?? "—"} />
-          <Fact label="Department" value={employee.department ?? "—"} />
-          <Fact label="Division" value={employee.division ?? "—"} />
-          <Fact label="Employment type" value={employee.employmentType ?? "—"} />
-          <Fact label="Work location" value={employee.workLocationName ?? "—"} />
-          <Fact label="Manager" value={employee.managerEmployeeNumber ?? "—"} />
-          <Fact label="Hire date" value={iso(employee.hireDate) || "—"} />
+          <Fact label="Organisasi" value={organizationName ?? "—"} />
+          <Fact label="Jabatan" value={employee.position ?? "—"} />
+          <Fact label="Departemen" value={employee.department ?? "—"} />
+          <Fact label="Divisi" value={employee.division ?? "—"} />
+          <Fact label="Jenis kepegawaian" value={employee.employmentType ?? "—"} />
+          <Fact label="Lokasi kerja" value={employee.workLocationName ?? "—"} />
+          <Fact label="Atasan" value={employee.managerEmployeeNumber ?? "—"} />
+          <Fact label="Tanggal masuk" value={iso(employee.hireDate) || "—"} />
           <Fact label="Email" value={employee.email ?? "—"} />
-          <Fact label="Phone" value={formatPhone(employee.phone, revealPhone)} />
+          <Fact label="Telepon" value={formatPhone(employee.phone, revealPhone)} />
           <Fact
-            label="Linked account"
+            label="Akun tertaut"
             value={employee.linkedUserEmail ?? "none"}
           />
-          <Fact label="Created" value={isoDateTime(employee.createdAt)} />
-          <Fact label="Last updated" value={isoDateTime(employee.updatedAt)} />
+          <Fact label="Dibuat" value={isoDateTime(employee.createdAt)} />
+          <Fact label="Terakhir diperbarui" value={isoDateTime(employee.updatedAt)} />
         </CardContent>
       </Card>
       {canUpdate ? (
@@ -156,17 +156,16 @@ function StatusToggle({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Employment status</CardTitle>
+        <CardTitle>Status kepegawaian</CardTitle>
         <CardDescription>
-          Changing status is audited and snapshotted into the employment
-          history.
+          Perubahan status diaudit dan disimpan ke riwayat kepegawaian.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form action={toggleStatusAction}>
           <input type="hidden" name="status" value={target} />
           <ButtonLike>
-            {target === "inactive" ? "Deactivate employee" : "Activate employee"}
+            {target === "inactive" ? "Nonaktifkan karyawan" : "Aktifkan karyawan"}
           </ButtonLike>
         </form>
       </CardContent>
@@ -220,53 +219,53 @@ export function PersonalSection({
   const action = updatePersonalDataAction.bind(null, employee.id);
   return (
     <SectionForm
-      title="Personal data"
-      description="Identity, birth and contact details. NIK is masked for viewers without update rights."
+      title="Data pribadi"
+      description="Data identitas, kelahiran, dan kontak. NIK disamarkan bagi yang tidak memiliki hak ubah."
       action={action}
     >
       {canEdit ? (
         <div className="grid gap-4 sm:grid-cols-2">
           <FormRow label="NIK" name="nik" value={employee.nik} maxLength={32} />
-          <FormRow label="Nickname" name="nickname" value={employee.nickname} maxLength={100} />
-          <FormRow label="Birth date" name="birthDate" type="date" value={iso(employee.birthDate)} />
-          <FormRow label="Birth place" name="birthPlace" value={employee.birthPlace} maxLength={200} />
+          <FormRow label="Nama panggilan" name="nickname" value={employee.nickname} maxLength={100} />
+          <FormRow label="Tanggal lahir" name="birthDate" type="date" value={iso(employee.birthDate)} />
+          <FormRow label="Tempat lahir" name="birthPlace" value={employee.birthPlace} maxLength={200} />
           <SelectRow
-            label="Gender"
+            label="Jenis Kelamin"
             name="gender"
             value={employee.gender}
             options={[
-              { value: "Male", label: "Male" },
-              { value: "Female", label: "Female" },
+              { value: "Male", label: "Laki-laki" },
+              { value: "Female", label: "Perempuan" },
             ]}
           />
-          <FormRow label="Religion" name="religion" value={employee.religion} maxLength={50} />
+          <FormRow label="Agama" name="religion" value={employee.religion} maxLength={50} />
           <SelectRow
-            label="Marital status"
+            label="Status pernikahan"
             name="maritalStatus"
             value={employee.maritalStatus}
             options={[
-              { value: "Single", label: "Single" },
-              { value: "Married", label: "Married" },
-              { value: "Divorced", label: "Divorced" },
-              { value: "Widowed", label: "Widowed" },
+              { value: "Single", label: "Lajang" },
+              { value: "Married", label: "Menikah" },
+              { value: "Divorced", label: "Cerai hidup" },
+              { value: "Widowed", label: "Cerai mati" },
             ]}
           />
-          <FormRow label="Nationality" name="nationality" value={employee.nationality} maxLength={50} />
-          <FormRow label="Personal email" name="personalEmail" type="email" value={employee.personalEmail} maxLength={254} />
-          <FormRow label="Phone" name="phone" value={employee.phone} maxLength={30} />
+          <FormRow label="Kewarganegaraan" name="nationality" value={employee.nationality} maxLength={50} />
+          <FormRow label="Email pribadi" name="personalEmail" type="email" value={employee.personalEmail} maxLength={254} />
+          <FormRow label="Telepon" name="phone" value={employee.phone} maxLength={30} />
         </div>
       ) : (
         <div className="grid gap-3 text-sm sm:grid-cols-2">
           <Fact label="NIK" value={formatNik(employee.nik, reveal)} />
-          <Fact label="Nickname" value={employee.nickname ?? "—"} />
-          <Fact label="Birth date" value={iso(employee.birthDate) || "—"} />
-          <Fact label="Birth place" value={employee.birthPlace ?? "—"} />
-          <Fact label="Gender" value={employee.gender ?? "—"} />
-          <Fact label="Religion" value={employee.religion ?? "—"} />
-          <Fact label="Marital status" value={employee.maritalStatus ?? "—"} />
-          <Fact label="Nationality" value={employee.nationality ?? "—"} />
-          <Fact label="Personal email" value={formatPersonalEmail(employee.personalEmail, reveal)} />
-          <Fact label="Phone" value={formatPhone(employee.phone, reveal)} />
+          <Fact label="Nama panggilan" value={employee.nickname ?? "—"} />
+          <Fact label="Tanggal lahir" value={iso(employee.birthDate) || "—"} />
+          <Fact label="Tempat lahir" value={employee.birthPlace ?? "—"} />
+          <Fact label="Jenis Kelamin" value={employee.gender ?? "—"} />
+          <Fact label="Agama" value={employee.religion ?? "—"} />
+          <Fact label="Status pernikahan" value={employee.maritalStatus ?? "—"} />
+          <Fact label="Kewarganegaraan" value={employee.nationality ?? "—"} />
+          <Fact label="Email pribadi" value={formatPersonalEmail(employee.personalEmail, reveal)} />
+          <Fact label="Telepon" value={formatPhone(employee.phone, reveal)} />
         </div>
       )}
     </SectionForm>
@@ -293,38 +292,38 @@ export function EmploymentSection({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Employment</CardTitle>
+          <CardTitle>Kepegawaian</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 text-sm sm:grid-cols-2">
-          <Fact label="Division" value={employee.division ?? "—"} />
-          <Fact label="Department" value={employee.department ?? "—"} />
-          <Fact label="Position" value={employee.position ?? "—"} />
-          <Fact label="Employment type" value={employee.employmentType ?? "—"} />
-          <Fact label="Work location" value={employee.workLocationName ?? "—"} />
-          <Fact label="Manager" value={employee.managerEmployeeNumber ?? "—"} />
-          <Fact label="Hire date" value={iso(employee.hireDate) || "—"} />
-          <Fact label="Contract start" value={iso(employee.contractStart) || "—"} />
-          <Fact label="Contract end" value={iso(employee.contractEnd) || "—"} />
-          <Fact label="Resignation date" value={iso(employee.resignationDate) || "—"} />
-          <Fact label="Termination date" value={iso(employee.terminationDate) || "—"} />
-          <Fact label="Reason for leaving" value={employee.reasonForLeaving ?? "—"} />
+          <Fact label="Divisi" value={employee.division ?? "—"} />
+          <Fact label="Departemen" value={employee.department ?? "—"} />
+          <Fact label="Jabatan" value={employee.position ?? "—"} />
+          <Fact label="Jenis kepegawaian" value={employee.employmentType ?? "—"} />
+          <Fact label="Lokasi kerja" value={employee.workLocationName ?? "—"} />
+          <Fact label="Atasan" value={employee.managerEmployeeNumber ?? "—"} />
+          <Fact label="Tanggal masuk" value={iso(employee.hireDate) || "—"} />
+          <Fact label="Mulai kontrak" value={iso(employee.contractStart) || "—"} />
+          <Fact label="Akhir kontrak" value={iso(employee.contractEnd) || "—"} />
+          <Fact label="Tanggal resign" value={iso(employee.resignationDate) || "—"} />
+          <Fact label="Tanggal berhenti" value={iso(employee.terminationDate) || "—"} />
+          <Fact label="Alasan keluar" value={employee.reasonForLeaving ?? "—"} />
         </CardContent>
       </Card>
     );
   }
   return (
     <SectionForm
-      title="Employment"
-      description="Organization assignment, position and contract. Changes are snapshotted to the History tab."
+      title="Kepegawaian"
+      description="Penempatan organisasi, jabatan, dan kontrak. Perubahan disimpan ke tab Riwayat."
       action={action}
-      submitLabel="Save employment"
+      submitLabel="Simpan kepegawaian"
     >
       <div className="grid gap-4 sm:grid-cols-2">
-        <FormRow label="Division" name="division" value={employee.division} maxLength={100} list="org-master-divisions" />
-        <FormRow label="Department" name="department" value={employee.department} maxLength={100} list="org-master-departments" />
-        <FormRow label="Position" name="position" value={employee.position} maxLength={100} list="org-master-positions" />
+        <FormRow label="Divisi" name="division" value={employee.division} maxLength={100} list="org-master-divisions" />
+        <FormRow label="Departemen" name="department" value={employee.department} maxLength={100} list="org-master-departments" />
+        <FormRow label="Jabatan" name="position" value={employee.position} maxLength={100} list="org-master-positions" />
         <SelectRow
-          label="Employment type"
+          label="Jenis kepegawaian"
           name="employmentType"
           value={employee.employmentType}
           options={[
@@ -337,7 +336,7 @@ export function EmploymentSection({
           ].map((value) => ({ value, label: value }))}
         />
         <SelectRow
-          label="Work location"
+          label="Lokasi kerja"
           name="workLocationId"
           value={employee.workLocationId}
           options={workLocations.map((location) => ({
@@ -346,7 +345,7 @@ export function EmploymentSection({
           }))}
         />
         <SelectRow
-          label="Manager"
+          label="Atasan"
           name="managerId"
           value={employee.managerId}
           options={managers.map((manager) => ({
@@ -354,12 +353,12 @@ export function EmploymentSection({
             label: `${manager.employeeNumber} — ${manager.name}`,
           }))}
         />
-        <FormRow label="Contract start" name="contractStart" type="date" value={iso(employee.contractStart)} />
-        <FormRow label="Contract end" name="contractEnd" type="date" value={iso(employee.contractEnd)} />
-        <FormRow label="Resignation date" name="resignationDate" type="date" value={iso(employee.resignationDate)} />
-        <FormRow label="Termination date" name="terminationDate" type="date" value={iso(employee.terminationDate)} />
-        <FormRow label="Reason for leaving" name="reasonForLeaving" value={employee.reasonForLeaving} maxLength={500} />
-        <FormRow label="History note (optional)" name="historyNotes" maxLength={500} />
+        <FormRow label="Mulai kontrak" name="contractStart" type="date" value={iso(employee.contractStart)} />
+        <FormRow label="Akhir kontrak" name="contractEnd" type="date" value={iso(employee.contractEnd)} />
+        <FormRow label="Tanggal resign" name="resignationDate" type="date" value={iso(employee.resignationDate)} />
+        <FormRow label="Tanggal berhenti" name="terminationDate" type="date" value={iso(employee.terminationDate)} />
+        <FormRow label="Alasan keluar" name="reasonForLeaving" value={employee.reasonForLeaving} maxLength={500} />
+        <FormRow label="Catatan riwayat (opsional)" name="historyNotes" maxLength={500} />
       </div>
     </SectionForm>
   );
@@ -382,8 +381,8 @@ export function AddressesSection({
   const domicile = addresses.find((address) => address.type === "domicile") ?? null;
   return (
     <ListSection
-      title="Addresses"
-      description="One KTP address and one Domicile address per employee."
+      title="Alamat"
+      description="Satu alamat KTP dan satu alamat Domisili per karyawan."
       footer={
         canEdit ? (
           <AddressEditors employeeId={employeeId} ktp={ktp} domicile={domicile} />
@@ -391,7 +390,7 @@ export function AddressesSection({
       }
     >
       {addresses.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No addresses recorded.</p>
+        <p className="text-sm text-muted-foreground">Belum ada alamat.</p>
       ) : addresses.map((address) => (
           <div key={address.id} className="rounded-md border border-border p-4 text-sm">
             <p className="mb-2 font-medium capitalize">
@@ -414,13 +413,13 @@ export function AddressesSection({
             {canEdit ? (
               <div className="mt-3 flex items-center gap-2">
                 <ActionButton
-                  label="Remove"
+                  label="Hapus"
                   action={deleteAddressAction}
                   employeeId={employeeId}
                   rowId={address.id}
                   variant="outline"
                 />
-                <Disclosure label="Edit">
+                <Disclosure label="Ubah">
                   <AddressEditor
                     employeeId={employeeId}
                     type={address.type === "ktp" ? "ktp" : "domicile"}
@@ -470,23 +469,23 @@ function AddressEditor({
     <SectionForm
       title={type === "ktp" ? "KTP address" : "Domicile address"}
       action={action}
-      submitLabel={existing ? "Update" : "Save"}
+      submitLabel={existing ? "Perbarui" : "Simpan"}
     >
       <input type="hidden" name="type" value={type} />
       {type === "domicile" ? (
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" name="sameAsKtp" value="on" className="h-4 w-4 rounded border-input" />
-          Same as KTP
+          Sama dengan KTP
         </label>
       ) : null}
       <div className="grid gap-4 sm:grid-cols-2">
-        <FormRow label="Address" name="address" value={existing?.address} maxLength={500} />
+        <FormRow label="Alamat" name="address" value={existing?.address} maxLength={500} />
         <FormRow label="RT/RW" name="rtRw" value={existing?.rtRw} maxLength={20} />
         <FormRow label="Village / Kelurahan" name="village" value={existing?.village} maxLength={120} />
         <FormRow label="District / Kecamatan" name="district" value={existing?.district} maxLength={120} />
-        <FormRow label="City" name="city" value={existing?.city} maxLength={120} />
-        <FormRow label="Province" name="province" value={existing?.province} maxLength={120} />
-        <FormRow label="Postal code" name="postalCode" value={existing?.postalCode} maxLength={20} />
+        <FormRow label="Kota" name="city" value={existing?.city} maxLength={120} />
+        <FormRow label="Provinsi" name="province" value={existing?.province} maxLength={120} />
+        <FormRow label="Kode pos" name="postalCode" value={existing?.postalCode} maxLength={20} />
       </div>
     </SectionForm>
   );
@@ -518,11 +517,11 @@ export function InsuranceSection({
         </CardHeader>
         <CardContent className="grid gap-3 text-sm sm:grid-cols-2">
           <Fact label="NPWP" value={formatNpwp(insurance?.npwp ?? null, reveal) ?? "—"} />
-          <Fact label="BPJS Kesehatan No." value={formatBpjs(insurance?.bpjsKesehatanNumber ?? null, reveal) ?? "—"} />
-          <Fact label="BPJS Kesehatan status" value={insurance?.bpjsKesehatanStatus ?? "—"} />
+          <Fact label="No. BPJS Kesehatan" value={formatBpjs(insurance?.bpjsKesehatanNumber ?? null, reveal) ?? "—"} />
+          <Fact label="Status BPJS Kesehatan" value={insurance?.bpjsKesehatanStatus ?? "—"} />
           <Fact label="BPJS Kesehatan class" value={insurance?.bpjsKesehatanClass ?? "—"} />
-          <Fact label="BPJS Ketenagakerjaan No." value={formatBpjs(insurance?.bpjsKetenagakerjaanNumber ?? null, reveal) ?? "—"} />
-          <Fact label="BPJS Ketenagakerjaan status" value={insurance?.bpjsKetenagakerjaanStatus ?? "—"} />
+          <Fact label="No. BPJS Ketenagakerjaan" value={formatBpjs(insurance?.bpjsKetenagakerjaanNumber ?? null, reveal) ?? "—"} />
+          <Fact label="Status BPJS Ketenagakerjaan" value={insurance?.bpjsKetenagakerjaanStatus ?? "—"} />
         </CardContent>
       </Card>
     );
@@ -530,16 +529,16 @@ export function InsuranceSection({
   return (
     <SectionForm
       title="Insurance & government"
-      description="NPWP and BPJS registrations. Values are masked for viewers without update rights."
+      description="Pendaftaran NPWP dan BPJS. Nilai disamarkan bagi yang tidak memiliki hak ubah."
       action={action}
     >
       <div className="grid gap-4 sm:grid-cols-2">
         <FormRow label="NPWP" name="npwp" value={value((i) => (reveal ? i.npwp : formatNpwp(i.npwp, reveal)))} maxLength={30} />
-        <FormRow label="BPJS Kesehatan No." name="bpjsKesehatanNumber" value={value((i) => (reveal ? i.bpjsKesehatanNumber : formatBpjs(i.bpjsKesehatanNumber, reveal)))} maxLength={30} />
-        <FormRow label="BPJS Kesehatan status" name="bpjsKesehatanStatus" value={value((i) => i.bpjsKesehatanStatus)} maxLength={30} />
+        <FormRow label="No. BPJS Kesehatan" name="bpjsKesehatanNumber" value={value((i) => (reveal ? i.bpjsKesehatanNumber : formatBpjs(i.bpjsKesehatanNumber, reveal)))} maxLength={30} />
+        <FormRow label="Status BPJS Kesehatan" name="bpjsKesehatanStatus" value={value((i) => i.bpjsKesehatanStatus)} maxLength={30} />
         <FormRow label="BPJS Kesehatan class" name="bpjsKesehatanClass" value={value((i) => i.bpjsKesehatanClass)} maxLength={10} />
-        <FormRow label="BPJS Ketenagakerjaan No." name="bpjsKetenagakerjaanNumber" value={value((i) => (reveal ? i.bpjsKetenagakerjaanNumber : formatBpjs(i.bpjsKetenagakerjaanNumber, reveal)))} maxLength={30} />
-        <FormRow label="BPJS Ketenagakerjaan status" name="bpjsKetenagakerjaanStatus" value={value((i) => i.bpjsKetenagakerjaanStatus)} maxLength={30} />
+        <FormRow label="No. BPJS Ketenagakerjaan" name="bpjsKetenagakerjaanNumber" value={value((i) => (reveal ? i.bpjsKetenagakerjaanNumber : formatBpjs(i.bpjsKetenagakerjaanNumber, reveal)))} maxLength={30} />
+        <FormRow label="Status BPJS Ketenagakerjaan" name="bpjsKetenagakerjaanStatus" value={value((i) => i.bpjsKetenagakerjaanStatus)} maxLength={30} />
       </div>
     </SectionForm>
   );
@@ -562,8 +561,8 @@ export function BankAccountsSection({
 }) {
   return (
     <ListSection
-      title="Bank accounts"
-      description="One primary account per employee; account numbers are masked for viewers without update rights."
+      title="Rekening bank"
+      description="Satu rekening utama per karyawan; nomor rekening disamarkan bagi yang tidak memiliki hak ubah."
       footer={
         canEdit ? (
           <BankEditor employeeId={employeeId} reveal={reveal} />
@@ -571,14 +570,14 @@ export function BankAccountsSection({
       }
     >
       {accounts.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No bank accounts recorded.</p>
+        <p className="text-sm text-muted-foreground">Belum ada rekening bank.</p>
       ) : accounts.map((account) => (
           <div key={account.id} className="rounded-md border border-border p-4 text-sm">
             <p className="font-medium">
               {account.bankName}
               {account.isPrimary ? (
                 <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
-                  Primary
+                  Utama
                 </span>
               ) : null}
             </p>
@@ -592,20 +591,20 @@ export function BankAccountsSection({
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 {!account.isPrimary ? (
                   <ActionButton
-                    label="Set primary"
+                    label="Jadikan utama"
                     action={setPrimaryBankAccountAction}
                     employeeId={employeeId}
                     rowId={account.id}
                   />
                 ) : null}
                 <ActionButton
-                  label="Remove"
+                  label="Hapus"
                   action={deleteBankAccountAction}
                   employeeId={employeeId}
                   rowId={account.id}
                   variant="outline"
                 />
-                <Disclosure label="Edit">
+                <Disclosure label="Ubah">
                   <BankEditor
                     employeeId={employeeId}
                     reveal={reveal}
@@ -635,26 +634,26 @@ function BankEditor({
     <SectionForm
       title={existing ? `Edit ${existing.bankName}` : "Add bank account"}
       action={action}
-      submitLabel={existing ? "Save account" : "Add account"}
+      submitLabel={existing ? "Simpan rekening" : "Tambah rekening"}
     >
       <div className="grid gap-4 sm:grid-cols-2">
-        <FormRow label="Bank name" name="bankName" value={existing?.bankName} required maxLength={100} />
+        <FormRow label="Nama bank" name="bankName" value={existing?.bankName} required maxLength={100} />
         <FormRow
-          label="Account number"
+          label="Nomor rekening"
           name="accountNumber"
           value={existing ? (reveal ? existing.accountNumber : "") : ""}
           required={!existing}
           maxLength={40}
         />
-        <FormRow label="Account holder" name="accountHolder" value={existing?.accountHolder} required maxLength={150} />
-        <FormRow label="Branch" name="branch" value={existing?.branch} maxLength={120} />
+        <FormRow label="Nama pemilik rekening" name="accountHolder" value={existing?.accountHolder} required maxLength={150} />
+        <FormRow label="Cabang" name="branch" value={existing?.branch} maxLength={120} />
         <SelectRow
           label="Status"
           name="status"
           value={existing?.status}
           options={[
-            { value: "active", label: "Active" },
-            { value: "inactive", label: "Inactive" },
+            { value: "active", label: "Aktif" },
+            { value: "inactive", label: "Nonaktif" },
           ]}
         />
         <label className="flex items-center gap-2 self-end pb-2 text-sm">
@@ -665,12 +664,12 @@ function BankEditor({
             defaultChecked={existing?.isPrimary ?? false}
             className="h-4 w-4 rounded border-input"
           />
-          Set as primary
+          Jadikan utama
         </label>
       </div>
       {existing && !reveal ? (
         <p className="text-xs text-muted-foreground">
-          The masked account number is preserved unless you type a new one.
+          Nomor rekening yang disamarkan tetap dipakai kecuali Anda mengetik nomor baru.
         </p>
       ) : null}
     </SectionForm>
@@ -694,12 +693,12 @@ export function FamilySection({
 }) {
   return (
     <ListSection
-      title="Family / dependents"
-      description="Dependent NIK values are masked for viewers without personal update rights."
+      title="Keluarga / tanggungan"
+      description="NIK tanggungan disamarkan bagi yang tidak memiliki hak ubah data pribadi."
       footer={canEdit ? <DependentEditor employeeId={employeeId} reveal={reveal} /> : null}
     >
       {dependents.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No family members recorded.</p>
+        <p className="text-sm text-muted-foreground">Belum ada anggota keluarga.</p>
       ) : dependents.map((dependent) => (
           <div key={dependent.id} className="rounded-md border border-border p-4 text-sm">
             <p className="font-medium">
@@ -720,13 +719,13 @@ export function FamilySection({
             {canEdit ? (
               <div className="mt-3 flex items-center gap-2">
                 <ActionButton
-                  label="Remove"
+                  label="Hapus"
                   action={deleteDependentAction}
                   employeeId={employeeId}
                   rowId={dependent.id}
                   variant="outline"
                 />
-                <Disclosure label="Edit">
+                <Disclosure label="Ubah">
                   <DependentEditor
                     employeeId={employeeId}
                     reveal={reveal}
@@ -756,12 +755,12 @@ function DependentEditor({
     <SectionForm
       title={existing ? `Edit ${existing.name}` : "Add family member"}
       action={action}
-      submitLabel={existing ? "Save member" : "Add member"}
+      submitLabel={existing ? "Simpan anggota" : "Tambah anggota"}
     >
       <div className="grid gap-4 sm:grid-cols-2">
-        <FormRow label="Name" name="name" value={existing?.name} required maxLength={150} />
+        <FormRow label="Nama" name="name" value={existing?.name} required maxLength={150} />
         <SelectRow
-          label="Relationship"
+          label="Hubungan"
           name="relationship"
           value={existing?.relationship}
           options={["spouse", "child", "parent", "other"].map((value) => ({
@@ -775,24 +774,24 @@ function DependentEditor({
           value={existing ? (reveal ? existing.nik : "") : ""}
           maxLength={32}
         />
-        <FormRow label="Birth date" name="birthDate" type="date" value={existing ? iso(existing.birthDate) : ""} />
+        <FormRow label="Tanggal lahir" name="birthDate" type="date" value={existing ? iso(existing.birthDate) : ""} />
         <SelectRow
-          label="Gender"
+          label="Jenis Kelamin"
           name="gender"
           value={existing?.gender}
           options={[
-            { value: "Male", label: "Male" },
-            { value: "Female", label: "Female" },
+            { value: "Male", label: "Laki-laki" },
+            { value: "Female", label: "Perempuan" },
           ]}
         />
-        <FormRow label="Occupation" name="occupation" value={existing?.occupation} maxLength={120} />
-        <FormRow label="Dependent status" name="dependentStatus" value={existing?.dependentStatus} maxLength={30} />
-        <FormRow label="BPJS status" name="bpjsStatus" value={existing?.bpjsStatus} maxLength={30} />
-        <FormRow label="Notes" name="notes" value={existing?.notes} maxLength={500} />
+        <FormRow label="Pekerjaan" name="occupation" value={existing?.occupation} maxLength={120} />
+        <FormRow label="Status tanggungan" name="dependentStatus" value={existing?.dependentStatus} maxLength={30} />
+        <FormRow label="Status BPJS" name="bpjsStatus" value={existing?.bpjsStatus} maxLength={30} />
+        <FormRow label="Catatan" name="notes" value={existing?.notes} maxLength={500} />
       </div>
       {reveal ? null : (
         <p className="text-xs text-muted-foreground">
-          NIK is only accepted here if you may update personal data.
+          NIK hanya diterima di sini jika Anda berhak mengubah data pribadi.
         </p>
       )}
     </SectionForm>
@@ -814,11 +813,11 @@ export function EducationSection({
 }) {
   return (
     <ListSection
-      title="Education"
+      title="Pendidikan"
       footer={canEdit ? <EducationEditor employeeId={employeeId} /> : null}
     >
       {educations.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No education records.</p>
+        <p className="text-sm text-muted-foreground">Belum ada data pendidikan.</p>
       ) : educations.map((education) => (
           <div key={education.id} className="rounded-md border border-border p-4 text-sm">
             <p className="font-medium">{education.educationLevel} · {education.institution}</p>
@@ -836,7 +835,7 @@ export function EducationSection({
             {canEdit ? (
               <div className="mt-3">
                 <ActionButton
-                  label="Remove"
+                  label="Hapus"
                   action={deleteEducationAction}
                   employeeId={employeeId}
                   rowId={education.id}
@@ -854,16 +853,16 @@ export function EducationSection({
 function EducationEditor({ employeeId }: { employeeId: string }) {
   const action = saveEducationAction.bind(null, employeeId, null);
   return (
-    <SectionForm title="Add education" action={action} submitLabel="Add education">
+    <SectionForm title="Tambah pendidikan" action={action} submitLabel="Tambah pendidikan">
       <div className="grid gap-4 sm:grid-cols-2">
-        <FormRow label="Education level" name="educationLevel" required maxLength={40} />
-        <FormRow label="Institution" name="institution" required maxLength={150} />
-        <FormRow label="Major" name="major" maxLength={150} />
-        <FormRow label="Start year" name="startYear" type="number" maxLength={4} />
-        <FormRow label="Graduation year" name="graduationYear" type="number" maxLength={4} />
+        <FormRow label="Jenjang pendidikan" name="educationLevel" required maxLength={40} />
+        <FormRow label="Institusi" name="institution" required maxLength={150} />
+        <FormRow label="Jurusan" name="major" maxLength={150} />
+        <FormRow label="Tahun mulai" name="startYear" type="number" maxLength={4} />
+        <FormRow label="Tahun lulus" name="graduationYear" type="number" maxLength={4} />
         <FormRow label="GPA / Score" name="gpaScore" maxLength={20} />
-        <FormRow label="Certificate No." name="certificateNumber" maxLength={100} />
-        <FormRow label="Notes" name="notes" maxLength={500} />
+        <FormRow label="No. Sertifikat" name="certificateNumber" maxLength={100} />
+        <FormRow label="Catatan" name="notes" maxLength={500} />
       </div>
     </SectionForm>
   );
@@ -887,18 +886,18 @@ export function DocumentsSection({
   const uploadAction = uploadEmployeeDocumentAction.bind(null, employeeId);
   return (
     <ListSection
-      title="Documents"
-      description="Files are stored privately and served only by the authenticated download route."
+      title="Dokumen"
+      description="Berkas disimpan secara privat dan hanya dapat diunduh oleh pengguna yang berhak."
       footer={
         canUpload ? (
           <SectionForm
-            title="Upload document"
+            title="Unggah dokumen"
             action={uploadAction}
-            submitLabel="Upload"
+            submitLabel="Unggah"
           >
             <div className="grid gap-4 sm:grid-cols-2">
               <SelectRow
-                label="Document type"
+                label="Jenis dokumen"
                 name="documentType"
                 options={[
                   "ktp",
@@ -914,11 +913,11 @@ export function DocumentsSection({
                   "other",
                 ].map((value) => ({ value, label: value }))}
               />
-              <FormRow label="Document number" name="documentNumber" maxLength={100} />
-              <FormRow label="Expiry date" name="expiryDate" type="date" />
-              <FormRow label="Notes" name="notes" maxLength={500} />
+              <FormRow label="Nomor dokumen" name="documentNumber" maxLength={100} />
+              <FormRow label="Tanggal kedaluwarsa" name="expiryDate" type="date" />
+              <FormRow label="Catatan" name="notes" maxLength={500} />
               <div className="sm:col-span-2 space-y-2">
-                <Label htmlFor="f-file">File (PDF, image, Word, Excel — 10 MB max)</Label>
+                <Label htmlFor="f-file">Berkas (PDF, gambar, Word, Excel — maks. 10 MB)</Label>
                 <input
                   id="f-file"
                   name="file"
@@ -933,17 +932,17 @@ export function DocumentsSection({
       }
     >
       {documents.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No documents uploaded.</p>
+        <p className="text-sm text-muted-foreground">Belum ada dokumen yang diunggah.</p>
       ) : (
         <div className="rounded-md border border-border">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left text-xs text-muted-foreground">
-                <th className="p-2 font-medium">Type</th>
-                <th className="p-2">Number</th>
-                <th className="p-2">File</th>
-                <th className="p-2">Expiry</th>
-                <th className="p-2 text-right">Actions</th>
+                <th className="p-2 font-medium">Jenis</th>
+                <th className="p-2">Nomor</th>
+                <th className="p-2">Berkas</th>
+                <th className="p-2">Masa berlaku</th>
+                <th className="p-2 text-right">Aksi</th>
               </tr>
             </thead>
             <tbody>
@@ -963,7 +962,7 @@ export function DocumentsSection({
                   <td className="p-2 text-right">
                     {canDelete ? (
                       <ActionButton
-                        label="Delete"
+                        label="Hapus"
                         action={deleteEmployeeDocumentAction}
                         employeeId={employeeId}
                         rowId={document.id}
@@ -997,8 +996,8 @@ export function HistorySection({
 }) {
   return (
     <ListSection
-      title="Employment history"
-      description="Append-only snapshots of employment changes."
+      title="Riwayat kepegawaian"
+      description="Riwayat perubahan kepegawaian (hanya bertambah)."
       footer={
         canClear ? (
           <HistoryClearButton employeeId={employeeId} count={history.length} />
@@ -1006,7 +1005,7 @@ export function HistorySection({
       }
     >
       {history.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No history recorded yet.</p>
+        <p className="text-sm text-muted-foreground">Belum ada riwayat.</p>
       ) : (
         <ol className="space-y-3">
           {history.map((entry) => (

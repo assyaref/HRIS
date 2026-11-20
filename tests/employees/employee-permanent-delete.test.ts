@@ -476,51 +476,51 @@ describe("operator-facing message contract", () => {
   it("pins the 403 / 404 / 400 / 409 / 500 wording used by the dialog", () => {
     assert.equal(
       EMPLOYEE_PERMANENT_DELETE_FORBIDDEN_MESSAGE,
-      "You do not have permission to permanently delete employees."
+      "Anda tidak berhak menghapus permanen karyawan."
     );
     assert.equal(
       EMPLOYEE_PERMANENT_DELETE_NOT_FOUND_MESSAGE,
-      "Employee not found."
+      "Karyawan tidak ditemukan."
     );
     assert.equal(
       EMPLOYEE_PERMANENT_DELETE_CONFIRMATION_MESSAGE,
-      "Employee number confirmation does not match."
+      "Konfirmasi nomor karyawan tidak cocok."
     );
     assert.equal(
       EMPLOYEE_PERMANENT_DELETE_ACKNOWLEDGEMENT_MESSAGE,
-      "You must confirm that this action cannot be undone."
+      "Anda harus mengonfirmasi bahwa tindakan ini tidak dapat dibatalkan."
     );
     assert.equal(
       EMPLOYEE_PERMANENT_DELETE_PROTECTED_MESSAGE,
-      "Employee cannot be permanently deleted because protected historical records exist."
+      "Karyawan tidak dapat dihapus permanen karena ada data historis yang dilindungi."
     );
     assert.equal(
       EMPLOYEE_PERMANENT_DELETE_DEPENDENCY_MESSAGE,
-      "Employee cannot be permanently deleted because related records still exist."
+      "Karyawan tidak dapat dihapus permanen karena masih ada data terkait."
     );
     assert.equal(
       EMPLOYEE_PERMANENT_DELETE_RETAINED_COMPLETION_MESSAGE,
-      "Permanent deletion cannot be completed because protected historical records must be retained."
+      "Hapus permanen tidak dapat diselesaikan karena data historis yang dilindungi harus disimpan."
     );
     assert.equal(
       EMPLOYEE_PERMANENT_DELETE_FAILED_MESSAGE,
-      "Permanent deletion failed. No data was deleted."
+      "Hapus permanen gagal. Tidak ada data yang dihapus."
     );
   });
 
   it("uses the exact strings the requirements specify", () => {
     assert.equal(
       EMPLOYEE_PERMANENT_DELETE_FORBIDDEN_MESSAGE,
-      "You do not have permission to permanently delete employees."
+      "Anda tidak berhak menghapus permanen karyawan."
     );
-    assert.equal(EMPLOYEE_PERMANENT_DELETE_NOT_FOUND_MESSAGE, "Employee not found.");
+    assert.equal(EMPLOYEE_PERMANENT_DELETE_NOT_FOUND_MESSAGE, "Karyawan tidak ditemukan.");
     assert.equal(
       EMPLOYEE_PERMANENT_DELETE_CONFIRMATION_MESSAGE,
-      "Employee number confirmation does not match."
+      "Konfirmasi nomor karyawan tidak cocok."
     );
     assert.equal(
       EMPLOYEE_PERMANENT_DELETE_FAILED_MESSAGE,
-      "Permanent deletion failed. No data was deleted."
+      "Hapus permanen gagal. Tidak ada data yang dihapus."
     );
   });
 });
@@ -849,17 +849,17 @@ describe("retained-completion message (database refuses the override attempt)", 
   it("pins the revised-policy wording", () => {
     assert.equal(
       EMPLOYEE_PERMANENT_DELETE_RETAINED_COMPLETION_MESSAGE,
-      "Permanent deletion cannot be completed because protected historical records must be retained."
+      "Hapus permanen tidak dapat diselesaikan karena data historis yang dilindungi harus disimpan."
     );
     assert.equal(
       EMPLOYEE_PERMANENT_DELETE_RETAINED_COMPLETION_EXPLANATION.includes(
-        "Nothing was deleted."
+        "Tidak ada data yang dihapus."
       ),
       true
     );
     assert.equal(
       EMPLOYEE_PERMANENT_DELETE_RETAINED_PREREQUISITES.includes(
-        "retention-policy approval"
+        "persetujuan kebijakan retensi"
       ),
       true
     );
@@ -878,10 +878,10 @@ describe("retained-completion message (database refuses the override attempt)", 
     const lines = message.split("\n");
     assert.equal(lines[0], EMPLOYEE_PERMANENT_DELETE_RETAINED_COMPLETION_MESSAGE);
     assert.equal(
-      message.includes("Cannot delete employee 03233 while its protected records are retained."),
+      message.includes("Karyawan 03233 tidak dapat dihapus selama data yang dilindungi masih disimpan."),
       true
     );
-    assert.equal(message.includes("Retained records:"), true);
+    assert.equal(message.includes("Data yang disimpan:"), true);
     assert.equal(message.includes("Attendance: 1"), true);
     assert.equal(message.includes("Employment history: 3"), true);
     assert.equal(
@@ -918,8 +918,8 @@ describe("protected rejection message names the retained modules", () => {
     );
     const lines = message.split("\n");
     assert.equal(lines[0], EMPLOYEE_PERMANENT_DELETE_PROTECTED_MESSAGE);
-    assert.equal(message.includes("Cannot delete employee 03233."), true);
-    assert.equal(message.includes("Protected records:"), true);
+    assert.equal(message.includes("Karyawan 03233 tidak dapat dihapus."), true);
+    assert.equal(message.includes("Data yang dilindungi:"), true);
     assert.equal(
       lines.indexOf("Attendance: 10") <
         lines.indexOf("Employment history: 3"),
@@ -1236,7 +1236,7 @@ describe("server action: mandatory audit-policy deletion reason", () => {
       "a visible, labeled reason textarea is part of the confirmation UI"
     );
     assert.equal(
-      dialogSource.includes("Reason for deletion (required)"),
+      dialogSource.includes("Alasan penghapusan (wajib)"),
       true
     );
     assert.equal(
@@ -1467,7 +1467,7 @@ describe("server action: transaction and explicit deletion", () => {
   it("reports success with the required message", () => {
     assert.equal(
       permanentDelete.includes(
-        'message: "Employee permanently deleted successfully."'
+        'message: "Karyawan berhasil dihapus permanen."'
       ),
       true
     );
@@ -1741,22 +1741,22 @@ describe("UI: the Super Administrator dialog", () => {
 
   it("shows the required title and warnings", () => {
     const copy = normalize(dialogSource);
-    assert.equal(copy.includes("Permanent Delete Employee?"), true);
+    assert.equal(copy.includes("Hapus Permanen Karyawan?"), true);
     assert.equal(
       copy.includes(
-        "This action permanently deletes this employee and eligible related records. This action cannot be undone."
+        "Tindakan ini menghapus permanen karyawan ini beserta data terkait yang memenuhi syarat. Tindakan ini tidak dapat dibatalkan."
       ),
       true
     );
-    assert.equal(copy.includes("This action cannot be undone."), true);
+    assert.equal(copy.includes("Tindakan ini tidak dapat dibatalkan."), true);
     assert.equal(
       copy.includes(
-        "Permanent deletion will remove this employee and eligible related records in a single transaction."
+        "Hapus permanen akan menghapus karyawan ini beserta data terkait yang memenuhi syarat dalam satu transaksi."
       ),
       true
     );
     assert.equal(
-      copy.includes("Protected historical records, if any, will not be deleted."),
+      copy.includes("Data historis yang dilindungi, jika ada, tidak akan dihapus."),
       true
     );
   });
@@ -1764,15 +1764,15 @@ describe("UI: the Super Administrator dialog", () => {
   it("shows Name, Employee Number and Status", () => {
     const copy = normalize(dialogSource);
     assert.equal(copy.includes("Name"), true);
-    assert.equal(copy.includes("Employee Number"), true);
+    assert.equal(copy.includes("Nomor Karyawan"), true);
     assert.equal(copy.includes("Status"), true);
     assert.equal(copy.includes("EmployeeStatusBadge"), true);
   });
 
   it("shows related-record counts and the total", () => {
     const copy = normalize(dialogSource);
-    assert.equal(copy.includes("Related records"), true);
-    assert.equal(copy.includes("Total related records:"), true);
+    assert.equal(copy.includes("Data terkait"), true);
+    assert.equal(copy.includes("Total data terkait:"), true);
     assert.equal(copy.includes("deletableSummary.map((dependency) => ("), true);
     assert.equal(copy.includes("dependencyCheck.deletableDependencies"), true);
   });
@@ -1780,18 +1780,18 @@ describe("UI: the Super Administrator dialog", () => {
   it("summarizes the records that will be deleted and those that will be retained", () => {
     const copy = normalize(dialogSource);
     // Deleted with the employee:
-    assert.equal(copy.includes("(will be deleted)"), true);
+    assert.equal(copy.includes("(akan dihapus)"), true);
     // Retained (protected history):
-    assert.equal(copy.includes("Retained records (never deleted)"), true);
-    assert.equal(copy.includes("(retained for legal and audit purposes)"), true);
+    assert.equal(copy.includes("Data yang disimpan (tidak pernah dihapus)"), true);
+    assert.equal(copy.includes("(disimpan untuk keperluan hukum dan audit)"), true);
     assert.equal(
       copy.includes("retainedSummary.map((dependency) => ("),
       true
     );
     // Retained (direct reports):
-    assert.equal(copy.includes("Direct reports"), true);
+    assert.equal(copy.includes("Bawahan langsung"), true);
     assert.equal(
-      copy.includes("(retained — their manager link will be cleared)"),
+      copy.includes("(disimpan — tautan atasan akan dikosongkan)"),
       true
     );
   });
@@ -1816,7 +1816,7 @@ describe("UI: the Super Administrator dialog", () => {
     );
     assert.equal(
       copy.includes(
-        "The transaction stores their historical identity (employee number and name) on each retained row and removes only the link to the employee record, so time and employment-history reports stay complete. Payroll history is not retained: it is deleted with the employee under the approved deletion scope."
+        "Transaksi menyimpan identitas historisnya (nomor dan nama karyawan) di setiap baris yang disimpan dan hanya melepas tautan ke data karyawan, sehingga laporan waktu dan riwayat kepegawaian tetap lengkap. Riwayat payroll tidak disimpan: ikut dihapus bersama karyawan sesuai cakupan penghapusan yang disetujui."
       ),
       true,
       "the retained section explains the retention-detach mechanism and the payroll deletion scope"
@@ -1831,7 +1831,7 @@ describe("UI: the Super Administrator dialog", () => {
   it("shows the final result of the transaction after the server responds", () => {
     const copy = normalize(dialogSource);
     assert.equal(
-      copy.includes("Final result of the transaction"),
+      copy.includes("Hasil akhir transaksi"),
       true,
       "the success panel reports the transaction outcome"
     );
@@ -1840,12 +1840,12 @@ describe("UI: the Super Administrator dialog", () => {
       true
     );
     assert.equal(
-      copy.includes("(deleted)"),
+      copy.includes("(dihapus)"),
       true,
       "removed records are listed per category"
     );
     assert.equal(
-      copy.includes("(retained with its historical identity)"),
+      copy.includes("(disimpan dengan identitas historisnya)"),
       true,
       "retained records are listed per category"
     );
@@ -1859,12 +1859,12 @@ describe("UI: the Super Administrator dialog", () => {
   it("renders the destructive action and both footer buttons", () => {
     assert.equal(dialogSource.includes('variant="destructive"'), true);
     assert.equal(dialogSource.includes("text-destructive"), true);
-    assert.equal(dialogSource.includes("Permanently Delete Employee"), true);
-    assert.equal(dialogSource.includes("Cancel"), true);
+    assert.equal(dialogSource.includes("Hapus Permanen Karyawan"), true);
+    assert.equal(dialogSource.includes("Batal"), true);
   });
 
   it("offers a layered confirmation: typed number AND acknowledgement", () => {
-    assert.equal(dialogSource.includes("Type the Employee Number to confirm"), true);
+    assert.equal(dialogSource.includes("Ketik Nomor Karyawan untuk konfirmasi"), true);
     assert.equal(
       dialogSource.includes(
         'data-testid="permanent-delete-acknowledgement"'
@@ -1873,7 +1873,7 @@ describe("UI: the Super Administrator dialog", () => {
     );
     assert.equal(
       normalize(dialogSource).includes(
-        "I understand that this action cannot be undone. Are you absolutely sure?"
+        "Saya mengerti bahwa tindakan ini tidak dapat dibatalkan. Apakah Anda benar-benar yakin?"
       ),
       true,
       "the second confirmation layer is visible next to the checkbox"
@@ -1906,7 +1906,7 @@ describe("UI: the Super Administrator dialog", () => {
   });
 
   it("shows a loading state and prevents double submit", () => {
-    assert.equal(dialogSource.includes("Deleting"), true);
+    assert.equal(dialogSource.includes("Menghapus"), true);
     assert.equal(dialogSource.includes("disabled={isPending"), true);
     assert.equal(
       dialogSource.includes("if (isPending) return;"),
@@ -1942,7 +1942,7 @@ describe("UI: the Super Administrator dialog", () => {
     assert.equal(dialogSource.includes("notifier.success("), true);
     assert.equal(
       dialogSource.includes(
-        'state.message ?? "Employee permanently deleted successfully."'
+        'state.message ?? "Karyawan berhasil dihapus permanen."'
       ),
       true
     );
@@ -2134,7 +2134,7 @@ describe("confirm-button gate model", () => {
       dialogSource.indexOf("</DialogFooter>")
     );
     assert.equal(
-      /variant="outline"[\s\S]{0,220}?disabled=\{isPending\}[\s\S]{0,220}?Cancel/.test(
+      /variant="outline"[\s\S]{0,220}?disabled=\{isPending\}[\s\S]{0,220}?Batal/.test(
         normalize(cancel)
       ),
       true,
@@ -2359,19 +2359,19 @@ describe("retained relationships are never presented as deleted rows", () => {
   it("the dialog reports them separately as retained", () => {
     assert.equal(dialogSource.includes("dependencyCheck.directReportCount"), true);
     assert.equal(
-      normalize(dialogSource).includes("Direct reports"),
+      normalize(dialogSource).includes("Bawahan langsung"),
       true
     );
     assert.equal(
       normalize(dialogSource).includes(
-        "(retained — their manager link will be cleared)"
+        "(disimpan — tautan atasan akan dikosongkan)"
       ),
       true,
       "the operator must not be told a retained employee will be deleted"
     );
     assert.equal(
       normalize(dialogSource).includes(
-        "(retained — their manager link will be cleared) (will be deleted)"
+        "(disimpan — tautan atasan akan dikosongkan) (akan dihapus)"
       ),
       false,
       "the retained figure must not sit inside the will-be-deleted block"

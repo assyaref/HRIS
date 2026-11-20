@@ -57,9 +57,9 @@ export function PayslipRevocationDialog({
   function clientValidationError(value: string): string | null {
     if (!isValidPayslipRevocationReason(value)) {
       if (value.trim().length === 0) {
-        return "A revocation reason is required.";
+        return "Alasan pencabutan wajib diisi.";
       }
-      return `The revocation reason must be ${PAYSLIP_REVOCATION_REASON_MAX_LENGTH} characters or fewer.`;
+      return `Alasan pencabutan maksimal ${PAYSLIP_REVOCATION_REASON_MAX_LENGTH} karakter.`;
     }
     return null;
   }
@@ -93,17 +93,15 @@ export function PayslipRevocationDialog({
         disabled={pending}
         className={`border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 ${triggerClassName ?? ""}`}
       >
-        Revoke
+        Cabut
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>
-            <DialogTitle>Revoke payslip {payslipNumber}</DialogTitle>
+            <DialogTitle>Cabut slip gaji {payslipNumber}</DialogTitle>
             <DialogDescription>
-              {payslipNumber} is a published payslip and is currently visible
-              to the employee. Revoking it removes it from employee access and
-              marks it revoked. This action is recorded and cannot be undone.
+              {payslipNumber} adalah slip gaji terbit dan saat ini terlihat oleh karyawan. Mencabutnya akan menghapus akses karyawan dan menandainya dicabut. Tindakan ini dicatat dan tidak dapat dibatalkan.
             </DialogDescription>
           </DialogHeader>
 
@@ -118,12 +116,12 @@ export function PayslipRevocationDialog({
 
           <form
             action={submit}
-            aria-label={`Revoke payslip ${payslipNumber}`}
+            aria-label={`Cabut slip gaji ${payslipNumber}`}
             className="space-y-4"
           >
             <div className="space-y-2">
               <Label htmlFor="payslip-revocation-reason">
-                Reason for revocation
+                Alasan pencabutan
               </Label>
               <textarea
                 id="payslip-revocation-reason"
@@ -137,11 +135,11 @@ export function PayslipRevocationDialog({
                   setError(null);
                 }}
                 disabled={pending}
-                placeholder="Explain why this published payslip must be revoked."
+                placeholder="Jelaskan alasan slip gaji yang sudah terbit ini harus dicabut."
                 className="flex min-h-24 w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground shadow-sm outline-none transition-colors placeholder:text-muted-foreground/80 focus-visible:ring-2 focus-visible:ring-blue-300 disabled:cursor-not-allowed disabled:opacity-60"
               />
               <p className="text-xs text-muted-foreground">
-                Required. The reason is stored with the payslip history.
+                Wajib. Alasan disimpan di riwayat slip gaji.
               </p>
             </div>
 
@@ -152,10 +150,10 @@ export function PayslipRevocationDialog({
                 onClick={() => setOpen(false)}
                 disabled={pending}
               >
-                Cancel
+                Batal
               </Button>
               <Button type="submit" variant="destructive" disabled={pending}>
-                {pending ? "Revoking…" : "Revoke payslip"}
+                {pending ? "Mencabut…" : "Cabut slip gaji"}
               </Button>
             </DialogFooter>
           </form>

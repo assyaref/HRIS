@@ -99,11 +99,11 @@ export function AnnouncementForm({
       ) : null}
 
       <div className="space-y-2">
-        <Label htmlFor="announcement-title">Title</Label>
+        <Label htmlFor="announcement-title">Judul</Label>
         <Input
           id="announcement-title"
           name="title"
-          placeholder="Announcement title"
+          placeholder="Judul pengumuman"
           required
           maxLength={ANNOUNCEMENT_TITLE_MAX_LENGTH}
           defaultValue={initial?.title ?? ""}
@@ -111,7 +111,7 @@ export function AnnouncementForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="announcement-content">Content</Label>
+        <Label htmlFor="announcement-content">Isi</Label>
         <textarea
           id="announcement-content"
           name="content"
@@ -122,13 +122,13 @@ export function AnnouncementForm({
           defaultValue={initial?.content ?? ""}
         />
         <p className="text-xs text-muted-foreground">
-          Plain text only — HTML tags are not supported.
+          Hanya teks biasa — tag HTML tidak didukung.
         </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="announcement-priority">Priority</Label>
+          <Label htmlFor="announcement-priority">Prioritas</Label>
           <select
             id="announcement-priority"
             name="priority"
@@ -151,14 +151,14 @@ export function AnnouncementForm({
               defaultChecked={initial?.pinned ?? false}
               className="h-4 w-4 rounded border-input accent-primary"
             />
-            Pin to the top
+            Sematkan di atas
           </label>
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="announcement-scheduled-at">Schedule for</Label>
+          <Label htmlFor="announcement-scheduled-at">Jadwalkan untuk</Label>
           <Input
             id="announcement-scheduled-at"
             name="scheduledAt"
@@ -166,11 +166,11 @@ export function AnnouncementForm({
             defaultValue={toLocalDateTimeInput(initial?.scheduledAt ?? null)}
           />
           <p className="text-xs text-muted-foreground">
-            Leave empty to publish immediately.
+            Kosongkan untuk langsung menerbitkan.
           </p>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="announcement-expires-at">Expires at</Label>
+          <Label htmlFor="announcement-expires-at">Berakhir pada</Label>
           <Input
             id="announcement-expires-at"
             name="expiresAt"
@@ -178,7 +178,7 @@ export function AnnouncementForm({
             defaultValue={toLocalDateTimeInput(initial?.expiresAt ?? null)}
           />
           <p className="text-xs text-muted-foreground">
-            The announcement disappears after this time.
+            Pengumuman hilang setelah waktu ini.
           </p>
         </div>
       </div>
@@ -207,7 +207,7 @@ export function AnnouncementForm({
           {targetType === "selected_employees" ? (
             <div className="space-y-2">
               <Label htmlFor="announcement-employees">
-                Employees
+                Karyawan
               </Label>
               <select
                 id="announcement-employees"
@@ -224,7 +224,7 @@ export function AnnouncementForm({
                 ))}
               </select>
               <p className="text-xs text-muted-foreground">
-                Hold Ctrl/Cmd to select multiple employees.
+                Tahan Ctrl/Cmd untuk memilih beberapa karyawan.
               </p>
             </div>
           ) : null}
@@ -294,16 +294,16 @@ export function AnnouncementForm({
           onClick={() => router.back()}
           disabled={pending}
         >
-          Cancel
+          Batal
         </Button>
         <Button type="submit" disabled={pending || tooMany}>
           {pending
             ? mode === "create"
-              ? "Creating…"
-              : "Saving…"
+              ? "Membuat…"
+              : "Menyimpan…"
             : mode === "create"
-              ? "Create announcement"
-              : "Save changes"}
+              ? "Buat pengumuman"
+              : "Simpan perubahan"}
         </Button>
       </div>
     </form>

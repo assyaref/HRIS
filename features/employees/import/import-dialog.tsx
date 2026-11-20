@@ -58,7 +58,7 @@ export function ImportEmployeesDialog() {
 
   function openWithWarning() {
     notifier.warning(
-      "Imported employees are permanent and cannot be undone. Review the CSV preview before importing."
+      "Karyawan yang diimpor bersifat permanen. Periksa pratinjau CSV sebelum mengimpor."
     );
     setResult(initialState);
     setFile(null);
@@ -70,7 +70,7 @@ export function ImportEmployeesDialog() {
       const next = await importEmployeesAction(initialState, payload);
       setResult(next);
       if (next.status === "success") {
-        notifier.success(next.message ?? "Employees imported successfully.");
+        notifier.success(next.message ?? "Karyawan berhasil diimpor.");
       }
     });
   }
@@ -80,7 +80,7 @@ export function ImportEmployeesDialog() {
       setResult({
         ...initialState,
         status: "error",
-        message: "No file selected.",
+        message: "Belum ada berkas yang dipilih.",
       });
       return;
     }
@@ -103,15 +103,15 @@ export function ImportEmployeesDialog() {
         variant="ghost"
         size="sm"
         onClick={openWithWarning}
-        aria-label="Import employees from CSV"
+        aria-label="Impor karyawan dari CSV"
       >
-        Import employees
+        Impor karyawan
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Import employees</DialogTitle>
+            <DialogTitle>Impor karyawan</DialogTitle>
             <DialogDescription>
               Upload a CSV file with employee data. Rows are validated before
               anything is written; the import is all-or-nothing.
@@ -143,7 +143,7 @@ export function ImportEmployeesDialog() {
                   htmlFor="import-csv-file"
                   className="text-sm font-medium"
                 >
-                  CSV file
+                  Berkas CSV
                 </label>
                 <input
                   id="import-csv-file"
@@ -159,9 +159,9 @@ export function ImportEmployeesDialog() {
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                Required columns: Employee No., Name, Email, Hire Date
-                (YYYY-MM-DD), Status (active/inactive). Maximum{" "}
-                <span className="font-medium">500 rows</span> per import.
+                Kolom wajib: Employee No., Name, Email, Hire Date
+                (YYYY-MM-DD), Status (active/inactive). Maksimal{" "}
+                <span className="font-medium">500 baris</span> per impor.
               </p>
             </div>
           ) : null}
@@ -169,21 +169,21 @@ export function ImportEmployeesDialog() {
           {status === "preview" ? (
             <div className="space-y-4">
               <p className="text-sm font-medium text-muted-foreground">
-                {result.validCount} ready, {result.errorCount} need attention of{" "}
+                {result.validCount} siap, {result.errorCount} perlu diperbaiki dari{" "}
                 {result.totalRows} total.
               </p>
 
               {result.validRows.length > 0 ? (
                 <div className="max-h-64 overflow-auto rounded-md border border-border">
                   <table className="w-full text-sm">
-                    <caption className="sr-only">Valid rows</caption>
+                    <caption className="sr-only">Baris valid</caption>
                     <thead className="sticky top-0 bg-card">
                       <tr className="border-b border-border text-left text-xs text-muted-foreground">
-                        <th className="p-2 font-mono">Row</th>
-                        <th className="p-2 font-medium">Employee No.</th>
-                        <th className="p-2">Name</th>
+                        <th className="p-2 font-mono">Baris</th>
+                        <th className="p-2 font-medium">No. Karyawan</th>
+                        <th className="p-2">Nama</th>
                         <th className="p-2">Email</th>
-                        <th className="p-2">Hire date</th>
+                        <th className="p-2">Tanggal masuk</th>
                         <th className="p-2">Status</th>
                       </tr>
                     </thead>
@@ -221,15 +221,15 @@ export function ImportEmployeesDialog() {
               {result.errorRows.length > 0 ? (
                 <div className="max-h-64 overflow-auto rounded-md border border-destructive/40">
                   <table className="w-full text-sm">
-                    <caption className="sr-only">Errors by row</caption>
+                    <caption className="sr-only">Kesalahan per baris</caption>
                     <thead className="sticky top-0 bg-card">
                       <tr className="border-b border-border text-left text-xs text-muted-foreground">
-                        <th className="p-2 font-mono">Row</th>
-                        <th className="p-2 font-medium">Employee No.</th>
-                        <th className="p-2">Name</th>
+                        <th className="p-2 font-mono">Baris</th>
+                        <th className="p-2 font-medium">No. Karyawan</th>
+                        <th className="p-2">Nama</th>
                         <th className="p-2">Email</th>
                         <th className="p-2">Status</th>
-                        <th className="p-2">Error</th>
+                        <th className="p-2">Kesalahan</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -272,7 +272,7 @@ export function ImportEmployeesDialog() {
                 variant="secondary"
                 onClick={() => setOpen(false)}
               >
-                Close
+                Tutup
               </Button>
             ) : (
               <>
@@ -282,7 +282,7 @@ export function ImportEmployeesDialog() {
                   onClick={() => setOpen(false)}
                   disabled={isPending}
                 >
-                  Cancel
+                  Batal
                 </Button>
                 {status === "preview" ? (
                   <Button
@@ -292,10 +292,8 @@ export function ImportEmployeesDialog() {
                     onClick={confirm}
                   >
                     {isPending
-                      ? "Importing..."
-                      : `Import ${result.validCount} record${
-                          result.validCount === 1 ? "" : "s"
-                        }`}
+                      ? "Mengimpor..."
+                      : `Impor ${result.validCount} data`}
                   </Button>
                 ) : (
                   <Button
@@ -304,7 +302,7 @@ export function ImportEmployeesDialog() {
                     disabled={!file || isPending}
                     onClick={preview}
                   >
-                    {isPending ? "Previewing..." : "Preview CSV"}
+                    {isPending ? "Previewing..." : "Pratinjau CSV"}
                   </Button>
                 )}
               </>

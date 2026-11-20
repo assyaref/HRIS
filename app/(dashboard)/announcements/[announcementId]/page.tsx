@@ -24,7 +24,7 @@ import { resolveAnnouncementPermissions } from "@/features/announcements/permiss
 import { formatDateTime } from "@/features/payroll/format";
 
 export const metadata: Metadata = {
-  title: "Announcement",
+  title: "Pengumuman",
 };
 
 const UUID_PATTERN =
@@ -132,7 +132,7 @@ export default async function AnnouncementDetailPage({
               href={`/announcements/management/${detail.id}/edit`}
               className={buttonVariants({ variant: "outline", size: "sm" })}
             >
-              Edit
+              Ubah
             </Link>
           ) : null}
           {perms.canView ? (
@@ -233,7 +233,7 @@ export default async function AnnouncementDetailPage({
                     size: "sm",
                   })}
                 >
-                  Download
+                  Unduh
                 </a>
               </div>
             ))}
@@ -243,7 +243,7 @@ export default async function AnnouncementDetailPage({
 
       {isEmployeeView ? null : (
         <p className="text-xs text-muted-foreground">
-          Read by {detail.readCount} employee(s)
+          Read by {detail.readCount} karyawan
           {detail.targetType === "selected_employees"
             ? ` · targeted ${detail.recipientIds.length} recipient(s)`
             : ""}

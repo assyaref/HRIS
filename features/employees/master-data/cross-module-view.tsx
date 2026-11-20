@@ -42,23 +42,23 @@ export function AttendanceTab({ rows }: { rows: AttendanceSummaryRow[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Attendance</CardTitle>
+        <CardTitle>Absensi</CardTitle>
         <CardDescription>
-          Latest 30 records. Full management lives in the Attendance module.
+          30 data terbaru. Pengelolaan lengkap ada di modul Absensi.
         </CardDescription>
       </CardHeader>
       <CardContent>
         {rows.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No attendance records.</p>
+          <p className="text-sm text-muted-foreground">Tidak ada data absensi.</p>
         ) : (
           <div className="rounded-md border border-border">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-xs text-muted-foreground">
-                  <th className="p-2">Date</th>
+                  <th className="p-2">Tanggal</th>
                   <th className="p-2">Status</th>
-                  <th className="p-2">Check in</th>
-                  <th className="p-2">Check out</th>
+                  <th className="p-2">Absen masuk</th>
+                  <th className="p-2">Absen pulang</th>
                   <th className="p-2 text-right">Detail</th>
                 </tr>
               </thead>
@@ -74,7 +74,7 @@ export function AttendanceTab({ rows }: { rows: AttendanceSummaryRow[] }) {
                         href={`/attendance/${row.id}`}
                         className={buttonVariants({ variant: "ghost", size: "sm" })}
                       >
-                        Open
+                        Buka
                       </Link>
                     </td>
                   </tr>
@@ -88,7 +88,7 @@ export function AttendanceTab({ rows }: { rows: AttendanceSummaryRow[] }) {
             href="/attendance/management"
             className={buttonVariants({ variant: "outline", size: "sm" })}
           >
-            Attendance management
+            Kelola absensi
           </Link>
         </div>
       </CardContent>
@@ -100,22 +100,22 @@ export function LeaveTab({ rows }: { rows: LeaveSummaryRow[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Leave</CardTitle>
+        <CardTitle>Cuti</CardTitle>
         <CardDescription>
-          Latest 30 requests. Approval flows live in the Leave module.
+          30 pengajuan terbaru. Alur persetujuan ada di modul Cuti.
         </CardDescription>
       </CardHeader>
       <CardContent>
         {rows.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No leave requests.</p>
+          <p className="text-sm text-muted-foreground">Tidak ada pengajuan cuti.</p>
         ) : (
           <div className="rounded-md border border-border">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-xs text-muted-foreground">
-                  <th className="p-2">Type</th>
-                  <th className="p-2">From</th>
-                  <th className="p-2">To</th>
+                  <th className="p-2">Jenis</th>
+                  <th className="p-2">Dari</th>
+                  <th className="p-2">Sampai</th>
                   <th className="p-2">Status</th>
                   <th className="p-2 text-right">Detail</th>
                 </tr>
@@ -132,7 +132,7 @@ export function LeaveTab({ rows }: { rows: LeaveSummaryRow[] }) {
                         href={`/leave/${row.id}`}
                         className={buttonVariants({ variant: "ghost", size: "sm" })}
                       >
-                        Open
+                        Buka
                       </Link>
                     </td>
                   </tr>
@@ -146,7 +146,7 @@ export function LeaveTab({ rows }: { rows: LeaveSummaryRow[] }) {
             href="/leave/management"
             className={buttonVariants({ variant: "outline", size: "sm" })}
           >
-            Leave management
+            Manajemen cuti
           </Link>
         </div>
       </CardContent>
@@ -166,21 +166,20 @@ export function PayrollTab({
       <CardHeader>
         <CardTitle>Payroll</CardTitle>
         <CardDescription>
-          Published payslips for this employee. Runs are managed in the
-          Payroll module.
+          Slip gaji terbit untuk karyawan ini. Proses payroll dikelola di modul Payroll.
         </CardDescription>
       </CardHeader>
       <CardContent>
         {rows.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No payslips yet.</p>
+          <p className="text-sm text-muted-foreground">Belum ada slip gaji.</p>
         ) : (
           <div className="rounded-md border border-border">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-xs text-muted-foreground">
-                  <th className="p-2">Payslip</th>
-                  <th className="p-2">Period</th>
-                  <th className="p-2">Issued</th>
+                  <th className="p-2">Slip gaji</th>
+                  <th className="p-2">Periode</th>
+                  <th className="p-2">Diterbitkan</th>
                   <th className="p-2">Status</th>
                   <th className="p-2 text-right">Detail</th>
                 </tr>
@@ -201,7 +200,7 @@ export function PayrollTab({
                         }
                         className={buttonVariants({ variant: "ghost", size: "sm" })}
                       >
-                        Open
+                        Buka
                       </Link>
                     </td>
                   </tr>
@@ -215,7 +214,7 @@ export function PayrollTab({
             href={canManage ? "/payroll" : "/payslip"}
             className={buttonVariants({ variant: "outline", size: "sm" })}
           >
-            {canManage ? "Payroll management" : "My payslips"}
+            {canManage ? "Payroll management" : "Slip gaji saya"}
           </Link>
         </div>
       </CardContent>

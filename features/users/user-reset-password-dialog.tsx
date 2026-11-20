@@ -45,15 +45,15 @@ export function ResetPasswordDialog({ user }: ResetPasswordDialogProps) {
         variant="ghost"
         size="sm"
         onClick={() => setOpen(true)}
-        aria-label={`Reset password for ${user.email}`}
+        aria-label={`Reset kata sandi untuk ${user.email}`}
       >
-        Reset Password
+        Reset Kata Sandi
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Reset Password</DialogTitle>
+            <DialogTitle>Reset Kata Sandi</DialogTitle>
             <DialogDescription>
               Karyawan: {employeeIdentifier} ({user.email})
             </DialogDescription>

@@ -48,7 +48,7 @@ function SubmitButton({ disabled }: { disabled: boolean }) {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={disabled || pending}>
-      {pending ? "Saving..." : "Save custom data"}
+      {pending ? "Menyimpan..." : "Simpan data kustom"}
     </Button>
   );
 }
@@ -125,7 +125,7 @@ function renderInput(spec: CustomFieldSpec): React.ReactNode {
             disabled={!spec.canEdit}
             className="h-4 w-4 rounded border-input"
           />
-          Yes
+          Ya
         </label>
       );
     case "date":
@@ -149,8 +149,8 @@ function renderInput(spec: CustomFieldSpec): React.ReactNode {
 export function CustomFieldsSection({
   employeeId,
   specs,
-  title = "Custom Fields",
-  description = "Fields below come from your organization's active custom field definitions.",
+  title = "Field Kustom",
+  description = "Field di bawah berasal dari definisi field kustom aktif organisasi Anda.",
   emptyMessage = "No active custom fields are defined for your organization yet. An administrator can create fields in Settings → Employee Fields — they appear here and in the Excel template automatically.",
 }: {
   employeeId: string;
@@ -200,7 +200,7 @@ export function CustomFieldsSection({
           ) : null}
           {hasErrors && !state.message ? (
             <p className="text-sm text-destructive">
-              Some values were rejected. See the fields below.
+              Sebagian nilai ditolak. Lihat field di bawah.
             </p>
           ) : null}
           {state.message && state.status === "error" ? (

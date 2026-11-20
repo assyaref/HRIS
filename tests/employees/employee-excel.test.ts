@@ -252,7 +252,7 @@ test("excel import: analyzes valid and invalid employee rows", async () => {
     ["EMP-100", "EMP-101"]
   );
   assert.ok(
-    analysis.errorEmployees.some((row) => row.error === "First name is required.")
+    analysis.errorEmployees.some((row) => row.error === "Nama depan wajib diisi.")
   );
   assert.ok(
     analysis.errorEmployees.some((row) => (row.error ?? "").includes("Invalid status"))
@@ -293,7 +293,7 @@ test("excel import: rejects duplicate employee numbers in the file", async () =>
   const analysis = await analyzeExcelImport(buffer as unknown as ArrayBuffer, []);
   assert.equal(analysis.validEmployees.length, 1);
   assert.ok(
-    analysis.errorEmployees.some((row) => row.error === "Duplicate employee number in the file.")
+    analysis.errorEmployees.some((row) => row.error === "Nomor karyawan ganda di dalam berkas.")
   );
 });
 
@@ -327,7 +327,7 @@ test("excel import: collects secondary address rows with validation", async () =
   assert.equal(addressRows.length, 3);
   assert.equal(addressRows[0]?.error, null);
   assert.ok(
-    addressRows.some((row) => row.error === "Employee number is required.")
+    addressRows.some((row) => row.error === "Nomor karyawan wajib diisi.")
   );
   assert.ok(
     addressRows.some((row) => (row.error ?? "").includes("Address Type"))
@@ -571,7 +571,7 @@ test("excel import: an invalid email is still rejected", async () => {
     sheet.addRow(["EMP-203", "Alice", "Smith", "not-an-email", "active"]);
   });
   assert.equal(analysis.validEmployees.length, 0);
-  assert.equal(analysis.errorEmployees[0]?.error, "Invalid email address.");
+  assert.equal(analysis.errorEmployees[0]?.error, "Alamat email tidak valid.");
 });
 
 test("excel import: a hyperlink email cell is read from the visible text", async () => {

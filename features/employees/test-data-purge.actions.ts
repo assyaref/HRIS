@@ -277,7 +277,7 @@ async function authorizePurge(): Promise<
       allowed: false,
       state: error(
         "FORBIDDEN",
-        "Your account is not assigned to an organization."
+        "Akun Anda belum ditetapkan ke organisasi."
       ),
     };
   }
@@ -580,7 +580,7 @@ export async function purgeTestEmployeesAction(
           code: "REFUSED",
           stateCode: "ORGANIZATION_MISMATCH",
           message:
-            "One or more selected records do not belong to your organization. " +
+            "Satu atau lebih data yang dipilih bukan milik organisasi Anda." +
             TEST_DATA_PURGE_ADVICE,
           reason: "ORGANIZATION_MISMATCH",
           selections: summarize(targets),
@@ -649,7 +649,7 @@ export async function purgeTestEmployeesAction(
               ? `Confirm the purge by typing "${purgeConfirmationPhraseFor(
                   unconfirmed[0]!.employeeNumber
                 )}".`
-              : "Confirm every selected employee by typing its confirmation phrase.",
+              : "Konfirmasi setiap karyawan terpilih dengan mengetik frasa konfirmasinya.",
           reason: "PER_EMPLOYEE_CONFIRMATION_MISSING",
           selections: summarize(targets),
         } as const;

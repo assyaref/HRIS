@@ -36,9 +36,9 @@ export function EmployeeExportButton({
       href={query ? `/api/employees/export?${query}` : "/api/employees/export"}
       download
       className={buttonVariants({ variant: "ghost", size: "sm" })}
-      aria-label="Export employees as CSV"
+      aria-label="Ekspor karyawan ke CSV"
     >
-      Export CSV
+      Ekspor CSV
     </Link>
   );
 }

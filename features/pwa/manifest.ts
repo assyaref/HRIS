@@ -16,7 +16,7 @@
 export const PWA_APP_NAME = "HRIS Lite Enterprise";
 export const PWA_APP_SHORT_NAME = "HRIS";
 export const PWA_APP_DESCRIPTION =
-  "Enterprise HRIS — a human resource information system for employee records, attendance, leave, and payroll.";
+  "HRIS — sistem informasi sumber daya manusia untuk data karyawan, absensi, cuti, dan penggajian.";
 export const PWA_THEME_COLOR = "#0A3F8F";
 export const PWA_BACKGROUND_COLOR = "#F8F9FF";
 export const PWA_START_URL = "/";
@@ -118,10 +118,10 @@ export function validateWebManifest(
   const icons = manifest.icons ?? [];
   const sizes = icons.map((icon) => icon.sizes);
   if (!sizes.some((size) => size === "192x192")) {
-    problems.push("Manifest requires an icon sized 192x192.");
+    problems.push("Manifest memerlukan ikon berukuran 192x192.");
   }
   if (!sizes.some((size) => size === "512x512")) {
-    problems.push("Manifest requires an icon sized 512x512.");
+    problems.push("Manifest memerlukan ikon berukuran 512x512.");
   }
 
   return problems;

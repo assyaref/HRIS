@@ -120,7 +120,7 @@ export async function GET(request: Request): Promise<Response> {
   });
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
-    return badRequest(issue?.message ?? "Invalid filters.");
+    return badRequest(issue?.message ?? "Filter tidak valid.");
   }
   const filters = parsed.data;
 

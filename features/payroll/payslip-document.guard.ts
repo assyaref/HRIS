@@ -119,24 +119,24 @@ export function buildPayslipPdfUploadDecision(
   input: PayslipPdfUploadDecisionInput
 ): PayslipPdfUploadDecision {
   if (!Number.isFinite(input.size) || input.size <= 0) {
-    return { allowed: false, message: "The selected PDF is empty." };
+    return { allowed: false, message: "PDF yang dipilih kosong." };
   }
 
   if (input.size > PAYSLIP_PDF_MAX_SIZE_BYTES) {
     return {
       allowed: false,
-      message: "The payslip PDF must not exceed 20 MB.",
+      message: "PDF slip gaji maksimal 20 MB.",
     };
   }
 
   if (!isPayslipPdfMimeType(input.mimeType)) {
-    return { allowed: false, message: "Only PDF files are allowed." };
+    return { allowed: false, message: "Hanya berkas PDF yang diperbolehkan." };
   }
 
   if (!hasPayslipPdfExtension(input.filename)) {
     return {
       allowed: false,
-      message: "The payslip file must have a .pdf extension.",
+      message: "Berkas slip gaji harus berekstensi .pdf.",
     };
   }
 
@@ -323,7 +323,7 @@ export function buildPayslipPdfReplaceDecision(
   if (!input.hasExistingDocument) {
     return {
       allowed: false,
-      message: "There is no payslip document to replace.",
+      message: "Tidak ada dokumen slip gaji untuk diganti.",
     };
   }
 
@@ -331,7 +331,7 @@ export function buildPayslipPdfReplaceDecision(
     return {
       allowed: false,
       message:
-        "Only generated payslips can have their PDF replaced. Published or revoked payslips are immutable.",
+        "Hanya slip gaji berstatus dibuat yang PDF-nya dapat diganti. Slip gaji terbit atau dicabut tidak dapat diubah.",
     };
   }
 
@@ -343,14 +343,14 @@ export function buildPayslipPdfReplaceDecision(
       return {
         allowed: false,
         message:
-          "Distribution payslips cannot be replaced for a cancelled or locked payroll period.",
+          "Slip gaji distribusi tidak dapat diganti untuk periode payroll yang dibatalkan atau terkunci.",
       };
     }
   } else if (input.runStatus !== "approved" && input.runStatus !== "locked") {
     return {
       allowed: false,
       message:
-        "The payroll run must be approved or locked before replacing payslips.",
+        "Proses payroll harus disetujui atau dikunci sebelum slip gaji diganti.",
     };
   }
 
@@ -369,14 +369,14 @@ export function buildPayslipPdfReplaceDecision(
   if (reason.length === 0) {
     return {
       allowed: false,
-      message: "A reason for replacing the payslip PDF is required.",
+      message: "Alasan penggantian PDF slip gaji wajib diisi.",
     };
   }
 
   if (reason.length > PAYSLIP_DOCUMENT_REPLACE_REASON_MAX_LENGTH) {
     return {
       allowed: false,
-      message: `The replacement reason must not exceed ${PAYSLIP_DOCUMENT_REPLACE_REASON_MAX_LENGTH} characters.`,
+      message: `Alasan penggantian maksimal ${PAYSLIP_DOCUMENT_REPLACE_REASON_MAX_LENGTH} karakter.`,
     };
   }
 

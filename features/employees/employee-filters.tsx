@@ -130,7 +130,7 @@ export function EmployeeFilters({
     <form action="/employees" method="get" className="flex flex-col gap-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
         <div className="space-y-2 sm:min-w-56">
-          <Label htmlFor="employee-org-filter">Organization</Label>
+          <Label htmlFor="employee-org-filter">Organisasi</Label>
           {canSwitchOrganization ? (
             <select
               id="employee-org-filter"
@@ -150,13 +150,13 @@ export function EmployeeFilters({
               id="employee-org-filter"
               className="border-input bg-muted/40 flex h-10 items-center rounded-md border px-3 text-sm text-muted-foreground"
             >
-              {activeOrganizationName ?? "Your organization"}
+              {activeOrganizationName ?? "Organisasi Anda"}
             </p>
           )}
         </div>
 
         <div className="space-y-2 sm:min-w-44">
-          <Label htmlFor="employee-project-filter">Project</Label>
+          <Label htmlFor="employee-project-filter">Proyek</Label>
           <select
             id="employee-project-filter"
             name="projectId"
@@ -164,7 +164,7 @@ export function EmployeeFilters({
             onChange={onProjectChange}
             className={SELECT_CLASS}
           >
-            <option value="">All projects</option>
+            <option value="">Semua proyek</option>
             {projects.map((project) => (
               <option key={project.id} value={project.id}>
                 {project.name}
@@ -174,13 +174,13 @@ export function EmployeeFilters({
         </div>
 
         <div className="flex-1 space-y-2">
-          <Label htmlFor="employee-search">Search</Label>
+          <Label htmlFor="employee-search">Cari</Label>
           <Input
             id="employee-search"
             name="q"
             type="search"
             defaultValue={search}
-            placeholder="Name, employee number or email"
+            placeholder="Nama, nomor karyawan, atau email"
           />
         </div>
 
@@ -192,18 +192,18 @@ export function EmployeeFilters({
             defaultValue={status}
             className="flex h-10 w-full min-w-40 rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
-            <option value="">All statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
+            <option value="">Semua status</option>
+            <option value="active">Aktif</option>
+            <option value="inactive">Nonaktif</option>
           </select>
         </div>
 
         <Button type="submit" variant="secondary">
-          Search
+          Cari
         </Button>
         {hasActiveSearch ? (
           <Button type="button" variant="ghost" onClick={onClear}>
-            Clear
+            Bersihkan
           </Button>
         ) : null}
       </div>
@@ -211,7 +211,7 @@ export function EmployeeFilters({
       {hasCustomFilters ? (
         <div className="grid gap-3 rounded-md border border-border bg-card p-3 sm:grid-cols-2 lg:grid-cols-3">
           <p className="text-xs font-medium text-muted-foreground sm:col-span-full">
-            Custom field filters
+            Filter field kustom
           </p>
           {customFieldSpecs.map((spec) => (
             <CustomFilterControl
@@ -246,7 +246,7 @@ function CustomFilterControl({
           defaultValue={value}
           className={SELECT_CLASS}
         >
-          <option value="">All</option>
+          <option value="">Semua</option>
           {spec.options.map((option) => (
             <option key={option} value={option}>
               {option}
@@ -267,9 +267,9 @@ function CustomFilterControl({
           defaultValue={value}
           className={SELECT_CLASS}
         >
-          <option value="">All</option>
-          <option value="true">Yes</option>
-          <option value="false">No</option>
+          <option value="">Semua</option>
+          <option value="true">Ya</option>
+          <option value="false">Tidak</option>
         </select>
       </div>
     );

@@ -99,7 +99,7 @@ export function PayslipDocumentUpload({
 
     if (!selectedFile) {
       setError(true);
-      setMessage("Please select a PDF payslip.");
+      setMessage("Pilih slip gaji PDF.");
       return;
     }
 
@@ -108,14 +108,14 @@ export function PayslipDocumentUpload({
     if (hasDocument) {
       if (trimmedReason.length === 0) {
         setError(true);
-        setMessage("A reason for replacing the payslip PDF is required.");
+        setMessage("Alasan penggantian PDF slip gaji wajib diisi.");
         return;
       }
 
       if (trimmedReason.length > PAYSLIP_DOCUMENT_REPLACE_REASON_MAX_LENGTH) {
         setError(true);
         setMessage(
-          `The replacement reason must not exceed ${PAYSLIP_DOCUMENT_REPLACE_REASON_MAX_LENGTH} characters.`,
+          `Alasan penggantian maksimal ${PAYSLIP_DOCUMENT_REPLACE_REASON_MAX_LENGTH} karakter.`,
         );
         return;
       }
@@ -170,14 +170,14 @@ export function PayslipDocumentUpload({
         accept="application/pdf,.pdf"
         className="sr-only"
         disabled={pending}
-        aria-label={`Select PDF for ${payslipNumber}`}
+        aria-label={`Pilih PDF untuk ${payslipNumber}`}
         onChange={handleFileChange}
       />
 
       {hasDocument ? (
         <label className="w-full max-w-xs text-left">
           <span className="text-[11px] font-medium text-muted-foreground">
-            Reason for replacement
+            Alasan penggantian
           </span>
           <textarea
             value={reason}
@@ -186,7 +186,7 @@ export function PayslipDocumentUpload({
             rows={2}
             onChange={(event) => setReason(event.target.value)}
             className="mt-1 w-full resize-none rounded-md border border-border bg-card px-2 py-1.5 text-xs text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary/30"
-            aria-label={`Reason for replacing ${payslipNumber}`}
+            aria-label={`Alasan penggantian ${payslipNumber}`}
           />
         </label>
       ) : null}
@@ -199,7 +199,7 @@ export function PayslipDocumentUpload({
           disabled={pending}
           onClick={selectFile}
         >
-          {selectedFile ? "Change PDF" : "Choose PDF"}
+          {selectedFile ? "Ganti PDF" : "Pilih PDF"}
         </Button>
 
         {selectedFile ? (
@@ -211,11 +211,11 @@ export function PayslipDocumentUpload({
           >
             {pending
               ? hasDocument
-                ? "Replacing…"
-                : "Uploading…"
+                ? "Mengganti…"
+                : "Mengunggah…"
               : hasDocument
-                ? "Replace PDF"
-                : "Upload PDF"}
+                ? "Ganti PDF"
+                : "Unggah PDF"}
           </Button>
         ) : null}
       </div>

@@ -46,13 +46,13 @@ export function validateDocumentUpload(
   input: DocumentUploadCheckInput
 ): DocumentUploadCheckResult {
   if (!input.filename) {
-    return { ok: false, error: "A file is required." };
+    return { ok: false, error: "Berkas wajib diunggah." };
   }
   if (input.fileSize <= 0) {
-    return { ok: false, error: "The uploaded file is empty." };
+    return { ok: false, error: "Berkas yang diunggah kosong." };
   }
   if (input.fileSize > DOCUMENT_MAX_SIZE_BYTES) {
-    return { ok: false, error: "File must be 10 MB or smaller." };
+    return { ok: false, error: "Ukuran berkas maksimal 10 MB." };
   }
 
   const lastDot = input.filename.lastIndexOf(".");
@@ -61,14 +61,14 @@ export function validateDocumentUpload(
   if (!allowed) {
     return {
       ok: false,
-      error: "File type is not supported. Use PDF, image (PNG/JPG/WebP), Word or Excel.",
+      error: "Jenis berkas tidak didukung. Gunakan PDF, gambar (PNG/JPG/WebP), Word, atau Excel.",
     };
   }
   const lowerMime = input.mimeType.toLowerCase();
   if (!allowed.includes(lowerMime)) {
     return {
       ok: false,
-      error: `The file's content type does not match its .${extension} extension.`,
+      error: `Jenis isi berkas tidak sesuai dengan ekstensi .${extension}.`,
     };
   }
   return { ok: true, extension };

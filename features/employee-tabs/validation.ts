@@ -131,12 +131,12 @@ export function validateCustomTabDefinition(
   push(
     errors,
     typeof input.tabKey === "string" && TAB_KEY_PATTERN.test(input.tabKey),
-    "Tab key must be 2-32 characters, start with a lowercase letter and contain only lowercase letters, digits or underscores."
+    "Kunci tab harus 2–32 karakter, diawali huruf kecil, dan hanya berisi huruf kecil, angka, atau garis bawah."
   );
   push(
     errors,
     typeof input.tabKey !== "string" || !RESERVED_TAB_KEYS.includes(input.tabKey),
-    `Tab key "${input.tabKey}" is reserved.`
+    `Kunci tab "${input.tabKey}" sudah dicadangkan.`
   );
 
   push(
@@ -144,14 +144,14 @@ export function validateCustomTabDefinition(
     typeof input.name === "string" &&
       input.name.trim().length > 0 &&
       input.name.trim().length <= TAB_LIMITS.name,
-    `Tab name must be 1-${TAB_LIMITS.name} characters.`
+    `Nama tab harus 1–${TAB_LIMITS.name} karakter.`
   );
 
   if (input.description != null) {
     push(
       errors,
       input.description.length <= TAB_LIMITS.description,
-      `Description must be at most ${TAB_LIMITS.description} characters.`
+      `Deskripsi maksimal ${TAB_LIMITS.description} karakter.`
     );
   }
 
@@ -159,7 +159,7 @@ export function validateCustomTabDefinition(
     push(
       errors,
       input.icon.trim().length <= TAB_LIMITS.icon,
-      `Icon must be at most ${TAB_LIMITS.icon} characters.`
+      `Ikon maksimal ${TAB_LIMITS.icon} karakter.`
     );
   }
 
@@ -169,7 +169,7 @@ export function validateCustomTabDefinition(
       Number.isInteger(input.displayOrder) &&
         input.displayOrder >= 0 &&
         input.displayOrder <= TAB_LIMITS.displayOrder,
-      "Display order must be an integer between 0 and 9999."
+      "Urutan tampilan harus bilangan bulat antara 0 dan 9999."
     );
   }
 
@@ -177,7 +177,7 @@ export function validateCustomTabDefinition(
     push(
       errors,
       (CUSTOM_TAB_STATUSES as readonly string[]).includes(input.status),
-      "Status must be active or inactive."
+      "Status harus aktif atau nonaktif."
     );
   }
 

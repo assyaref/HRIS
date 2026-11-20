@@ -263,27 +263,27 @@ export function CreateEmployeeDialog({
               description="Data utama yang tampil di Overview profil."
             >
               <TextField
-                label="Employee number"
+                label="Nomor karyawan"
                 name="employeeNumber"
                 placeholder="mis. EMP-0001"
                 required
                 error={errors?.employeeNumber}
               />
               <TextField
-                label="Hire date"
+                label="Tanggal masuk"
                 name="hireDate"
                 type="date"
                 error={errors?.hireDate}
               />
               <TextField
-                label="First name"
+                label="Nama depan"
                 name="firstName"
                 autoComplete="given-name"
                 required
                 error={errors?.firstName}
               />
               <TextField
-                label="Last name"
+                label="Nama belakang"
                 name="lastName"
                 autoComplete="family-name"
                 error={errors?.lastName}
@@ -297,7 +297,7 @@ export function CreateEmployeeDialog({
                 error={errors?.email}
               />
               <div className="space-y-2">
-                <Label htmlFor="new-userId">Linked account</Label>
+                <Label htmlFor="new-userId">Akun tertaut</Label>
                 <select
                   id="new-userId"
                   name="userId"
@@ -321,48 +321,48 @@ export function CreateEmployeeDialog({
             </Section>
 
             {canPersonal ? (
-              <Section icon="profile" title="Personal" description="Sama dengan tab Personal di profil.">
+              <Section icon="profile" title="Pribadi" description="Sama dengan tab Personal di profil.">
                 <TextField label="NIK" name="nik" maxLength={32} error={errors?.nik} />
-                <TextField label="Nickname" name="nickname" maxLength={100} error={errors?.nickname} />
-                <TextField label="Birth date" name="birthDate" type="date" error={errors?.birthDate} />
-                <TextField label="Birth place" name="birthPlace" maxLength={200} error={errors?.birthPlace} />
-                <SelectField label="Gender" name="gender" options={asOptions(GENDERS)} error={errors?.gender} />
-                <TextField label="Religion" name="religion" maxLength={50} error={errors?.religion} />
+                <TextField label="Nama panggilan" name="nickname" maxLength={100} error={errors?.nickname} />
+                <TextField label="Tanggal lahir" name="birthDate" type="date" error={errors?.birthDate} />
+                <TextField label="Tempat lahir" name="birthPlace" maxLength={200} error={errors?.birthPlace} />
+                <SelectField label="Jenis Kelamin" name="gender" options={asOptions(GENDERS)} error={errors?.gender} />
+                <TextField label="Agama" name="religion" maxLength={50} error={errors?.religion} />
                 <SelectField
-                  label="Marital status"
+                  label="Status pernikahan"
                   name="maritalStatus"
                   options={asOptions(MARITAL_STATUSES)}
                   error={errors?.maritalStatus}
                 />
-                <TextField label="Nationality" name="nationality" maxLength={50} error={errors?.nationality} />
+                <TextField label="Kewarganegaraan" name="nationality" maxLength={50} error={errors?.nationality} />
                 <TextField
-                  label="Personal email"
+                  label="Email pribadi"
                   name="personalEmail"
                   type="email"
                   maxLength={254}
                   error={errors?.personalEmail}
                 />
-                <TextField label="Phone" name="phone" type="tel" maxLength={30} error={errors?.phone} />
+                <TextField label="Telepon" name="phone" type="tel" maxLength={30} error={errors?.phone} />
               </Section>
             ) : (
               <Section icon="profile" title="Kontak">
-                <TextField label="Phone" name="phone" type="tel" maxLength={30} error={errors?.phone} />
+                <TextField label="Telepon" name="phone" type="tel" maxLength={30} error={errors?.phone} />
               </Section>
             )}
 
             {canEmployment ? (
-              <Section icon="briefcase" title="Employment" description="Sama dengan tab Employment di profil; tercatat sebagai riwayat pertama.">
-                <TextField label="Division" name="division" maxLength={100} error={errors?.division} list="org-master-divisions" />
-                <TextField label="Department" name="department" maxLength={100} error={errors?.department} list="org-master-departments" />
-                <TextField label="Position" name="position" maxLength={100} error={errors?.position} list="org-master-positions" />
+              <Section icon="briefcase" title="Kepegawaian" description="Sama dengan tab Employment di profil; tercatat sebagai riwayat pertama.">
+                <TextField label="Divisi" name="division" maxLength={100} error={errors?.division} list="org-master-divisions" />
+                <TextField label="Departemen" name="department" maxLength={100} error={errors?.department} list="org-master-departments" />
+                <TextField label="Jabatan" name="position" maxLength={100} error={errors?.position} list="org-master-positions" />
                 <SelectField
-                  label="Employment type"
+                  label="Jenis kepegawaian"
                   name="employmentType"
                   options={asOptions(EMPLOYMENT_TYPES)}
                   error={errors?.employmentType}
                 />
                 <SelectField
-                  label="Work location"
+                  label="Lokasi kerja"
                   name="workLocationId"
                   options={workLocations.map((location) => ({
                     value: location.id,
@@ -371,7 +371,7 @@ export function CreateEmployeeDialog({
                   error={errors?.workLocationId}
                 />
                 <SelectField
-                  label="Manager"
+                  label="Atasan"
                   name="managerId"
                   options={managers.map((manager) => ({
                     value: manager.id,
@@ -379,8 +379,8 @@ export function CreateEmployeeDialog({
                   }))}
                   error={errors?.managerId}
                 />
-                <TextField label="Contract start" name="contractStart" type="date" error={errors?.contractStart} />
-                <TextField label="Contract end" name="contractEnd" type="date" error={errors?.contractEnd} />
+                <TextField label="Mulai kontrak" name="contractStart" type="date" error={errors?.contractStart} />
+                <TextField label="Akhir kontrak" name="contractEnd" type="date" error={errors?.contractEnd} />
               </Section>
             ) : null}
 
@@ -414,7 +414,7 @@ export function CreateEmployeeDialog({
                   >
                     <HrisIcon name="employee-fields" className="size-[18px]" />
                   </span>
-                  Custom fields
+                  Field kustom
                 </h3>
                 <DynamicCustomFieldInputs specs={otherSpecs} legend={null} />
               </section>

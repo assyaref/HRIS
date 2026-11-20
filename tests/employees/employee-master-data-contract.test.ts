@@ -100,7 +100,7 @@ describe("excel import action: RBAC + scoping", () => {
 
   it("re-validates and commits in one transaction with rollback", () => {
     assert.equal(excelImportAction.includes("db.transaction"), true);
-    assert.match(excelImportAction, /No records were changed|rolled back/i);
+    assert.match(excelImportAction, /tidak ada data yang diubah|dibatalkan/i);
   });
 
   it("writes the employee.imported audit event", () => {
@@ -128,7 +128,7 @@ describe("excel import action: RBAC + scoping", () => {
     assert.equal(excelImportAction.includes("fieldDefinitionId: definition.id"), true);
     assert.equal(excelImportAction.includes("fieldDefinitionId: spec.fieldDefinitionId"), true);
     assert.equal(
-      excelImportAction.includes("unknown or unauthorized custom field"),
+      excelImportAction.includes("tidak dikenal atau tidak diizinkan"),
       true
     );
     assert.equal(excelImportAction.includes("inaccessibleRequiredField"), true);
@@ -138,14 +138,14 @@ describe("excel import action: RBAC + scoping", () => {
 
   it("rejects unauthorized sections instead of silently dropping them", () => {
     assert.equal(excelImportAction.includes("findUnauthorizedSections"), true);
-    assert.match(excelImportAction, /not authorized to update/i);
+    assert.match(excelImportAction, /tidak boleh Anda perbarui/i);
     assert.equal(/if \(!permissions\.(address|insurance|bank|family|education)\) break;/.test(excelImportAction), false);
   });
 
   it("updates preserve blank values and cannot reactivate through import", () => {
     assert.equal(excelImportAction.includes("buildExcelUpdatePatch"), true);
     assert.equal(
-      excelImportAction.includes("inactive employees cannot be reactivated through Excel import"),
+      excelImportAction.includes("karyawan nonaktif tidak dapat diaktifkan kembali lewat impor Excel"),
       true
     );
     assert.equal(
@@ -162,9 +162,9 @@ describe("excel import action: RBAC + scoping", () => {
     assert.equal(excelImportAction.includes(".delete(employeeBankAccounts)"), false);
     assert.equal(excelImportAction.includes(".delete(employeeDependents)"), false);
     assert.equal(excelImportAction.includes(".delete(employeeEducations)"), false);
-    assert.match(excelImportAction, /multiple bank accounts match/i);
-    assert.match(excelImportAction, /multiple dependents match/i);
-    assert.match(excelImportAction, /multiple education records match/i);
+    assert.match(excelImportAction, /beberapa rekening yang cocok/i);
+    assert.match(excelImportAction, /beberapa tanggungan yang cocok/i);
+    assert.match(excelImportAction, /beberapa data pendidikan yang cocok/i);
     assert.equal(excelImportAction.includes("db.transaction"), true);
   });
 });

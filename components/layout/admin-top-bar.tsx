@@ -142,7 +142,7 @@ export function AdminTopBar({
                   <HrisIcon name={icon} className="size-5" />
                 </span>
                 <div className="min-w-0">
-                  <nav aria-label="Breadcrumb">
+                  <nav aria-label="Navigasi jejak">
                     <ol className="flex min-w-0 flex-wrap items-center gap-x-1 text-[12px] font-medium text-muted-foreground">
                       <li>
                         <Link href="/dashboard" className="rounded hover:text-primary">

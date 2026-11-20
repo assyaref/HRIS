@@ -62,7 +62,7 @@ function SaveButton({ disabled }: { disabled: boolean }) {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending || disabled}>
-      {pending ? "Saving..." : "Save changes"}
+      {pending ? "Menyimpan..." : "Simpan perubahan"}
     </Button>
   );
 }
@@ -138,19 +138,19 @@ export function RolePermissionEditor({
             <CardTitle>{roleName}</CardTitle>
             <Badge variant="outline">{roleCode}</Badge>
             {isSystemRole ? (
-              <Badge variant="secondary">System role</Badge>
+              <Badge variant="secondary">Peran sistem</Badge>
             ) : null}
             {isSuperAdminRole ? (
               <Badge variant="destructive">System-level</Badge>
             ) : null}
           </div>
           <CardDescription>
-            {roleDescription || "No description provided."}
+            {roleDescription || "Tidak ada deskripsi."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-1 text-sm text-muted-foreground">
           <p>
-            Role code is fixed and cannot be changed.
+            Kode peran tetap dan tidak dapat diubah.
             {isSuperAdminRole
               ? " SUPERADMIN is a protected system role — only SUPERADMIN holders can modify it, and it cannot be deleted."
               : isSystemRole
@@ -165,8 +165,8 @@ export function RolePermissionEditor({
           <CardTitle>Role profile &amp; permissions</CardTitle>
           <CardDescription>
             {canEdit
-              ? "Update the role name, description and the permissions granted to it."
-              : "You have read-only access to this role."}
+              ? "Perbarui nama peran, deskripsi, dan hak akses yang diberikan."
+              : "Anda hanya memiliki akses baca untuk peran ini."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -175,7 +175,7 @@ export function RolePermissionEditor({
           <form action={updateFormAction} noValidate className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="edit-role-name">Name</Label>
+                <Label htmlFor="edit-role-name">Nama</Label>
                 <Input
                   id="edit-role-name"
                   name="name"
@@ -196,7 +196,7 @@ export function RolePermissionEditor({
                 ) : null}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-role-description">Description</Label>
+                <Label htmlFor="edit-role-description">Deskripsi</Label>
                 <Input
                   id="edit-role-description"
                   name="description"
@@ -261,10 +261,9 @@ export function RolePermissionEditor({
       {canDelete ? (
         <Card className="border-destructive/50">
           <CardHeader>
-            <CardTitle className="text-destructive">Danger zone</CardTitle>
+            <CardTitle className="text-destructive">Zona berbahaya</CardTitle>
             <CardDescription>
-              Deleting a role is permanent. Roles assigned to users cannot be
-              deleted until those assignments are removed.
+              Menghapus peran bersifat permanen. Peran yang ditetapkan ke pengguna tidak dapat dihapus sampai penetapannya dilepas.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -273,7 +272,7 @@ export function RolePermissionEditor({
               {confirmDelete ? (
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <p className="text-sm text-muted-foreground">
-                    Are you sure? This cannot be undone.
+                    Anda yakin? Tindakan ini tidak dapat dibatalkan.
                   </p>
                   <div className="flex gap-2">
                     <Button
@@ -281,7 +280,7 @@ export function RolePermissionEditor({
                       variant="ghost"
                       onClick={() => setConfirmDelete(false)}
                     >
-                      Cancel
+                      Batal
                     </Button>
                     <DeleteButton />
                   </div>
@@ -292,7 +291,7 @@ export function RolePermissionEditor({
                   variant="destructive"
                   onClick={() => setConfirmDelete(true)}
                 >
-                  Delete role
+                  Hapus peran
                 </Button>
               )}
             </form>
@@ -307,7 +306,7 @@ function DeleteButton() {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" variant="destructive" disabled={pending}>
-      {pending ? "Deleting..." : "Yes, delete"}
+      {pending ? "Menghapus..." : "Ya, hapus"}
     </Button>
   );
 }

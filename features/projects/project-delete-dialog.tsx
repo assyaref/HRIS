@@ -89,26 +89,26 @@ export function ProjectDeleteDialog({
         className="text-destructive hover:bg-destructive/10 hover:text-destructive"
         onClick={() => {
           notifier.warning(
-            "Deleting a project is permanent and cannot be undone."
+            "Penghapusan proyek bersifat permanen dan tidak dapat dibatalkan."
           );
           setMessage("");
           setOpen(true);
         }}
         aria-label={`Delete ${project.name}`}
       >
-        Delete
+        Hapus
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-destructive">
-              Delete project
+              Hapus proyek
             </DialogTitle>
             <DialogDescription>
               {withReferences
                 ? "Proyek ini masih dirujuk. Menghapusnya akan menghapus assignment karyawan ke proyek ini; riwayat absensi dan lokasi kerja tetap disimpan tanpa proyek. Tindakan ini tidak dapat dibatalkan."
-                : "This permanently removes the project."}
+                : "Proyek akan dihapus permanen."}
             </DialogDescription>
           </DialogHeader>
 
@@ -123,18 +123,18 @@ export function ProjectDeleteDialog({
 
           <div className="space-y-3 rounded-md border border-destructive/40 p-4">
             <div className="grid grid-cols-[9rem_1fr] gap-x-3 gap-y-2 text-sm">
-              <span className="text-muted-foreground">Name</span>
+              <span className="text-muted-foreground">Nama</span>
               <span className="truncate font-medium">{project.name}</span>
-              <span className="text-muted-foreground">Code</span>
+              <span className="text-muted-foreground">Kode</span>
               <span className="font-mono">{project.code}</span>
-              <span className="text-muted-foreground">Organization</span>
+              <span className="text-muted-foreground">Organisasi</span>
               <span className="truncate font-medium">
                 {project.organizationName}
               </span>
-              <span className="text-muted-foreground">Referenced records</span>
+              <span className="text-muted-foreground">Data yang dirujuk</span>
               <span className="font-medium tabular-nums">
                 {dependencyTotal === 0
-                  ? "None — safe to delete"
+                  ? "Tidak ada — aman dihapus"
                   : `${dependencyTotal} record(s)`}
               </span>
             </div>
@@ -162,7 +162,7 @@ export function ProjectDeleteDialog({
               onClick={() => setOpen(false)}
               disabled={pending}
             >
-              Cancel
+              Batal
             </Button>
             <Button
               type="button"
@@ -171,10 +171,10 @@ export function ProjectDeleteDialog({
               onClick={confirmDelete}
             >
               {pending
-                ? "Deleting..."
+                ? "Menghapus..."
                 : withReferences
                   ? "Hapus proyek"
-                  : "Delete project"}
+                  : "Hapus proyek"}
             </Button>
           </DialogFooter>
         </DialogContent>

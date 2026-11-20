@@ -47,7 +47,7 @@ import {
 } from "@/features/payroll/queries";
 
 export const metadata: Metadata = {
-  title: "Payroll period",
+  title: "Periode payroll",
 };
 
 function SectionIcon({
@@ -224,7 +224,7 @@ export default async function PayrollPeriodDetailPage({
           <div className="min-w-0">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold backdrop-blur">
-                Payroll period
+                Periode payroll
               </span>
               <PayrollPeriodStatusBadge status={period.status} />
             </div>
@@ -247,7 +247,7 @@ export default async function PayrollPeriodDetailPage({
                 "w-full border-border bg-card text-primary shadow-sm hover:bg-accent hover:text-primary/90 sm:w-auto",
             })}
           >
-            ← Back to payroll
+            ← Kembali ke payroll
           </Link>
         </div>
       </section>
@@ -260,7 +260,7 @@ export default async function PayrollPeriodDetailPage({
               <SectionIcon type="calendar" />
             </div>
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Payroll window
+              Jendela payroll
             </p>
             <p className="mt-2 text-sm font-bold text-foreground">
               {formatDate(period.periodStart)}
@@ -277,7 +277,7 @@ export default async function PayrollPeriodDetailPage({
               <SectionIcon type="money" />
             </div>
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Payment date
+              Tanggal pembayaran
             </p>
             <p className="mt-2 text-sm font-bold text-foreground">
               {formatDate(period.paymentDate)}
@@ -291,14 +291,14 @@ export default async function PayrollPeriodDetailPage({
               <SectionIcon type="workflow" />
             </div>
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Run status
+              Status proses
             </p>
             <div className="mt-2">
               {period.run ? (
                 <PayrollRunStatusBadge status={period.run.status} />
               ) : (
                 <span className="text-sm font-semibold text-muted-foreground">
-                  Not calculated
+                  Belum dihitung
                 </span>
               )}
             </div>
@@ -311,7 +311,7 @@ export default async function PayrollPeriodDetailPage({
               <SectionIcon type="history" />
             </div>
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Created
+              Dibuat
             </p>
             <p className="mt-2 text-sm font-bold text-foreground">
               {formatDateTime(period.createdAt)}
@@ -329,25 +329,25 @@ export default async function PayrollPeriodDetailPage({
                 <SectionIcon type="calendar" />
               </div>
               <div>
-                <CardTitle>Period details</CardTitle>
+                <CardTitle>Detail periode</CardTitle>
                 <CardDescription>
-                  Payroll cycle metadata and schedule.
+                  Metadata dan jadwal siklus payroll.
                 </CardDescription>
               </div>
             </div>
           </CardHeader>
 
           <CardContent className="space-y-2 p-5">
-            <InfoRow label="Window">
+            <InfoRow label="Rentang">
               {formatDate(period.periodStart)} → {formatDate(period.periodEnd)}
             </InfoRow>
-            <InfoRow label="Payment date">
+            <InfoRow label="Tanggal pembayaran">
               {formatDate(period.paymentDate)}
             </InfoRow>
             <InfoRow label="Status">
               <PayrollPeriodStatusBadge status={period.status} />
             </InfoRow>
-            <InfoRow label="Created">
+            <InfoRow label="Dibuat">
               {formatDateTime(period.createdAt)}
             </InfoRow>
           </CardContent>
@@ -360,9 +360,9 @@ export default async function PayrollPeriodDetailPage({
                 <SectionIcon type="workflow" />
               </div>
               <div>
-                <CardTitle>Payroll workflow</CardTitle>
+                <CardTitle>Alur kerja payroll</CardTitle>
                 <CardDescription>
-                  Server-controlled payroll workflow.
+                  Alur kerja payroll yang dikendalikan server.
                 </CardDescription>
               </div>
             </div>
@@ -371,17 +371,17 @@ export default async function PayrollPeriodDetailPage({
           <CardContent className="space-y-5 p-5">
             {period.run ? (
               <div className="grid gap-2 sm:grid-cols-3">
-                <InfoRow label="Run">
+                <InfoRow label="Proses">
                   <PayrollRunStatusBadge status={period.run.status} />
                 </InfoRow>
-                <InfoRow label="Calculated">
+                <InfoRow label="Terhitung">
                   {formatDateTime(period.run.calculatedAt)}
                 </InfoRow>
-                <InfoRow label="Approved">
+                <InfoRow label="Disetujui">
                   {formatDateTime(period.run.approvedAt)}
                 </InfoRow>
                 <div className="sm:col-span-3">
-                  <InfoRow label="Locked">
+                  <InfoRow label="Terkunci">
                     {formatDateTime(period.run.lockedAt)}
                   </InfoRow>
                 </div>
@@ -389,10 +389,10 @@ export default async function PayrollPeriodDetailPage({
             ) : (
               <div className="rounded-2xl border border-dashed border-primary/30 bg-primary/10 p-4">
                 <p className="text-sm font-semibold text-primary">
-                  No payroll run yet
+                  Belum ada proses payroll
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Use Calculate run to generate payroll items.
+                  Gunakan Hitung proses untuk membuat item payroll.
                 </p>
               </div>
             )}
@@ -422,9 +422,9 @@ export default async function PayrollPeriodDetailPage({
               <SectionIcon type="money" />
             </div>
             <div>
-              <CardTitle>Payroll items</CardTitle>
+              <CardTitle>Item payroll</CardTitle>
               <CardDescription>
-                Employee snapshots and calculated totals for this run.
+                Snapshot karyawan dan total hasil perhitungan untuk proses ini.
               </CardDescription>
             </div>
           </div>
@@ -433,8 +433,8 @@ export default async function PayrollPeriodDetailPage({
         <CardContent className="p-4 sm:p-6">
           {!period.run || items.length === 0 ? (
             <EmptyState
-              title="No payroll items"
-              description="Payroll items will appear here after the run is calculated."
+              title="Tidak ada item payroll"
+              description="Item payroll akan tampil di sini setelah proses dihitung."
             />
           ) : (
             <>
@@ -460,7 +460,7 @@ export default async function PayrollPeriodDetailPage({
                     <div className="mt-4 grid grid-cols-3 gap-2">
                       <div className="rounded-xl bg-muted/40 p-3">
                         <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                          Gross
+                          Bruto
                         </p>
                         <p className="mt-1 text-xs font-bold text-foreground">
                           {formatIDR(item.grossAmount)}
@@ -468,7 +468,7 @@ export default async function PayrollPeriodDetailPage({
                       </div>
                       <div className="rounded-xl bg-muted/40 p-3">
                         <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                          Deduction
+                          Potongan
                         </p>
                         <p className="mt-1 text-xs font-bold text-foreground">
                           {formatIDR(item.totalDeductions)}
@@ -476,7 +476,7 @@ export default async function PayrollPeriodDetailPage({
                       </div>
                       <div className="rounded-xl bg-primary/10 p-3">
                         <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">
-                          Net
+                          Neto
                         </p>
                         <p className="mt-1 text-xs font-bold text-primary">
                           {formatIDR(item.netAmount)}
@@ -493,7 +493,7 @@ export default async function PayrollPeriodDetailPage({
                           "mt-4 w-full border-primary/30 text-primary hover:bg-primary/10",
                       })}
                     >
-                      View payroll item
+                      Lihat item payroll
                     </Link>
                   </div>
                 ))}
@@ -504,12 +504,12 @@ export default async function PayrollPeriodDetailPage({
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/40 hover:bg-muted/40">
-                      <TableHead>Employee</TableHead>
-                      <TableHead className="text-right">Gross</TableHead>
-                      <TableHead className="text-right">Deductions</TableHead>
-                      <TableHead className="text-right">Net</TableHead>
+                      <TableHead>Karyawan</TableHead>
+                      <TableHead className="text-right">Bruto</TableHead>
+                      <TableHead className="text-right">Potongan</TableHead>
+                      <TableHead className="text-right">Neto</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead className="text-right">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -545,7 +545,7 @@ export default async function PayrollPeriodDetailPage({
                                 "text-primary hover:bg-primary/10 hover:text-primary",
                             })}
                           >
-                            View →
+                            Lihat →
                           </Link>
                         </TableCell>
                       </TableRow>
@@ -567,9 +567,9 @@ export default async function PayrollPeriodDetailPage({
                 <SectionIcon type="document" />
               </div>
               <div>
-                <CardTitle>Payslips</CardTitle>
+                <CardTitle>Slip gaji</CardTitle>
                 <CardDescription>
-                  Payslip generation, documents, and publication status.
+                  Pembuatan slip gaji, dokumen, dan status penerbitan.
                 </CardDescription>
               </div>
             </div>
@@ -586,7 +586,7 @@ export default async function PayrollPeriodDetailPage({
                     "border-violet-200 text-violet-700 hover:bg-violet-50",
                 })}
               >
-                Upload distribution payslip
+                Unggah slip gaji distribusi
               </Link>
             ) : null}
           </div>
@@ -596,11 +596,10 @@ export default async function PayrollPeriodDetailPage({
           {payslips.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border bg-muted/40/60 p-6 text-center">
               <p className="text-sm font-semibold text-muted-foreground">
-                No payslips generated
+                Belum ada slip gaji yang dibuat
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Payslips will appear here after they are generated for this
-                period.
+                Slip gaji akan tampil di sini setelah dibuat untuk periode ini.
               </p>
             </div>
           ) : (
@@ -629,12 +628,12 @@ export default async function PayrollPeriodDetailPage({
                     </div>
 
                     <p className="mt-3 text-xs text-muted-foreground">
-                      Issued {formatDateTime(payslip.issuedAt)}
+                      Terbit {formatDateTime(payslip.issuedAt)}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
                       {payslip.kind === "distribution"
-                        ? "Distribution payslip"
-                        : "Calculated payslip"}
+                        ? "Slip gaji distribusi"
+                        : "Slip gaji terhitung"}
                     </p>
 
                     {payslip.status === "generated" ? (
@@ -688,12 +687,12 @@ export default async function PayrollPeriodDetailPage({
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/40 hover:bg-muted/40">
-                      <TableHead>Payslip</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Issued</TableHead>
+                      <TableHead>Slip gaji</TableHead>
+                      <TableHead>Jenis</TableHead>
+                      <TableHead>Diterbitkan</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">PDF</TableHead>
-                      <TableHead className="text-right">Action</TableHead>
+                      <TableHead className="text-right">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -713,8 +712,8 @@ export default async function PayrollPeriodDetailPage({
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {payslip.kind === "distribution"
-                            ? "Distribution"
-                            : "Calculated"}
+                            ? "Distribusi"
+                            : "Terhitung"}
                         </TableCell>
                         <TableCell>{formatDateTime(payslip.issuedAt)}</TableCell>
                         <TableCell>
@@ -773,10 +772,10 @@ export default async function PayrollPeriodDetailPage({
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-foreground">
-                    Your published payslips
+                    Slip gaji Anda yang sudah terbit
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Published payslips available to your employee account.
+                    Slip gaji terbit yang tersedia untuk akun karyawan Anda.
                   </p>
                 </div>
               </div>
@@ -794,7 +793,7 @@ export default async function PayrollPeriodDetailPage({
                       {payslip.payslipNumber}
                     </Link>
                     <span className="text-xs text-muted-foreground">
-                      Published on {formatDateTime(payslip.issuedAt)}
+                      Terbit pada {formatDateTime(payslip.issuedAt)}
                     </span>
                   </li>
                 ))}
@@ -812,9 +811,9 @@ export default async function PayrollPeriodDetailPage({
               <SectionIcon type="history" />
             </div>
             <div>
-              <CardTitle>History</CardTitle>
+              <CardTitle>Riwayat</CardTitle>
               <CardDescription>
-                Immutable payroll events and workflow transitions.
+                Riwayat kejadian dan alur kerja payroll yang tidak dapat diubah.
               </CardDescription>
             </div>
           </div>
@@ -823,7 +822,7 @@ export default async function PayrollPeriodDetailPage({
         <CardContent className="p-4 sm:p-6">
           {events.length === 0 ? (
             <p className="rounded-2xl bg-muted/40 p-5 text-sm text-muted-foreground">
-              No events.
+              Tidak ada kejadian.
             </p>
           ) : (
             <>
@@ -857,10 +856,10 @@ export default async function PayrollPeriodDetailPage({
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/40 hover:bg-muted/40">
-                      <TableHead>Event</TableHead>
-                      <TableHead>Transition</TableHead>
-                      <TableHead>Actor</TableHead>
-                      <TableHead>Time</TableHead>
+                      <TableHead>Kejadian</TableHead>
+                      <TableHead>Transisi</TableHead>
+                      <TableHead>Pelaku</TableHead>
+                      <TableHead>Waktu</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

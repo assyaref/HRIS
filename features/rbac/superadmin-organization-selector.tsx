@@ -26,7 +26,7 @@ export function SuperAdminOrganizationSelector({
         htmlFor="superadmin-organization"
         className="text-sm font-medium"
       >
-        Organization
+        Organisasi
       </label>
 
       <select
@@ -52,8 +52,7 @@ export function SuperAdminOrganizationSelector({
       </select>
 
       <p className="text-xs text-muted-foreground">
-        SUPERADMIN can administer roles across organizations. The selected
-        organization determines which role catalog is displayed.
+        SUPERADMIN dapat mengelola peran lintas organisasi. Organisasi yang dipilih menentukan katalog peran yang ditampilkan.
       </p>
     </div>
   );

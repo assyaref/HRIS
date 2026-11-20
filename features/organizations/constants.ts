@@ -13,8 +13,8 @@ export const ORGANIZATION_STATUS_LABELS: Record<
   OrganizationStatus,
   string
 > = {
-  active: "Active",
-  inactive: "Inactive",
+  active: "Aktif",
+  inactive: "Nonaktif",
 };
 
 export function isOrganizationStatus(
@@ -31,19 +31,19 @@ export const ORGANIZATION_NAME_MAX_LENGTH = 120;
 
 /** Display labels for the dependency categories tracked by the delete guard. */
 export const DEPENDENCY_CATEGORY_LABELS = {
-  users: "Users",
-  employees: "Employees",
-  roles: "Roles",
-  attendance: "Attendance",
-  leave: "Leave",
-  permission_requests: "Permission requests",
+  users: "Pengguna",
+  employees: "Karyawan",
+  roles: "Peran",
+  attendance: "Absensi",
+  leave: "Cuti",
+  permission_requests: "Pengajuan izin",
   payroll: "Payroll",
-  payslips: "Payslips",
-  payslip_documents: "Payslip documents",
-  announcements: "Announcements",
-  work_locations: "Work locations",
-  projects: "Projects",
-  assignments: "Assignments",
-  face_enrollments: "Face enrollments",
-  audit: "Audit trail",
+  payslips: "Slip gaji",
+  payslip_documents: "Dokumen slip gaji",
+  announcements: "Pengumuman",
+  work_locations: "Lokasi kerja",
+  projects: "Proyek",
+  assignments: "Penugasan",
+  face_enrollments: "Pendaftaran wajah",
+  audit: "Jejak audit",
 } as const;

@@ -50,15 +50,14 @@ export function CreateAccountDialog({
         className="mt-2"
         onClick={() => setOpen(true)}
       >
-        Create Login Account
+        Buat Akun Login
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Create Login Account</DialogTitle>
+            <DialogTitle>Buat Akun Login</DialogTitle>
             <DialogDescription>
-              Create a system login account for this employee. The employee will be
-              able to sign in to the HRIS dashboard with the credentials you provide.
+              Buat akun login sistem untuk karyawan ini. Karyawan dapat masuk ke dasbor HRIS dengan kredensial yang Anda berikan.
             </DialogDescription>
           </DialogHeader>
           <form action={formAction} className="space-y-4">
@@ -77,7 +76,7 @@ export function CreateAccountDialog({
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Kata sandi</Label>
               <Input
                 id="password"
                 name="password"
@@ -90,7 +89,7 @@ export function CreateAccountDialog({
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Label htmlFor="confirmPassword">Konfirmasi Kata Sandi</Label>
               <Input
                 id="confirmPassword"
                 name="confirmPassword"
@@ -103,7 +102,7 @@ export function CreateAccountDialog({
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="role">Role</Label>
+              <Label htmlFor="role">Peran</Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="role"
@@ -113,10 +112,10 @@ export function CreateAccountDialog({
                   disabled
                   className="bg-muted"
                 />
-                <Badge variant="secondary">Default</Badge>
+                <Badge variant="secondary">Bawaan</Badge>
               </div>
               <p className="text-sm text-muted-foreground">
-                Employee accounts receive the EMPLOYEE role by default.
+                Akun karyawan otomatis mendapat peran EMPLOYEE.
               </p>
             </div>
             {state.status === "error" && state.message && (
@@ -129,10 +128,10 @@ export function CreateAccountDialog({
                 onClick={() => setOpen(false)}
                 disabled={isPending}
               >
-                Cancel
+                Batal
               </Button>
               <Button type="submit" disabled={isPending}>
-                {isPending ? "Creating..." : "Create Account"}
+                {isPending ? "Membuat..." : "Buat Akun"}
               </Button>
             </DialogFooter>
           </form>

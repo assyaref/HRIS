@@ -95,7 +95,7 @@ export function buildBulkUploadPlan(
         employeeId: null,
         status: "invalid_filename",
         message:
-          "The filename must start with the employee number (digits), e.g. 03233.pdf.",
+          "Nama berkas harus diawali nomor karyawan (angka), mis. 03233.pdf.",
       };
     }
 
@@ -107,7 +107,7 @@ export function buildBulkUploadPlan(
         employeeNumber,
         employeeId: null,
         status: "unknown_employee",
-        message: `No active employee with number ${employeeNumber} in this organization.`,
+        message: `Tidak ada karyawan aktif dengan nomor ${employeeNumber} di organisasi ini.`,
       };
     }
 
@@ -129,7 +129,7 @@ export function buildBulkUploadPlan(
         employeeNumber,
         employeeId: employee.id,
         status: "missing_birth_date",
-        message: `Employee ${employeeNumber} has no birth date, so the PDF password cannot be built.`,
+        message: `Karyawan ${employeeNumber} belum memiliki tanggal lahir, sehingga kata sandi PDF tidak dapat dibuat.`,
       };
     }
 

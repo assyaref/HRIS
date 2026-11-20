@@ -274,7 +274,7 @@ test("preview: existing employee emails cannot be reassigned", async () => {
   ]);
   assert.equal(errors.length, 1);
   assert.equal(errors[0]?.employeeNumber, "EMP-2");
-  assert.match(errors[0]?.error ?? "", /already assigned/i);
+  assert.match(errors[0]?.error ?? "", /sudah dipakai/i);
 });
 
 test("preview: custom validation errors are included in the error count", async () => {
@@ -337,7 +337,7 @@ test("validateEmployeeCells: contract end before start rejected", () => {
     "contract start": "2025-01-01",
     "contract end": "2024-01-01",
   });
-  assert.equal(errors.some((error) => error.includes("Contract end")), true);
+  assert.equal(errors.some((error) => error.includes("Akhir kontrak")), true);
 });
 
 test("validateEmployeeCells: NIK must be digits", () => {

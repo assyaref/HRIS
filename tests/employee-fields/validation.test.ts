@@ -34,7 +34,7 @@ test("custom field definition: select requires non-empty unique options", () => 
     options: [],
   });
   assert.equal(empty.ok, false);
-  assert.ok(empty.errors[0]?.includes("Options are required"));
+  assert.ok(empty.errors[0]?.includes("Pilihan wajib diisi"));
 
   const dupes = validateCustomFieldDefinition({
     fieldKey: "shirt_size",
@@ -43,7 +43,7 @@ test("custom field definition: select requires non-empty unique options", () => 
     options: ["M", "M", "L"],
   });
   assert.equal(dupes.ok, false);
-  assert.ok(dupes.errors.some((error) => error.includes("unique")));
+  assert.ok(dupes.errors.some((error) => error.includes("ganda")));
 });
 
 test("custom field definition: text does not require options", () => {
@@ -67,7 +67,7 @@ test("custom field value: parses number and currency", () => {
 test("custom field value: rejects non-numeric number", () => {
   const result = parseCustomFieldValue("number", "abc");
   assert.equal(result.ok, false);
-  if (!result.ok) assert.ok(result.error.includes("number"));
+  if (!result.ok) assert.ok(result.error.includes("angka"));
 });
 
 test("custom field value: parses checkbox booleans", () => {

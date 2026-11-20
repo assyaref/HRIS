@@ -828,7 +828,7 @@ describe("historical reporting: detached rows stay visible via snapshots", () =>
     );
     assert.equal(
       leaveActionsSource.includes(
-        "This request belongs to a permanently deleted employee and can no longer be reviewed."
+        "Pengajuan ini milik karyawan yang telah dihapus permanen dan tidak dapat ditinjau lagi."
       ),
       true,
       "a detached request is refused safely instead of mutating detached balances"
@@ -983,17 +983,17 @@ describe("authorization and isolation under the detach design", () => {
 
 describe("UI: the operator sees exactly what the transaction will do", () => {
   it("states which employee is being deleted", () => {
-    assert.equal(dialogSource.includes("Permanent Delete Employee?"), true);
+    assert.equal(dialogSource.includes("Hapus Permanen Karyawan?"), true);
     assert.equal(dialogSource.includes("{displayName}"), true);
     assert.equal(dialogSource.includes("{employee.employeeNumber}"), true);
   });
 
   it("separates records that will be deleted from those retained", () => {
-    assert.equal(dialogSource.includes("(will be deleted)"), true);
-    assert.equal(dialogSource.includes("(retained for legal and audit purposes)"), true);
-    assert.equal(dialogSource.includes("Retained records (never deleted)"), true);
+    assert.equal(dialogSource.includes("(akan dihapus)"), true);
+    assert.equal(dialogSource.includes("(disimpan untuk keperluan hukum dan audit)"), true);
+    assert.equal(dialogSource.includes("Data yang disimpan (tidak pernah dihapus)"), true);
     assert.equal(
-      dialogSource.includes("(retained — their manager link will be cleared)"),
+      dialogSource.includes("(disimpan — tautan atasan akan dikosongkan)"),
       true
     );
   });
@@ -1003,8 +1003,8 @@ describe("UI: the operator sees exactly what the transaction will do", () => {
       dialogSource.includes('data-testid="permanent-delete-final-result"'),
       true
     );
-    assert.equal(dialogSource.includes("Final result of the transaction"), true);
-    assert.equal(dialogSource.includes("(retained with its historical identity)"), true);
+    assert.equal(dialogSource.includes("Hasil akhir transaksi"), true);
+    assert.equal(dialogSource.includes("(disimpan dengan identitas historisnya)"), true);
     assert.equal(dialogSource.includes("router.replace(redirectTo)"), true);
     assert.equal(dialogSource.includes("router.refresh();"), true);
     assert.equal(dialogSource.includes("notifier.success("), true);

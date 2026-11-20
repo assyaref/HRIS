@@ -174,7 +174,7 @@ async function lockPeriod(
 }
 
 function messageFromParseError(error: { issues: { message: string }[] }): string {
-  return error.issues[0]?.message ?? "Invalid input.";
+  return error.issues[0]?.message ?? "Isian tidak valid.";
 }
 
 /** Create a payroll period (org-scoped). No run is created until calculate. */
@@ -187,7 +187,7 @@ export async function createPayrollPeriodAction(
     PERMISSIONS.PAYROLL_MANAGE,
   ]);
   if (!user.organizationId) {
-    return { ok: false, message: "Your account is not assigned to an organization." };
+    return { ok: false, message: "Akun Anda belum ditetapkan ke organisasi." };
   }
   const organizationId = user.organizationId;
 
@@ -214,7 +214,7 @@ export async function createPayrollPeriodAction(
 
       const periodId = inserted[0]?.id;
       if (!periodId) {
-        throw new Error("Payroll period insert returned no row.");
+        throw new Error("Periode payroll gagal disimpan.");
       }
 
       await tx.insert(payrollEvents).values({
@@ -244,13 +244,13 @@ export async function createPayrollPeriodAction(
         periodEnd: values.periodEnd,
       },
     });
-    return { ok: true, message: "Payroll period created." };
+    return { ok: true, message: "Periode payroll dibuat." };
   } catch (error) {
     console.error("[payroll] create period failed", error);
     return {
       ok: false,
       message:
-        "The payroll period could not be created. A period with this code may already exist.",
+        "Periode payroll gagal dibuat. Mungkin sudah ada periode dengan kode ini.",
     };
   }
 }
@@ -268,7 +268,7 @@ export async function createPayrollComponentAction(
   const user = await requireUser();
   await requirePermission(user.id, PERMISSIONS.PAYROLL_MANAGE);
   if (!user.organizationId) {
-    return { ok: false, message: "Your account is not assigned to an organization." };
+    return { ok: false, message: "Akun Anda belum ditetapkan ke organisasi." };
   }
   const organizationId = user.organizationId;
 
@@ -288,12 +288,12 @@ export async function createPayrollComponentAction(
       defaultAmount: values.defaultAmount ?? 0,
       description: values.description?.trim() || null,
     });
-    return { ok: true, message: "Payroll component created." };
+    return { ok: true, message: "Komponen payroll dibuat." };
   } catch (error) {
     console.error("[payroll] create component failed", error);
     return {
       ok: false,
-      message: "The component could not be created. A component with this code may already exist.",
+      message: "Komponen gagal dibuat. Mungkin sudah ada komponen dengan kode ini.",
     };
   }
 }
@@ -306,7 +306,7 @@ export async function updatePayrollComponentAction(
   const user = await requireUser();
   await requirePermission(user.id, PERMISSIONS.PAYROLL_MANAGE);
   if (!user.organizationId) {
-    return { ok: false, message: "Your account is not assigned to an organization." };
+    return { ok: false, message: "Akun Anda belum ditetapkan ke organisasi." };
   }
   const organizationId = user.organizationId;
 
@@ -340,12 +340,12 @@ export async function updatePayrollComponentAction(
         description: values.description?.trim() || null,
       })
       .where(eq(payrollComponents.id, componentId));
-    return { ok: true, message: "Payroll component updated." };
+    return { ok: true, message: "Komponen payroll diperbarui." };
   } catch (error) {
     console.error("[payroll] update component failed", error);
     return {
       ok: false,
-      message: "The component could not be updated. A component with this code may already exist.",
+      message: "Komponen gagal diperbarui. Mungkin sudah ada komponen dengan kode ini.",
     };
   }
 }
@@ -358,7 +358,7 @@ export async function setPayrollComponentActiveAction(
   const user = await requireUser();
   await requirePermission(user.id, PERMISSIONS.PAYROLL_MANAGE);
   if (!user.organizationId) {
-    return { ok: false, message: "Your account is not assigned to an organization." };
+    return { ok: false, message: "Akun Anda belum ditetapkan ke organisasi." };
   }
   const organizationId = user.organizationId;
 
@@ -380,7 +380,7 @@ export async function setPayrollComponentActiveAction(
     .where(eq(payrollComponents.id, componentId));
   return {
     ok: true,
-    message: active ? "Component activated." : "Component deactivated.",
+    message: active ? "Komponen diaktifkan." : "Komponen dinonaktifkan.",
   };
 }
 
@@ -409,7 +409,7 @@ export async function calculatePayrollAction(
   if (!user.organizationId) {
     return {
       ok: false,
-      message: "Your account is not assigned to an organization.",
+      message: "Akun Anda belum ditetapkan ke organisasi.",
     };
   }
   const organizationId = user.organizationId;
@@ -418,12 +418,12 @@ export async function calculatePayrollAction(
     const outcome = await db.transaction(async (tx) => {
       const period = await lockPeriod(tx, organizationId, periodId);
       if (!period) {
-        return { kind: "error" as const, message: "Period not found." };
+        return { kind: "error" as const, message: "Periode tidak ditemukan." };
       }
       if (period.periodStatus !== "draft") {
         return {
           kind: "error" as const,
-          message: "Only draft periods can be (re)calculated.",
+          message: "Hanya periode draf yang dapat dihitung (ulang).",
         };
       }
       if (
@@ -434,7 +434,7 @@ export async function calculatePayrollAction(
         return {
           kind: "error" as const,
           message:
-            "This run has already progressed and can no longer be calculated.",
+            "Proses ini sudah berlanjut dan tidak dapat dihitung lagi.",
         };
       }
 
@@ -454,7 +454,7 @@ export async function calculatePayrollAction(
       if (!runId) {
         return {
           kind: "error" as const,
-          message: "The run could not be created.",
+          message: "Proses gagal dibuat.",
         };
       }
 
@@ -646,9 +646,7 @@ export async function calculatePayrollAction(
 
       return {
         kind: "success" as const,
-        message: `Calculated payroll for ${includedCount} employee${
-          includedCount === 1 ? "" : "s"
-        }.`,
+        message: `Payroll dihitung untuk ${includedCount} karyawan.`,
         grossTotal,
         deductionTotal,
         netTotal,
@@ -674,7 +672,7 @@ export async function calculatePayrollAction(
     console.error("[payroll] calculate failed", error);
     return {
       ok: false,
-      message: "The payroll run could not be calculated. Please try again.",
+      message: "Proses payroll gagal dihitung. Silakan coba lagi.",
     };
   }
 }
@@ -690,24 +688,24 @@ export async function submitPayrollRunAction(
     PERMISSIONS.PAYROLL_MANAGE,
   ]);
   if (!user.organizationId) {
-    return { ok: false, message: "Your account is not assigned to an organization." };
+    return { ok: false, message: "Akun Anda belum ditetapkan ke organisasi." };
   }
   const organizationId = user.organizationId;
 
   try {
     const outcome = await db.transaction(async (tx) => {
       const period = await lockPeriod(tx, organizationId, periodId);
-      if (!period) return { kind: "error" as const, message: "Period not found." };
+      if (!period) return { kind: "error" as const, message: "Periode tidak ditemukan." };
       if (!period.runId || period.runStatus !== "calculated") {
         return {
           kind: "error" as const,
-          message: "The run must be calculated before it can be submitted.",
+          message: "Proses harus dihitung sebelum dapat diajukan.",
         };
       }
       if (period.periodStatus !== "pending_approval") {
         return {
           kind: "error" as const,
-          message: "The period is not waiting for approval.",
+          message: "Periode tidak sedang menunggu persetujuan.",
         };
       }
       const now = new Date();
@@ -737,10 +735,10 @@ export async function submitPayrollRunAction(
       action: "payroll.submitted",
       entityType: "payroll_run",
     });
-    return { ok: true, message: "Run submitted for approval." };
+    return { ok: true, message: "Proses diajukan untuk persetujuan." };
   } catch (error) {
     console.error("[payroll] submit failed", error);
-    return { ok: false, message: "The run could not be submitted. Please try again." };
+    return { ok: false, message: "Proses gagal diajukan. Silakan coba lagi." };
   }
 }
 
@@ -754,18 +752,18 @@ export async function approvePayrollRunAction(
     PERMISSIONS.PAYROLL_MANAGE,
   ]);
   if (!user.organizationId) {
-    return { ok: false, message: "Your account is not assigned to an organization." };
+    return { ok: false, message: "Akun Anda belum ditetapkan ke organisasi." };
   }
   const organizationId = user.organizationId;
 
   try {
     const outcome = await db.transaction(async (tx) => {
       const period = await lockPeriod(tx, organizationId, periodId);
-      if (!period) return { kind: "error" as const, message: "Period not found." };
+      if (!period) return { kind: "error" as const, message: "Periode tidak ditemukan." };
       if (!period.runId || period.runStatus !== "submitted") {
         return {
           kind: "error" as const,
-          message: "Only submitted runs can be approved.",
+          message: "Hanya proses yang diajukan yang dapat disetujui.",
         };
       }
       const now = new Date();
@@ -799,10 +797,10 @@ export async function approvePayrollRunAction(
       action: "payroll.approved",
       entityType: "payroll_run",
     });
-    return { ok: true, message: "Run approved. Payslips can now be generated." };
+    return { ok: true, message: "Proses disetujui. Slip gaji sekarang dapat dibuat." };
   } catch (error) {
     console.error("[payroll] approve failed", error);
-    return { ok: false, message: "The run could not be approved. Please try again." };
+    return { ok: false, message: "Proses gagal disetujui. Silakan coba lagi." };
   }
 }
 
@@ -818,7 +816,7 @@ export async function rejectPayrollRunAction(
     PERMISSIONS.PAYROLL_MANAGE,
   ]);
   if (!user.organizationId) {
-    return { ok: false, message: "Your account is not assigned to an organization." };
+    return { ok: false, message: "Akun Anda belum ditetapkan ke organisasi." };
   }
   const organizationId = user.organizationId;
 
@@ -831,11 +829,11 @@ export async function rejectPayrollRunAction(
   try {
     const outcome = await db.transaction(async (tx) => {
       const period = await lockPeriod(tx, organizationId, periodId);
-      if (!period) return { kind: "error" as const, message: "Period not found." };
+      if (!period) return { kind: "error" as const, message: "Periode tidak ditemukan." };
       if (!period.runId || period.runStatus !== "submitted") {
         return {
           kind: "error" as const,
-          message: "Only submitted runs can be rejected.",
+          message: "Hanya proses yang diajukan yang dapat ditolak.",
         };
       }
       await tx
@@ -869,10 +867,10 @@ export async function rejectPayrollRunAction(
       entityType: "payroll_run",
       metadata: { reason: trimmedReason },
     });
-    return { ok: true, message: "Run rejected. The period is back to draft." };
+    return { ok: true, message: "Proses ditolak. Periode kembali ke draf." };
   } catch (error) {
     console.error("[payroll] reject failed", error);
-    return { ok: false, message: "The run could not be rejected. Please try again." };
+    return { ok: false, message: "Proses gagal ditolak. Silakan coba lagi." };
   }
 }
 
@@ -886,18 +884,18 @@ export async function lockPayrollRunAction(
     PERMISSIONS.PAYROLL_MANAGE,
   ]);
   if (!user.organizationId) {
-    return { ok: false, message: "Your account is not assigned to an organization." };
+    return { ok: false, message: "Akun Anda belum ditetapkan ke organisasi." };
   }
   const organizationId = user.organizationId;
 
   try {
     const outcome = await db.transaction(async (tx) => {
       const period = await lockPeriod(tx, organizationId, periodId);
-      if (!period) return { kind: "error" as const, message: "Period not found." };
+      if (!period) return { kind: "error" as const, message: "Periode tidak ditemukan." };
       if (!period.runId || period.runStatus !== "approved") {
         return {
           kind: "error" as const,
-          message: "Only approved runs can be locked.",
+          message: "Hanya proses yang disetujui yang dapat dikunci.",
         };
       }
       const now = new Date();
@@ -931,10 +929,10 @@ export async function lockPayrollRunAction(
       action: "payroll.locked",
       entityType: "payroll_run",
     });
-    return { ok: true, message: "Run locked. The payroll is now final." };
+    return { ok: true, message: "Proses dikunci. Payroll sekarang final." };
   } catch (error) {
     console.error("[payroll] lock failed", error);
-    return { ok: false, message: "The run could not be locked. Please try again." };
+    return { ok: false, message: "Proses gagal dikunci. Silakan coba lagi." };
   }
 }
 
@@ -949,18 +947,18 @@ export async function cancelPayrollPeriodAction(
     PERMISSIONS.PAYROLL_MANAGE,
   ]);
   if (!user.organizationId) {
-    return { ok: false, message: "Your account is not assigned to an organization." };
+    return { ok: false, message: "Akun Anda belum ditetapkan ke organisasi." };
   }
   const organizationId = user.organizationId;
 
   try {
     const outcome = await db.transaction(async (tx) => {
       const period = await lockPeriod(tx, organizationId, periodId);
-      if (!period) return { kind: "error" as const, message: "Period not found." };
+      if (!period) return { kind: "error" as const, message: "Periode tidak ditemukan." };
       if (period.periodStatus !== "draft") {
         return {
           kind: "error" as const,
-          message: "Only draft periods can be cancelled.",
+          message: "Hanya periode draf yang dapat dibatalkan.",
         };
       }
       if (period.runId) {
@@ -971,7 +969,7 @@ export async function cancelPayrollPeriodAction(
         ) {
           return {
             kind: "error" as const,
-            message: "Cancel the run state first (reject or recalculate).",
+            message: "Batalkan status proses terlebih dahulu (tolak atau hitung ulang).",
           };
         }
         await tx
@@ -1005,10 +1003,10 @@ export async function cancelPayrollPeriodAction(
       action: "payroll.cancelled",
       entityType: "payroll_period",
     });
-    return { ok: true, message: "Payroll period cancelled." };
+    return { ok: true, message: "Periode payroll dibatalkan." };
   } catch (error) {
     console.error("[payroll] cancel failed", error);
-    return { ok: false, message: "The period could not be cancelled. Please try again." };
+    return { ok: false, message: "Periode gagal dibatalkan. Silakan coba lagi." };
   }
 }
 
@@ -1033,12 +1031,12 @@ export async function updatePayrollPeriodAction(
     PERMISSIONS.PAYROLL_MANAGE,
   ]);
   if (!user.organizationId) {
-    return { ok: false, message: "Your account is not assigned to an organization." };
+    return { ok: false, message: "Akun Anda belum ditetapkan ke organisasi." };
   }
   const organizationId = user.organizationId;
 
   if (!isPayslipUuid(periodId)) {
-    return { ok: false, message: "Invalid payroll period identifier." };
+    return { ok: false, message: "ID periode payroll tidak valid." };
   }
 
   const parsed = createPayrollPeriodSchema.safeParse(input);
@@ -1050,13 +1048,13 @@ export async function updatePayrollPeriodAction(
   try {
     const outcome = await db.transaction(async (tx) => {
       const period = await lockPeriod(tx, organizationId, periodId);
-      if (!period) return { kind: "error" as const, message: "Period not found." };
+      if (!period) return { kind: "error" as const, message: "Periode tidak ditemukan." };
 
       // Edit eligibility by status
       if (period.periodStatus === "locked") {
         return {
           kind: "error" as const,
-          message: "Cannot edit a locked payroll period.",
+          message: "Periode payroll yang terkunci tidak dapat diubah.",
         };
       }
 
@@ -1065,7 +1063,7 @@ export async function updatePayrollPeriodAction(
         if (period.periodStatus !== "processing") {
           return {
             kind: "error" as const,
-            message: "Only draft or cancelled periods can be fully updated.",
+            message: "Hanya periode draf atau dibatalkan yang dapat diperbarui penuh.",
           };
         }
         // Processing: only name is editable; ignore date/code changes
@@ -1076,7 +1074,7 @@ export async function updatePayrollPeriodAction(
         if (period.runId) {
           return {
             kind: "error" as const,
-            message: "Cancel the run first before updating this period.",
+            message: "Batalkan proses payroll terlebih dahulu sebelum mengubah periode ini.",
           };
         }
       }
@@ -1097,7 +1095,7 @@ export async function updatePayrollPeriodAction(
         if (payslipRows[0]) {
           return {
             kind: "error" as const,
-            message: "Delete or revoke existing payslips before updating this period.",
+            message: "Hapus atau cabut slip gaji yang ada sebelum mengubah periode ini.",
           };
         }
       } else {
@@ -1119,7 +1117,7 @@ export async function updatePayrollPeriodAction(
         return {
           kind: "success" as const,
           code: period.periodCode,
-          message: "Payroll period name updated.",
+          message: "Nama periode payroll diperbarui.",
         };
       }
 
@@ -1175,12 +1173,12 @@ export async function updatePayrollPeriodAction(
         periodEnd: values.periodEnd,
       },
     });
-    return { ok: true, message: outcome.message ?? "Payroll period updated." };
+    return { ok: true, message: outcome.message ?? "Periode payroll diperbarui." };
   } catch (error) {
     console.error("[payroll] update period failed", error);
     return {
       ok: false,
-      message: "The payroll period could not be updated. A period with this code may already exist.",
+      message: "Periode payroll gagal diperbarui. Mungkin sudah ada periode dengan kode ini.",
     };
   }
 }
@@ -1216,19 +1214,19 @@ export async function deletePayrollPeriodAction(
     PERMISSIONS.PAYROLL_MANAGE,
   ]);
   if (!user.organizationId) {
-    return { ok: false, message: "Your account is not assigned to an organization." };
+    return { ok: false, message: "Akun Anda belum ditetapkan ke organisasi." };
   }
   const organizationId = user.organizationId;
 
   if (!isPayslipUuid(periodId)) {
-    return { ok: false, message: "Invalid payroll period identifier." };
+    return { ok: false, message: "ID periode payroll tidak valid." };
   }
 
   try {
     const outcome = await db.transaction(async (tx) => {
       const period = await lockPeriod(tx, organizationId, periodId);
       if (!period) {
-        return { kind: "error" as const, message: "Period not found." };
+        return { kind: "error" as const, message: "Periode tidak ditemukan." };
       }
 
       if (
@@ -1240,7 +1238,7 @@ export async function deletePayrollPeriodAction(
         return {
           kind: "error" as const,
           message:
-            "Only draft, cancelled, processing or locked periods can be deleted. Otherwise cancel the period first.",
+            "Hanya periode draf, dibatalkan, diproses, atau terkunci yang dapat dihapus. Selain itu, batalkan periode terlebih dahulu.",
         };
       }
 
@@ -1327,7 +1325,7 @@ export async function deletePayrollPeriodAction(
         if (!deletionDecision.allowed) {
           return {
             kind: "error" as const,
-            message: deletionDecision.message ?? "The payroll period cannot be deleted.",
+            message: deletionDecision.message ?? "Periode payroll tidak dapat dihapus.",
           };
         }
 
@@ -1470,7 +1468,7 @@ export async function deletePayrollPeriodAction(
       if (period.runId) {
         return {
           kind: "error" as const,
-          message: "Cancel the run first before deleting this period.",
+          message: "Batalkan proses payroll terlebih dahulu sebelum menghapus periode ini.",
         };
       }
 
@@ -1488,7 +1486,7 @@ export async function deletePayrollPeriodAction(
       if (payslipRows[0]) {
         return {
           kind: "error" as const,
-          message: "Delete or revoke existing payslips before deleting this period.",
+          message: "Hapus atau cabut slip gaji yang ada sebelum menghapus periode ini.",
         };
       }
 
@@ -1544,16 +1542,16 @@ export async function deletePayrollPeriodAction(
         versionCount: outcome.versionCount,
       },
     });
-    return { ok: true, message: "Payroll period deleted." };
+    return { ok: true, message: "Periode payroll dihapus." };
   } catch (error) {
     console.error("[payroll] delete period failed", error);
     if (typeof error === "object" && error !== null && (error as { code?: unknown }).code === "23503") {
       return {
         ok: false,
-        message: "The payroll period has related records that cannot be safely deleted.",
+        message: "Periode payroll memiliki data terkait yang tidak dapat dihapus dengan aman.",
       };
     }
-    return { ok: false, message: "The payroll period could not be deleted. Please try again." };
+    return { ok: false, message: "Periode payroll gagal dihapus. Silakan coba lagi." };
   }
 }
 
@@ -1578,18 +1576,18 @@ export async function generatePayslipsAction(
     PERMISSIONS.PAYROLL_MANAGE,
   ]);
   if (!user.organizationId) {
-    return { ok: false, message: "Your account is not assigned to an organization." };
+    return { ok: false, message: "Akun Anda belum ditetapkan ke organisasi." };
   }
   const organizationId = user.organizationId;
 
   try {
     const outcome = await db.transaction(async (tx) => {
       const period = await lockPeriod(tx, organizationId, periodId);
-      if (!period) return { kind: "error" as const, message: "Period not found." };
+      if (!period) return { kind: "error" as const, message: "Periode tidak ditemukan." };
       if (!period.runId || (period.runStatus !== "approved" && period.runStatus !== "locked")) {
         return {
           kind: "error" as const,
-          message: "Payslips can only be generated for approved or locked runs.",
+          message: "Slip gaji hanya dapat dibuat untuk proses yang disetujui atau terkunci.",
         };
       }
 
@@ -1608,7 +1606,7 @@ export async function generatePayslipsAction(
       if (existing[0]) {
         return {
           kind: "error" as const,
-          message: "Payslips were already generated for this run.",
+          message: "Slip gaji untuk proses ini sudah dibuat.",
         };
       }
 
@@ -1630,7 +1628,7 @@ export async function generatePayslipsAction(
       if (itemRows.length === 0) {
         return {
           kind: "error" as const,
-          message: "There are no included employees to issue payslips for.",
+          message: "Tidak ada karyawan yang disertakan untuk diterbitkan slip gajinya.",
         };
       }
 
@@ -1703,13 +1701,13 @@ export async function generatePayslipsAction(
     });
     return {
       ok: true,
-      message: `Generated ${outcome.count} payslip${outcome.count === 1 ? "" : "s"}.`,
+      message: `${outcome.count} slip gaji dibuat.`,
     };
   } catch (error) {
     console.error("[payroll] generate payslips failed", error);
     return {
       ok: false,
-      message: "Payslips could not be generated. Please try again.",
+      message: "Slip gaji gagal dibuat. Silakan coba lagi.",
     };
   }
 }
@@ -1752,7 +1750,7 @@ export async function generatePayslipPdfsAction(
     PERMISSIONS.PAYROLL_MANAGE,
   ]);
   if (!user.organizationId) {
-    return { ok: false, message: "Your account is not assigned to an organization." };
+    return { ok: false, message: "Akun Anda belum ditetapkan ke organisasi." };
   }
   const organizationId = user.organizationId;
 
@@ -1762,7 +1760,7 @@ export async function generatePayslipPdfsAction(
     // candidates and build the (pure, deterministic) PostScript per payslip.
     const outcome = await db.transaction(async (tx) => {
       const period = await lockPeriod(tx, organizationId, periodId);
-      if (!period) return { kind: "error" as const, message: "Period not found." };
+      if (!period) return { kind: "error" as const, message: "Periode tidak ditemukan." };
       if (
         !period.runId ||
         !runStatusAllowsDocumentGeneration(period.runStatus)
@@ -1770,7 +1768,7 @@ export async function generatePayslipPdfsAction(
         return {
           kind: "error" as const,
           message:
-            "Payslip documents can only be generated for approved or locked runs.",
+            "Dokumen slip gaji hanya dapat dibuat untuk proses yang disetujui atau terkunci.",
         };
       }
       const runId = period.runId;
@@ -1799,7 +1797,7 @@ export async function generatePayslipPdfsAction(
         .limit(1);
 
       const meta = metaRows[0];
-      if (!meta) return { kind: "error" as const, message: "Period not found." };
+      if (!meta) return { kind: "error" as const, message: "Periode tidak ditemukan." };
 
       const payslipRows = await tx
         .select({
@@ -1944,7 +1942,7 @@ export async function generatePayslipPdfsAction(
         if (!row || !row.payrollItemId) {
           // Unreachable for `included` entries by the guard's contract; fail
           // loudly rather than silently skip a payslip the guard admitted.
-          throw new Error("Payslip PDF eligibility invariant violated.");
+          throw new Error("Syarat kelayakan PDF slip gaji dilanggar.");
         }
 
         /*
@@ -1966,7 +1964,7 @@ export async function generatePayslipPdfsAction(
         const effectiveBirthDate = passwordIdentity.birthDate;
 
         if (!effectiveEmployeeNumber || !effectiveBirthDate) {
-          throw new Error("Payslip PDF eligibility invariant violated.");
+          throw new Error("Syarat kelayakan PDF slip gaji dilanggar.");
         }
 
         prepared.push({
@@ -2016,15 +2014,15 @@ export async function generatePayslipPdfsAction(
     }
 
     if (outcome.totalCount === 0) {
-      return { ok: false, message: "There are no generated payslips to process." };
+      return { ok: false, message: "Tidak ada slip gaji berstatus dibuat untuk diproses." };
     }
 
     if (outcome.prepared.length === 0) {
       return {
         ok: true,
         message:
-          `No payslip PDFs were generated. ${outcome.skippedCount} ` +
-          `payslip${outcome.skippedCount === 1 ? "" : "s"} skipped.`,
+          `Tidak ada PDF slip gaji yang dibuat. ${outcome.skippedCount} ` +
+          `slip gaji dilewati.`,
         generated: 0,
         skipped: outcome.skippedCount,
       };
@@ -2083,7 +2081,7 @@ export async function generatePayslipPdfsAction(
       console.error("[payroll] payslip PDF generation failed", error);
       return {
         ok: false,
-        message: "Payslip PDFs could not be rendered. Please try again.",
+        message: "PDF slip gaji gagal dirender. Silakan coba lagi.",
       };
     }
 
@@ -2107,7 +2105,7 @@ export async function generatePayslipPdfsAction(
             .limit(1);
 
           if (!lockedRows[0] || lockedRows[0].status !== "generated") {
-            throw new Error("Payslip is no longer eligible for a PDF document.");
+            throw new Error("Slip gaji tidak lagi memenuhi syarat untuk dokumen PDF.");
           }
 
           const existingRows = await tx
@@ -2122,7 +2120,7 @@ export async function generatePayslipPdfsAction(
             .limit(1);
 
           if (existingRows[0]) {
-            throw new Error("A payslip document already exists for this payslip.");
+            throw new Error("Dokumen slip gaji untuk slip ini sudah ada.");
           }
 
           const insertedDocument = await tx
@@ -2142,7 +2140,7 @@ export async function generatePayslipPdfsAction(
           const documentId = insertedDocument[0]?.id;
 
           if (!documentId) {
-            throw new Error("Payslip document insert returned no id.");
+            throw new Error("Dokumen slip gaji gagal disimpan.");
           }
 
           /*
@@ -2180,7 +2178,7 @@ export async function generatePayslipPdfsAction(
       console.error("[payroll] payslip document commit failed", error);
       return {
         ok: false,
-        message: "Payslip PDFs could not be stored. Please try again.",
+        message: "PDF slip gaji gagal disimpan. Silakan coba lagi.",
       };
     }
 
@@ -2197,12 +2195,12 @@ export async function generatePayslipPdfsAction(
 
     const suffix =
       outcome.skippedCount > 0
-        ? ` ${outcome.skippedCount} payslip${outcome.skippedCount === 1 ? "" : "s"} skipped.`
+        ? ` ${outcome.skippedCount} slip gaji dilewati.`
         : "";
     return {
       ok: true,
       message:
-        `Generated ${stored.length} payslip PDF${stored.length === 1 ? "" : "s"}.` +
+        `${stored.length} PDF slip gaji dibuat.` +
         suffix,
       generated: stored.length,
       skipped: outcome.skippedCount,
@@ -2211,7 +2209,7 @@ export async function generatePayslipPdfsAction(
     console.error("[payroll] generate payslip PDFs failed", error);
     return {
       ok: false,
-      message: "Payslip PDFs could not be generated. Please try again.",
+      message: "PDF slip gaji gagal dibuat. Silakan coba lagi.",
     };
   }
 }
@@ -2228,18 +2226,18 @@ export async function publishPayslipsAction(
     PERMISSIONS.PAYROLL_MANAGE,
   ]);
   if (!user.organizationId) {
-    return { ok: false, message: "Your account is not assigned to an organization." };
+    return { ok: false, message: "Akun Anda belum ditetapkan ke organisasi." };
   }
   const organizationId = user.organizationId;
 
   try {
     const outcome = await db.transaction(async (tx) => {
       const period = await lockPeriod(tx, organizationId, periodId);
-      if (!period) return { kind: "error" as const, message: "Period not found." };
+      if (!period) return { kind: "error" as const, message: "Periode tidak ditemukan." };
       if (!period.runId || (period.runStatus !== "approved" && period.runStatus !== "locked")) {
         return {
           kind: "error" as const,
-          message: "Payslips can only be published for approved or locked runs.",
+          message: "Slip gaji hanya dapat diterbitkan untuk proses yang disetujui atau terkunci.",
         };
       }
       const runId = period.runId;
@@ -2256,7 +2254,7 @@ export async function publishPayslipsAction(
       if (itemRows.length === 0) {
         return {
           kind: "error" as const,
-          message: "This run has no payroll items.",
+          message: "Proses ini tidak memiliki item payroll.",
         };
       }
       const itemIds = itemRows.map((row) => row.id);
@@ -2277,7 +2275,7 @@ export async function publishPayslipsAction(
       if (pendingRows.length === 0) {
         return {
           kind: "error" as const,
-          message: "There are no generated payslips to publish.",
+          message: "Tidak ada slip gaji berstatus dibuat untuk diterbitkan.",
         };
       }
 
@@ -2368,13 +2366,13 @@ export async function publishPayslipsAction(
     });
     return {
       ok: true,
-      message: `Published ${outcome.count} payslip${outcome.count === 1 ? "" : "s"}.`,
+      message: `${outcome.count} slip gaji diterbitkan.`,
     };
   } catch (error) {
     console.error("[payroll] publish payslips failed", error);
     return {
       ok: false,
-      message: "Payslips could not be published. Please try again.",
+      message: "Slip gaji gagal diterbitkan. Silakan coba lagi.",
     };
   }
 }
@@ -2406,12 +2404,12 @@ export async function revokePayslipAction(
     PERMISSIONS.PAYROLL_MANAGE,
   ]);
   if (!user.organizationId) {
-    return { ok: false, message: "Your account is not assigned to an organization." };
+    return { ok: false, message: "Akun Anda belum ditetapkan ke organisasi." };
   }
   const organizationId = user.organizationId;
 
   if (!isPayslipUuid(payslipId)) {
-    return { ok: false, message: "Invalid payslip identifier." };
+    return { ok: false, message: "ID slip gaji tidak valid." };
   }
 
   try {
@@ -2433,7 +2431,7 @@ export async function revokePayslipAction(
 
       const located = locatedRows[0];
       if (!located) {
-        return { kind: "error" as const, message: "Payslip not found." };
+        return { kind: "error" as const, message: "Slip gaji tidak ditemukan." };
       }
 
       // A distribution payslip links the period directly; a calculated
@@ -2456,14 +2454,14 @@ export async function revokePayslipAction(
       }
 
       if (!resolvedPeriodId) {
-        return { kind: "error" as const, message: "Payslip not found." };
+        return { kind: "error" as const, message: "Slip gaji tidak ditemukan." };
       }
 
       // Lock the borrowing period so every payslip workflow transition for
       // this period is serialized before the payslip status is re-read.
       const period = await lockPeriod(tx, organizationId, resolvedPeriodId);
       if (!period) {
-        return { kind: "error" as const, message: "Payslip not found." };
+        return { kind: "error" as const, message: "Slip gaji tidak ditemukan." };
       }
 
       // Lock the payslip row and verify its current status in the same
@@ -2481,7 +2479,7 @@ export async function revokePayslipAction(
         .limit(1);
       const locked = lockedRows[0];
       if (!locked) {
-        return { kind: "error" as const, message: "Payslip not found." };
+        return { kind: "error" as const, message: "Slip gaji tidak ditemukan." };
       }
 
       const decision = buildPayslipRevocationDecision({
@@ -2492,7 +2490,7 @@ export async function revokePayslipAction(
       if (!decision.allowed) {
         return {
           kind: "error" as const,
-          message: decision.message ?? "The payslip cannot be revoked.",
+          message: decision.message ?? "Slip gaji tidak dapat dicabut.",
         };
       }
 
@@ -2551,7 +2549,7 @@ export async function revokePayslipAction(
     console.error("[payroll] revoke payslip failed", error);
     return {
       ok: false,
-      message: "The payslip could not be revoked. Please try again.",
+      message: "Slip gaji gagal dicabut. Silakan coba lagi.",
     };
   }
 }
@@ -2581,11 +2579,11 @@ export async function deleteRevokedPayslipAction(
     };
   }
   if (!user.organizationId) {
-    return { ok: false, message: "Your account is not assigned to an organization." };
+    return { ok: false, message: "Akun Anda belum ditetapkan ke organisasi." };
   }
   const organizationId = user.organizationId;
   if (!isPayslipUuid(payslipId)) {
-    return { ok: false, message: "Invalid payslip identifier." };
+    return { ok: false, message: "ID slip gaji tidak valid." };
   }
 
   let outcome:
@@ -2613,7 +2611,7 @@ export async function deleteRevokedPayslipAction(
         .for("update")
         .limit(1);
       const payslip = lockedRows[0];
-      if (!payslip) return { kind: "error" as const, message: "Payslip not found." };
+      if (!payslip) return { kind: "error" as const, message: "Slip gaji tidak ditemukan." };
       if (payslip.status !== "revoked") {
         return {
           kind: "error" as const,
@@ -2757,11 +2755,11 @@ export async function deletePayrollComponentAction(
     };
   }
   if (!user.organizationId) {
-    return { ok: false, message: "Your account is not assigned to an organization." };
+    return { ok: false, message: "Akun Anda belum ditetapkan ke organisasi." };
   }
   const organizationId = user.organizationId;
   if (!isPayslipUuid(componentId)) {
-    return { ok: false, message: "Invalid component identifier." };
+    return { ok: false, message: "ID komponen tidak valid." };
   }
 
   const existing = await db
@@ -2779,7 +2777,7 @@ export async function deletePayrollComponentAction(
     )
     .limit(1);
   const component = existing[0];
-  if (!component) return { ok: false, message: "Component not found." };
+  if (!component) return { ok: false, message: "Komponen tidak ditemukan." };
 
   let assignmentCount = 0;
   try {

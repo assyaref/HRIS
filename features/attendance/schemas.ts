@@ -18,24 +18,24 @@ const UUID_PATTERN =
 
 const uuidSchema = z
   .string()
-  .regex(UUID_PATTERN, "Invalid id.");
+  .regex(UUID_PATTERN, "ID tidak valid.");
 
 const latitudeSchema = z
-  .number("Latitude is required.")
-  .refine(isValidLatitude, "Latitude is out of range.");
+  .number("Latitude wajib diisi.")
+  .refine(isValidLatitude, "Latitude di luar rentang.");
 
 const longitudeSchema = z
-  .number("Longitude is required.")
-  .refine(isValidLongitude, "Longitude is out of range.");
+  .number("Longitude wajib diisi.")
+  .refine(isValidLongitude, "Longitude di luar rentang.");
 
 const accuracySchema = z
-  .number("Location accuracy is required.")
-  .min(0, "Accuracy cannot be negative.");
+  .number("Akurasi lokasi wajib diisi.")
+  .min(0, "Akurasi tidak boleh negatif.");
 
 const notesSchema = z
   .string()
   .trim()
-  .max(500, "Notes must be 500 characters or fewer.");
+  .max(500, "Catatan maksimal 500 karakter.");
 
 export const attendanceLocationIssueSchema = z.enum([
   "denied",
@@ -86,7 +86,7 @@ export type CheckOutInput = z.infer<typeof checkOutSchema>;
 export const attendanceFilterSchema = z.object({
   date: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Use the YYYY-MM-DD date format.")
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Gunakan format tanggal YYYY-MM-DD.")
     .optional(),
   projectId: z.string().regex(UUID_PATTERN).optional(),
   status: z.enum(["present", "completed", "incomplete", "rejected"]).optional(),

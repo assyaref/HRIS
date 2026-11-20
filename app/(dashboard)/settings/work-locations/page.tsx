@@ -25,7 +25,7 @@ import { CreateWorkLocationDialog } from "@/features/work-locations/work-locatio
 import { WorkLocationRowActions } from "@/features/work-locations/work-location-row-actions";
 
 export const metadata: Metadata = {
-  title: "Work Locations",
+  title: "Lokasi Kerja",
 };
 
 /**
@@ -60,7 +60,7 @@ export default async function WorkLocationsPage() {
             Lokasi Kerja
           </h1>
           <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-            Manage geofenced work locations for attendance check-ins.
+            Kelola lokasi kerja ber-geofence untuk absen masuk.
           </p>
         </div>
         {canManage ? <CreateWorkLocationDialog projects={projects} /> : null}
@@ -68,25 +68,25 @@ export default async function WorkLocationsPage() {
 
       {!user.organizationId ? (
         <EmptyState
-          title="No organization assigned"
-          description="Your account is not linked to an organization, so there are no work locations to administer."
+          title="Belum ada organisasi"
+          description="Akun Anda belum tertaut ke organisasi, sehingga tidak ada lokasi kerja untuk dikelola."
         />
       ) : locations.length === 0 ? (
         <EmptyState
-          title="No work locations yet"
-          description="Create your first work location to enable geofenced attendance check-ins for your organization."
+          title="Belum ada lokasi kerja"
+          description="Buat lokasi kerja pertama untuk mengaktifkan absensi berbasis geofence di organisasi Anda."
         />
       ) : (
         <div className="rounded-lg border border-border bg-card">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Location</TableHead>
-                <TableHead>Coordinates</TableHead>
+                <TableHead>Lokasi</TableHead>
+                <TableHead>Koordinat</TableHead>
                 <TableHead>Radius</TableHead>
-                <TableHead>Timezone</TableHead>
+                <TableHead>Zona waktu</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -120,21 +120,21 @@ export default async function WorkLocationsPage() {
                           {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
                         </span>
                       ) : (
-                        <span className="text-sm text-muted-foreground">Not set</span>
+                        <span className="text-sm text-muted-foreground">Belum diisi</span>
                       )}
                     </TableCell>
                     <TableCell>
                       {location.radiusMeters ? (
                         <span className="text-sm">{location.radiusMeters}m</span>
                       ) : (
-                        <span className="text-sm text-muted-foreground">Not set</span>
+                        <span className="text-sm text-muted-foreground">Belum diisi</span>
                       )}
                     </TableCell>
                     <TableCell>
                       {location.timezone ? (
                         <span className="text-sm">{location.timezone}</span>
                       ) : (
-                        <span className="text-sm text-muted-foreground">Not set</span>
+                        <span className="text-sm text-muted-foreground">Belum diisi</span>
                       )}
                     </TableCell>
                     <TableCell>
@@ -144,12 +144,12 @@ export default async function WorkLocationsPage() {
                             location.status === "active" ? "primary" : "secondary"
                           }
                         >
-                          {location.status === "active" ? "Active" : "Inactive"}
+                          {location.status === "active" ? "Aktif" : "Nonaktif"}
                         </Badge>
                         <span className="text-xs text-muted-foreground">
                           {location.status === "active"
-                            ? "Available for attendance"
-                            : "Not available for attendance"}
+                            ? "Dapat dipakai absensi"
+                            : "Tidak dapat dipakai absensi"}
                         </span>
                       </div>
                     </TableCell>

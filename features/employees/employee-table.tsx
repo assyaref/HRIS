@@ -49,14 +49,14 @@ function rowActions({
         href={detailHref}
         className={buttonVariants({ variant: "ghost", size: "sm" })}
       >
-        View
+        Lihat
       </Link>
       {canEdit ? (
         <Link
           href={detailHref}
           className={buttonVariants({ variant: "ghost", size: "sm" })}
         >
-          Edit
+          Ubah
         </Link>
       ) : null}
       {canDelete && employee.employmentStatus === "active" ? (
@@ -166,7 +166,7 @@ export function EmployeeTable({
       {canBulkDelete ? (
         <div className="border-b border-border p-3 flex items-center justify-between gap-2 bg-muted/40">
           <div className="flex items-center gap-2 text-sm font-medium">
-            {selectedCount} employee{selectedCount === 1 ? "" : "s"} selected
+            {selectedCount} karyawan terpilih
           </div>
           <Button
             type="button"
@@ -175,7 +175,7 @@ export function EmployeeTable({
             onClick={handleBulkDelete}
             data-testid="bulk-delete-selected-employees"
           >
-            Delete Selected Employees ({selectedCount})
+            Hapus Karyawan Terpilih ({selectedCount})
           </Button>
         </div>
       ) : null}
@@ -193,7 +193,7 @@ export function EmployeeTable({
           <TableRow>
             <TableHead className="w-10">
               <label className="flex items-center">
-                <span className="sr-only">Select all employees on this page</span>
+                <span className="sr-only">Pilih semua karyawan di halaman ini</span>
                 <input
                   type="checkbox"
                   checked={employees.length > 0 && selectedCount === employees.length}
@@ -202,12 +202,12 @@ export function EmployeeTable({
                 />
               </label>
             </TableHead>
-            <TableHead>Employee No.</TableHead>
-            <TableHead>Name</TableHead>
+            <TableHead>No. Karyawan</TableHead>
+            <TableHead>Nama</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>Hire date</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead>Tanggal masuk</TableHead>
+            <TableHead className="text-right">Aksi</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -216,7 +216,7 @@ export function EmployeeTable({
               <TableCell>
                 <label className="flex items-center">
                   <span className="sr-only">
-                    Select {employee.firstName} {employee.lastName}
+                    Pilih {employee.firstName} {employee.lastName}
                   </span>
                   <input
                     type="checkbox"
@@ -279,7 +279,7 @@ export function EmployeeTable({
               <EmployeeStatusBadge status={employee.employmentStatus} />
             </div>
             <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
-              <span>Hired {formatDate(employee.hireDate)}</span>
+              <span>Masuk {formatDate(employee.hireDate)}</span>
               <div className="flex flex-wrap justify-end gap-1">
                 {rowActions({
                   employee,

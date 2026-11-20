@@ -33,7 +33,7 @@ function SubmitButton() {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending}>
-      {pending ? "Creating..." : "Create location"}
+      {pending ? "Membuat..." : "Buat lokasi"}
     </Button>
   );
 }
@@ -97,14 +97,14 @@ export function CreateWorkLocationDialog({
   return (
     <>
       <Button type="button" onClick={() => setOpen(true)}>
-        New work location
+        Lokasi kerja baru
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Create work location</DialogTitle>
+            <DialogTitle>Buat lokasi kerja</DialogTitle>
             <DialogDescription>
-              Add a new geofenced work location for attendance check-ins.
+              Tambahkan lokasi kerja baru dengan geofence untuk absensi.
             </DialogDescription>
           </DialogHeader>
 
@@ -122,19 +122,19 @@ export function CreateWorkLocationDialog({
               role="status"
               className="rounded-md border border-border bg-muted/50 px-3 py-2 text-sm text-muted-foreground"
             >
-              No active projects available. Create a project first.
+              Tidak ada proyek aktif. Buat proyek terlebih dahulu.
             </div>
           ) : null}
 
           <form action={formAction} onSubmit={handleSubmit} noValidate className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="wl-name">
-                Work location name <span className="text-destructive">*</span>
+                Nama lokasi kerja <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="wl-name"
                 name="name"
-                placeholder="Head Office Jakarta"
+                placeholder="Kantor Pusat Jakarta"
                 required
                 invalid={Boolean(nameError)}
                 aria-invalid={Boolean(nameError)}
@@ -146,7 +146,7 @@ export function CreateWorkLocationDialog({
 
             <div className="space-y-2">
               <Label htmlFor="wl-project">
-                Project <span className="text-destructive">*</span>
+                Proyek <span className="text-destructive">*</span>
               </Label>
               <select
                 id="wl-project"
@@ -157,7 +157,7 @@ export function CreateWorkLocationDialog({
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="" disabled>
-                  Select a project
+                  Pilih proyek
                 </option>
                 {projects.map((project) => (
                   <option key={project.id} value={project.id}>
@@ -188,7 +188,7 @@ export function CreateWorkLocationDialog({
                   aria-invalid={Boolean(latitudeError)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Contoh: -6.2088 (between -90 and 90)
+                  Contoh: -6.2088 (antara -90 dan 90)
                 </p>
                 {latitudeError ? (
                   <p className="text-sm text-destructive">{latitudeError}</p>
@@ -210,7 +210,7 @@ export function CreateWorkLocationDialog({
                   aria-invalid={Boolean(longitudeError)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Contoh: 106.8456 (between -180 and 180)
+                  Contoh: 106.8456 (antara -180 dan 180)
                 </p>
                 {longitudeError ? (
                   <p className="text-sm text-destructive">{longitudeError}</p>
@@ -257,7 +257,7 @@ export function CreateWorkLocationDialog({
                   aria-invalid={Boolean(maxGpsAccuracyMetersError)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Contoh: 100 meter (default 100 m when empty)
+                  Contoh: 100 meter (bawaan 100 m jika kosong)
                 </p>
                 {maxGpsAccuracyMetersError ? (
                   <p className="text-sm text-destructive">{maxGpsAccuracyMetersError}</p>
@@ -267,7 +267,7 @@ export function CreateWorkLocationDialog({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="wl-timezone">Timezone</Label>
+                <Label htmlFor="wl-timezone">Zona waktu</Label>
                 <select
                   id="wl-timezone"
                   name="timezone"
@@ -296,8 +296,8 @@ export function CreateWorkLocationDialog({
                   aria-invalid={Boolean(statusError)}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
+                  <option value="active">Aktif</option>
+                  <option value="inactive">Nonaktif</option>
                 </select>
                 {statusError ? (
                   <p className="text-sm text-destructive">{statusError}</p>
@@ -325,7 +325,7 @@ export function CreateWorkLocationDialog({
                 variant="ghost"
                 onClick={() => setOpen(false)}
               >
-                Cancel
+                Batal
               </Button>
               <SubmitButton />
             </DialogFooter>

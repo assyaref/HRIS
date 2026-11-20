@@ -60,7 +60,7 @@ export function AnnouncementTargetEditor({
     <form action={save} className="space-y-3">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="target-editor-type">Audience</Label>
+          <Label htmlFor="target-editor-type">Penerima</Label>
           <select
             id="target-editor-type"
             name="targetType"
@@ -80,7 +80,7 @@ export function AnnouncementTargetEditor({
 
       {selectedType === "selected_employees" ? (
         <div className="space-y-2">
-          <Label htmlFor="target-editor-employees">Employees</Label>
+          <Label htmlFor="target-editor-employees">Karyawan</Label>
           <select
             id="target-editor-employees"
             name="employeeIds"
@@ -96,14 +96,14 @@ export function AnnouncementTargetEditor({
             ))}
           </select>
           <p className="text-xs text-muted-foreground">
-            Hold Ctrl/Cmd to select multiple employees.
+            Tahan Ctrl/Cmd untuk memilih beberapa karyawan.
           </p>
         </div>
       ) : null}
 
       <div className="flex items-center gap-3">
         <Button type="submit" variant="outline" size="sm" disabled={pending}>
-          {pending ? "Saving…" : "Save audience"}
+          {pending ? "Menyimpan…" : "Simpan audiens"}
         </Button>
         {message ? (
           <span

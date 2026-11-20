@@ -20,12 +20,12 @@ const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 const dateSchema = z
   .string()
-  .regex(DATE_PATTERN, "Use the YYYY-MM-DD date format.");
+  .regex(DATE_PATTERN, "Gunakan format tanggal YYYY-MM-DD.");
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const uuidSchema = z.string().regex(UUID_PATTERN, "Invalid id.");
+const uuidSchema = z.string().regex(UUID_PATTERN, "ID tidak valid.");
 
 const EMPLOYMENT_STATUSES = ["active", "inactive"] as const;
 
@@ -82,13 +82,13 @@ export const recapFilterSchema = z
       .optional(),
   })
   .refine((data) => data.startDate <= data.endDate, {
-    message: "Start date cannot be later than end date.",
+    message: "Tanggal mulai tidak boleh setelah tanggal selesai.",
     path: ["startDate"],
   })
   .refine(
     (data) => daysBetween(data.startDate, data.endDate) <= RECAP_MAX_PERIOD_DAYS,
     {
-      message: `The period cannot be longer than ${RECAP_MAX_PERIOD_DAYS} days.`,
+      message: `Periode tidak boleh lebih dari ${RECAP_MAX_PERIOD_DAYS} hari.`,
       path: ["endDate"],
     }
   );
@@ -116,4 +116,4 @@ export { RECAP_PAGE_SIZE, ATTENDANCE_RATE_DECIMALS };
 
 /** Validation error message shown when period bounds are inverted. */
 export const RECAP_PERIOD_ORDER_ERROR =
-  "Start date cannot be later than end date.";
+  "Tanggal mulai tidak boleh setelah tanggal selesai.";

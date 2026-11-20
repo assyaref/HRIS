@@ -89,7 +89,7 @@ export function buildPayslipRevocationDecision(
       allowed: false,
       recordAudit: false,
       message:
-        "You need payroll or payslip management access to revoke a payslip.",
+        "Anda memerlukan akses kelola payroll atau slip gaji untuk mencabut slip gaji.",
     };
   }
 
@@ -97,7 +97,7 @@ export function buildPayslipRevocationDecision(
     return {
       allowed: false,
       recordAudit: false,
-      message: "Only a published payslip can be revoked.",
+      message: "Hanya slip gaji yang sudah terbit yang dapat dicabut.",
     };
   }
 
@@ -106,7 +106,7 @@ export function buildPayslipRevocationDecision(
     return {
       allowed: false,
       recordAudit: false,
-      message: "A revocation reason is required.",
+      message: "Alasan pencabutan wajib diisi.",
     };
   }
 
@@ -114,7 +114,7 @@ export function buildPayslipRevocationDecision(
     return {
       allowed: false,
       recordAudit: false,
-      message: `The revocation reason must be ${PAYSLIP_REVOCATION_REASON_MAX_LENGTH} characters or fewer.`,
+      message: `Alasan pencabutan maksimal ${PAYSLIP_REVOCATION_REASON_MAX_LENGTH} karakter.`,
     };
   }
 

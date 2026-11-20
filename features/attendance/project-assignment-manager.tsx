@@ -96,10 +96,9 @@ export function ProjectAssignmentManager({
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <CardTitle>Project assignments</CardTitle>
+            <CardTitle>Penugasan proyek</CardTitle>
             <CardDescription>
-              Projects this employee may attend. Active assignments must resolve
-              to an active project and active work location for check-in.
+              Proyek tempat karyawan ini boleh absen. Penugasan aktif harus mengarah ke proyek aktif dan lokasi kerja aktif agar dapat absen masuk.
             </CardDescription>
           </div>
           <Button
@@ -109,11 +108,11 @@ export function ProjectAssignmentManager({
             disabled={assignableProjects.length === 0}
             title={
               assignableProjects.length === 0
-                ? "No active projects available."
+                ? "Tidak ada proyek aktif."
                 : undefined
             }
           >
-            Assign to project
+            Tugaskan ke proyek
           </Button>
         </div>
       </CardHeader>
@@ -129,15 +128,14 @@ export function ProjectAssignmentManager({
 
         {assignableProjects.length === 0 ? (
           <p className="mb-4 text-xs text-muted-foreground">
-            No active projects available in this organization. Create a project
-            before assigning employees.
+            Tidak ada proyek aktif di organisasi ini. Buat proyek sebelum menugaskan karyawan.
           </p>
         ) : null}
 
         {assignments.length === 0 ? (
           <EmptyState
-            title="No project assignments"
-            description="This employee is not assigned to any project yet. Assign a project to make them eligible for attendance check-ins."
+            title="Belum ada penugasan proyek"
+            description="Karyawan ini belum ditugaskan ke proyek mana pun. Tugaskan proyek agar dapat absen masuk."
           />
         ) : (
           <ul className="divide-y divide-border rounded-lg border border-border">
@@ -162,7 +160,7 @@ export function ProjectAssignmentManager({
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant={assignment.active ? "primary" : "secondary"}>
-                    {assignment.active ? "Active" : "Ended"}
+                    {assignment.active ? "Aktif" : "Berakhir"}
                   </Badge>
                   {assignment.active ? (
                     <Button
@@ -173,8 +171,8 @@ export function ProjectAssignmentManager({
                       onClick={() => handleEndAssignment(assignment.id)}
                     >
                       {endingId === assignment.id
-                        ? "Ending..."
-                        : "End assignment"}
+                        ? "Mengakhiri..."
+                        : "Akhiri penugasan"}
                     </Button>
                   ) : null}
                 </div>
@@ -186,10 +184,9 @@ export function ProjectAssignmentManager({
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="sm:max-w-[480px]">
             <DialogHeader>
-              <DialogTitle>Assign employee to project</DialogTitle>
+              <DialogTitle>Tugaskan karyawan ke proyek</DialogTitle>
               <DialogDescription>
-                The employee becomes eligible to check in at active work
-                locations bound to the selected project.
+                Karyawan dapat absen masuk di lokasi kerja aktif yang terikat ke proyek terpilih.
               </DialogDescription>
             </DialogHeader>
 
@@ -204,7 +201,7 @@ export function ProjectAssignmentManager({
 
             <form onSubmit={handleAssignSubmit} noValidate className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="assignment-project">Project</Label>
+                <Label htmlFor="assignment-project">Proyek</Label>
                 <select
                   id="assignment-project"
                   name="projectId"
@@ -213,7 +210,7 @@ export function ProjectAssignmentManager({
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <option value="" disabled>
-                    Select a project
+                    Pilih proyek
                   </option>
                   {assignableProjects.map((project) => (
                     <option key={project.id} value={project.id}>
@@ -230,8 +227,7 @@ export function ProjectAssignmentManager({
 
               {activeAssignments.length > 0 ? (
                 <p className="text-xs text-muted-foreground">
-                  The employee may hold multiple active assignments (one per
-                  project). Only active projects appear above.
+                  Karyawan dapat memiliki beberapa penugasan aktif (satu per proyek). Hanya proyek aktif yang tampil di atas.
                 </p>
               ) : null}
 
@@ -241,10 +237,10 @@ export function ProjectAssignmentManager({
                   variant="ghost"
                   onClick={() => setDialogOpen(false)}
                 >
-                  Cancel
+                  Batal
                 </Button>
                 <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? "Assigning..." : "Assign"}
+                  {isSubmitting ? "Menetapkan..." : "Tugaskan"}
                 </Button>
               </DialogFooter>
             </form>

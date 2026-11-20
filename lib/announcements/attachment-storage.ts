@@ -30,7 +30,7 @@ const PRIVATE_ROOT = path.join(
 function resolveWithinRoot(root: string, relativePath: string): string {
   const resolved = path.resolve(root, relativePath);
   if (!resolved.startsWith(`${root}${path.sep}`)) {
-    throw new Error("Resolved attachment path escapes the private root.");
+    throw new Error("Path lampiran keluar dari root privat.");
   }
   return resolved;
 }
@@ -62,12 +62,12 @@ const UUID_PATH_SEGMENT =
 function resolveAnnouncementFolder(announcementId: string): string {
   if (!UUID_PATH_SEGMENT.test(announcementId)) {
     throw new Error(
-      "Refusing to use an announcement attachment folder outside the private root."
+      "Menolak memakai folder lampiran pengumuman di luar root privat."
     );
   }
   const resolved = path.resolve(PRIVATE_ROOT, announcementId);
   if (!resolved.startsWith(`${PRIVATE_ROOT}${path.sep}`)) {
-    throw new Error("Resolved attachment path escapes the private root.");
+    throw new Error("Path lampiran keluar dari root privat.");
   }
   return resolved;
 }

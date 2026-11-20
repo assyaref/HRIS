@@ -29,15 +29,14 @@ export default function LoginError({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Unable to load sign-in</CardTitle>
+        <CardTitle>Halaman login gagal dimuat</CardTitle>
         <CardDescription>
-          Something went wrong while preparing the sign-in page. Please try
-          again.
+          Terjadi kesalahan saat menyiapkan halaman login. Silakan coba lagi.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Button type="button" onClick={reset}>
-          Try again
+          Coba lagi
         </Button>
       </CardContent>
     </Card>

@@ -154,7 +154,7 @@ async function requireEmployeeScope(employeeId: string): Promise<{
 }> {
   const user = await requireUser();
   if (!user.organizationId) {
-    throw new ActionError("Your account is not assigned to an organization.");
+    throw new ActionError("Akun Anda belum ditetapkan ke organisasi.");
   }
   const organizationId = user.organizationId;
   const employee = await getEmployeeInOrganization(employeeId, organizationId);
@@ -177,7 +177,7 @@ function handle(error: unknown): EmployeeSectionActionState {
   }
   console.error("[master-data] action failed", error);
   return toStateError(undefined, {
-    form: "Could not save your changes. Please try again.",
+    form: "Perubahan gagal disimpan. Silakan coba lagi.",
   });
 }
 
@@ -203,19 +203,19 @@ export async function updatePersonalDataAction(
 
     const gender = optionalValue(formData, "gender");
     const maritalStatus = optionalValue(formData, "maritalStatus");
-    if (gender && gender.length > 20) throw new ActionError("Gender is too long.");
+    if (gender && gender.length > 20) throw new ActionError("Jenis kelamin terlalu panjang.");
     if (maritalStatus && maritalStatus.length > 20) {
-      throw new ActionError("Marital status is too long.");
+      throw new ActionError("Status pernikahan terlalu panjang.");
     }
 
     const personalEmail = optionalCapped(formData, "personalEmail", 254);
     if (personalEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(personalEmail)) {
-      throw new ActionError("Personal email is invalid.");
+      throw new ActionError("Email pribadi tidak valid.");
     }
 
     const nik = optionalCapped(formData, "nik", 32);
     if (nik && !/^\d+$/.test(nik)) {
-      throw new ActionError("NIK must contain digits only.");
+      throw new ActionError("NIK hanya boleh berisi angka.");
     }
 
     await db
@@ -246,7 +246,7 @@ export async function updatePersonalDataAction(
       { employeeNumber: employee.employeeNumber }
     );
     revalidate(employeeId);
-    return toSuccess("Personal details updated.");
+    return toSuccess("Data pribadi diperbarui.");
   } catch (error) {
     return handle(error);
   }
@@ -275,7 +275,7 @@ export async function updateEmploymentDataAction(
           and(eq(workLocations.id, workLocationId), eq(workLocations.organizationId, organizationId))
         )
         .limit(1);
-      if (!location[0]) throw new ActionError("The selected work location is invalid.");
+      if (!location[0]) throw new ActionError("Lokasi kerja yang dipilih tidak valid.");
     }
 
     const managerId = optionalValue(formData, "managerId");
@@ -287,7 +287,7 @@ export async function updateEmploymentDataAction(
           and(eq(employees.id, managerId), eq(employees.organizationId, organizationId), ne(employees.id, employeeId))
         )
         .limit(1);
-      if (!manager[0]) throw new ActionError("The selected manager is invalid.");
+      if (!manager[0]) throw new ActionError("Atasan yang dipilih tidak valid.");
     }
 
     const employmentType = optionalCapped(formData, "employmentType", 30);
@@ -301,7 +301,7 @@ export async function updateEmploymentDataAction(
     const terminationDate = dateOrNull(optionalValue(formData, "terminationDate"));
 
     if (contractStart && contractEnd && contractEnd < contractStart) {
-      throw new ActionError("Contract end cannot be before the start.");
+      throw new ActionError("Akhir kontrak tidak boleh sebelum tanggal mulai.");
     }
 
     const nextEmploymentStatus = optionalValue(formData, "employmentStatus");
@@ -310,7 +310,7 @@ export async function updateEmploymentDataAction(
       nextEmploymentStatus !== "inactive" &&
       nextEmploymentStatus !== null
     ) {
-      throw new ActionError("Invalid employment status.");
+      throw new ActionError("Status kepegawaian tidak valid.");
     }
     const employmentStatus = nextEmploymentStatus ?? null;
 
@@ -333,7 +333,7 @@ export async function updateEmploymentDataAction(
       )
       .limit(1);
     const before = previous[0];
-    if (!before) throw new ActionError("The employee no longer exists in your organization.");
+    if (!before) throw new ActionError("Karyawan sudah tidak ada di organisasi Anda.");
     const nextStatus = employmentStatus ?? before.employmentStatus;
     if (nextStatus === "inactive" && before.employmentStatus !== "inactive") {
       await requirePermission(user.id, PERMISSIONS.EMPLOYEES_DELETE);
@@ -408,7 +408,7 @@ export async function updateEmploymentDataAction(
       { employeeNumber: employee.employeeNumber }
     );
     revalidate(employeeId);
-    return toSuccess("Employment details updated.");
+    return toSuccess("Data kepegawaian diperbarui.");
   } catch (error) {
     return handle(error);
   }
@@ -501,7 +501,7 @@ export async function saveAddressAction(
     }
 
     revalidate(employeeId);
-    return toSuccess(addressId ? "Address updated." : "Address added.");
+    return toSuccess(addressId ? "Alamat diperbarui." : "Alamat ditambahkan.");
   } catch (error) {
     return handle(error);
   }
@@ -534,7 +534,7 @@ export async function deleteAddressAction(
       { employeeNumber: employee.employeeNumber }
     );
     revalidate(employeeId);
-    return toSuccess("Address removed.");
+    return toSuccess("Alamat dihapus.");
   } catch (error) {
     return handle(error);
   }
@@ -601,7 +601,7 @@ export async function saveInsuranceAction(
       { employeeNumber: employee.employeeNumber }
     );
     revalidate(employeeId);
-    return toSuccess("Insurance details saved.");
+    return toSuccess("Data asuransi disimpan.");
   } catch (error) {
     return handle(error);
   }
@@ -625,7 +625,7 @@ export async function saveBankAccountAction(
     const bankName = optionalCapped(formData, "bankName", 100);
     let accountNumber = optionalCapped(formData, "accountNumber", 40);
     const accountHolder = optionalCapped(formData, "accountHolder", 150);
-    if (!bankName) throw new ActionError("Bank name is required.");
+    if (!bankName) throw new ActionError("Nama bank wajib diisi.");
     // When editing a row whose (masked) account number was not re-entered,
     // keep the stored value instead of failing the save.
     if (!accountNumber && bankAccountId) {
@@ -643,9 +643,9 @@ export async function saveBankAccountAction(
       accountNumber = existing[0]?.accountNumber ?? null;
     }
     if (!accountNumber || !/^[0-9A-Za-z .\-]+$/.test(accountNumber)) {
-      throw new ActionError("Account number may contain letters, digits, spaces, dots and dashes only.");
+      throw new ActionError("Nomor rekening hanya boleh berisi huruf, angka, spasi, titik, dan tanda hubung.");
     }
-    if (!accountHolder) throw new ActionError("Account holder is required.");
+    if (!accountHolder) throw new ActionError("Nama pemilik rekening wajib diisi.");
 
     const status = optionalValue(formData, "status") === "inactive" ? "inactive" : "active";
     const isPrimary = value(formData, "isPrimary") === "on";
@@ -739,7 +739,7 @@ export async function saveBankAccountAction(
           .returning({ id: employeeBankAccounts.id });
       });
       const row = inserted[0];
-      if (!row) throw new Error("Bank account insert returned no row.");
+      if (!row) throw new Error("Rekening bank gagal disimpan.");
       await audit(
         organizationId,
         user.id,
@@ -751,7 +751,7 @@ export async function saveBankAccountAction(
     }
 
     revalidate(employeeId);
-    return toSuccess(bankAccountId ? "Bank account updated." : "Bank account added.");
+    return toSuccess(bankAccountId ? "Rekening bank diperbarui." : "Rekening bank ditambahkan.");
   } catch (error) {
     return handle(error);
   }
@@ -804,7 +804,7 @@ export async function setPrimaryBankAccountAction(
       { employeeNumber: employee.employeeNumber, bankName: owned[0].bankName }
     );
     revalidate(employeeId);
-    return toSuccess("Primary bank account updated.");
+    return toSuccess("Rekening bank utama diperbarui.");
   } catch (error) {
     return handle(error);
   }
@@ -837,7 +837,7 @@ export async function deleteBankAccountAction(
       { employeeNumber: employee.employeeNumber }
     );
     revalidate(employeeId);
-    return toSuccess("Bank account removed.");
+    return toSuccess("Rekening bank dihapus.");
   } catch (error) {
     return handle(error);
   }
@@ -860,8 +860,8 @@ export async function saveDependentAction(
 
     const name = optionalCapped(formData, "name", 150);
     const relationship = optionalCapped(formData, "relationship", 30);
-    if (!name) throw new ActionError("Name is required.");
-    if (!relationship) throw new ActionError("Relationship is required.");
+    if (!name) throw new ActionError("Nama wajib diisi.");
+    if (!relationship) throw new ActionError("Hubungan wajib diisi.");
 
     const body = {
       name,
@@ -905,7 +905,7 @@ export async function saveDependentAction(
         .values({ organizationId, employeeId, ...body })
         .returning({ id: employeeDependents.id });
       const row = inserted[0];
-      if (!row) throw new Error("Dependent insert returned no row.");
+      if (!row) throw new Error("Data tanggungan gagal disimpan.");
       await audit(
         organizationId,
         user.id,
@@ -917,7 +917,7 @@ export async function saveDependentAction(
     }
 
     revalidate(employeeId);
-    return toSuccess(dependentId ? "Family member updated." : "Family member added.");
+    return toSuccess(dependentId ? "Anggota keluarga diperbarui." : "Anggota keluarga ditambahkan.");
   } catch (error) {
     return handle(error);
   }
@@ -950,7 +950,7 @@ export async function deleteDependentAction(
       { employeeNumber: employee.employeeNumber }
     );
     revalidate(employeeId);
-    return toSuccess("Family member removed.");
+    return toSuccess("Anggota keluarga dihapus.");
   } catch (error) {
     return handle(error);
   }
@@ -973,18 +973,18 @@ export async function saveEducationAction(
 
     const educationLevel = optionalCapped(formData, "educationLevel", 40);
     const institution = optionalCapped(formData, "institution", 150);
-    if (!educationLevel) throw new ActionError("Education level is required.");
-    if (!institution) throw new ActionError("Institution is required.");
+    if (!educationLevel) throw new ActionError("Jenjang pendidikan wajib diisi.");
+    if (!institution) throw new ActionError("Institusi wajib diisi.");
 
     const startYearRaw = optionalValue(formData, "startYear");
     const graduationYearRaw = optionalValue(formData, "graduationYear");
     const startYear = isValidInteger(startYearRaw) ? Number(startYearRaw) : null;
     const graduationYear = isValidInteger(graduationYearRaw) ? Number(graduationYearRaw) : null;
     if (startYear !== null && (startYear < 1900 || startYear > 2200)) {
-      throw new ActionError("Start year is out of range.");
+      throw new ActionError("Tahun mulai di luar rentang.");
     }
     if (graduationYear !== null && (graduationYear < 1900 || graduationYear > 2200)) {
-      throw new ActionError("Graduation year is out of range.");
+      throw new ActionError("Tahun lulus di luar rentang.");
     }
 
     const body = {
@@ -1026,7 +1026,7 @@ export async function saveEducationAction(
         .values({ organizationId, employeeId, ...body })
         .returning({ id: employeeEducations.id });
       const row = inserted[0];
-      if (!row) throw new Error("Education insert returned no row.");
+      if (!row) throw new Error("Data pendidikan gagal disimpan.");
       await audit(
         organizationId,
         user.id,
@@ -1038,7 +1038,7 @@ export async function saveEducationAction(
     }
 
     revalidate(employeeId);
-    return toSuccess(educationId ? "Education updated." : "Education added.");
+    return toSuccess(educationId ? "Pendidikan diperbarui." : "Pendidikan ditambahkan.");
   } catch (error) {
     return handle(error);
   }
@@ -1071,7 +1071,7 @@ export async function deleteEducationAction(
       { employeeNumber: employee.employeeNumber }
     );
     revalidate(employeeId);
-    return toSuccess("Education record removed.");
+    return toSuccess("Data pendidikan dihapus.");
   } catch (error) {
     return handle(error);
   }
@@ -1093,11 +1093,11 @@ export async function uploadEmployeeDocumentAction(
 
     const fileEntry = formData.get("file");
     if (!fileEntry || typeof fileEntry === "string" || !fileEntry.size) {
-      return toStateError(undefined, { file: "Choose a file to upload." });
+      return toStateError(undefined, { file: "Pilih berkas untuk diunggah." });
     }
 
     const documentType = optionalCapped(formData, "documentType", 50);
-    if (!documentType) throw new ActionError("Document type is required.");
+    if (!documentType) throw new ActionError("Jenis dokumen wajib diisi.");
 
     const check = validateDocumentUpload({
       filename: fileEntry.name,
@@ -1133,7 +1133,7 @@ export async function uploadEmployeeDocumentAction(
       })
       .returning({ id: employeeDocuments.id });
     const row = inserted[0];
-    if (!row) throw new Error("Document insert returned no row.");
+    if (!row) throw new Error("Dokumen gagal disimpan.");
 
     await audit(
       organizationId,
@@ -1149,7 +1149,7 @@ export async function uploadEmployeeDocumentAction(
       }
     );
     revalidate(employeeId);
-    return toSuccess("Document uploaded.");
+    return toSuccess("Dokumen diunggah.");
   } catch (error) {
     return handle(error);
   }
@@ -1189,7 +1189,7 @@ export async function deleteEmployeeDocumentAction(
       { employeeNumber: employee.employeeNumber }
     );
     revalidate(employeeId);
-    return toSuccess("Document deleted.");
+    return toSuccess("Dokumen dihapus.");
   } catch (error) {
     return handle(error);
   }
@@ -1205,7 +1205,7 @@ export async function updateEmployeeStatusAction(
 ): Promise<EmployeeSectionActionState> {
   try {
     if (status !== "active" && status !== "inactive") {
-      throw new ActionError("Invalid employment status.");
+      throw new ActionError("Status kepegawaian tidak valid.");
     }
     const user = await requireUser();
     await requirePermission(user.id, PERMISSIONS.EMPLOYEES_UPDATE);
@@ -1235,7 +1235,7 @@ export async function updateEmployeeStatusAction(
         .limit(1);
       const current = rows[0];
       if (!current) {
-        throw new ActionError("The employee no longer exists in your organization.");
+        throw new ActionError("Karyawan sudah tidak ada di organisasi Anda.");
       }
       if (current.status === status) return false;
       const effectiveFrom = new Date();
@@ -1259,7 +1259,7 @@ export async function updateEmployeeStatusAction(
         employmentType: current.employmentType,
         employmentStatus: status,
         effectiveFrom,
-        notes: `Status changed to ${status}`,
+        notes: `Status diubah menjadi ${status}`,
       });
       return true;
     });
@@ -1277,7 +1277,7 @@ export async function updateEmployeeStatusAction(
 
     revalidate(employeeId);
     revalidatePath("/employees");
-    return toSuccess(status === "active" ? "Employee activated." : "Employee deactivated.");
+    return toSuccess(status === "active" ? "Karyawan diaktifkan." : "Karyawan dinonaktifkan.");
   } catch (error) {
     return handle(error);
   }
@@ -1325,7 +1325,7 @@ export async function updateEmployeeCustomDataAction(
     );
     if (unauthorizedSubmitted) {
       throw new ActionError(
-        "You are not authorized to update one or more submitted custom fields."
+        "Anda tidak berhak memperbarui satu atau lebih field kustom yang dikirim."
       );
     }
 
@@ -1372,7 +1372,7 @@ export async function updateEmployeeCustomDataAction(
         parsed.value.valueBoolean === null &&
         parsed.value.valueJson === null
       ) {
-        errors[fieldKey] = "This field is required.";
+        errors[fieldKey] = "Field ini wajib diisi.";
         continue;
       }
       writes.push({
@@ -1389,7 +1389,7 @@ export async function updateEmployeeCustomDataAction(
       return { status: "error", fieldErrors: errors };
     }
     if (writes.length === 0) {
-      return toSuccess("Nothing to save.");
+      return toSuccess("Tidak ada yang perlu disimpan.");
     }
 
     const updatedAt = new Date();
@@ -1405,7 +1405,7 @@ export async function updateEmployeeCustomDataAction(
         )
         .returning({ id: employees.id });
       if (updated.length === 0) {
-        throw new ActionError("The employee no longer exists in your organization.");
+        throw new ActionError("Karyawan sudah tidak ada di organisasi Anda.");
       }
       for (const write of writes) {
         await tx
@@ -1450,7 +1450,7 @@ export async function updateEmployeeCustomDataAction(
       }
     );
     revalidate(employeeId);
-    return toSuccess("Custom data saved.");
+    return toSuccess("Data kustom disimpan.");
   } catch (error) {
     return handle(error);
   }
@@ -1478,7 +1478,7 @@ export async function deleteEmployeeCustomDataAction(
         roleCodes
       )
     ) {
-      throw new ActionError("The custom field is unavailable or unauthorized.");
+      throw new ActionError("Field kustom tidak tersedia atau tidak diizinkan.");
     }
 
     const updatedAt = new Date();
@@ -1494,7 +1494,7 @@ export async function deleteEmployeeCustomDataAction(
         )
         .returning({ id: employees.id });
       if (updated.length === 0) {
-        throw new ActionError("The employee no longer exists in your organization.");
+        throw new ActionError("Karyawan sudah tidak ada di organisasi Anda.");
       }
       await tx
         .delete(employeeCustomFieldValues)
@@ -1516,7 +1516,7 @@ export async function deleteEmployeeCustomDataAction(
       { employeeNumber: employee.employeeNumber, fieldKey: definition.fieldKey }
     );
     revalidate(employeeId);
-    return toSuccess("Custom value cleared.");
+    return toSuccess("Nilai kustom dikosongkan.");
   } catch (error) {
     return handle(error);
   }

@@ -117,7 +117,7 @@ describe("delete action: refusal behavior", () => {
     assert.equal(deleteBody.includes("isForeignKeyViolation("), true);
     assert.equal(deleteBody.includes("23503") === true || true, true);
     assert.equal(
-      deleteBody.includes("cannot be deleted because it is still referenced"),
+      deleteBody.includes("tidak dapat dihapus karena masih dirujuk"),
       true
     );
   });

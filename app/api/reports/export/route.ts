@@ -360,7 +360,7 @@ export async function GET(request: Request): Promise<Response> {
             { header: "Berlaku Sampai", key: "until", width: 14 },
             { header: "Sisa", key: "remaining", width: 18 },
             { header: "Hasil", key: "result", width: 18 },
-            { header: "Provider", key: "provider", width: 22 },
+            { header: "Penyedia", key: "provider", width: 22 },
             { header: "Lokasi", key: "location", width: 18 },
             { header: "Dokter", key: "doctor", width: 18 },
             { header: "Status", key: "status", width: 16 },

@@ -198,7 +198,7 @@ export async function createPermissionRequestAction(
           .returning({ id: permissionRequests.id });
         const requestId = inserted[0]?.id;
         if (!requestId) {
-          throw new Error("Permission request insert returned no row.");
+          throw new Error("Pengajuan izin gagal disimpan.");
         }
 
         await tx.insert(permissionRequestEvents).values({
@@ -359,8 +359,8 @@ async function decidePermissionRequest(
       ok: true,
       message:
         decision === "approved"
-          ? "Permission request approved."
-          : "Permission request rejected.",
+          ? "Pengajuan izin disetujui."
+          : "Pengajuan izin ditolak.",
     };
   } catch (error) {
     console.error("[permission] review failed", error);

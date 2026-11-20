@@ -15,11 +15,11 @@ const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export const uuidSchema = z
   .string()
-  .regex(UUID_PATTERN, "Invalid id.");
+  .regex(UUID_PATTERN, "ID tidak valid.");
 
 export const dateStringSchema = z
   .string()
-  .regex(DATE_PATTERN, "Use the YYYY-MM-DD date format.");
+  .regex(DATE_PATTERN, "Gunakan format tanggal YYYY-MM-DD.");
 
 export const createLeaveRequestSchema = z.object({
   leaveTypeId: uuidSchema,
@@ -28,8 +28,8 @@ export const createLeaveRequestSchema = z.object({
   reason: z
     .string()
     .trim()
-    .min(1, "Enter a reason.")
-    .max(1000, "Reason must be 1000 characters or fewer."),
+    .min(1, "Masukkan alasan.")
+    .max(1000, "Alasan maksimal 1000 karakter."),
 });
 export type CreateLeaveRequestInput = z.infer<
   typeof createLeaveRequestSchema
@@ -40,7 +40,7 @@ export const reviewRequestSchema = z.object({
   reviewerNote: z
     .string()
     .trim()
-    .max(500, "Reviewer note must be 500 characters or fewer.")
+    .max(500, "Catatan peninjau maksimal 500 karakter.")
     .optional(),
 });
 export type ReviewRequestInput = z.infer<typeof reviewRequestSchema>;

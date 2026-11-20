@@ -65,7 +65,7 @@ test("payroll component rejects percentage above 100", () => {
       result.error.issues.some(
         (issue) =>
           issue.path[0] === "defaultAmount" &&
-          issue.message === "Percentage must be between 0 and 100."
+          issue.message === "Persentase harus antara 0 dan 100."
       )
     );
   }

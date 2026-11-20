@@ -6,7 +6,7 @@ import { requireUser } from "@/lib/auth/auth";
 import { ChangePasswordForm } from "@/features/account/change-password-form";
 
 export const metadata: Metadata = {
-  title: "Ganti Password",
+  title: "Ganti Kata Sandi",
 };
 
 export default async function ChangePasswordPage() {
@@ -31,7 +31,7 @@ export default async function ChangePasswordPage() {
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Ganti Password</CardTitle>
+          <CardTitle>Ganti Kata Sandi</CardTitle>
           <CardDescription>
             Anda wajib mengganti password sebelum melanjutkan. Password awal adalah Nomor Karyawan Anda.
           </CardDescription>

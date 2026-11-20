@@ -103,11 +103,11 @@ describe("delete safety: no cascade path", () => {
   it("the action refuses with the standard message when any dependency exists", () => {
     assert.equal(
       actionsSource.includes(
-        "Organization cannot be deleted because it still contains dependent records"
+        "Organisasi tidak dapat dihapus karena masih memiliki data terkait"
       ),
       true
     );
-    assert.equal(actionsSource.includes("Deactivate the organization instead"), true);
+    assert.equal(actionsSource.includes("Nonaktifkan organisasi saja"), true);
   });
 
   it("maps a foreign-key violation (23503) to the same refusal (never cascades)", () => {
@@ -182,12 +182,12 @@ describe("client bypass cannot change the SYSTEM organization", () => {
   it("the update action refuses reserved code/status changes for SYSTEM", () => {
     assert.equal(
       actionsSource.includes(
-        'code: "The reserved system organization code cannot be changed."'
+        'code: "Kode organisasi sistem yang dicadangkan tidak dapat diubah."'
       ),
       true
     );
     assert.equal(
-      actionsSource.includes("The SYSTEM organization must remain active."),
+      actionsSource.includes("Organisasi SYSTEM harus tetap aktif."),
       true
     );
   });

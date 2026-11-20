@@ -83,12 +83,12 @@ function placementFromSection(
 
 function statusBadge(status: string) {
   if (status === "active") {
-    return <Badge className="border-emerald-600/40 bg-emerald-600/10 text-emerald-700">Active</Badge>;
+    return <Badge className="border-emerald-600/40 bg-emerald-600/10 text-emerald-700">Aktif</Badge>;
   }
   if (status === "inactive") {
-    return <Badge variant="outline">Inactive</Badge>;
+    return <Badge variant="outline">Nonaktif</Badge>;
   }
-  return <Badge variant="outline">Archived</Badge>;
+  return <Badge variant="outline">Diarsipkan</Badge>;
 }
 
 function FieldForm({
@@ -122,10 +122,10 @@ function FieldForm({
   // built-in Custom Fields tab, so a field must not be newly parked on one.
   const assignableTabs = customTabs.filter((tab) => tab.status === "active");
   const [placement, setPlacement] = useState<CustomFieldLocation>(
-    placementFromSection(definition?.section ?? "Other", customTabs).location
+    placementFromSection(definition?.section ?? "Lainnya", customTabs).location
   );
   const [tabKey, setTabKey] = useState(
-    placementFromSection(definition?.section ?? "Other", customTabs).tabKey
+    placementFromSection(definition?.section ?? "Lainnya", customTabs).tabKey
   );
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -139,10 +139,10 @@ function FieldForm({
       );
       if (state.status === "error") {
         setErrors(state.fieldErrors ?? {});
-        notifier.error(state.message ?? "Please fix the highlighted fields.");
+        notifier.error(state.message ?? "Silakan perbaiki field yang ditandai.");
         return;
       }
-      notifier.success(state.message ?? "Field saved.");
+      notifier.success(state.message ?? "Field disimpan.");
       setErrors({});
       event.currentTarget.reset();
       onDone?.();
@@ -153,7 +153,7 @@ function FieldForm({
     <form onSubmit={submit} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor={`${formId}-key`}>Field key</Label>
+          <Label htmlFor={`${formId}-key`}>Kunci field</Label>
           <Input
             id={`${formId}-key`}
             name="fieldKey"
@@ -166,7 +166,7 @@ function FieldForm({
             <p className="text-sm text-destructive">{errors.fieldKey}</p>
           ) : null}
           <p className="text-xs text-muted-foreground">
-            Lowercase letters, digits and underscores. Immutable once created.
+            Huruf kecil, angka, dan garis bawah. Tidak dapat diubah setelah dibuat.
           </p>
         </div>
         <div className="space-y-2">
@@ -183,7 +183,7 @@ function FieldForm({
           ) : null}
         </div>
         <div className="space-y-2">
-          <Label htmlFor={`${formId}-type`}>Type</Label>
+          <Label htmlFor={`${formId}-type`}>Jenis</Label>
           <select
             id={`${formId}-type`}
             name="fieldType"
@@ -201,7 +201,7 @@ function FieldForm({
           </select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor={`${formId}-displayLocation`}>Display location</Label>
+          <Label htmlFor={`${formId}-displayLocation`}>Lokasi tampilan</Label>
           <select
             id={`${formId}-displayLocation`}
             name="displayLocation"
@@ -214,24 +214,24 @@ function FieldForm({
             {CUSTOM_FIELD_LOCATIONS.map((value) => (
               <option key={value} value={value}>
                 {value === "header"
-                  ? "Header"
+                  ? "Judul bagian"
                   : value === "custom-tab"
                     ? "Custom Tab"
-                    : "System Tab"}
+                    : "Tab Sistem"}
               </option>
             ))}
           </select>
           <p className="text-xs text-muted-foreground">
-            Where this field renders on the employee profile.
+            Tempat field ini tampil di profil karyawan.
           </p>
         </div>
         {placement === "system-tab" ? (
           <div className="space-y-2">
-            <Label htmlFor={`${formId}-section`}>Section</Label>
+            <Label htmlFor={`${formId}-section`}>Bagian</Label>
             <select
               id={`${formId}-section`}
               name="section"
-              defaultValue={definition?.section ?? "Other"}
+              defaultValue={definition?.section ?? "Lainnya"}
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
               {BUILTIN_FIELD_SECTIONS.map((value) => (
@@ -244,7 +244,7 @@ function FieldForm({
         ) : null}
         {placement === "custom-tab" ? (
           <div className="space-y-2">
-            <Label htmlFor={`${formId}-customTabKey`}>Custom tab</Label>
+            <Label htmlFor={`${formId}-customTabKey`}>Tab kustom</Label>
             <select
               id={`${formId}-customTabKey`}
               name="customTabKey"
@@ -252,7 +252,7 @@ function FieldForm({
               onChange={(event) => setTabKey(event.target.value)}
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
-              <option value="">Select a tab...</option>
+              <option value="">Pilih tab...</option>
               {assignableTabs.map((tab) => (
                 <option key={tab.tabKey} value={tab.tabKey}>
                   {tab.icon ? `${tab.icon} ${tab.name}` : tab.name}
@@ -282,7 +282,7 @@ function FieldForm({
           </div>
         ) : null}
         <div className="space-y-2">
-          <Label htmlFor={`${formId}-description`}>Description</Label>
+          <Label htmlFor={`${formId}-description`}>Deskripsi</Label>
           <Input
             id={`${formId}-description`}
             name="description"
@@ -290,7 +290,7 @@ function FieldForm({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor={`${formId}-displayOrder`}>Display order</Label>
+          <Label htmlFor={`${formId}-displayOrder`}>Urutan tampilan</Label>
           <Input
             id={`${formId}-displayOrder`}
             name="displayOrder"
@@ -309,14 +309,14 @@ function FieldForm({
               onChange={(event) => setStatus(event.target.value)}
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="archived">Archived</option>
+              <option value="active">Aktif</option>
+              <option value="inactive">Nonaktif</option>
+              <option value="archived">Diarsipkan</option>
             </select>
           </div>
         ) : null}
         <div className="space-y-2">
-          <Label>Visibility (role codes)</Label>
+          <Label>Visibilitas (kode peran)</Label>
           <div className="flex flex-wrap gap-3">
             {roleOptions.map((role) => (
               <label key={role.value} className="flex items-center gap-1.5 text-sm">
@@ -338,7 +338,7 @@ function FieldForm({
           </p>
         </div>
         <div className="space-y-2">
-          <Label>Editable by (role codes)</Label>
+          <Label>Dapat diubah oleh (kode peran)</Label>
           <div className="flex flex-wrap gap-3">
             {roleOptions.map((role) => (
               <label key={role.value} className="flex items-center gap-1.5 text-sm">
@@ -367,11 +367,11 @@ function FieldForm({
             defaultChecked={definition?.isRequired}
             className="h-4 w-4 rounded border-input"
           />
-          Required
+          Wajib
         </label>
       </div>
       <Button type="submit" disabled={pending}>
-        {pending ? "Saving..." : submitLabel}
+        {pending ? "Menyimpan..." : submitLabel}
       </Button>
     </form>
   );
@@ -399,9 +399,9 @@ function RowActions({
     startTransition(async () => {
       const state = await action();
       if (state.status === "error") {
-        notifier.error(state.message ?? "Action failed.");
+        notifier.error(state.message ?? "Tindakan gagal.");
       } else {
-        notifier.success(state.message ?? "Done.");
+        notifier.success(state.message ?? "Selesai.");
         onDone();
       }
     });
@@ -422,7 +422,7 @@ function RowActions({
             }
             disabled={pending}
           >
-            Duplicate
+            Duplikasi
           </Button>
           {definition.status === "active" ? (
             <Button
@@ -434,7 +434,7 @@ function RowActions({
               }
               disabled={pending}
             >
-              Deactivate
+              Nonaktifkan
             </Button>
           ) : (
             <Button
@@ -446,7 +446,7 @@ function RowActions({
               }
               disabled={pending}
             >
-              Activate
+              Aktifkan
             </Button>
           )}
           <Button
@@ -455,7 +455,7 @@ function RowActions({
             size="sm"
             onClick={() => setEditOpen(true)}
           >
-            Edit
+            Ubah
           </Button>
         </>
       ) : null}
@@ -467,22 +467,22 @@ function RowActions({
           onClick={() => run(() => deleteEmployeeFieldAction(definition.id))}
           disabled={pending}
         >
-          Archive
+          Arsipkan
         </Button>
       ) : null}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Edit field</DialogTitle>
+            <DialogTitle>Ubah field</DialogTitle>
             <DialogDescription>
-              The field key is immutable so historical values stay linked.
+              Kunci field tidak dapat diubah agar nilai historis tetap tertaut.
             </DialogDescription>
           </DialogHeader>
           <FieldForm
             definition={definition}
             roleOptions={roleOptions}
             customTabs={customTabs}
-            submitLabel="Save changes"
+            submitLabel="Simpan perubahan"
             onSubmit={(prev, formData) =>
               updateEmployeeFieldAction(definition.id, prev, formData)
             }
@@ -539,9 +539,9 @@ export function EmployeeFieldsManager({
     startTransition(async () => {
       const state = await reorderEmployeeFieldsAction({ status: "idle" }, formData);
       if (state.status === "error") {
-        notifier.error(state.message ?? "Reorder failed.");
+        notifier.error(state.message ?? "Pengurutan ulang gagal.");
       } else {
-        notifier.success(state.message ?? "Order saved.");
+        notifier.success(state.message ?? "Urutan disimpan.");
       }
     });
   }
@@ -550,10 +550,9 @@ export function EmployeeFieldsManager({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Custom field definitions</CardTitle>
+          <CardTitle>Definisi field kustom</CardTitle>
           <CardDescription>
-            Fields here drive the Custom Fields tab, the Excel template,
-            import validation and export columns — dynamically.
+            Field di sini menentukan tab Field Kustom, template Excel, validasi impor, dan kolom ekspor — secara dinamis.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -563,21 +562,21 @@ export function EmployeeFieldsManager({
                 type="button"
                 onClick={() => setShowCreate((current) => !current)}
               >
-                {showCreate ? "Cancel" : "New field"}
+                {showCreate ? "Batal" : "New field"}
               </Button>
             </div>
           ) : null}
           {canCreate && showCreate ? (
             <Card>
               <CardHeader>
-                <CardTitle>Create field</CardTitle>
+                <CardTitle>Buat field</CardTitle>
               </CardHeader>
               <CardContent>
                 <FieldForm
                   definition={null}
                   roleOptions={roleOptions}
                   customTabs={customTabs}
-                  submitLabel="Create field"
+                  submitLabel="Buat field"
                   onSubmit={createEmployeeFieldAction}
                   onDone={() => setShowCreate(false)}
                 />
@@ -587,9 +586,7 @@ export function EmployeeFieldsManager({
 
           {ordered.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No fields defined yet. Create one — for example Shirt Size
-              (select with options S, M, L) — and it appears everywhere
-              automatically.
+              Belum ada field. Buat satu — misalnya Ukuran Baju (pilihan S, M, L) — dan field itu otomatis tampil di semua tempat.
             </p>
           ) : (
             <div className="rounded-md border border-border">
@@ -597,12 +594,12 @@ export function EmployeeFieldsManager({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Label</TableHead>
-                    <TableHead>Key</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Section</TableHead>
+                    <TableHead>Kunci</TableHead>
+                    <TableHead>Jenis</TableHead>
+                    <TableHead>Bagian</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Order</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>Urutan</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -629,7 +626,7 @@ export function EmployeeFieldsManager({
                               size="sm"
                               disabled={pending}
                               onClick={() => move(definition.id, -1)}
-                              aria-label="Move up"
+                              aria-label="Pindah ke atas"
                             >
                               ↑
                             </Button>
@@ -639,7 +636,7 @@ export function EmployeeFieldsManager({
                               size="sm"
                               disabled={pending}
                               onClick={() => move(definition.id, 1)}
-                              aria-label="Move down"
+                              aria-label="Pindah ke bawah"
                             >
                               ↓
                             </Button>

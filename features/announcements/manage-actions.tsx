@@ -66,7 +66,7 @@ export function ManageAnnouncementActions({
         : false;
   const deleteHint =
     status === "published"
-      ? "Unpublish dulu sebelum menghapus."
+      ? "Tarik terbitan dulu sebelum menghapus."
       : status === "unpublished" && !isSuperAdmin
         ? "Hanya Super Administrator yang dapat menghapus pengumuman yang di-unpublish."
         : readCount > 0
@@ -92,7 +92,7 @@ export function ManageAnnouncementActions({
             run(() => unpublishAnnouncementAction({ announcementId }))
           }
         >
-          Unpublish
+          Tarik terbitan
         </Button>
       ) : null}
 
@@ -105,7 +105,7 @@ export function ManageAnnouncementActions({
             run(() => publishAnnouncementAction({ announcementId }))
           }
         >
-          Publish
+          Terbitkan
         </Button>
       ) : null}
 
@@ -127,7 +127,7 @@ export function ManageAnnouncementActions({
             run(() => deleteAnnouncementAction({ announcementId }));
           }}
         >
-          {compact ? "Hapus" : "Delete"}
+          {compact ? "Hapus" : "Hapus"}
         </Button>
       ) : null}
 

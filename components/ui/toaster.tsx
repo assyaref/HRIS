@@ -104,7 +104,7 @@ export function Toaster() {
           <span className="text-sm leading-5">{toast.message}</span>
           <button
             type="button"
-            aria-label="Dismiss notification"
+            aria-label="Tutup notifikasi"
             onClick={() =>
               setToasts((current) =>
                 current.filter((item) => item.id !== toast.id)

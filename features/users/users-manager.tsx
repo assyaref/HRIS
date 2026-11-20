@@ -60,8 +60,8 @@ export function UsersManager({
   if (users.length === 0) {
     return (
       <EmptyState
-        title="No user accounts yet"
-        description="Add a user account to grant dashboard access. Each account carries a role, an organization scope and an optional employee link."
+        title="Belum ada akun pengguna"
+        description="Tambahkan akun pengguna untuk memberi akses dasbor. Setiap akun memiliki peran, cakupan organisasi, dan tautan karyawan (opsional)."
       />
     );
   }
@@ -72,15 +72,15 @@ export function UsersManager({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>User</TableHead>
+              <TableHead>Pengguna</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Role</TableHead>
-              {actorIsSuperAdmin ? <TableHead>Organization</TableHead> : null}
-              <TableHead>Employee</TableHead>
+              <TableHead>Peran</TableHead>
+              {actorIsSuperAdmin ? <TableHead>Organisasi</TableHead> : null}
+              <TableHead>Karyawan</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Last Login</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>Login Terakhir</TableHead>
+              <TableHead>Dibuat</TableHead>
+              <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -161,7 +161,7 @@ export function UsersManager({
             </div>
             <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
               <div>
-                <dt className="text-xs text-muted-foreground">Role</dt>
+                <dt className="text-xs text-muted-foreground">Peran</dt>
                 <dd className="truncate">{user.roleName ?? "—"}</dd>
               </div>
               {actorIsSuperAdmin ? (
@@ -171,17 +171,17 @@ export function UsersManager({
                 </div>
               ) : null}
               <div>
-                <dt className="text-xs text-muted-foreground">Employee</dt>
+                <dt className="text-xs text-muted-foreground">Karyawan</dt>
                 <dd className="truncate">
                   {user.employeeName ?? `#${user.employeeNumber ?? "—"}`}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-muted-foreground">Last Login</dt>
+                <dt className="text-xs text-muted-foreground">Login Terakhir</dt>
                 <dd>{user.lastLoginAt ? formatDate(user.lastLoginAt) : "—"}</dd>
               </div>
               <div>
-                <dt className="text-xs text-muted-foreground">Created</dt>
+                <dt className="text-xs text-muted-foreground">Dibuat</dt>
                 <dd>{formatDate(user.createdAt)}</dd>
               </div>
             </dl>

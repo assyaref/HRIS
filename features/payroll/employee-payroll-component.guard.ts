@@ -51,22 +51,22 @@ export function evaluateCreateEmployeePayrollComponentGuard(
   const { employee, component } = context;
 
   if (!employee || employee.organizationId !== context.actorOrganizationId) {
-    return { ok: false, message: "Employee not found." };
+    return { ok: false, message: "Karyawan tidak ditemukan." };
   }
   if (employee.employmentStatus !== "active") {
     return {
       ok: false,
-      message: "Inactive employees cannot be assigned payroll components.",
+      message: "Karyawan nonaktif tidak dapat diberi komponen payroll.",
     };
   }
 
   if (!component || component.organizationId !== context.actorOrganizationId) {
-    return { ok: false, message: "Payroll component not found." };
+    return { ok: false, message: "Komponen payroll tidak ditemukan." };
   }
   if (component.active !== "true") {
     return {
       ok: false,
-      message: "Only active payroll components can be assigned.",
+      message: "Hanya komponen payroll aktif yang dapat ditetapkan.",
     };
   }
 
@@ -74,19 +74,19 @@ export function evaluateCreateEmployeePayrollComponentGuard(
     return {
       ok: false,
       message:
-        "This employee already has an active assignment for this payroll component.",
+        "Karyawan ini sudah memiliki penetapan aktif untuk komponen payroll ini.",
     };
   }
 
   if (component.calculationMethod === "percentage" && context.amount > 100) {
-    return { ok: false, message: "Percentage must be between 0 and 100." };
+    return { ok: false, message: "Persentase harus antara 0 dan 100." };
   }
 
   if (
     context.effectiveTo &&
     context.effectiveTo.getTime() <= context.effectiveFrom.getTime()
   ) {
-    return { ok: false, message: "Effective to must be after effective from." };
+    return { ok: false, message: "Tanggal berakhir harus setelah tanggal mulai berlaku." };
   }
 
   return { ok: true };
@@ -115,21 +115,21 @@ export function evaluateUpdateEmployeePayrollComponentGuard(
     !assignment ||
     assignment.organizationId !== context.actorOrganizationId
   ) {
-    return { ok: false, message: "Payroll component assignment not found." };
+    return { ok: false, message: "Penetapan komponen payroll tidak ditemukan." };
   }
   if (!assignment.active) {
-    return { ok: false, message: "This assignment is already ended." };
+    return { ok: false, message: "Penugasan ini sudah berakhir." };
   }
 
   if (assignment.calculationMethod === "percentage" && context.amount > 100) {
-    return { ok: false, message: "Percentage must be between 0 and 100." };
+    return { ok: false, message: "Persentase harus antara 0 dan 100." };
   }
 
   if (
     context.effectiveTo &&
     context.effectiveTo.getTime() <= context.effectiveFrom.getTime()
   ) {
-    return { ok: false, message: "Effective to must be after effective from." };
+    return { ok: false, message: "Tanggal berakhir harus setelah tanggal mulai berlaku." };
   }
 
   return { ok: true };
@@ -157,13 +157,13 @@ export function evaluateEndEmployeePayrollComponentGuard(
     !assignment ||
     assignment.organizationId !== context.actorOrganizationId
   ) {
-    return { ok: false, message: "Payroll component assignment not found." };
+    return { ok: false, message: "Penetapan komponen payroll tidak ditemukan." };
   }
   if (!assignment.active) {
-    return { ok: false, message: "This assignment is already ended." };
+    return { ok: false, message: "Penugasan ini sudah berakhir." };
   }
   if (context.effectiveTo.getTime() <= assignment.effectiveFrom.getTime()) {
-    return { ok: false, message: "Effective to must be after effective from." };
+    return { ok: false, message: "Tanggal berakhir harus setelah tanggal mulai berlaku." };
   }
 
   return { ok: true };

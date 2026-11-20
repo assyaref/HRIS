@@ -81,27 +81,27 @@ export function DistributionPayslipUpload({
 
     if (!periodId) {
       setError(true);
-      setMessage("Please select a payroll period.");
+      setMessage("Pilih periode payroll.");
       return;
     }
 
     if (!employeeId) {
       setError(true);
-      setMessage("Please select an employee.");
+      setMessage("Pilih karyawan.");
       return;
     }
 
     if (selectedEmployee && !selectedEmployee.hasBirthDate) {
       setError(true);
       setMessage(
-        "The selected employee has no birth date. Add it in the employee record before uploading a payslip."
+        "Karyawan yang dipilih belum memiliki tanggal lahir. Lengkapi di data karyawan sebelum mengunggah slip gaji."
       );
       return;
     }
 
     if (!selectedFile) {
       setError(true);
-      setMessage("Please select a PDF payslip.");
+      setMessage("Pilih slip gaji PDF.");
       return;
     }
 
@@ -134,7 +134,7 @@ export function DistributionPayslipUpload({
     <div className="space-y-5">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="distribution-period">Payroll period</Label>
+          <Label htmlFor="distribution-period">Periode payroll</Label>
           <select
             id="distribution-period"
             value={periodId}
@@ -142,7 +142,7 @@ export function DistributionPayslipUpload({
             onChange={(event) => setPeriodId(event.target.value)}
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <option value="">Select a period…</option>
+            <option value="">Pilih periode…</option>
             {periods.map((period) => (
               <option key={period.id} value={period.id}>
                 {period.code} · {period.name}
@@ -152,7 +152,7 @@ export function DistributionPayslipUpload({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="distribution-employee">Employee</Label>
+          <Label htmlFor="distribution-employee">Karyawan</Label>
           <select
             id="distribution-employee"
             value={employeeId}
@@ -160,7 +160,7 @@ export function DistributionPayslipUpload({
             onChange={(event) => setEmployeeId(event.target.value)}
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <option value="">Select an employee…</option>
+            <option value="">Pilih karyawan…</option>
             {employees.map((employee) => (
               <option key={employee.id} value={employee.id}>
                 {employee.employeeNumber} · {employee.lastName},{" "}
@@ -173,7 +173,7 @@ export function DistributionPayslipUpload({
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="distribution-file">Payslip PDF</Label>
+        <Label htmlFor="distribution-file">PDF slip gaji</Label>
         <input
           id="distribution-file"
           ref={inputRef}
@@ -184,8 +184,7 @@ export function DistributionPayslipUpload({
           className="block w-full cursor-pointer rounded-md border border-input bg-background px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm file:font-medium disabled:cursor-not-allowed disabled:opacity-50"
         />
         <p className="text-xs text-muted-foreground">
-          The PDF is encrypted with the employee number + birth date password
-          (DDMMYYYY) before it is stored.
+          PDF dienkripsi dengan kata sandi nomor karyawan + tanggal lahir (DDMMYYYY) sebelum disimpan.
         </p>
       </div>
 
@@ -204,7 +203,7 @@ export function DistributionPayslipUpload({
 
       <div className="flex justify-end">
         <Button type="button" disabled={pending} onClick={submit}>
-          {pending ? "Uploading…" : "Upload distribution payslip"}
+          {pending ? "Mengunggah…" : "Unggah slip gaji distribusi"}
         </Button>
       </div>
     </div>

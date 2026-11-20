@@ -171,13 +171,13 @@ function sectionFromLocation(
     // reserved key must never become a field placement even if a row somehow
     // carries one.
     if (RESERVED_TAB_KEYS.includes(tabKey)) {
-      return { error: "Select a valid custom tab for this field." };
+      return { error: "Pilih tab kustom yang valid untuk field ini." };
     }
     const tab = organizationTabs.find(
       (candidate) => candidate.tabKey === tabKey && candidate.status === "active"
     );
     if (!tab) {
-      return { error: "Select a valid custom tab for this field." };
+      return { error: "Pilih tab kustom yang valid untuk field ini." };
     }
     return { section: tab.tabKey };
   }
@@ -191,7 +191,7 @@ function sectionFromLocation(
     );
     return { section: builtin ? trimmed : trimmed.slice(0, 40) };
   }
-  return { error: "Invalid display location." };
+  return { error: "Lokasi tampilan tidak valid." };
 }
 
 type DefinitionInput =
@@ -260,7 +260,7 @@ export async function createEmployeeFieldAction(
   await requirePermission(user.id, PERMISSIONS.EMPLOYEE_FIELDS_CREATE);
 
   if (!user.organizationId) {
-    return toStateError("Your account is not assigned to an organization.");
+    return toStateError("Akun Anda belum ditetapkan ke organisasi.");
   }
   const organizationId = user.organizationId;
   const allowedRoleCodes = (await listRolesByOrganization(organizationId)).map(
@@ -284,7 +284,7 @@ export async function createEmployeeFieldAction(
   );
   if (visibilityRoles.invalid.length > 0 || editableRoles.invalid.length > 0) {
     return toStateError(undefined, {
-      form: "One or more selected roles do not exist in this organization.",
+      form: "Satu atau lebih peran yang dipilih tidak ada di organisasi ini.",
     });
   }
 
@@ -309,7 +309,7 @@ export async function createEmployeeFieldAction(
       })
       .returning({ id: employeeCustomFieldDefinitions.id });
     const row = inserted[0];
-    if (!row) throw new Error("Field insert returned no row.");
+    if (!row) throw new Error("Field gagal disimpan.");
     fieldId = row.id;
   } catch (error) {
     if (
@@ -319,11 +319,11 @@ export async function createEmployeeFieldAction(
       (error as { code?: unknown }).code === DB_UNIQUE_VIOLATION
     ) {
       return toStateError(undefined, {
-        fieldKey: `Field key "${input.data.fieldKey}" already exists.`,
+        fieldKey: `Kunci field "${input.data.fieldKey}" sudah ada.`,
       });
     }
     console.error("[employee-fields] create failed", error);
-    return toStateError("Could not create the field. Please try again.");
+    return toStateError("Field gagal dibuat. Silakan coba lagi.");
   }
 
   try {
@@ -346,7 +346,7 @@ export async function createEmployeeFieldAction(
 
   revalidatePath("/settings/employee-fields");
   revalidatePath("/employees");
-  return { status: "success", message: "Field created." };
+  return { status: "success", message: "Field dibuat." };
 }
 
 /** Update a definition (key stays immutable once created). */
@@ -359,7 +359,7 @@ export async function updateEmployeeFieldAction(
   await requirePermission(user.id, PERMISSIONS.EMPLOYEE_FIELDS_UPDATE);
 
   if (!user.organizationId) {
-    return toStateError("Your account is not assigned to an organization.");
+    return toStateError("Akun Anda belum ditetapkan ke organisasi.");
   }
   const organizationId = user.organizationId;
   const organizationRoleCodes = (
@@ -393,7 +393,7 @@ export async function updateEmployeeFieldAction(
   );
   if (visibilityRoles.invalid.length > 0 || editableRoles.invalid.length > 0) {
     return toStateError(undefined, {
-      form: "One or more selected roles do not exist in this organization.",
+      form: "Satu atau lebih peran yang dipilih tidak ada di organisasi ini.",
     });
   }
 
@@ -423,7 +423,7 @@ export async function updateEmployeeFieldAction(
       );
   } catch (error) {
     console.error("[employee-fields] update failed", error);
-    return toStateError("Could not update the field. Please try again.");
+    return toStateError("Field gagal diperbarui. Silakan coba lagi.");
   }
 
   try {
@@ -444,7 +444,7 @@ export async function updateEmployeeFieldAction(
 
   revalidatePath("/settings/employee-fields");
   revalidatePath("/employees");
-  return { status: "success", message: "Field updated." };
+  return { status: "success", message: "Field diperbarui." };
 }
 
 /** Toggle a definition between active/inactive/archived. */
@@ -456,7 +456,7 @@ export async function setEmployeeFieldStatusAction(
   await requirePermission(user.id, PERMISSIONS.EMPLOYEE_FIELDS_UPDATE);
 
   if (!user.organizationId) {
-    return toStateError("Your account is not assigned to an organization.");
+    return toStateError("Akun Anda belum ditetapkan ke organisasi.");
   }
   const organizationId = user.organizationId;
 
@@ -475,7 +475,7 @@ export async function setEmployeeFieldStatusAction(
       );
   } catch (error) {
     console.error("[employee-fields] status change failed", error);
-    return toStateError("Could not update the field status. Please try again.");
+    return toStateError("Status field gagal diubah. Silakan coba lagi.");
   }
 
   try {
@@ -499,7 +499,7 @@ export async function setEmployeeFieldStatusAction(
   revalidatePath("/employees");
   return {
     status: "success",
-    message: `Field ${status === "archived" ? "archived" : status === "inactive" ? "deactivated" : "activated"}.`,
+    message: `Field ${status === "archived" ? "diarsipkan" : status === "inactive" ? "dinonaktifkan" : "diaktifkan"}.`,
   };
 }
 
@@ -515,7 +515,7 @@ export async function deleteEmployeeFieldAction(
   await requirePermission(user.id, PERMISSIONS.EMPLOYEE_FIELDS_DELETE);
 
   if (!user.organizationId) {
-    return toStateError("Your account is not assigned to an organization.");
+    return toStateError("Akun Anda belum ditetapkan ke organisasi.");
   }
   const organizationId = user.organizationId;
 
@@ -544,11 +544,11 @@ export async function deleteEmployeeFieldAction(
       (error as { code?: unknown }).code === DB_FOREIGN_KEY_VIOLATION
     ) {
       return toStateError(
-        "This field cannot be archived because it is still referenced."
+        "Field ini tidak dapat diarsipkan karena masih dirujuk."
       );
     }
     console.error("[employee-fields] delete failed", error);
-    return toStateError("Could not archive the field. Please try again.");
+    return toStateError("Field gagal diarsipkan. Silakan coba lagi.");
   }
 
   try {
@@ -569,7 +569,7 @@ export async function deleteEmployeeFieldAction(
 
   revalidatePath("/settings/employee-fields");
   revalidatePath("/employees");
-  return { status: "success", message: "Field archived." };
+  return { status: "success", message: "Field diarsipkan." };
 }
 
 /**
@@ -584,7 +584,7 @@ export async function duplicateEmployeeFieldAction(
   await requirePermission(user.id, PERMISSIONS.EMPLOYEE_FIELDS_CREATE);
 
   if (!user.organizationId) {
-    return toStateError("Your account is not assigned to an organization.");
+    return toStateError("Akun Anda belum ditetapkan ke organisasi.");
   }
   const organizationId = user.organizationId;
 
@@ -605,7 +605,7 @@ export async function duplicateEmployeeFieldAction(
     suffix += 1;
   }
   if (!/^[a-z][a-z0-9_]{1,31}$/.test(candidate)) {
-    return toStateError("The duplicated field key would be invalid.");
+    return toStateError("Kunci field hasil duplikasi akan tidak valid.");
   }
 
   let newId: string;
@@ -629,11 +629,11 @@ export async function duplicateEmployeeFieldAction(
       })
       .returning({ id: employeeCustomFieldDefinitions.id });
     const row = inserted[0];
-    if (!row) throw new Error("Field insert returned no row.");
+    if (!row) throw new Error("Field gagal disimpan.");
     newId = row.id;
   } catch (error) {
     console.error("[employee-fields] duplicate failed", error);
-    return toStateError("Could not duplicate the field. Please try again.");
+    return toStateError("Field gagal diduplikasi. Silakan coba lagi.");
   }
 
   try {
@@ -651,7 +651,7 @@ export async function duplicateEmployeeFieldAction(
 
   revalidatePath("/settings/employee-fields");
   revalidatePath("/employees");
-  return { status: "success", message: "Field duplicated." };
+  return { status: "success", message: "Field diduplikasi." };
 }
 
 /**
@@ -666,29 +666,29 @@ export async function reorderEmployeeFieldsAction(
   await requirePermission(user.id, PERMISSIONS.EMPLOYEE_FIELDS_UPDATE);
 
   if (!user.organizationId) {
-    return toStateError("Your account is not assigned to an organization.");
+    return toStateError("Akun Anda belum ditetapkan ke organisasi.");
   }
   const organizationId = user.organizationId;
 
   const raw = formData.get("order");
   if (typeof raw !== "string" || raw.trim() === "") {
-    return toStateError("Missing reorder payload.");
+    return toStateError("Data pengurutan tidak ada.");
   }
   let ids: unknown;
   try {
     ids = JSON.parse(raw);
   } catch {
-    return toStateError("Invalid reorder payload.");
+    return toStateError("Data pengurutan tidak valid.");
   }
   if (!Array.isArray(ids) || ids.length === 0 || ids.length > 200) {
-    return toStateError("Invalid reorder payload.");
+    return toStateError("Data pengurutan tidak valid.");
   }
   const fieldIds = ids.filter(
     (value): value is string =>
       typeof value === "string" && value.length > 0 && value.length <= 64
   );
   if (fieldIds.length !== ids.length) {
-    return toStateError("Invalid reorder payload.");
+    return toStateError("Data pengurutan tidak valid.");
   }
 
   const owned = await db
@@ -724,7 +724,7 @@ export async function reorderEmployeeFieldsAction(
     });
   } catch (error) {
     console.error("[employee-fields] reorder failed", error);
-    return toStateError("Could not reorder the fields. Please try again.");
+    return toStateError("Urutan field gagal diubah. Silakan coba lagi.");
   }
 
   try {
@@ -741,5 +741,5 @@ export async function reorderEmployeeFieldsAction(
   }
 
   revalidatePath("/settings/employee-fields");
-  return { status: "success", message: "Field order saved." };
+  return { status: "success", message: "Urutan field disimpan." };
 }

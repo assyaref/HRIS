@@ -156,7 +156,7 @@ describe("employee filter bar: organization + project selects", () => {
   it("renders both selects", () => {
     assert.equal(filtersSource.includes('id="employee-org-filter"'), true);
     assert.equal(filtersSource.includes('id="employee-project-filter"'), true);
-    assert.equal(filtersSource.includes("All projects"), true);
+    assert.equal(filtersSource.includes("Semua proyek"), true);
   });
 
   it("only offers organization switching to a Super Administrator", () => {

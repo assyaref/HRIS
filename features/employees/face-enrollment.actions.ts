@@ -663,6 +663,6 @@ export async function revokeFaceEnrollmentAction(
   revalidatePath(`/employees/${employee.id}`);
   return {
     ok: true,
-    message: "Data wajah karyawan berhasil direvoke.",
+    message: "Data wajah karyawan berhasil dicabut.",
   };
 }

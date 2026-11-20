@@ -31,7 +31,7 @@ import { canViewPublishedPayslip } from "@/features/payroll/payslip-document.gua
 import { PayslipDocumentView } from "@/features/payroll/payslip-document-view";
 
 export const metadata: Metadata = {
-  title: "Payslip",
+  title: "Slip gaji",
 };
 
 export default async function PayslipDetailPage({
@@ -90,15 +90,15 @@ export default async function PayslipDetailPage({
           }
           className={buttonVariants({ variant: "outline", size: "sm" })}
         >
-          Back
+          Kembali
         </Link>
       </div>
 
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         <span className="rounded-full bg-muted px-3 py-1 font-medium">
           {detail.kind === "distribution"
-            ? "Distribution payslip"
-            : "Calculated payslip"}
+            ? "Slip gaji distribusi"
+            : "Slip gaji terhitung"}
         </span>
         <span className="rounded-full bg-muted px-3 py-1 font-mono">
           {detail.payslipNumber}
@@ -119,17 +119,17 @@ export default async function PayslipDetailPage({
               <PayslipStatusBadge status={detail.status} />
             </p>
             <p className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Issued</span>
+              <span className="text-muted-foreground">Diterbitkan</span>
               <span className="font-medium">{formatDateTime(detail.issuedAt)}</span>
             </p>
             <p className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Pay period</span>
+              <span className="text-muted-foreground">Periode gaji</span>
               <span className="font-medium">
                 {formatDate(detail.periodStart)} → {formatDate(detail.periodEnd)}
               </span>
             </p>
             <p className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Payment date</span>
+              <span className="text-muted-foreground">Tanggal pembayaran</span>
               <span className="font-medium">{formatDate(detail.paymentDate)}</span>
             </p>
           </CardContent>
@@ -137,34 +137,34 @@ export default async function PayslipDetailPage({
 
         <Card>
           <CardHeader>
-            <CardTitle>Amounts</CardTitle>
+            <CardTitle>Jumlah</CardTitle>
             <CardDescription>
               {detail.kind === "distribution"
-                ? "This payslip was distributed without the payroll calculation engine."
-                : "Published snapshot values."}
+                ? "Slip gaji ini didistribusikan tanpa mesin perhitungan payroll."
+                : "Nilai snapshot yang diterbitkan."}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             {detail.kind === "distribution" ? (
               <p className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
-                No calculated breakdown is available for a distribution payslip.
+                Rincian perhitungan tidak tersedia untuk slip gaji distribusi.
               </p>
             ) : (
               <>
                 <p className="flex justify-between gap-4">
-                  <span className="text-muted-foreground">Gross</span>
+                  <span className="text-muted-foreground">Bruto</span>
                   <span className="font-medium">{formatIDR(detail.grossAmount)}</span>
                 </p>
                 <p className="flex justify-between gap-4">
-                  <span className="text-muted-foreground">Total earnings</span>
+                  <span className="text-muted-foreground">Total pendapatan</span>
                   <span className="font-medium">{formatIDR(detail.totalEarnings)}</span>
                 </p>
                 <p className="flex justify-between gap-4">
-                  <span className="text-muted-foreground">Total deductions</span>
+                  <span className="text-muted-foreground">Total potongan</span>
                   <span className="font-medium">{formatIDR(detail.totalDeductions)}</span>
                 </p>
                 <p className="flex justify-between gap-4">
-                  <span className="text-muted-foreground">Net amount</span>
+                  <span className="text-muted-foreground">Jumlah neto</span>
                   <span className="font-semibold">{formatIDR(detail.netAmount)}</span>
                 </p>
               </>
@@ -175,10 +175,9 @@ export default async function PayslipDetailPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Payslip PDF</CardTitle>
+          <CardTitle>PDF slip gaji</CardTitle>
           <CardDescription>
-            Secure PDF document. The PDF password is not displayed or stored
-            by the HRIS application.
+            Dokumen PDF aman. Kata sandi PDF tidak ditampilkan atau disimpan oleh aplikasi HRIS.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -198,18 +197,18 @@ export default async function PayslipDetailPage({
       {detail.kind === "calculated" ? (
         <Card>
           <CardHeader>
-            <CardTitle>Components</CardTitle>
-            <CardDescription>Immutable payroll component snapshots.</CardDescription>
+            <CardTitle>Komponen</CardTitle>
+            <CardDescription>Snapshot komponen payroll yang tidak dapat diubah.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="rounded-lg border border-border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Component</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead>Notes</TableHead>
+                    <TableHead>Komponen</TableHead>
+                    <TableHead>Jenis</TableHead>
+                    <TableHead className="text-right">Jumlah</TableHead>
+                    <TableHead>Catatan</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

@@ -43,29 +43,29 @@ export function evaluateCreateAssignmentGuard(
   const { employee, project } = context;
 
   if (!employee || employee.organizationId !== context.actorOrganizationId) {
-    return { ok: false, message: "Employee not found." };
+    return { ok: false, message: "Karyawan tidak ditemukan." };
   }
   if (employee.employmentStatus !== "active") {
     return {
       ok: false,
-      message: "Inactive employees cannot be assigned to projects.",
+      message: "Karyawan nonaktif tidak dapat ditugaskan ke proyek.",
     };
   }
 
   if (!project || project.organizationId !== context.actorOrganizationId) {
-    return { ok: false, message: "Project not found." };
+    return { ok: false, message: "Proyek tidak ditemukan." };
   }
   if (project.status !== "active") {
     return {
       ok: false,
-      message: "Only active projects can be assigned.",
+      message: "Hanya proyek aktif yang dapat ditugaskan.",
     };
   }
 
   if (context.existingActiveAssignment) {
     return {
       ok: false,
-      message: "This employee is already actively assigned to the project.",
+      message: "Karyawan ini sudah aktif ditugaskan ke proyek tersebut.",
     };
   }
 
@@ -87,12 +87,12 @@ export function evaluateEndAssignmentGuard(
   const { assignment } = context;
 
   if (!assignment || assignment.organizationId !== context.actorOrganizationId) {
-    return { ok: false, message: "Assignment not found." };
+    return { ok: false, message: "Penugasan tidak ditemukan." };
   }
   if (!assignment.active) {
     return {
       ok: false,
-      message: "This assignment is already ended.",
+      message: "Penugasan ini sudah berakhir.",
     };
   }
 

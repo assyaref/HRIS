@@ -176,7 +176,7 @@ describe("deletion tier classification", () => {
     if (isRetainedEligibility(eligibility)) {
       assert.equal(eligibility.code, "LEGAL_HOLD");
       assert.match(eligibility.message, /E-1/);
-      assert.match(eligibility.message, /legal hold/i);
+      assert.match(eligibility.message, /penahanan hukum/i);
     }
   });
 

@@ -55,11 +55,11 @@ function statusBadge(status: string) {
   if (status === "active") {
     return (
       <Badge className="border-emerald-600/40 bg-emerald-600/10 text-emerald-700">
-        Active
+        Aktif
       </Badge>
     );
   }
-  return <Badge variant="outline">Inactive</Badge>;
+  return <Badge variant="outline">Nonaktif</Badge>;
 }
 
 function TabForm({
@@ -94,10 +94,10 @@ function TabForm({
       const state = await onSubmit({ status: "idle" }, formData);
       if (state.status === "error") {
         setErrors(state.fieldErrors ?? {});
-        notifier.error(state.message ?? "Please fix the highlighted fields.");
+        notifier.error(state.message ?? "Silakan perbaiki field yang ditandai.");
         return;
       }
-      notifier.success(state.message ?? "Tab saved.");
+      notifier.success(state.message ?? "Tab disimpan.");
       onDone?.();
     });
   }
@@ -106,7 +106,7 @@ function TabForm({
     <form onSubmit={submit} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor={`${formId}-name`}>Tab name</Label>
+          <Label htmlFor={`${formId}-name`}>Nama tab</Label>
           <Input
             id={`${formId}-name`}
             name="name"
@@ -126,7 +126,7 @@ function TabForm({
           ) : null}
         </div>
         <div className="space-y-2">
-          <Label htmlFor={`${formId}-key`}>Tab key</Label>
+          <Label htmlFor={`${formId}-key`}>Kunci tab</Label>
           <Input
             id={`${formId}-key`}
             name="tabKey"
@@ -140,8 +140,7 @@ function TabForm({
             <p className="text-sm text-destructive">{errors.tabKey}</p>
           ) : null}
           <p className="text-xs text-muted-foreground">
-            Lowercase letters, digits and underscores. Immutable once
-            created{!tab && key && !TAB_KEY_PATTERN.test(key) ? " — the auto key is not valid yet." : "."}
+            Huruf kecil, angka, dan garis bawah. Tidak dapat diubah setelah dibuat{!tab && key && !TAB_KEY_PATTERN.test(key) ? " — the auto key is not valid yet." : "."}
           </p>
         </div>
         <div className="space-y-2">
@@ -155,7 +154,7 @@ function TabForm({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor={`${formId}-displayOrder`}>Display order</Label>
+          <Label htmlFor={`${formId}-displayOrder`}>Urutan tampilan</Label>
           <Input
             id={`${formId}-displayOrder`}
             name="displayOrder"
@@ -168,8 +167,7 @@ function TabForm({
             required
           />
           <p className="text-xs text-muted-foreground">
-            Position between system tabs (e.g. 70 sits between Bank Account
-            at 60 and Family at 90).
+            Posisi di antara tab sistem (mis. 70 berada di antara Rekening Bank di 60 dan Keluarga di 90).
           </p>
         </div>
         <div className="space-y-2 sm:col-span-2">
@@ -178,7 +176,7 @@ function TabForm({
             id={`${formId}-description`}
             name="description"
             defaultValue={tab?.description ?? ""}
-            placeholder="What belongs on this tab?"
+            placeholder="Apa isi tab ini?"
           />
           {errors.description ? (
             <p className="text-sm text-destructive">{errors.description}</p>
@@ -195,14 +193,14 @@ function TabForm({
             >
               {CUSTOM_TAB_STATUSES.map((value) => (
                 <option key={value} value={value}>
-                  {value === "active" ? "Active" : "Inactive"}
+                  {value === "active" ? "Aktif" : "Nonaktif"}
                 </option>
               ))}
             </select>
           </div>
         ) : null}
         <div className="space-y-2">
-          <Label>Visibility (role codes)</Label>
+          <Label>Visibilitas (kode peran)</Label>
           <div className="flex flex-wrap gap-3">
             {roleOptions.map((role) => (
               <label
@@ -229,7 +227,7 @@ function TabForm({
         <p className="text-sm text-destructive">{errors.form}</p>
       ) : null}
       <Button type="submit" disabled={pending}>
-        {pending ? "Saving..." : submitLabel}
+        {pending ? "Menyimpan..." : submitLabel}
       </Button>
     </form>
   );
@@ -253,9 +251,9 @@ function RowActions({
     startTransition(async () => {
       const state = await action();
       if (state.status === "error") {
-        notifier.error(state.message ?? "Action failed.");
+        notifier.error(state.message ?? "Tindakan gagal.");
       } else {
-        notifier.success(state.message ?? "Done.");
+        notifier.success(state.message ?? "Selesai.");
         onDone();
       }
     });
@@ -273,7 +271,7 @@ function RowActions({
               onClick={() => run(() => setCustomTabStatusAction(tab.id, "inactive"))}
               disabled={pending}
             >
-              Deactivate
+              Nonaktifkan
             </Button>
           ) : (
             <Button
@@ -283,7 +281,7 @@ function RowActions({
               onClick={() => run(() => setCustomTabStatusAction(tab.id, "active"))}
               disabled={pending}
             >
-              Activate
+              Aktifkan
             </Button>
           )}
           <Button
@@ -292,25 +290,23 @@ function RowActions({
             size="sm"
             onClick={() => setEditOpen(true)}
           >
-            Edit
+            Ubah
           </Button>
         </>
       ) : null}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Edit tab</DialogTitle>
+            <DialogTitle>Ubah tab</DialogTitle>
             <DialogDescription>
-              The tab key is immutable so fields assigned to it stay linked.
-              Assign fields to this tab from the Display Location control on
-              the field form.
+              Kunci tab tidak dapat diubah agar field yang ditetapkan tetap tertaut. Tetapkan field ke tab ini dari kontrol Lokasi Tampilan di formulir field.
             </DialogDescription>
           </DialogHeader>
           <TabForm
             tab={tab}
             roleOptions={roleOptions}
             defaultDisplayOrder={tab.displayOrder}
-            submitLabel="Save changes"
+            submitLabel="Simpan perubahan"
             onSubmit={(prev, formData) =>
               updateCustomTabAction(tab.id, prev, formData)
             }
@@ -355,9 +351,9 @@ export function EmployeeTabsManager({
     startTransition(async () => {
       const state = await reorderCustomTabsAction({ status: "idle" }, formData);
       if (state.status === "error") {
-        notifier.error(state.message ?? "Reorder failed.");
+        notifier.error(state.message ?? "Pengurutan ulang gagal.");
       } else {
-        notifier.success(state.message ?? "Order saved.");
+        notifier.success(state.message ?? "Urutan disimpan.");
       }
     });
   }
@@ -369,29 +365,26 @@ export function EmployeeTabsManager({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Employee Tabs</CardTitle>
+        <CardTitle>Tab Karyawan</CardTitle>
         <CardDescription>
-          Custom tabs appear on every employee profile between the system
-          tabs, ordered by their display order (Bank Account is{" "}
-          {systemOrderHint[0]?.displayOrder ?? 60}, Family is{" "}
+          Tab kustom tampil di setiap profil karyawan di antara tab sistem, diurutkan menurut urutan tampilannya (Rekening Bank di{" "}
+          {systemOrderHint[0]?.displayOrder ?? 60}, Keluarga di{" "}
           {systemOrderHint[1]?.displayOrder ?? 90}
-          ). Fields are assigned to a tab from the Display Location control on
-          the field form.
+          ). Field ditetapkan ke tab melalui kontrol Lokasi Tampilan di formulir field.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {canCreate ? (
           <Button type="button" onClick={() => setShowCreate((current) => !current)}>
-            {showCreate ? "Cancel" : "Add Custom Tab"}
+            {showCreate ? "Batal" : "Tambah Tab Kustom"}
           </Button>
         ) : null}
         {canCreate && showCreate ? (
           <Card>
             <CardHeader>
-              <CardTitle>New custom tab</CardTitle>
+              <CardTitle>Tab kustom baru</CardTitle>
               <CardDescription>
-                The key is derived from the name and can be adjusted before
-                saving.
+                Kunci diambil dari nama dan dapat disesuaikan sebelum disimpan.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -399,7 +392,7 @@ export function EmployeeTabsManager({
                 tab={null}
                 roleOptions={roleOptions}
                 defaultDisplayOrder={suggestedCustomTabDisplayOrder(tabs.length)}
-                submitLabel="Create tab"
+                submitLabel="Buat tab"
                 onSubmit={createCustomTabAction}
                 onDone={() => setShowCreate(false)}
               />
@@ -418,12 +411,12 @@ export function EmployeeTabsManager({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Order</TableHead>
-                  <TableHead>Tab Name</TableHead>
-                  <TableHead>Key</TableHead>
-                  <TableHead>Fields</TableHead>
+                  <TableHead>Urutan</TableHead>
+                  <TableHead>Nama Tab</TableHead>
+                  <TableHead>Kunci</TableHead>
+                  <TableHead>Field</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -438,7 +431,7 @@ export function EmployeeTabsManager({
                             size="sm"
                             disabled={pending || index === 0}
                             onClick={() => move(tab.id, -1)}
-                            aria-label="Move up"
+                            aria-label="Pindah ke atas"
                           >
                             ↑
                           </Button>
@@ -448,7 +441,7 @@ export function EmployeeTabsManager({
                             size="sm"
                             disabled={pending || index === tabs.length - 1}
                             onClick={() => move(tab.id, 1)}
-                            aria-label="Move down"
+                            aria-label="Pindah ke bawah"
                           >
                             ↓
                           </Button>
@@ -471,7 +464,7 @@ export function EmployeeTabsManager({
                       </span>
                       {(fieldCounts[tab.tabKey] ?? 0) === 0 ? (
                         <span className="ml-1 text-xs text-muted-foreground">
-                          (assign fields to show data)
+                          (atur field agar data tampil)
                         </span>
                       ) : null}
                     </TableCell>

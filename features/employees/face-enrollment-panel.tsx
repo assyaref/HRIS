@@ -102,7 +102,7 @@ export function FaceEnrollmentPanel({
         setConfirmingRevoke(false);
         setFeedback({
           kind: "success",
-          message: result.message ?? "Data wajah karyawan berhasil direvoke.",
+          message: result.message ?? "Data wajah karyawan berhasil dicabut.",
         });
         router.refresh();
       } else {
@@ -174,7 +174,7 @@ export function FaceEnrollmentPanel({
         <div>
           <p className="font-medium">{employeeName}</p>
           <p className="text-xs text-muted-foreground">
-            Face identity enrollment status.
+            Status pendaftaran identitas wajah.
           </p>
         </div>
         <Badge variant={isEnrolled ? "primary" : "outline"}>
@@ -245,7 +245,7 @@ export function FaceEnrollmentPanel({
 
       {confirmingRevoke ? (
         <div className="space-y-2 rounded-md border border-destructive/40 bg-destructive/10 p-3">
-          <p className="text-sm font-medium">Revoke face enrollment?</p>
+          <p className="text-sm font-medium">Cabut pendaftaran wajah?</p>
           <p className="text-xs text-muted-foreground">
             Data biometrik wajah {employeeName} akan dihapus permanen dan
             verifikasi wajah tidak lagi tersedia. Enrollment wajah baru
@@ -259,7 +259,7 @@ export function FaceEnrollmentPanel({
               disabled={revoking}
               onClick={cancelRevoke}
             >
-              Cancel
+              Batal
             </Button>
             <Button
               type="button"
@@ -268,7 +268,7 @@ export function FaceEnrollmentPanel({
               disabled={revoking}
               onClick={() => void confirmRevoke()}
             >
-              {revoking ? "Revoking..." : "Revoke"}
+              {revoking ? "Revoking..." : "Cabut"}
             </Button>
           </div>
         </div>
@@ -283,7 +283,7 @@ export function FaceEnrollmentPanel({
               size="sm"
               onClick={beginCapture}
             >
-              {isEnrolled ? "Perbarui data wajah" : "Enroll face"}
+              {isEnrolled ? "Perbarui data wajah" : "Daftarkan wajah"}
             </Button>
           ) : null}
           {canManage && isEnrolled ? (
@@ -293,7 +293,7 @@ export function FaceEnrollmentPanel({
               size="sm"
               onClick={() => setConfirmingRevoke(true)}
             >
-              Revoke face data
+              Cabut data wajah
             </Button>
           ) : null}
         </div>

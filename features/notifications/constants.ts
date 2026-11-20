@@ -24,8 +24,8 @@ export const NOTIFICATION_CATEGORY_LABELS: Record<NotificationCategory, string> 
     announcement: "Pengumuman",
     approval: "Persetujuan",
     payroll: "Payroll",
-    attendance: "Attendance",
-    system: "System",
+    attendance: "Absensi",
+    system: "Sistem",
   };
 
 export function isNotificationCategory(

@@ -69,28 +69,28 @@ export function ProjectStatusDialog({ project }: ProjectStatusDialogProps) {
           setOpen(true);
         }}
       >
-        Change Status
+        Ubah Status
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Change Project Status</DialogTitle>
+            <DialogTitle>Ubah Status Proyek</DialogTitle>
             <DialogDescription>
-              Change the operational status of this project.
+              Ubah status operasional proyek ini.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="rounded-lg border p-4">
               <div className="flex items-center justify-between gap-4">
-                <span className="text-sm font-medium">Current status</span>
+                <span className="text-sm font-medium">Status saat ini</span>
                 <ProjectStatusBadge status={project.status} />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="project-status-change">New Status</Label>
+              <Label htmlFor="project-status-change">Status Baru</Label>
               <select
                 id="project-status-change"
                 value={selectedStatus}
@@ -98,9 +98,9 @@ export function ProjectStatusDialog({ project }: ProjectStatusDialogProps) {
                 disabled={pending}
                 className="border-input bg-background flex h-10 w-full rounded-md border px-3 py-2 text-sm"
               >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="completed">Completed</option>
+                <option value="active">Aktif</option>
+                <option value="inactive">Nonaktif</option>
+                <option value="completed">Selesai</option>
               </select>
             </div>
 
@@ -117,7 +117,7 @@ export function ProjectStatusDialog({ project }: ProjectStatusDialogProps) {
                 onClick={() => setOpen(false)}
                 disabled={pending}
               >
-                Cancel
+                Batal
               </Button>
 
               <Button
@@ -125,7 +125,7 @@ export function ProjectStatusDialog({ project }: ProjectStatusDialogProps) {
                 onClick={submitStatus}
                 disabled={pending || selectedStatus === project.status}
               >
-                {pending ? "Updating..." : "Update Status"}
+                {pending ? "Memperbarui..." : "Perbarui Status"}
               </Button>
             </DialogFooter>
           </div>

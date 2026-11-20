@@ -17,13 +17,13 @@ export const PERMISSION_CODE_TUPLE = PERMISSION_CATALOG.map(
 const nameSchema = z
   .string()
   .trim()
-  .min(1, "Enter a name.")
-  .max(80, "Name must be 80 characters or fewer.");
+  .min(1, "Masukkan nama.")
+  .max(80, "Nama maksimal 80 karakter.");
 
 const descriptionSchema = z
   .string()
   .trim()
-  .max(300, "Description must be 300 characters or fewer.");
+  .max(300, "Deskripsi maksimal 300 karakter.");
 
 /**
  * Custom role code: uppercase letters, digits and underscores; must start with
@@ -33,11 +33,11 @@ const descriptionSchema = z
 const roleCodeSchema = z
   .string()
   .trim()
-  .min(2, "Code must be at least 2 characters.")
-  .max(32, "Code must be 32 characters or fewer.")
+  .min(2, "Kode minimal 2 karakter.")
+  .max(32, "Kode maksimal 32 karakter.")
   .regex(
     /^[A-Z][A-Z0-9_]{0,31}$/,
-    "Use uppercase letters, digits and underscores, starting with a letter."
+    "Gunakan huruf kapital, angka, dan garis bawah, diawali huruf."
   );
 
 export const createRoleSchema = z.object({

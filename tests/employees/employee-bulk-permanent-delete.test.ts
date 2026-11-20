@@ -153,7 +153,7 @@ describe("authorization: Super Administrator only", () => {
   it("refuses when the actor has no organization", () => {
     assert.equal(bulkAction.includes("sessionOrganizationId"), true);
     assert.equal(
-      bulkAction.includes('"Your account is not assigned to an organization."'),
+      bulkAction.includes('"Akun Anda belum ditetapkan ke organisasi."'),
       true
     );
   });
@@ -386,7 +386,7 @@ describe("ui: bulk action gating and confirmation", () => {
 
   it("the selected employee count is displayed and the bar is hidden when nothing is selected", () => {
     assert.equal(
-      tableSource.includes("Delete Selected Employees ({selectedCount})"),
+      tableSource.includes("Hapus Karyawan Terpilih ({selectedCount})"),
       true
     );
     assert.equal(

@@ -11,8 +11,8 @@ export const EMPLOYEE_STATUSES = ["active", "inactive"] as const;
 export type EmployeeStatus = (typeof EMPLOYEE_STATUSES)[number];
 
 export const EMPLOYEE_STATUS_LABELS: Record<EmployeeStatus, string> = {
-  active: "Active",
-  inactive: "Inactive",
+  active: "Aktif",
+  inactive: "Nonaktif",
 };
 
 /** Whether a raw string (e.g. from the DB or a form) is a valid status. */

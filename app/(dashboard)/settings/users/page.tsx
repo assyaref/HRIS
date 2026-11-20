@@ -26,7 +26,7 @@ import {
 } from "@/features/users/queries";
 
 export const metadata: Metadata = {
-  title: "User Management",
+  title: "Manajemen Pengguna",
 };
 
 /**
@@ -77,7 +77,7 @@ export default async function UsersSettingsPage({
           <PageHeader hasCreate={false} actorIsSuperAdmin={true} />
           <Card>
             <CardContent className="py-8 text-sm text-muted-foreground">
-              No active organization is available.
+              Tidak ada organisasi aktif.
             </CardContent>
           </Card>
         </div>
@@ -147,8 +147,8 @@ export default async function UsersSettingsPage({
       <div className="space-y-6">
         <PageHeader hasCreate={false} actorIsSuperAdmin={false} />
         <EmptyState
-          title="No organization assigned"
-          description="Your account is not linked to an organization, so there are no user accounts to administer."
+          title="Belum ada organisasi"
+          description="Akun Anda belum tertaut ke organisasi, sehingga tidak ada akun pengguna untuk dikelola."
         />
       </div>
     );
@@ -222,7 +222,7 @@ function PageHeader({
           Manajemen Pengguna
         </h1>
         <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-          Manage HRIS user accounts, roles and access.
+          Kelola akun pengguna HRIS, peran, dan akses.
         </p>
       </div>
       {hasCreate && organizationId && roles && employees ? (

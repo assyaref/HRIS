@@ -38,21 +38,21 @@ function sha256(buffer: Buffer): string {
 
 function assertPdfMagic(buffer: Buffer): void {
   if (buffer.length < PDF_MAGIC.length) {
-    throw new Error("Uploaded file is not a valid PDF.");
+    throw new Error("Berkas yang diunggah bukan PDF yang valid.");
   }
 
   if (!buffer.subarray(0, PDF_MAGIC.length).equals(PDF_MAGIC)) {
-    throw new Error("Uploaded file is not a valid PDF.");
+    throw new Error("Berkas yang diunggah bukan PDF yang valid.");
   }
 }
 
 function assertPdfSize(size: number): void {
   if (size <= 0) {
-    throw new Error("PDF file is empty.");
+    throw new Error("Berkas PDF kosong.");
   }
 
   if (size > MAX_PDF_SIZE_BYTES) {
-    throw new Error("PDF file exceeds the maximum allowed size.");
+    throw new Error("Berkas PDF melebihi ukuran maksimal.");
   }
 }
 
@@ -65,7 +65,7 @@ function assertIdentity(
 } {
   if (!identity.employeeNumber) {
     throw new Error(
-      "Employee number is required before a payslip PDF can be processed."
+      "Nomor karyawan wajib ada sebelum PDF slip gaji dapat diproses."
     );
   }
 
@@ -74,7 +74,7 @@ function assertIdentity(
     Number.isNaN(identity.birthDate.getTime())
   ) {
     throw new Error(
-      "Employee birth date is required before a payslip PDF can be processed."
+      "Tanggal lahir karyawan diperlukan sebelum PDF slip gaji dapat diproses."
     );
   }
 }
@@ -88,7 +88,7 @@ async function runGhostscript(args: string[]): Promise<void> {
     });
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Ghostscript failed.";
+      error instanceof Error ? error.message : "Ghostscript gagal.";
 
     throw new Error(`PDF processing failed: ${message}`);
   }
@@ -114,7 +114,7 @@ function assertEncryptedPdf(buffer: Buffer): void {
     !content.includes("/Encrypt") ||
     !content.includes("/Filter /Standard")
   ) {
-    throw new Error("Ghostscript did not produce an encrypted PDF.");
+    throw new Error("Ghostscript tidak menghasilkan PDF terenkripsi.");
   }
 }
 
@@ -148,7 +148,7 @@ async function verifyEncryptedPdfPassword(
       combinedOutput.includes("cannot decrypt pdf") ||
       combinedOutput.includes("requires a password")
     ) {
-      throw new Error("Generated PDF password verification failed.");
+      throw new Error("Verifikasi kata sandi PDF yang dibuat gagal.");
     }
   } catch (error) {
     if (
@@ -158,7 +158,7 @@ async function verifyEncryptedPdfPassword(
       throw error;
     }
 
-    throw new Error("Generated PDF password verification failed.");
+    throw new Error("Verifikasi kata sandi PDF yang dibuat gagal.");
   }
 }
 
@@ -177,7 +177,7 @@ export async function reencryptPayslipPdfCore(input: {
 
   if (!input.identity.nik) {
     throw new Error(
-      "Employee NIK is required to decrypt a PDF created under the legacy contract."
+      "NIK karyawan diperlukan untuk membuka PDF yang dibuat dengan format lama."
     );
   }
 

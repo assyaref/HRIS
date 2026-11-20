@@ -123,7 +123,7 @@ describe("employeePayrollComponentCreateSchema", () => {
     });
     assert.equal(earlier.success, false);
     if (!earlier.success) {
-      assert.equal(parsedErrorMessage(earlier), "Effective to must be after effective from.");
+      assert.equal(parsedErrorMessage(earlier), "Tanggal berakhir harus setelah tanggal mulai berlaku.");
     }
   });
 });
@@ -159,7 +159,7 @@ describe("employeePayrollComponentUpdateSchema", () => {
     });
     assert.equal(parsed.success, false);
     if (!parsed.success) {
-      assert.equal(parsedErrorMessage(parsed), "Effective to must be after effective from.");
+      assert.equal(parsedErrorMessage(parsed), "Tanggal berakhir harus setelah tanggal mulai berlaku.");
     }
   });
 
@@ -205,5 +205,5 @@ describe("employeePayrollComponentEndSchema", () => {
 });
 
 function parsedErrorMessage(result: { success: false; error: { issues: { message: string }[] } }): string {
-  return result.error.issues[0]?.message ?? "Invalid input.";
+  return result.error.issues[0]?.message ?? "Isian tidak valid.";
 }

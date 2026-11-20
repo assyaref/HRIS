@@ -34,7 +34,7 @@ export function CreateOrganizationDialog() {
   );
 
   if (state.status === "success" && open) {
-    notifier.success(state.message ?? "Organization created.");
+    notifier.success(state.message ?? "Organisasi dibuat.");
     setOpen(false);
   }
 
@@ -44,15 +44,14 @@ export function CreateOrganizationDialog() {
   return (
     <>
       <Button type="button" onClick={() => setOpen(true)}>
-        Add Organization
+        Tambah Organisasi
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Add Organization</DialogTitle>
+            <DialogTitle>Tambah Organisasi</DialogTitle>
             <DialogDescription>
-              Create a new tenant organization. The code is a stable,
-              uppercase identifier and must be unique across the platform.
+              Buat organisasi tenant baru. Kode adalah pengenal huruf kapital yang tetap dan harus unik di seluruh platform.
             </DialogDescription>
           </DialogHeader>
 
@@ -67,11 +66,11 @@ export function CreateOrganizationDialog() {
             ) : null}
 
             <div className="space-y-2">
-              <Label htmlFor="organization-name">Name</Label>
+              <Label htmlFor="organization-name">Nama</Label>
               <Input
                 id="organization-name"
                 name="name"
-                placeholder="Acme Corp"
+                placeholder="PT Contoh Sejahtera"
                 required
                 maxLength={ORGANIZATION_NAME_MAX_LENGTH}
               />
@@ -81,7 +80,7 @@ export function CreateOrganizationDialog() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="organization-code">Code</Label>
+              <Label htmlFor="organization-code">Kode</Label>
               <Input
                 id="organization-code"
                 name="code"
@@ -91,7 +90,7 @@ export function CreateOrganizationDialog() {
                 pattern="[A-Za-z0-9][A-Za-z0-9_-]*"
               />
               <p className="text-xs text-muted-foreground">
-                Letters, digits, dash and underscore. Stored uppercase.
+                Huruf, angka, tanda hubung, dan garis bawah. Disimpan dalam huruf kapital.
               </p>
               {codeError ? (
                 <p className="text-xs text-destructive">{codeError}</p>
@@ -105,10 +104,10 @@ export function CreateOrganizationDialog() {
                 onClick={() => setOpen(false)}
                 disabled={isPending}
               >
-                Cancel
+                Batal
               </Button>
               <Button type="submit" disabled={isPending}>
-                {isPending ? "Creating..." : "Create organization"}
+                {isPending ? "Membuat..." : "Buat organisasi"}
               </Button>
             </DialogFooter>
           </form>

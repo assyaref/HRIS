@@ -17,11 +17,11 @@ export const ASSIGNMENT_UUID_PATTERN =
 
 const employeeIdSchema = z
   .string()
-  .regex(ASSIGNMENT_UUID_PATTERN, "Employee is required.");
+  .regex(ASSIGNMENT_UUID_PATTERN, "Karyawan wajib dipilih.");
 
 const projectIdSchema = z
   .string()
-  .regex(ASSIGNMENT_UUID_PATTERN, "Project is required.");
+  .regex(ASSIGNMENT_UUID_PATTERN, "Proyek wajib dipilih.");
 
 export const assignmentCreateSchema = z.object({
   employeeId: employeeIdSchema,

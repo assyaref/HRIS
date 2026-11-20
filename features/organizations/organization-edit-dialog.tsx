@@ -48,7 +48,7 @@ export function EditOrganizationDialog({
   );
 
   if (state.status === "success" && open) {
-    notifier.success(state.message ?? "Organization updated.");
+    notifier.success(state.message ?? "Organisasi diperbarui.");
     setOpen(false);
   }
 
@@ -66,16 +66,16 @@ export function EditOrganizationDialog({
         onClick={() => setOpen(true)}
         aria-label={`Edit ${organization.name}`}
       >
-        Edit
+        Ubah
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit organization</DialogTitle>
+            <DialogTitle>Ubah organisasi</DialogTitle>
             <DialogDescription>
               {isSystem
                 ? "The reserved system organization's code and status are immutable."
-                : "Update the tenant name, code or status."}
+                : "Perbarui nama, kode, atau status tenant."}
             </DialogDescription>
           </DialogHeader>
 
@@ -90,7 +90,7 @@ export function EditOrganizationDialog({
             ) : null}
 
             <div className="space-y-2">
-              <Label htmlFor={`edit-name-${organization.id}`}>Name</Label>
+              <Label htmlFor={`edit-name-${organization.id}`}>Nama</Label>
               <Input
                 id={`edit-name-${organization.id}`}
                 name="name"
@@ -104,7 +104,7 @@ export function EditOrganizationDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor={`edit-code-${organization.id}`}>Code</Label>
+              <Label htmlFor={`edit-code-${organization.id}`}>Kode</Label>
               <Input
                 id={`edit-code-${organization.id}`}
                 name="code"
@@ -128,8 +128,8 @@ export function EditOrganizationDialog({
                 disabled={isSystem}
                 className={selectClasses}
               >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
+                <option value="active">Aktif</option>
+                <option value="inactive">Nonaktif</option>
               </select>
               <p className="text-xs text-muted-foreground">
                 Deactivating hides the organization from sign-in and tenant
@@ -147,10 +147,10 @@ export function EditOrganizationDialog({
                 onClick={() => setOpen(false)}
                 disabled={isPending}
               >
-                Cancel
+                Batal
               </Button>
               <Button type="submit" disabled={isPending}>
-                {isPending ? "Saving..." : "Save changes"}
+                {isPending ? "Menyimpan..." : "Simpan perubahan"}
               </Button>
             </DialogFooter>
           </form>

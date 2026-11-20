@@ -213,7 +213,7 @@ async function loadImportContext(
   const user = await requireUser();
   await requirePermission(user.id, PERMISSIONS.EMPLOYEES_IMPORT);
   if (!user.organizationId) {
-    throw new Error("Your account is not assigned to an organization.");
+    throw new Error("Akun Anda belum ditetapkan ke organisasi.");
   }
   // Import settings are validated by `validateImportSettings` before this
   // runs, so a caller other than SUPERADMIN can only ever target their own
@@ -348,17 +348,17 @@ export async function previewExcelImportAction(
 
   const file = formData.get("excelFile");
   if (!(file instanceof File)) {
-    return previewError("No file selected.");
+    return previewError("Belum ada berkas yang dipilih.");
   }
   if (!file.name.toLowerCase().endsWith(".xlsx")) {
-    return previewError("Only .xlsx workbooks are supported. Use the Excel template.");
+    return previewError("Hanya workbook .xlsx yang didukung. Gunakan template Excel.");
   }
 
   let buffer: ArrayBuffer;
   try {
     buffer = await file.arrayBuffer();
   } catch {
-    return previewError("Could not read the uploaded file. Please try again.");
+    return previewError("Berkas yang diunggah gagal dibaca. Silakan coba lagi.");
   }
 
   let analysis: ExcelImportAnalysis;
@@ -370,7 +370,7 @@ export async function previewExcelImportAction(
     );
   } catch {
     return previewError(
-      "The file could not be parsed as an Excel workbook. Use the downloadable template."
+      "Berkas tidak dapat dibaca sebagai workbook Excel. Gunakan template yang dapat diunduh."
     );
   }
 
@@ -379,7 +379,7 @@ export async function previewExcelImportAction(
   }
   if (analysis.missingColumns.length > 0) {
     return previewError(
-      `Missing required columns on the Employees sheet: ${analysis.missingColumns.join(", ")}.`
+      `Kolom wajib tidak ada di sheet Employees: ${analysis.missingColumns.join(", ")}.`
     );
   }
   if (analysis.rowLimitExceeded) {
@@ -396,7 +396,7 @@ export async function previewExcelImportAction(
 
   if (plan.createCount > 0 && context.inaccessibleRequiredField) {
     return previewError(
-      "A required custom field is unavailable to your current roles. New employees cannot be imported."
+      "Ada field kustom wajib yang tidak tersedia untuk peran Anda saat ini. Karyawan baru tidak dapat diimpor."
     );
   }
 
@@ -404,7 +404,7 @@ export async function previewExcelImportAction(
   const unauthorizedSections = findUnauthorizedSections(analysis, permissions);
   if (unauthorizedSections.length > 0) {
     return previewError(
-      `Import includes sections you are not authorized to update: ${unauthorizedSections.join(", ")}.`
+      `Impor berisi bagian yang tidak boleh Anda perbarui: ${unauthorizedSections.join(", ")}.`
     );
   }
 
@@ -429,7 +429,7 @@ export async function previewExcelImportAction(
     })),
     message:
       plan.rows.length === 0
-        ? "No valid employee rows were found."
+        ? "Tidak ditemukan baris karyawan yang valid."
         : `${plan.createCount} to create, ${plan.updateCount} to update of ${plan.rows.length} valid rows. ${previewErrors.length} row(s) need attention.`,
   };
 }
@@ -593,7 +593,7 @@ export async function confirmExcelImportAction(
 
   const file = formData.get("excelFile");
   if (!(file instanceof File)) {
-    return previewError("The uploaded file is missing. Upload it again.");
+    return previewError("Berkas yang diunggah tidak ada. Unggah ulang.");
   }
 
   let analysis: ExcelImportAnalysis;
@@ -601,7 +601,7 @@ export async function confirmExcelImportAction(
     const buffer = await file.arrayBuffer();
     analysis = await analyzeExcelImport(buffer, customSpecs, customDataSheetNames);
   } catch {
-    return previewError("The file could not be parsed. Upload a valid workbook.");
+    return previewError("Berkas tidak dapat dibaca. Unggah workbook yang valid.");
   }
   if (
     !analysis.employeesSheetFound ||
@@ -611,7 +611,7 @@ export async function confirmExcelImportAction(
     analysis.secondary.some((row) => row.error)
   ) {
     return previewError(
-      "The workbook has validation errors. Preview it again and fix every row before importing."
+      "Workbook memiliki kesalahan validasi. Pratinjau ulang dan perbaiki setiap baris sebelum mengimpor."
     );
   }
 
@@ -629,7 +629,7 @@ export async function confirmExcelImportAction(
   }
   const duplicateEmailErrors = findDuplicateExistingEmailErrors(plan, identifiers);
   if (duplicateEmailErrors.length > 0) {
-    return previewError(duplicateEmailErrors[0]?.error ?? "Duplicate employee email.");
+    return previewError(duplicateEmailErrors[0]?.error ?? "Email karyawan ganda.");
   }
   if (plan.rows.length === 0) {
     return previewError("No valid employee rows to import.");
@@ -643,14 +643,14 @@ export async function confirmExcelImportAction(
   }
   if (plan.createCount > 0 && context.inaccessibleRequiredField) {
     return previewError(
-      "A required custom field is unavailable to your current roles. New employees cannot be imported."
+      "Ada field kustom wajib yang tidak tersedia untuk peran Anda saat ini. Karyawan baru tidak dapat diimpor."
     );
   }
   const permissions = await loadSectionPermissions(userId, analysis);
   const unauthorizedSections = findUnauthorizedSections(analysis, permissions);
   if (unauthorizedSections.length > 0) {
     return previewError(
-      `Import includes sections you are not authorized to update: ${unauthorizedSections.join(", ")}.`
+      `Impor berisi bagian yang tidak boleh Anda perbarui: ${unauthorizedSections.join(", ")}.`
     );
   }
   for (const row of plan.rows) {
@@ -660,7 +660,7 @@ export async function confirmExcelImportAction(
     const currentStatus = existingByNumber.get(row.employeeNumber)?.status;
     if (currentStatus === "inactive" && requestedStatus === "active") {
       return previewError(
-        `Row for ${row.employeeNumber}: inactive employees cannot be reactivated through Excel import.`
+        `Baris ${row.employeeNumber}: karyawan nonaktif tidak dapat diaktifkan kembali lewat impor Excel.`
       );
     }
     if (currentStatus === "active" && requestedStatus === "inactive") {
@@ -735,13 +735,13 @@ export async function confirmExcelImportAction(
         const spec = definitionsByFieldKey.get(fieldKey);
         if (!spec) {
           throw new ImportError(
-            `Row for ${row.employeeNumber}: unknown or unauthorized custom field "${fieldKey}".`
+            `Baris ${row.employeeNumber}: field kustom "${fieldKey}" tidak dikenal atau tidak diizinkan.`
           );
         }
         const parsed = parseCustomFieldValue(spec.fieldType, raw, spec.options);
         if (!parsed.ok) {
           throw new ImportError(
-            `Row for ${row.employeeNumber}: [${spec.label}] ${parsed.error}`
+            `Baris ${row.employeeNumber}: [${spec.label}] ${parsed.error}`
           );
         }
         writes.push({
@@ -757,7 +757,7 @@ export async function confirmExcelImportAction(
         for (const spec of customSpecs) {
           if (spec.isRequired && !row.customValues[spec.fieldKey]) {
             throw new ImportError(
-              `Row for ${row.employeeNumber}: [${spec.label}] This field is required.`
+              `Baris ${row.employeeNumber}: [${spec.label}] Field ini wajib diisi.`
             );
           }
         }
@@ -767,7 +767,7 @@ export async function confirmExcelImportAction(
   } catch (error) {
     if (error instanceof ImportError) {
       return previewError(
-        `Import rolled back — no records were changed. ${error.message}`
+        `Impor dibatalkan — tidak ada data yang diubah. ${error.message}`
       );
     }
     throw error;
@@ -910,7 +910,7 @@ export async function confirmExcelImportAction(
           const resolved = managerByNumber.get(cells.manager);
           if (!resolved) {
             throw new ImportError(
-              `Unknown manager employee number "${cells.manager}".`
+              `Nomor karyawan atasan "${cells.manager}" tidak dikenal.`
             );
           }
           write.managerId = resolved;
@@ -936,7 +936,7 @@ export async function confirmExcelImportAction(
             })
             .returning({ id: employees.id });
           const record = inserted[0];
-          if (!record) throw new Error("Employee insert returned no row.");
+          if (!record) throw new Error("Data karyawan gagal disimpan.");
           employeeId = record.id;
           effectiveEmail = write.email ?? null;
           effectiveStatus = write.employmentStatus ?? "active";
@@ -980,17 +980,17 @@ export async function confirmExcelImportAction(
           const existing = existingRows[0];
           if (!existing) {
             throw new ImportError(
-              `Employee ${row.employeeNumber} disappeared during import.`
+              `Karyawan ${row.employeeNumber} hilang saat impor berlangsung.`
             );
           }
           if (existing.status === "inactive" && requestedStatus === "active") {
             throw new ImportError(
-              `Row for ${row.employeeNumber}: inactive employees cannot be reactivated through Excel import.`
+              `Baris ${row.employeeNumber}: karyawan nonaktif tidak dapat diaktifkan kembali lewat impor Excel.`
             );
           }
           if (write.managerId === existing.id) {
             throw new ImportError(
-              `Row for ${row.employeeNumber}: an employee cannot manage themselves.`
+              `Baris ${row.employeeNumber}: karyawan tidak dapat menjadi atasan dirinya sendiri.`
             );
           }
           employeeId = existing.id;
@@ -1013,7 +1013,7 @@ export async function confirmExcelImportAction(
               .returning({ id: employees.id });
             if (changed.length === 0) {
               throw new ImportError(
-                `Employee ${row.employeeNumber} disappeared during import.`
+                `Karyawan ${row.employeeNumber} hilang saat impor berlangsung.`
               );
             }
           }
@@ -1202,7 +1202,7 @@ export async function confirmExcelImportAction(
                 : existingAccount?.status ?? "active";
               if (existingAccounts.length > 1) {
                 throw new ImportError(
-                  `Row for ${row.employeeNumber}: multiple bank accounts match ${bankName} (${accountNumber}). Resolve them before importing.`
+                  `Baris ${row.employeeNumber}: ada beberapa rekening yang cocok dengan ${bankName} (${accountNumber}). Rapikan sebelum mengimpor.`
                 );
               }
               if (existingAccount) {
@@ -1285,7 +1285,7 @@ export async function confirmExcelImportAction(
               );
               if (matchingDependents.length > 1) {
                 throw new ImportError(
-                  `Row for ${row.employeeNumber}: multiple dependents match "${name}" (${relationship}). Resolve them before importing.`
+                  `Baris ${row.employeeNumber}: ada beberapa tanggungan yang cocok dengan "${name}" (${relationship}). Rapikan sebelum mengimpor.`
                 );
               }
               if (matchingDependents.length === 1) {
@@ -1359,7 +1359,7 @@ export async function confirmExcelImportAction(
               );
               if (matchingEducation.length > 1) {
                 throw new ImportError(
-                  `Row for ${row.employeeNumber}: multiple education records match "${educationLevel}" (${institution}). Resolve them before importing.`
+                  `Baris ${row.employeeNumber}: ada beberapa data pendidikan yang cocok dengan "${educationLevel}" (${institution}). Rapikan sebelum mengimpor.`
                 );
               }
               if (matchingEducation.length === 1) {
@@ -1689,7 +1689,7 @@ export async function confirmExcelImportAction(
   } catch (error) {
     if (error instanceof ImportError) {
       return previewError(
-        `Import rolled back — no records were changed. ${error.message}`
+        `Impor dibatalkan — tidak ada data yang diubah. ${error.message}`
       );
     }
     if (
@@ -1699,12 +1699,12 @@ export async function confirmExcelImportAction(
       (error as { code?: unknown }).code === "23505"
     ) {
       return previewError(
-        "Import rolled back — a duplicate employee number or email appeared. No records were changed."
+        "Impor dibatalkan — ditemukan nomor karyawan atau email ganda. Tidak ada data yang diubah."
       );
     }
     console.error("[employees/excel-import] import failed", error);
     return previewError(
-      "Import failed. No records were changed. Please try again."
+      "Impor gagal. Tidak ada data yang diubah. Silakan coba lagi."
     );
   }
 }

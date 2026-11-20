@@ -36,22 +36,22 @@ export interface SystemTabSpec {
  * a system tab keeps its component regardless of custom tab metadata.
  */
 export const SYSTEM_TABS: readonly SystemTabSpec[] = [
-  { key: "overview", label: "Overview", displayOrder: 10 },
-  { key: "personal", label: "Personal", displayOrder: 20 },
-  { key: "employment", label: "Employment", displayOrder: 30 },
-  { key: "address", label: "Address", displayOrder: 40 },
-  { key: "insurance", label: "Insurance", displayOrder: 50 },
-  { key: "bank", label: "Bank Account", displayOrder: 60 },
-  { key: "family", label: "Family", displayOrder: 90 },
-  { key: "education", label: "Education", displayOrder: 100 },
-  { key: "documents", label: "Documents", displayOrder: 110 },
+  { key: "overview", label: "Ringkasan", displayOrder: 10 },
+  { key: "personal", label: "Pribadi", displayOrder: 20 },
+  { key: "employment", label: "Kepegawaian", displayOrder: 30 },
+  { key: "address", label: "Alamat", displayOrder: 40 },
+  { key: "insurance", label: "Asuransi", displayOrder: 50 },
+  { key: "bank", label: "Rekening Bank", displayOrder: 60 },
+  { key: "family", label: "Keluarga", displayOrder: 90 },
+  { key: "education", label: "Pendidikan", displayOrder: 100 },
+  { key: "documents", label: "Dokumen", displayOrder: 110 },
   // The built-in "Custom Fields" tab was retired: tabs and fields are
   // configured in Settings → Employee Fields / Tabs. Fields not placed on a
   // custom tab render on the Overview tab instead (see the profile page).
-  { key: "attendance", label: "Attendance", displayOrder: 130 },
-  { key: "leave", label: "Leave", displayOrder: 140 },
+  { key: "attendance", label: "Absensi", displayOrder: 130 },
+  { key: "leave", label: "Cuti", displayOrder: 140 },
   { key: "payroll", label: "Payroll", displayOrder: 150 },
-  { key: "history", label: "History", displayOrder: 160 },
+  { key: "history", label: "Riwayat", displayOrder: 160 },
 ];
 
 /** URL ?tab= prefix for custom tabs (never collides with system keys). */

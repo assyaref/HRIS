@@ -17,29 +17,29 @@ export const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const emailSchema = z
-  .email("Enter a valid email address.")
-  .max(254, "Email must be 254 characters or fewer.");
+  .email("Masukkan alamat email yang valid.")
+  .max(254, "Email maksimal 254 karakter.");
 
 const optionalNameSchema = z
   .string()
   .trim()
-  .max(120, "Name must be 120 characters or fewer.");
+  .max(120, "Nama maksimal 120 karakter.");
 
 const uuidSchema = z
   .string()
-  .regex(UUID_PATTERN, "The selected value is invalid.");
+  .regex(UUID_PATTERN, "Nilai yang dipilih tidak valid.");
 
 const optionalUuidSchema = z
   .string()
-  .regex(UUID_PATTERN, "The selected value is invalid.");
+  .regex(UUID_PATTERN, "Nilai yang dipilih tidak valid.");
 
 /** Password rules mirror the existing employee account creation policy. */
 export const PASSWORD_MIN_LENGTH = 8;
 
 const passwordSchema = z
   .string()
-  .min(PASSWORD_MIN_LENGTH, `Password must be at least ${PASSWORD_MIN_LENGTH} characters.`)
-  .max(128, "Password must be 128 characters or fewer.");
+  .min(PASSWORD_MIN_LENGTH, `Kata sandi minimal ${PASSWORD_MIN_LENGTH} karakter.`)
+  .max(128, "Kata sandi maksimal 128 karakter.");
 
 /**
  * Create payload. `name` is optional in storage (legacy accounts have no
@@ -65,7 +65,7 @@ export const createUserSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["password"],
-        message: "A password is required for an active account.",
+        message: "Kata sandi wajib diisi untuk akun aktif.",
       });
     }
   });

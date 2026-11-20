@@ -70,7 +70,7 @@ export default async function TimesheetPage({
   ]);
   const manageLink = canReview ? (
     <Link href="/timesheet/management" className={buttonVariants({ variant: "outline", size: "sm" })}>
-      Management
+      Manajemen
     </Link>
   ) : null;
   if (!employee) {

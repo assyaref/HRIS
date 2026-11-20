@@ -89,19 +89,19 @@ test("recap sheet header contains the expected columns", async () => {
   const sheet = workbook.getWorksheet(RECAP_EXPORT_SHEET_NAME)!;
   const header = sheet.getRow(1);
   const expected = [
-    "Employee No",
-    "Employee Name",
-    "Department",
-    "Work Location",
-    "Manager",
-    "Working Days",
-    "Present",
-    "Late",
-    "Leave",
-    "Sick",
-    "Permission",
-    "Absent",
-    "Attendance Rate (%)",
+    "No. Karyawan",
+    "Nama Karyawan",
+    "Departemen",
+    "Lokasi Kerja",
+    "Atasan",
+    "Hari Kerja",
+    "Hadir",
+    "Terlambat",
+    "Cuti",
+    "Sakit",
+    "Izin",
+    "Alpa",
+    "Tingkat Kehadiran (%)",
   ];
   expected.forEach((label, index) => {
     assert.equal(header.getCell(index + 1).value, label);

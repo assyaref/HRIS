@@ -30,7 +30,7 @@ import { OrganizationLogoCard } from "@/features/organizations/organization-logo
 import { organizationLogoUrl } from "@/lib/organizations/logo-storage";
 
 export const metadata: Metadata = {
-  title: "Organization",
+  title: "Organisasi",
 };
 
 const UUID_PATTERN =
@@ -108,7 +108,7 @@ export default async function OrganizationDetailPage({
             <OrganizationStatusBadge status={organization.status} />
             {isSystem ? (
               <span className={badgeVariants({ variant: "secondary" })}>
-                Reserved
+                Dicadangkan
               </span>
             ) : null}
           </h1>
@@ -129,7 +129,7 @@ export default async function OrganizationDetailPage({
             href="/settings/organizations"
             className={buttonVariants({ variant: "outline", size: "sm" })}
           >
-            Back to list
+            Kembali ke daftar
           </Link>
         </div>
       </div>
@@ -141,20 +141,20 @@ export default async function OrganizationDetailPage({
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard icon="users" label="Users" value={organization.userCount} />
+        <StatCard icon="users" label="Pengguna" value={organization.userCount} />
         <StatCard
           icon="profile"
-          label="Active users"
+          label="Pengguna aktif"
           value={organization.activeUserCount}
         />
         <StatCard
           icon="employees"
-          label="Employees"
+          label="Karyawan"
           value={organization.employeeCount}
         />
         <StatCard
           icon="check"
-          label="Active employees"
+          label="Karyawan aktif"
           value={organization.activeEmployeeCount}
           tone="green"
         />
@@ -162,7 +162,7 @@ export default async function OrganizationDetailPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Dependent records</CardTitle>
+          <CardTitle>Data terkait</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {summary.hasAny ? (
@@ -172,8 +172,7 @@ export default async function OrganizationDetailPage({
                 <span className="font-medium text-foreground">
                   {summary.total}
                 </span>{" "}
-                record(s). Hard deletion is blocked while any protected
-                record exists — deactivate instead.
+                data. Hapus permanen diblokir selama masih ada data yang dilindungi — nonaktifkan saja.
               </p>
               <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
                 {summary.categories.map(({ category, count }) => (
@@ -195,11 +194,11 @@ export default async function OrganizationDetailPage({
             </>
           ) : (
             <EmptyState
-              title="No dependent records"
+              title="Tidak ada data terkait"
               description={
                 isSystem
-                  ? "The reserved SYSTEM tenant is protected regardless of its records."
-                  : "This organization is empty and safe to delete."
+                  ? "Tenant SYSTEM yang dicadangkan selalu dilindungi, apa pun datanya."
+                  : "Organisasi ini kosong dan aman dihapus."
               }
             />
           )}

@@ -11,7 +11,7 @@ import { PayrollComponentManager } from "@/features/payroll/payroll-component-ma
 import { listAllPayrollComponents } from "@/features/payroll/queries";
 
 export const metadata: Metadata = {
-  title: "Payroll components",
+  title: "Komponen payroll",
 };
 
 export default async function PayrollComponentsPage() {
@@ -34,14 +34,14 @@ export default async function PayrollComponentsPage() {
             Komponen Gaji
           </h1>
           <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-            Organization-wide earning and deduction definitions.
+            Definisi pendapatan dan potongan untuk seluruh organisasi.
           </p>
         </div>
         <Link
           href="/payroll"
           className={buttonVariants({ variant: "outline", size: "sm" })}
         >
-          Back to payroll
+          Kembali ke payroll
         </Link>
       </div>
 

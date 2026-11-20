@@ -27,7 +27,7 @@ import {
 import { RolePermissionEditor } from "@/features/rbac/role-editor";
 
 export const metadata: Metadata = {
-  title: "Role details",
+  title: "Detail peran",
 };
 
 /**
@@ -98,7 +98,7 @@ export default async function RoleDetailPage({
               href="/settings/roles"
               className="hover:text-foreground hover:underline"
             >
-              Roles
+              Peran
             </Link>
           </p>
         </div>
@@ -106,7 +106,7 @@ export default async function RoleDetailPage({
           href="/settings/roles"
           className={buttonVariants({ variant: "outline", size: "sm" })}
         >
-          Back to roles
+          Kembali ke peran
         </Link>
       </div>
 

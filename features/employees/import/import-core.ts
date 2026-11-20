@@ -146,25 +146,25 @@ export function validateNormalizedEmployee(input: {
   status: string;
 }): { valid: true; status: ImportStatus } | { valid: false; error: string } {
   if (!input.employeeNumber) {
-    return { valid: false, error: "Employee number is required." };
+    return { valid: false, error: "Nomor karyawan wajib diisi." };
   }
   if (!EMPLOYEE_NUMBER_PATTERN.test(input.employeeNumber)) {
-    return { valid: false, error: "Invalid employee number format." };
+    return { valid: false, error: "Format nomor karyawan tidak valid." };
   }
   if (!input.firstName) {
-    return { valid: false, error: "First name is required." };
+    return { valid: false, error: "Nama depan wajib diisi." };
   }
   if (input.firstName.length > 100) {
-    return { valid: false, error: "First name must be 100 characters or fewer." };
+    return { valid: false, error: "Nama depan maksimal 100 karakter." };
   }
   if (input.lastName && input.lastName.length > 100) {
-    return { valid: false, error: "Last name must be 100 characters or fewer." };
+    return { valid: false, error: "Nama belakang maksimal 100 karakter." };
   }
   if (input.email && !IMPORT_EMAIL_PATTERN.test(input.email)) {
-    return { valid: false, error: "Invalid email address." };
+    return { valid: false, error: "Alamat email tidak valid." };
   }
   if (input.hireDate && !DATE_PATTERN.test(input.hireDate)) {
-    return { valid: false, error: "Invalid hire date format. Use YYYY-MM-DD." };
+    return { valid: false, error: "Format tanggal masuk tidak valid. Gunakan YYYY-MM-DD." };
   }
   const status = input.status as ImportStatus;
   if (!(EMPLOYEE_STATUSES as readonly string[]).includes(status)) {
@@ -247,12 +247,12 @@ export function analyzeImportRows(
     }
 
     if (seenNumbers.has(employeeNumber)) {
-      base.error = "Duplicate employee number in the file.";
+      base.error = "Nomor karyawan ganda di dalam berkas.";
       errorRows.push(base);
       return;
     }
     if (email && seenEmails.has(email.toLowerCase())) {
-      base.error = "Duplicate email in the file.";
+      base.error = "Email ganda di dalam berkas.";
       errorRows.push(base);
       return;
     }
@@ -312,7 +312,7 @@ export function payloadRowToImportedEmployee(item: unknown):
   | { employee: ImportedEmployee; error: null }
   | { employee: null; error: string } {
   if (typeof item !== "object" || item === null) {
-    return { employee: null, error: "Row payload is invalid." };
+    return { employee: null, error: "Data baris tidak valid." };
   }
   const row = item as Record<string, unknown>;
   const employeeNumber =

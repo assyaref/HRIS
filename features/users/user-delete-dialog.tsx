@@ -62,13 +62,13 @@ export function DeleteUserDialog({
       );
       setState(result);
       if (result.status === "success") {
-        notifier.success(result.message ?? "User account deleted.");
+        notifier.success(result.message ?? "Akun pengguna dihapus.");
         setOpen(false);
         router.refresh();
       } else if (result.requiresConfirmation) {
         setNeedsConfirmation(true);
       } else {
-        notifier.error(result.message ?? "Could not delete the user account.");
+        notifier.error(result.message ?? "Akun pengguna gagal dihapus.");
       }
     });
   }
@@ -78,7 +78,7 @@ export function DeleteUserDialog({
     setConfirmation("");
     setNeedsConfirmation(requiresConfirmation);
     notifier.warning(
-      "Deleting this account is permanent and cannot be undone. Review the details and confirm."
+      "Penghapusan akun ini bersifat permanen dan tidak dapat dibatalkan. Periksa detailnya lalu konfirmasi."
     );
     setOpen(true);
   }
@@ -93,7 +93,7 @@ export function DeleteUserDialog({
         onClick={openWithWarning}
         aria-label={`Delete ${user.email}`}
       >
-        Delete
+        Hapus
       </Button>
       <Dialog
         open={open}
@@ -104,12 +104,12 @@ export function DeleteUserDialog({
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-destructive">
-              Delete user account
+              Hapus akun pengguna
             </DialogTitle>
             <DialogDescription>
               {needsConfirmation
                 ? "Akun ini memiliki riwayat (audit log, approval, payroll, dll). Riwayat tetap disimpan tetapi tidak lagi terhubung ke akun ini. Tindakan ini tidak dapat dibatalkan."
-                : "This permanently removes the account and cannot be undone."}
+                : "Akun akan dihapus permanen dan tindakan ini tidak dapat dibatalkan."}
             </DialogDescription>
           </DialogHeader>
 
@@ -124,15 +124,15 @@ export function DeleteUserDialog({
 
           <div className="space-y-3 rounded-md border border-destructive/40 p-4">
             <div className="grid grid-cols-[9rem_1fr] gap-x-3 gap-y-2 text-sm">
-              <span className="text-muted-foreground">Name</span>
+              <span className="text-muted-foreground">Nama</span>
               <span className="truncate font-medium">
                 {user.name ?? "—"}
               </span>
               <span className="text-muted-foreground">Email</span>
               <span className="truncate font-medium">{user.email}</span>
-              <span className="text-muted-foreground">Role</span>
+              <span className="text-muted-foreground">Peran</span>
               <span className="truncate">{user.roleName ?? "—"}</span>
-              <span className="text-muted-foreground">Organization</span>
+              <span className="text-muted-foreground">Organisasi</span>
               <span className="truncate">{user.organizationCode}</span>
               <span className="text-muted-foreground">Status</span>
               <span>
@@ -140,9 +140,7 @@ export function DeleteUserDialog({
               </span>
             </div>
             <p className="text-xs text-muted-foreground">
-              The server will re-check per-organization scope, self-deletion,
-              the last-active Super Administrator guarantee and protected
-              history before deleting.
+              Server akan memeriksa ulang cakupan organisasi, penghapusan akun sendiri, jaminan Super Administrator aktif terakhir, dan riwayat yang dilindungi sebelum menghapus.
             </p>
           </div>
 
@@ -169,7 +167,7 @@ export function DeleteUserDialog({
               onClick={() => setOpen(false)}
               disabled={isPending}
             >
-              Cancel
+              Batal
             </Button>
             <Button
               type="button"
@@ -177,7 +175,7 @@ export function DeleteUserDialog({
               disabled={isPending || !confirmed}
               onClick={confirmDelete}
             >
-              {isPending ? "Deleting..." : "Yes, delete account"}
+              {isPending ? "Menghapus..." : "Ya, hapus akun"}
             </Button>
           </DialogFooter>
         </DialogContent>

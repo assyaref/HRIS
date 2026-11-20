@@ -47,15 +47,15 @@ export interface PurgeableTestEmployee {
 /** The confirmation sentence block shown above the destructive button. */
 function purgeWarning(employeeCount: number, recordCount: number) {
   if (employeeCount === 0) {
-    return "Select at least one test employee to review what a purge would remove.";
+    return "Pilih minimal satu karyawan uji untuk meninjau data yang akan dibersihkan.";
   }
   if (employeeCount === 1) {
-    return "This will permanently remove 1 test employee and about " +
-      `${recordCount} related record${recordCount === 1 ? "" : "s"}. ` +
-      "This cannot be undone and there is no recovery.";
+    return "Tindakan ini akan menghapus permanen 1 karyawan uji dan sekitar " +
+      `${recordCount} data terkait. ` +
+      "Tindakan ini tidak dapat dibatalkan dan data tidak dapat dipulihkan.";
   }
-  return `This will permanently remove ${employeeCount} test employees and about ` +
-    `${recordCount} related records. This cannot be undone and there is no recovery.`;
+  return `Tindakan ini akan menghapus permanen ${employeeCount} karyawan uji dan sekitar ` +
+    `${recordCount} data terkait. Tindakan ini tidak dapat dibatalkan dan data tidak dapat dipulihkan.`;
 }
 
 /**
@@ -152,7 +152,7 @@ export function TestDataPurgePanel({
       notifier.success(
         `${purge.message} ${
           purge.removedRelatedRecords
-        } related record${purge.removedRelatedRecords === 1 ? "" : "s"} removed.`
+        } data terkait dihapus.`
       );
       // After the refresh the purged rows are gone from `employees`, and
       // `activeSelection` is derived from the intersection, so the stale ids
@@ -217,8 +217,7 @@ export function TestDataPurgePanel({
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
           <div>
             <p className="text-sm font-medium">
-              Eligible test employees ({activeSelection.length}/{employees.length}{" "}
-              selected)
+              Karyawan uji yang memenuhi syarat ({activeSelection.length}/{employees.length} dipilih)
             </p>
             <p className="text-xs text-muted-foreground">
               Only records identified as TEST data are listed. Production
@@ -237,7 +236,7 @@ export function TestDataPurgePanel({
                 )
               }
             >
-              {allSelected ? "Clear selection" : "Select all"}
+              {allSelected ? "Hapus pilihan" : "Pilih semua"}
             </Button>
             <Button
               type="button"
@@ -245,7 +244,7 @@ export function TestDataPurgePanel({
               disabled={isBusy || activeSelection.length === 0}
               onClick={runAnalysis}
             >
-              {analyzing ? "Analyzing…" : "Review purge"}
+              {analyzing ? "Analyzing…" : "Tinjau pembersihan"}
             </Button>
           </div>
         </div>
@@ -262,7 +261,7 @@ export function TestDataPurgePanel({
                 <TableHead className="w-10">
                   <input
                     type="checkbox"
-                    aria-label="Select all test employees"
+                    aria-label="Pilih semua karyawan uji"
                     checked={allSelected}
                     disabled={isBusy}
                     onChange={() =>
@@ -272,8 +271,8 @@ export function TestDataPurgePanel({
                     }
                   />
                 </TableHead>
-                <TableHead>Employee Number</TableHead>
-                <TableHead>Name</TableHead>
+                <TableHead>Nomor Karyawan</TableHead>
+                <TableHead>Nama</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -283,7 +282,7 @@ export function TestDataPurgePanel({
                   <TableCell>
                     <input
                       type="checkbox"
-                      aria-label={`Select ${employee.employeeNumber}`}
+                      aria-label={`Pilih ${employee.employeeNumber}`}
                       checked={activeSelection.includes(employee.employeeId)}
                       disabled={isBusy}
                       onChange={() => toggle(employee.employeeId)}
@@ -326,7 +325,7 @@ export function TestDataPurgePanel({
           <DialogHeader>
             <DialogTitle>PURGE TEST DATA</DialogTitle>
             <DialogDescription>
-              Review the server-generated plan before continuing.
+              Tinjau rencana dari server sebelum melanjutkan.
             </DialogDescription>
           </DialogHeader>
 
@@ -352,7 +351,7 @@ export function TestDataPurgePanel({
 
               <div className="space-y-2">
                 <p className="text-sm font-medium">
-                  Selected records ({analysis.selections.length})
+                  Data terpilih ({analysis.selections.length})
                 </p>
                 <ul className="max-h-40 space-y-1 overflow-y-auto rounded-md border border-border p-2 text-sm">
                   {analysis.selections.map((selection) => (
@@ -362,25 +361,22 @@ export function TestDataPurgePanel({
                       </span>
                       <span className="text-muted-foreground">
                         {selection.employeeName} ·{" "}
-                        {selection.deletableRecordCount} related record
-                        {selection.deletableRecordCount === 1 ? "" : "s"}
-                        {selection.blocked ? " · BLOCKED" : ""}
+                        {selection.deletableRecordCount} data terkait
+                        {selection.blocked ? " · DIBLOKIR" : ""}
                       </span>
                     </li>
                   ))}
                 </ul>
                 {analysis.directReportCount > 0 ? (
                   <p className="text-xs text-muted-foreground">
-                    {analysis.directReportCount} direct report
-                    {analysis.directReportCount === 1 ? "" : "s"} outside this
-                    selection will be reviewed before anything is removed.
+                    {analysis.directReportCount} bawahan langsung di luar pilihan ini akan ditinjau sebelum ada yang dihapus.
                   </p>
                 ) : null}
               </div>
 
               <div className="space-y-2">
                 <p className="text-sm font-medium">
-                  Type <span className="font-mono">{TEST_DATA_PURGE_CONFIRMATION_PHRASE}</span> to confirm
+                  Jenis <span className="font-mono">{TEST_DATA_PURGE_CONFIRMATION_PHRASE}</span> untuk konfirmasi
                 </p>
                 <Input
                   value={phrase}
@@ -388,13 +384,13 @@ export function TestDataPurgePanel({
                   placeholder={TEST_DATA_PURGE_CONFIRMATION_PHRASE}
                   autoComplete="off"
                   disabled={isBusy}
-                  aria-label="Purge confirmation phrase"
+                  aria-label="Frasa konfirmasi pembersihan"
                 />
               </div>
 
               <div className="space-y-2">
                 <p className="text-sm font-medium">
-                  Confirm each employee
+                  Konfirmasi setiap karyawan
                 </p>
                 {analysis.selections.map((selection) => (
                   <div key={selection.employeeId} className="space-y-1">
@@ -448,7 +444,7 @@ export function TestDataPurgePanel({
               }}
               disabled={purging}
             >
-              Cancel
+              Batal
             </Button>
             <Button
               type="button"
@@ -457,7 +453,7 @@ export function TestDataPurgePanel({
               aria-disabled={purging || !canPurge}
               onClick={runPurge}
             >
-              {purging ? "Purging…" : "Purge test data"}
+              {purging ? "Membersihkan…" : "Bersihkan data uji"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -450,37 +450,37 @@ export function productionDirectReports(
 }
 
 export const TEST_DATA_PURGE_PROTECTED_MESSAGE =
-  "Test Data Purge blocked — protected historical records exist.";
+  "Pembersihan Data Uji diblokir — ada data historis yang dilindungi.";
 
 export const TEST_DATA_PURGE_RETENTION_NOTICE =
-  "These records are protected by HRIS data-retention rules.";
+  "Data ini dilindungi aturan retensi data HRIS.";
 
 export const TEST_DATA_PURGE_DIRECT_REPORT_MESSAGE =
-  "Test Data Purge blocked — a production employee reports to a selected test employee.";
+  "Pembersihan Data Uji diblokir — ada karyawan produksi yang melapor ke karyawan uji terpilih.";
 
 export const TEST_DATA_PURGE_NOT_TEST_DATA_MESSAGE =
-  "Only records explicitly identified as TEST data are eligible for purge.";
+  "Hanya data yang ditandai sebagai data TEST yang dapat dibersihkan.";
 
 export const TEST_DATA_PURGE_INVALID_CONFIRMATION_MESSAGE =
-  "Purge confirmation did not match.";
+  "Konfirmasi pembersihan tidak cocok.";
 
 export const TEST_DATA_PURGE_ACKNOWLEDGEMENT_MESSAGE =
-  "You must acknowledge that a test data purge cannot be undone.";
+  "Anda harus menyatakan bahwa pembersihan data uji tidak dapat dibatalkan.";
 
 export const TEST_DATA_PURGE_FORBIDDEN_MESSAGE =
-  "You do not have permission to purge test data.";
+  "Anda tidak berhak membersihkan data uji.";
 
 export const TEST_DATA_PURGE_NOT_FOUND_MESSAGE =
-  "None of the selected records exist in your organization.";
+  "Tidak ada data terpilih yang ada di organisasi Anda.";
 
 export const TEST_DATA_PURGE_FAILED_MESSAGE =
-  "Test data purge failed. No records were deleted.";
+  "Pembersihan data uji gagal. Tidak ada data yang dihapus.";
 
 export const TEST_DATA_PURGE_EMPTY_SELECTION_MESSAGE =
-  "Select at least one test employee.";
+  "Pilih minimal satu karyawan uji.";
 
 export const TEST_DATA_PURGE_ADVICE =
-  "No records were deleted. Resolve the findings and try again.";
+  "Tidak ada data yang dihapus. Selesaikan temuan lalu coba lagi.";
 
 /** Block report text, listing every protected category with its count. */
 export function buildProtectedPurgeMessage(
@@ -516,7 +516,7 @@ export function buildProductionDirectReportMessage(
     ...lines,
     "",
     "A production employee must never be affected by a test-data purge. " +
-      "Reassign or unlink the reporting line first, then purge.",
+      "Pindahkan atau lepaskan garis pelaporan terlebih dahulu, lalu bersihkan.",
   ].join("\n");
 }
 

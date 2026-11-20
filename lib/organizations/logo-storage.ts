@@ -35,11 +35,11 @@ const UUID_PATH_SEGMENT =
 
 function resolveFolder(organizationId: string): string {
   if (!UUID_PATH_SEGMENT.test(organizationId)) {
-    throw new Error("Refusing to resolve an organization folder outside the private root.");
+    throw new Error("Menolak membaca folder organisasi di luar root privat.");
   }
   const resolved = path.resolve(PRIVATE_ROOT, organizationId);
   if (!resolved.startsWith(`${PRIVATE_ROOT}${path.sep}`)) {
-    throw new Error("Resolved organization path escapes the private root.");
+    throw new Error("Path organisasi keluar dari root privat.");
   }
   return resolved;
 }

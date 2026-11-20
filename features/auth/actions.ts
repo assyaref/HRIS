@@ -30,11 +30,11 @@ export interface LoginState {
   fieldErrors?: { identifier?: string; password?: string };
 }
 
-const GENERIC_AUTH_ERROR = "Invalid credentials. Check your Employee Number / Email and password.";
+const GENERIC_AUTH_ERROR = "Kredensial tidak valid. Periksa Nomor Karyawan / Email dan kata sandi Anda.";
 const SERVICE_UNAVAILABLE_ERROR =
   "Layanan sedang tidak dapat diakses (database tidak terhubung). Coba lagi beberapa saat lagi atau hubungi administrator.";
 const LOCKED_ERROR =
-  "Too many failed sign-in attempts. Try again later.";
+  "Terlalu banyak percobaan login gagal. Coba lagi nanti.";
 
 /* ---------------------------------------------------------------------- */
 /* Login throttling (in-memory, per-process)                               */
@@ -177,7 +177,7 @@ export async function loginAction(
         // enumeration. The message still avoids leaking internal details.
         return {
           status: "error",
-          error: "This account is not active. Contact your administrator.",
+          error: "Akun ini tidak aktif. Hubungi administrator Anda.",
         };
       }
       // Wrong credentials: advance the throttle counter for this key.

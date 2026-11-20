@@ -99,7 +99,7 @@ function ComponentFormDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {initial ? "Edit payroll component" : "New payroll component"}
+            {initial ? "Ubah komponen payroll" : "New payroll component"}
           </DialogTitle>
           <DialogDescription>
             Organization-wide component definitions. Amounts are integer IDR;
@@ -118,7 +118,7 @@ function ComponentFormDialog({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="component-code">Code</Label>
+              <Label htmlFor="component-code">Kode</Label>
               <Input
                 id="component-code"
                 name="code"
@@ -130,12 +130,12 @@ function ComponentFormDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="component-name">Name</Label>
+              <Label htmlFor="component-name">Nama</Label>
               <Input
                 id="component-name"
                 name="name"
                 defaultValue={defaults.name}
-                placeholder="Basic salary"
+                placeholder="Gaji pokok"
                 required
               />
             </div>
@@ -143,7 +143,7 @@ function ComponentFormDialog({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="component-type">Type</Label>
+              <Label htmlFor="component-type">Jenis</Label>
               <select id="component-type" name="type" defaultValue={defaults.type} className={selectClass}>
                 {PAYROLL_COMPONENT_TYPES.map((type) => (
                   <option key={type} value={type}>
@@ -153,7 +153,7 @@ function ComponentFormDialog({
               </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="component-method">Calculation method</Label>
+              <Label htmlFor="component-method">Metode perhitungan</Label>
               <select
                 id="component-method"
                 name="calculationMethod"
@@ -171,7 +171,7 @@ function ComponentFormDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="component-amount">Default amount / percent</Label>
+            <Label htmlFor="component-amount">Jumlah / persen bawaan</Label>
             <Input
               id="component-amount"
               name="defaultAmount"
@@ -184,8 +184,8 @@ function ComponentFormDialog({
             />
             <p className="text-xs text-muted-foreground">
               {calculationMethod === "percentage"
-                ? "Percentage must be a whole number from 0 to 100% of fixed earnings."
-                : "Fixed/manual uses an integer IDR amount."}
+                ? "Persentase harus bilangan bulat 0 sampai 100% dari pendapatan tetap."
+                : "Tetap/manual memakai jumlah rupiah bulat."}
             </p>
           </div>
 
@@ -202,10 +202,10 @@ function ComponentFormDialog({
 
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              Batal
             </Button>
             <Button type="submit" disabled={pending}>
-              {pending ? "Saving…" : initial ? "Save changes" : "Create component"}
+              {pending ? "Menyimpan…" : initial ? "Simpan perubahan" : "Buat komponen"}
             </Button>
           </DialogFooter>
         </form>
@@ -274,7 +274,7 @@ export function PayrollComponentManager({
           </p>
         </div>
         <Button type="button" onClick={() => setCreateOpen(true)}>
-          New component
+          Komponen baru
         </Button>
       </div>
 
@@ -302,22 +302,22 @@ export function PayrollComponentManager({
             <thead className="[&_tr]:border-b">
               <tr className="border-b">
                 <th className="h-10 px-4 text-left align-middle text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                  Component
+                  Komponen
                 </th>
                 <th className="h-10 px-4 text-left align-middle text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                  Type
+                  Jenis
                 </th>
                 <th className="h-10 px-4 text-left align-middle text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                  Method
+                  Metode
                 </th>
                 <th className="h-10 px-4 text-right align-middle text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                  Default
+                  Bawaan
                 </th>
                 <th className="h-10 px-4 text-left align-middle text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                   Status
                 </th>
                 <th className="h-10 px-4 text-right align-middle text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                  Actions
+                  Aksi
                 </th>
               </tr>
             </thead>
@@ -351,9 +351,9 @@ export function PayrollComponentManager({
                   </td>
                   <td className="p-4">
                     {component.active === "true" ? (
-                      <Badge variant="primary">Active</Badge>
+                      <Badge variant="primary">Aktif</Badge>
                     ) : (
-                      <Badge variant="secondary">Inactive</Badge>
+                      <Badge variant="secondary">Nonaktif</Badge>
                     )}
                   </td>
                   <td className="p-4 text-right">
@@ -364,7 +364,7 @@ export function PayrollComponentManager({
                         size="sm"
                         onClick={() => setEditing(component)}
                       >
-                        Edit
+                        Ubah
                       </Button>
                       <Button
                         type="button"
@@ -373,7 +373,7 @@ export function PayrollComponentManager({
                         onClick={() => toggle(component)}
                         disabled={pending}
                       >
-                        {component.active === "true" ? "Deactivate" : "Activate"}
+                        {component.active === "true" ? "Nonaktifkan" : "Aktifkan"}
                       </Button>
                       {canDelete ? (
                         <Button

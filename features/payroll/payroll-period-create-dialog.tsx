@@ -45,12 +45,12 @@ export function PayrollPeriodCreateDialog() {
   return (
     <>
       <Button type="button" onClick={() => setOpen(true)}>
-        New payroll period
+        Periode payroll baru
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>New payroll period</DialogTitle>
+            <DialogTitle>Periode payroll baru</DialogTitle>
             <DialogDescription>
               Create a payroll cycle. Dates use YYYY-MM-DD and are stored as
               UTC; no run is created until you calculate it.
@@ -67,7 +67,7 @@ export function PayrollPeriodCreateDialog() {
             ) : null}
 
             <div className="space-y-2">
-              <Label htmlFor="period-code">Code</Label>
+              <Label htmlFor="period-code">Kode</Label>
               <Input
                 id="period-code"
                 name="code"
@@ -78,7 +78,7 @@ export function PayrollPeriodCreateDialog() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="period-name">Name</Label>
+              <Label htmlFor="period-name">Nama</Label>
               <Input
                 id="period-name"
                 name="name"
@@ -88,15 +88,15 @@ export function PayrollPeriodCreateDialog() {
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="period-start">Start date</Label>
+                <Label htmlFor="period-start">Tanggal mulai</Label>
                 <Input id="period-start" name="periodStart" type="date" required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="period-end">End date</Label>
+                <Label htmlFor="period-end">Tanggal selesai</Label>
                 <Input id="period-end" name="periodEnd" type="date" required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="period-payment">Payment date</Label>
+                <Label htmlFor="period-payment">Tanggal pembayaran</Label>
                 <Input id="period-payment" name="paymentDate" type="date" required />
               </div>
             </div>
@@ -107,10 +107,10 @@ export function PayrollPeriodCreateDialog() {
                 variant="ghost"
                 onClick={() => setOpen(false)}
               >
-                Cancel
+                Batal
               </Button>
               <Button type="submit" disabled={pending}>
-                {pending ? "Creating…" : "Create period"}
+                {pending ? "Membuat…" : "Buat periode"}
               </Button>
             </DialogFooter>
           </form>

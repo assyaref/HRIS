@@ -65,18 +65,18 @@ export const EMPLOYEE_ATTENDANCE_STATE_LABELS: Record<
   EmployeeAttendanceState,
   string
 > = {
-  NOT_CHECKED_IN: "Not checked in",
-  CHECKED_IN: "Checked in",
-  CHECKED_OUT: "Checked out",
-  REJECTED: "Rejected",
-  UNAVAILABLE: "Unavailable",
+  NOT_CHECKED_IN: "Belum absen masuk",
+  CHECKED_IN: "Sudah absen masuk",
+  CHECKED_OUT: "Sudah absen pulang",
+  REJECTED: "Ditolak",
+  UNAVAILABLE: "Tidak tersedia",
 };
 
 export const ATTENDANCE_STATUS_LABELS: Record<AttendanceStatus, string> = {
-  present: "Present",
-  completed: "Completed",
-  incomplete: "Incomplete",
-  rejected: "Rejected",
+  present: "Hadir",
+  completed: "Selesai",
+  incomplete: "Belum lengkap",
+  rejected: "Ditolak",
 };
 
 export const ATTENDANCE_LOCATION_STATUS_LABELS: Record<
@@ -84,17 +84,17 @@ export const ATTENDANCE_LOCATION_STATUS_LABELS: Record<
   string
 > = {
   valid: "Valid",
-  outside_geofence: "Outside geofence",
-  unavailable: "Unavailable",
-  denied: "Denied",
+  outside_geofence: "Di luar geofence",
+  unavailable: "Tidak tersedia",
+  denied: "Ditolak",
 };
 
 export const ATTENDANCE_VERIFICATION_STATUS_LABELS: Record<
   AttendanceVerificationStatus,
   string
 > = {
-  pending: "Pending",
-  verified: "Verified",
-  failed: "Failed",
-  unavailable: "Unavailable",
+  pending: "Menunggu",
+  verified: "Terverifikasi",
+  failed: "Gagal",
+  unavailable: "Tidak tersedia",
 };

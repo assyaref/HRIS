@@ -75,7 +75,7 @@ export function UserRoleManager({
     const role = roles.find((item) => item.id === selectedRoleId);
 
     if (!role) {
-      setError("Selected role was not found.");
+      setError("Peran yang dipilih tidak ditemukan.");
       return;
     }
 
@@ -91,11 +91,11 @@ export function UserRoleManager({
       );
 
       if (result.status === "success") {
-        setMessage(result.message ?? "Role assigned.");
+        setMessage(result.message ?? "Peran ditetapkan.");
         setSelectedRoleId("");
         window.location.reload();
       } else {
-        setError(result.message ?? "Could not assign role.");
+        setError(result.message ?? "Peran gagal ditetapkan.");
       }
     });
   }
@@ -116,9 +116,9 @@ export function UserRoleManager({
         setAssignments((current) =>
           current.filter((assignment) => assignment.roleId !== roleId)
         );
-        setMessage(result.message ?? "Role removed.");
+        setMessage(result.message ?? "Peran dihapus.");
       } else {
-        setError(result.message ?? "Could not remove role.");
+        setError(result.message ?? "Peran gagal dicabut.");
       }
     });
   }
@@ -128,10 +128,9 @@ export function UserRoleManager({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>User Role Management</CardTitle>
+        <CardTitle>Manajemen Peran Pengguna</CardTitle>
         <CardDescription>
-          Assign organization roles to users. Permissions are inherited from
-          the selected role.
+          Tetapkan peran organisasi ke pengguna. Hak akses diwarisi dari peran yang dipilih.
         </CardDescription>
       </CardHeader>
 
@@ -159,7 +158,7 @@ export function UserRoleManager({
             htmlFor="user-role-user"
             className="text-sm font-medium"
           >
-            User
+            Pengguna
           </label>
 
           <select
@@ -172,7 +171,7 @@ export function UserRoleManager({
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
           >
             {users.length === 0 ? (
-              <option value="">No users found</option>
+              <option value="">Pengguna tidak ditemukan</option>
             ) : (
               users.map((user) => (
                 <option key={user.id} value={user.id}>
@@ -194,15 +193,15 @@ export function UserRoleManager({
 
         <div className="space-y-3">
           <div>
-            <h3 className="text-sm font-semibold">Current roles</h3>
+            <h3 className="text-sm font-semibold">Peran saat ini</h3>
             <p className="text-xs text-muted-foreground">
-              EMPLOYEE is protected as the base tenant role.
+              EMPLOYEE dilindungi sebagai peran dasar tenant.
             </p>
           </div>
 
           {assignments.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No roles assigned.
+              Belum ada peran.
             </p>
           ) : (
             <div className="space-y-2">
@@ -220,7 +219,7 @@ export function UserRoleManager({
 
                   {assignment.roleCode === "EMPLOYEE" ? (
                     <span className="text-xs text-muted-foreground">
-                      Protected
+                      Dilindungi
                     </span>
                   ) : (
                     <Button
@@ -230,7 +229,7 @@ export function UserRoleManager({
                       disabled={pending}
                       onClick={() => removeRole(assignment.roleId)}
                     >
-                      Remove
+                      Hapus
                     </Button>
                   )}
                 </div>
@@ -241,9 +240,9 @@ export function UserRoleManager({
 
         <div className="space-y-3 border-t pt-5">
           <div>
-            <h3 className="text-sm font-semibold">Assign role</h3>
+            <h3 className="text-sm font-semibold">Tetapkan peran</h3>
             <p className="text-xs text-muted-foreground">
-              SUPERADMIN cannot be delegated to tenant users.
+              SUPERADMIN tidak dapat didelegasikan ke pengguna tenant.
             </p>
           </div>
 
@@ -256,8 +255,8 @@ export function UserRoleManager({
             >
               <option value="">
                 {availableRoles.length === 0
-                  ? "No additional roles available"
-                  : "Select role"}
+                  ? "Tidak ada peran tambahan"
+                  : "Pilih peran"}
               </option>
 
               {availableRoles.map((role) => (
@@ -272,7 +271,7 @@ export function UserRoleManager({
               disabled={pending || !selectedRoleId || !selectedUserId}
               onClick={assignRole}
             >
-              {pending ? "Processing..." : "Assign Role"}
+              {pending ? "Memproses..." : "Tetapkan Peran"}
             </Button>
           </div>
         </div>

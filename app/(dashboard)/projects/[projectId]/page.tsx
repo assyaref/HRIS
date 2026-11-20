@@ -19,7 +19,7 @@ import { ProjectStatusDialog } from "@/features/projects/project-status-dialog";
 import { ProjectDeleteDialog } from "@/features/projects/project-delete-dialog";
 
 export const metadata: Metadata = {
-  title: "Project detail",
+  title: "Detail proyek",
 };
 
 function formatDate(date: Date | null) {
@@ -90,7 +90,7 @@ export default async function ProjectDetailPage({
             href="/projects"
             className={buttonVariants({ variant: "outline", size: "sm" })}
           >
-            Back
+            Kembali
           </Link>
 
           <div>
@@ -117,7 +117,7 @@ export default async function ProjectDetailPage({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-lg border p-5">
-          <p className="text-muted-foreground text-sm">Organization</p>
+          <p className="text-muted-foreground text-sm">Organisasi</p>
           <p className="mt-1 font-medium">{project.organizationName}</p>
           <p className="text-muted-foreground mt-1 font-mono text-xs">
             {project.organizationCode}
@@ -132,18 +132,18 @@ export default async function ProjectDetailPage({
         </div>
 
         <div className="rounded-lg border p-5">
-          <p className="text-muted-foreground text-sm">Start Date</p>
+          <p className="text-muted-foreground text-sm">Tanggal Mulai</p>
           <p className="mt-1 font-medium">{formatDate(project.startDate)}</p>
         </div>
 
         <div className="rounded-lg border p-5">
-          <p className="text-muted-foreground text-sm">End Date</p>
+          <p className="text-muted-foreground text-sm">Tanggal Selesai</p>
           <p className="mt-1 font-medium">{formatDate(project.endDate)}</p>
         </div>
       </div>
 
       <div className="rounded-lg border p-5">
-        <p className="text-muted-foreground text-sm">Linked records</p>
+        <p className="text-muted-foreground text-sm">Data terkait</p>
         {dependencySummary.hasAny ? (
           <ul className="mt-2 space-y-1 text-sm">
             {dependencySummary.categories.map(
@@ -152,10 +152,10 @@ export default async function ProjectDetailPage({
                   <Badge variant="secondary">{count}</Badge>
                   <span>
                     {category === "assignments"
-                      ? "Employee assignments"
+                      ? "Penugasan karyawan"
                       : category === "attendance"
                         ? "Attendance records"
-                        : "Work locations"}
+                        : "Lokasi kerja"}
                   </span>
                 </li>
               )
@@ -163,14 +163,12 @@ export default async function ProjectDetailPage({
           </ul>
         ) : (
           <p className="mt-1 text-sm">
-            None — this project is not referenced by assignments, attendance
-            or work locations.
+            Tidak ada — proyek ini tidak dirujuk oleh penugasan, absensi, atau lokasi kerja.
           </p>
         )}
         {dependencySummary.hasAny ? (
           <p className="text-muted-foreground mt-2 text-xs">
-            Projects with linked records cannot be deleted or moved to
-            another organization. Set the project to Inactive instead.
+            Proyek yang memiliki data terkait tidak dapat dihapus atau dipindah ke organisasi lain. Ubah statusnya menjadi Nonaktif.
           </p>
         ) : null}
       </div>

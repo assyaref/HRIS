@@ -27,7 +27,7 @@ import { ProjectCreateDialog } from "@/features/projects/project-create-dialog";
 import { ProjectTable } from "@/features/projects/project-table";
 
 export const metadata: Metadata = {
-  title: "Projects",
+  title: "Proyek",
 };
 
 function readParam(value: string | string[] | undefined): string | undefined {
@@ -114,8 +114,7 @@ export default async function ProjectsPage({
             Proyek
           </h1>
           <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-            Manage organizational projects across tenants. Reserved for Super
-            Administrators.
+            Kelola proyek organisasi lintas tenant. Khusus Super Administrator.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -137,7 +136,7 @@ export default async function ProjectsPage({
               type="search"
               name="q"
               defaultValue={search ?? ""}
-              placeholder="Search code, name or organization"
+              placeholder="Cari kode, nama, atau organisasi"
               className="border-input bg-background h-9 w-44 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:w-56"
             />
             {search ? (
@@ -145,7 +144,7 @@ export default async function ProjectsPage({
                 type="submit"
                 className={buttonVariants({ variant: "outline", size: "sm" })}
               >
-                Search
+                Cari
               </button>
             ) : null}
           </form>
@@ -161,7 +160,7 @@ export default async function ProjectsPage({
             size: "sm",
           })}
         >
-          All
+          Semua
         </Link>
         {PROJECT_STATUSES.map((value) => (
           <Link
@@ -186,9 +185,9 @@ export default async function ProjectsPage({
             name="organizationId"
             defaultValue={organizationId ?? ""}
             className="border-input bg-background h-8 rounded-md border px-2 text-xs"
-            aria-label="Filter by organization"
+            aria-label="Filter berdasarkan organisasi"
           >
-            <option value="">All organizations</option>
+            <option value="">Semua organisasi</option>
             {allOrganizations.map((organization) => (
               <option key={organization.id} value={organization.id}>
                 {organization.name}
@@ -208,8 +207,8 @@ export default async function ProjectsPage({
         <CardContent className="pt-6">
           {projects.length === 0 ? (
             <EmptyState
-              title="No projects found"
-              description="Adjust the search or filters, or create the first project inside an organization."
+              title="Proyek tidak ditemukan"
+              description="Ubah pencarian atau filter, atau buat proyek pertama di dalam organisasi."
             />
           ) : (
             <ProjectTable

@@ -61,7 +61,7 @@ export function CreateUserDialog({
   );
 
   if (state.status === "success" && open) {
-    notifier.success(state.message ?? "User account created.");
+    notifier.success(state.message ?? "Akun pengguna dibuat.");
     setOpen(false);
   }
 
@@ -75,12 +75,12 @@ export function CreateUserDialog({
   return (
     <>
       <Button type="button" onClick={() => setOpen(true)}>
-        Add User
+        Tambah Pengguna
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Add User</DialogTitle>
+            <DialogTitle>Tambah Pengguna</DialogTitle>
             <DialogDescription>
               Create a new HRIS user account. Email addresses must be unique
               system-wide; role and linked employee scoped to the current
@@ -101,11 +101,11 @@ export function CreateUserDialog({
             <input type="hidden" name="organizationId" value={organizationId} />
 
             <div className="space-y-2">
-              <Label htmlFor="create-user-name">Name</Label>
+              <Label htmlFor="create-user-name">Nama</Label>
               <Input
                 id="create-user-name"
                 name="name"
-                placeholder="Full name"
+                placeholder="Nama lengkap"
                 autoComplete="off"
                 invalid={Boolean(nameError)}
                 aria-invalid={Boolean(nameError)}
@@ -132,7 +132,7 @@ export function CreateUserDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="create-user-role">Role</Label>
+              <Label htmlFor="create-user-role">Peran</Label>
               <select
                 id="create-user-role"
                 name="roleId"
@@ -151,7 +151,7 @@ export function CreateUserDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="create-user-employee">Employee</Label>
+              <Label htmlFor="create-user-employee">Karyawan</Label>
               <select
                 id="create-user-employee"
                 name="employeeId"
@@ -183,10 +183,10 @@ export function CreateUserDialog({
                 value={status}
                 onChange={(event) => setStatus(event.target.value)}
               >
-                <option value="pending">Invited</option>
-                <option value="active">Active</option>
-                <option value="suspended">Inactive</option>
-                <option value="locked">Locked</option>
+                <option value="pending">Diundang</option>
+                <option value="active">Aktif</option>
+                <option value="suspended">Nonaktif</option>
+                <option value="locked">Terkunci</option>
               </select>
               {statusError ? (
                 <p className="text-sm text-destructive">{statusError}</p>
@@ -194,7 +194,7 @@ export function CreateUserDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="create-user-password">Password</Label>
+              <Label htmlFor="create-user-password">Kata sandi</Label>
               <Input
                 id="create-user-password"
                 name="password"
@@ -207,8 +207,8 @@ export function CreateUserDialog({
               />
               <p className="text-xs text-muted-foreground">
                 {status === "active"
-                  ? "Required for an Active account. At least 8 characters."
-                  : "Optional until the account is activated."}
+                  ? "Wajib untuk akun Aktif. Minimal 8 karakter."
+                  : "Opsional sampai akun diaktifkan."}
               </p>
               {passwordError ? (
                 <p className="text-sm text-destructive">{passwordError}</p>
@@ -217,8 +217,7 @@ export function CreateUserDialog({
 
             {isSuperAdmin ? (
               <p className="text-xs text-muted-foreground">
-                Super Administrators can manage this account across
-                organizations.
+                Super Administrator dapat mengelola akun ini lintas organisasi.
               </p>
             ) : null}
 
@@ -229,10 +228,10 @@ export function CreateUserDialog({
                 onClick={() => setOpen(false)}
                 disabled={isPending}
               >
-                Cancel
+                Batal
               </Button>
               <Button type="submit" disabled={isPending}>
-                {isPending ? "Creating..." : "Create user"}
+                {isPending ? "Membuat..." : "Buat pengguna"}
               </Button>
             </DialogFooter>
           </form>

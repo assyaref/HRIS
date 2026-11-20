@@ -112,7 +112,7 @@ const idleDependencyCheck: DependencyCheckState = { status: "idle" };
  * 1. the typed Employee Number matches exactly, character for character;
  * 2. the read-only pre-flight has arrived (a pending or failed report keeps
  *    the button disabled — fail closed);
- * 3. "I understand that this action cannot be undone." is ticked;
+ * 3. "Saya mengerti bahwa tindakan ini tidak dapat dibatalkan." is ticked;
  * 4. a deletion reason of at least 10 characters is supplied — re-validated
  *    server-side and recorded on the permanent-delete audit trail.
  *
@@ -274,7 +274,7 @@ export function EmployeePermanentDeleteDialog({
     if (state.status !== "success" || handledSuccess.current) return;
     handledSuccess.current = true;
     notifier.success(
-      state.message ?? "Employee permanently deleted successfully."
+      state.message ?? "Karyawan berhasil dihapus permanen."
     );
     router.refresh();
   }, [state, router]);
@@ -292,9 +292,9 @@ export function EmployeePermanentDeleteDialog({
         size={variant === "button" ? "md" : "sm"}
         className="text-destructive hover:bg-destructive/10 hover:text-destructive"
         onClick={openDialog}
-        aria-label={`Permanently delete ${displayName}`}
+        aria-label={`Hapus permanen ${displayName}`}
       >
-        Permanent Delete
+        Hapus Permanen
       </Button>
 
       <Dialog
@@ -317,22 +317,21 @@ export function EmployeePermanentDeleteDialog({
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="text-destructive">
-              Permanent Delete Employee?
+              Hapus Permanen Karyawan?
             </DialogTitle>
             <DialogDescription>
-              This action permanently deletes this employee and eligible
-              related records. This action cannot be undone.
+              Tindakan ini menghapus permanen karyawan ini beserta data terkait yang memenuhi syarat. Tindakan ini tidak dapat dibatalkan.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="space-y-3 rounded-md border border-destructive/40 bg-destructive/5 p-4">
               <div className="grid grid-cols-[7rem_1fr] gap-x-3 gap-y-2 text-sm">
-                <span className="text-muted-foreground">Name</span>
+                <span className="text-muted-foreground">Nama</span>
                 <span className="truncate font-medium">{displayName}</span>
 
                 <span className="text-muted-foreground">
-                  Employee Number
+                  Nomor Karyawan
                 </span>
                 <span className="truncate font-mono text-xs">
                   {employee.employeeNumber}
@@ -346,7 +345,7 @@ export function EmployeePermanentDeleteDialog({
                 {role ? (
                   <>
                     <span className="text-muted-foreground">
-                      Department / Position
+                      Departemen / Jabatan
                     </span>
                     <span className="truncate">{role}</span>
                   </>
@@ -361,17 +360,17 @@ export function EmployeePermanentDeleteDialog({
               data-testid="permanent-delete-dependency-report"
             >
               <p className="text-xs font-medium text-muted-foreground">
-                Related records
+                Data terkait
               </p>
               {dependencyCheckPending ? (
                 <p className="text-sm text-muted-foreground">
-                  Checking related records…
+                  Memeriksa data terkait…
                 </p>
               ) : null}
 
               {dependencyCheck.status === "ready" ? (
                 <p className="text-sm text-muted-foreground">
-                  Total related records:{" "}
+                  Total data terkait:{" "}
                   <span className="font-mono font-medium">
                     {totalRelatedRecords}
                   </span>
@@ -388,7 +387,7 @@ export function EmployeePermanentDeleteDialog({
                       <span>
                         {dependency.label}{" "}
                         <span className="text-xs text-muted-foreground">
-                          (will be deleted)
+                          (akan dihapus)
                         </span>
                       </span>
                       <span className="font-mono font-medium">
@@ -399,9 +398,9 @@ export function EmployeePermanentDeleteDialog({
                   {directReportCount > 0 ? (
                     <li className="flex items-start justify-between gap-3 text-sm">
                       <span>
-                        Direct reports{" "}
+                        Bawahan langsung{" "}
                         <span className="text-xs text-muted-foreground">
-                          (retained — their manager link will be cleared)
+                          (disimpan — tautan atasan akan dikosongkan)
                         </span>
                       </span>
                       <span className="font-mono font-medium">
@@ -415,14 +414,14 @@ export function EmployeePermanentDeleteDialog({
               {dependencyCheck.status === "ready" &&
               deletableSummary.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  No deletable related records were found.
+                  Tidak ditemukan data terkait yang dapat dihapus.
                 </p>
               ) : null}
 
               {hasRetainedRecords ? (
                 <div className="space-y-2" data-testid="permanent-delete-retained-summary">
                   <p className="text-xs font-medium text-muted-foreground">
-                    Retained records (never deleted)
+                    Data yang disimpan (tidak pernah dihapus)
                   </p>
                   <ul className="space-y-1">
                     {retainedSummary.map((dependency) => (
@@ -433,7 +432,7 @@ export function EmployeePermanentDeleteDialog({
                         <span>
                           {dependency.label}{" "}
                           <span className="text-xs text-muted-foreground">
-                            (retained for legal and audit purposes)
+                            (disimpan untuk keperluan hukum dan audit)
                           </span>
                         </span>
                         <span className="font-mono font-medium">
@@ -443,53 +442,44 @@ export function EmployeePermanentDeleteDialog({
                     ))}
                   </ul>
                   <p className="text-xs text-muted-foreground">
-                    Protected historical records are retained for legal and
-                    audit purposes and are never deleted, not even by a Super
-                    Administrator. The transaction stores their historical
-                    identity (employee number and name) on each retained row
-                    and removes only the link to the employee record, so time
-                    and employment-history reports stay complete. Payroll
-                    history is not retained: it is deleted with the employee
-                    under the approved deletion scope.
+                    Data historis yang dilindungi disimpan untuk keperluan hukum dan audit dan tidak pernah dihapus, bahkan oleh Super Administrator. Transaksi menyimpan identitas historisnya (nomor dan nama karyawan) di setiap baris yang disimpan dan hanya melepas tautan ke data karyawan, sehingga laporan waktu dan riwayat kepegawaian tetap lengkap. Riwayat payroll tidak disimpan: ikut dihapus bersama karyawan sesuai cakupan penghapusan yang disetujui.
                   </p>
                 </div>
               ) : null}
 
               {legalHoldActive ? (
                 <p className="text-sm text-destructive">
-                  {DELETION_LEGAL_HOLD_MESSAGE} Delete is disabled.
+                  {DELETION_LEGAL_HOLD_MESSAGE} Hapus dinonaktifkan.
                 </p>
               ) : null}
 
               {blockingDeletionRequestCount > 0 ? (
                 <p className="text-sm text-destructive">
-                  {DELETION_ACTIVE_REQUEST_MESSAGE} Delete is disabled.
+                  {DELETION_ACTIVE_REQUEST_MESSAGE} Hapus dinonaktifkan.
                 </p>
               ) : null}
 
               {dependencyCheck.status === "error" ? (
                 <p className="text-sm text-destructive">
-                  {dependencyCheck.message} Delete stays disabled — reload and
-                  try again.
+                  {dependencyCheck.message} Hapus tetap dinonaktifkan — muat ulang lalu coba lagi.
                 </p>
               ) : null}
             </div>
 
             <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm">
               <p className="font-medium text-destructive">
-                This action cannot be undone.
+                Tindakan ini tidak dapat dibatalkan.
               </p>
               <p className="mt-1 text-destructive/90">
-                Permanent deletion will remove this employee and eligible
-                related records in a single transaction.
+                Hapus permanen akan menghapus karyawan ini beserta data terkait yang memenuhi syarat dalam satu transaksi.
               </p>
               <p className="mt-1 text-destructive/90">
-                Protected historical records, if any, will not be deleted.
+                Data historis yang dilindungi, jika ada, tidak akan dihapus.
               </p>
             </div>
 
             <p className="text-sm font-medium">
-              Type the Employee Number to confirm
+              Ketik Nomor Karyawan untuk konfirmasi
             </p>
 
             <div className="space-y-2">
@@ -497,7 +487,7 @@ export function EmployeePermanentDeleteDialog({
                 htmlFor={`delete-employee-number-${employee.id}`}
                 className="text-xs text-muted-foreground"
               >
-                Employee Number
+                Nomor Karyawan
               </label>
               <Input
                 id={`delete-employee-number-${employee.id}`}
@@ -517,7 +507,7 @@ export function EmployeePermanentDeleteDialog({
                 <span className="font-mono font-medium">
                   {employee.employeeNumber}
                 </span>{" "}
-                to enable deletion.
+                untuk mengaktifkan penghapusan.
               </p>
             </div>
 
@@ -526,7 +516,7 @@ export function EmployeePermanentDeleteDialog({
                 htmlFor={`delete-employee-reason-${employee.id}`}
                 className="text-xs text-muted-foreground"
               >
-                Reason for deletion (required)
+                Alasan penghapusan (wajib)
               </label>
               <textarea
                 id={`delete-employee-reason-${employee.id}`}
@@ -534,7 +524,7 @@ export function EmployeePermanentDeleteDialog({
                 onChange={(event) => setReason(event.target.value)}
                 rows={3}
                 maxLength={DELETION_REASON_MAX_LENGTH}
-                placeholder="Why is this employee being permanently deleted?"
+                placeholder="Mengapa karyawan ini dihapus permanen?"
                 disabled={isPending}
                 data-testid="permanent-delete-reason"
                 aria-describedby={`delete-employee-reason-help-${employee.id}`}
@@ -544,8 +534,8 @@ export function EmployeePermanentDeleteDialog({
                 id={`delete-employee-reason-help-${employee.id}`}
                 className="text-xs text-muted-foreground"
               >
-                Recorded on the permanent-delete audit trail. At least{" "}
-                {DELETION_REASON_MIN_LENGTH} characters.
+                Dicatat di jejak audit hapus permanen. Minimal{" "}
+                {DELETION_REASON_MIN_LENGTH} karakter.
               </p>
             </div>
 
@@ -559,8 +549,7 @@ export function EmployeePermanentDeleteDialog({
                 data-testid="permanent-delete-acknowledgement"
               />
               <span>
-                I understand that this action cannot be undone. Are you
-                absolutely sure?
+                Saya mengerti bahwa tindakan ini tidak dapat dibatalkan. Apakah Anda benar-benar yakin?
               </span>
             </label>
 
@@ -583,7 +572,7 @@ export function EmployeePermanentDeleteDialog({
                   deleted.
                 </p>
                 <p className="text-xs font-medium text-muted-foreground">
-                  Final result of the transaction
+                  Hasil akhir transaksi
                 </p>
                 {state.removedSummary &&
                 Object.keys(state.removedSummary).length > 0 ? (
@@ -597,7 +586,7 @@ export function EmployeePermanentDeleteDialog({
                           <span>
                             {label}{" "}
                             <span className="text-xs text-muted-foreground">
-                              (deleted)
+                              (dihapus)
                             </span>
                           </span>
                           <span className="font-mono font-medium">{count}</span>
@@ -607,7 +596,7 @@ export function EmployeePermanentDeleteDialog({
                   </ul>
                 ) : (
                   <p className="text-muted-foreground">
-                    No related records had to be removed.
+                    Tidak ada data terkait yang perlu dihapus.
                   </p>
                 )}
                 {state.retainedDependencies &&
@@ -621,7 +610,7 @@ export function EmployeePermanentDeleteDialog({
                         <span>
                           {dependency.label}{" "}
                           <span className="text-xs text-muted-foreground">
-                            (retained with its historical identity)
+                            (disimpan dengan identitas historisnya)
                           </span>
                         </span>
                         <span className="font-mono font-medium">
@@ -632,7 +621,7 @@ export function EmployeePermanentDeleteDialog({
                   </ul>
                 ) : (
                   <p className="text-muted-foreground">
-                    No historical records had to be retained.
+                    Tidak ada data historis yang perlu disimpan.
                   </p>
                 )}
               </div>
@@ -647,7 +636,7 @@ export function EmployeePermanentDeleteDialog({
                 onClick={closeFinalResult}
                 data-testid="permanent-delete-final-result-close"
               >
-                Close
+                Tutup
               </Button>
             ) : (
               <>
@@ -657,7 +646,7 @@ export function EmployeePermanentDeleteDialog({
                   disabled={isPending}
                   onClick={reset}
                 >
-                  Cancel
+                  Batal
                 </Button>
                 <Button
                   type="button"
@@ -677,7 +666,7 @@ export function EmployeePermanentDeleteDialog({
                     startTransition(() => formAction(formData));
                   }}
                 >
-                  {isPending ? "Deleting…" : "Permanently Delete Employee"}
+                  {isPending ? "Menghapus…" : "Hapus Permanen Karyawan"}
                 </Button>
               </>
             )}

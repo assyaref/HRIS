@@ -40,7 +40,7 @@ import { monthPeriodOf } from "@/features/attendance/recap";
 import { recapPeriodParamsSchema } from "@/features/attendance/recap.schemas";
 
 export const metadata: Metadata = {
-  title: "Employee attendance recap",
+  title: "Rekap absensi karyawan",
 };
 
 function readParam(
@@ -125,13 +125,13 @@ export default async function EmployeeAttendanceRecapPage({
           href={`/attendance/recap?startDate=${startDate}&endDate=${endDate}`}
           className={buttonVariants({ variant: "outline", size: "sm" })}
         >
-          Back to recap
+          Kembali ke rekap
         </Link>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Period</CardTitle>
+          <CardTitle>Periode</CardTitle>
           <CardDescription>
             {formatDate(new Date(`${startDate}T00:00:00.000Z`))} –{" "}
             {formatDate(new Date(`${endDate}T00:00:00.000Z`))}
@@ -140,43 +140,43 @@ export default async function EmployeeAttendanceRecapPage({
         <CardContent>
           <div className="grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
             <div>
-              <p className="text-muted-foreground">Department</p>
+              <p className="text-muted-foreground">Departemen</p>
               <p className="font-medium">{employee.department ?? "—"}</p>
             </div>
             <div>
-              <p className="text-muted-foreground">Position</p>
+              <p className="text-muted-foreground">Jabatan</p>
               <p className="font-medium">{employee.position ?? "—"}</p>
             </div>
             <div>
-              <p className="text-muted-foreground">Work location</p>
+              <p className="text-muted-foreground">Lokasi kerja</p>
               <p className="font-medium">
                 {employee.workLocationName ?? "—"}
               </p>
             </div>
             <div>
-              <p className="text-muted-foreground">Manager</p>
+              <p className="text-muted-foreground">Atasan</p>
               <p className="font-medium">{employee.managerName ?? "—"}</p>
             </div>
             <div>
-              <p className="text-muted-foreground">Employment status</p>
+              <p className="text-muted-foreground">Status kepegawaian</p>
               <p className="font-medium capitalize">
                 {employee.employmentStatus}
               </p>
             </div>
             <div>
-              <p className="text-muted-foreground">Hire date</p>
+              <p className="text-muted-foreground">Tanggal masuk</p>
               <p className="font-medium">
                 {employee.hireDate ?? "—"}
               </p>
             </div>
             <div>
-              <p className="text-muted-foreground">Employment end date</p>
+              <p className="text-muted-foreground">Tanggal akhir kerja</p>
               <p className="font-medium">
                 {employee.employmentEndDate ?? "—"}
               </p>
             </div>
             <div>
-              <p className="text-muted-foreground">Attendance rate</p>
+              <p className="text-muted-foreground">Tingkat kehadiran</p>
               <p>
                 <AttendanceRateBadge rate={summary.attendanceRate} />
               </p>
@@ -213,17 +213,15 @@ export default async function EmployeeAttendanceRecapPage({
 
       {days.length === 0 ? (
         <EmptyState
-          title="No attendance data found"
-          description="No attendance data found for the selected period."
+          title="Tidak ada data absensi"
+          description="Tidak ada data absensi untuk periode yang dipilih."
         />
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle>Daily attendance</CardTitle>
+            <CardTitle>Absensi harian</CardTitle>
             <CardDescription>
-              One row per expected working day (Monday–Friday inside the
-              employment window). Accepted attendance outside expected days
-              is shown as “Extra” and is not counted in the summary.
+              Satu baris per hari kerja yang diharapkan (Senin–Jumat dalam masa kerja). Absensi yang diterima di luar hari tersebut ditandai “Ekstra” dan tidak dihitung dalam ringkasan.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -231,15 +229,15 @@ export default async function EmployeeAttendanceRecapPage({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Day</TableHead>
-                    <TableHead>Check in</TableHead>
-                    <TableHead>Check out</TableHead>
+                    <TableHead>Tanggal</TableHead>
+                    <TableHead>Hari</TableHead>
+                    <TableHead>Absen masuk</TableHead>
+                    <TableHead>Absen pulang</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Work location</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Verification</TableHead>
-                    <TableHead className="text-right">Details</TableHead>
+                    <TableHead>Lokasi kerja</TableHead>
+                    <TableHead>Lokasi</TableHead>
+                    <TableHead>Verifikasi</TableHead>
+                    <TableHead className="text-right">Detail</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -283,7 +281,7 @@ export default async function EmployeeAttendanceRecapPage({
                               size: "sm",
                             })}
                           >
-                            Open
+                            Buka
                           </Link>
                         ) : (
                           <span className="text-muted-foreground">—</span>

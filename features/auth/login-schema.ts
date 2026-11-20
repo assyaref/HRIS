@@ -16,7 +16,7 @@ export const loginSchema = z.object({
     .trim()
     .min(1, "Masukkan Nomor Karyawan atau Email.")
     .max(254, "Identifier terlalu panjang."),
-  password: z.string().min(1, "Enter your password."),
+  password: z.string().min(1, "Masukkan kata sandi Anda."),
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;

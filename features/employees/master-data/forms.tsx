@@ -31,7 +31,7 @@ function SubmitButton({ label }: { label: string }) {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending}>
-      {pending ? "Saving..." : label}
+      {pending ? "Menyimpan..." : label}
     </Button>
   );
 }
@@ -55,7 +55,7 @@ function StateMessage({ state }: { state: EmployeeSectionActionState }) {
       <ul className="space-y-1 text-sm text-destructive">
         {Object.entries(state.fieldErrors).map(([key, message]) => (
           <li key={key}>
-            {message ?? "Invalid value."}
+            {message ?? "Nilai tidak valid."}
           </li>
         ))}
       </ul>
@@ -136,7 +136,7 @@ export function SectionForm({
   description,
   action,
   children,
-  submitLabel = "Save",
+  submitLabel = "Simpan",
 }: {
   title: string;
   description?: string;
@@ -203,7 +203,7 @@ export function ActionButton({
           void action(employeeId, rowId)
             .then((state) =>
               setMessage(
-                state.message ?? (state.status === "error" ? "Failed." : null)
+                state.message ?? (state.status === "error" ? "Gagal." : null)
               )
             )
             .finally(() => setPending(false));
@@ -240,7 +240,7 @@ export function Disclosure({
         size="sm"
         onClick={() => setOpen((current) => !current)}
       >
-        {open ? "Cancel" : label}
+        {open ? "Batal" : label}
       </Button>
       {open ? <div className="w-full">{children}</div> : null}
     </div>
@@ -265,7 +265,7 @@ export function CollapsibleEditor({
       <div className="mb-3 flex items-center justify-between gap-2">
         <h4 className="text-sm font-medium">{title}</h4>
         <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-          Close
+          Tutup
         </Button>
       </div>
       {children}

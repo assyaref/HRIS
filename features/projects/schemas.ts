@@ -13,13 +13,13 @@ export const PROJECT_CODE_PATTERN =
 
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 
-const uuidSchema = z.string().uuid("Invalid identifier format.");
+const uuidSchema = z.string().uuid("Format ID tidak valid.");
 
 const projectCodeSchema = z
   .string()
   .trim()
-  .min(1, "Project code is required.")
-  .max(32, "Project code must be 32 characters or fewer.")
+  .min(1, "Kode proyek wajib diisi.")
+  .max(32, "Kode proyek maksimal 32 karakter.")
   .regex(
     PROJECT_CODE_PATTERN,
     "Project code may contain letters, digits and . _ / - only."
@@ -28,12 +28,12 @@ const projectCodeSchema = z
 const projectNameSchema = z
   .string()
   .trim()
-  .min(1, "Project name is required.")
-  .max(150, "Project name must be 150 characters or fewer.");
+  .min(1, "Nama proyek wajib diisi.")
+  .max(150, "Nama proyek maksimal 150 karakter.");
 
 const optionalDateSchema = z
   .string()
-  .regex(datePattern, "Use the YYYY-MM-DD date format.");
+  .regex(datePattern, "Gunakan format tanggal YYYY-MM-DD.");
 
 const projectStatusSchema = z.enum(PROJECT_STATUSES);
 
@@ -59,7 +59,7 @@ export const createProjectSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["endDate"],
-        message: "End date cannot be earlier than start date.",
+        message: "Tanggal selesai tidak boleh sebelum tanggal mulai.",
       });
     }
   })
@@ -87,7 +87,7 @@ export const updateProjectSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["endDate"],
-        message: "End date cannot be earlier than start date.",
+        message: "Tanggal selesai tidak boleh sebelum tanggal mulai.",
       });
     }
   })

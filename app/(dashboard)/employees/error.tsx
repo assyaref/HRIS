@@ -22,13 +22,13 @@ export default function EmployeesError({
   return (
     <div className="flex flex-col items-center gap-3 rounded-lg border border-destructive/40 bg-destructive/10 px-6 py-12 text-center">
       <h2 className="text-sm font-semibold text-foreground">
-        Unable to load employees
+        Daftar karyawan gagal dimuat
       </h2>
       <p className="max-w-sm text-sm text-muted-foreground">
-        Something went wrong while loading this page. Please try again.
+        Terjadi kesalahan saat memuat halaman ini. Silakan coba lagi.
       </p>
       <Button type="button" variant="outline" onClick={retry}>
-        Try again
+        Coba lagi
       </Button>
     </div>
   );

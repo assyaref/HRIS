@@ -81,7 +81,7 @@ describe("permission catalog: organizations.* codes", () => {
       const blockStart = permissionsSource.lastIndexOf("  {\n", definitionStart);
       const block = permissionsSource.slice(blockStart, definitionStart + 400);
       assert.equal(
-        /Super Administrator only/.test(block),
+        /khusus Super Administrator/.test(block),
         true,
         `${code} description must say Super Administrator only`
       );

@@ -24,5 +24,5 @@ export function inclusiveDayCount(
 export function formatDayCount(value: number | null): string {
   if (value === null || value === undefined) return "—";
   const formatted = Number.isInteger(value) ? String(value) : value.toFixed(1);
-  return `${formatted} day${value === 1 ? "" : "s"}`;
+  return `${formatted} hari`;
 }

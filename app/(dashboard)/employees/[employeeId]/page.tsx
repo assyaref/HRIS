@@ -107,7 +107,7 @@ import {
 import { SwitchOrganizationButton } from "@/features/acting-organization/switch-button";
 
 export const metadata: Metadata = {
-  title: "Employee profile",
+  title: "Profil karyawan",
 };
 
 // The system tab param keys now live in features/employee-tabs/tabs.ts
@@ -579,8 +579,8 @@ export default async function EmployeeDetailPage({
             employeeId={employeeId}
             specs={specsByTabKey.get(tabKey) ?? []}
             title={tab.icon ? `${tab.icon} ${tab.name}` : tab.name}
-            description={tab.description ?? "Fields assigned to this custom tab."}
-            emptyMessage="No visible custom fields are assigned to this tab yet."
+            description={tab.description ?? "Field yang ditempatkan di tab kustom ini."}
+            emptyMessage="Belum ada field kustom yang tampil di tab ini."
           />
         );
       }
@@ -628,7 +628,7 @@ export default async function EmployeeDetailPage({
             href={backHref}
             className={buttonVariants({ variant: "outline", size: "sm" })}
           >
-            Back to employees
+            Kembali ke daftar karyawan
           </Link>
           {/* Same permanent-deletion flow as the employee list — one dialog,
               one server action, one set of guards. Gated on
@@ -678,9 +678,9 @@ export default async function EmployeeDetailPage({
 
       {!canEditInScope(canUpdate) && activeTab === "overview" ? (
         <div className="flex items-center gap-2">
-          <Badge variant="outline">Read only</Badge>
+          <Badge variant="outline">Hanya baca</Badge>
           <span className="text-sm text-muted-foreground">
-            You have view access to this employee record.
+            Anda memiliki akses lihat untuk data karyawan ini.
           </span>
         </div>
       ) : null}
@@ -735,11 +735,11 @@ function AccountCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Account</CardTitle>
-        <CardDescription>Linked sign-in account.</CardDescription>
+        <CardTitle>Akun</CardTitle>
+        <CardDescription>Akun login yang tertaut.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
-        <p className="text-muted-foreground">No login account is linked.</p>
+        <p className="text-muted-foreground">Belum ada akun login yang tertaut.</p>
         <CreateAccountDialog
           employeeId={employeeId}
           employeeEmail={employeeEmail}
@@ -807,7 +807,7 @@ function FaceIdentityCards({
       </div>
       <div className="space-y-6">
         <div>
-          <h3 className="mb-2 text-sm font-medium">Face identity</h3>
+          <h3 className="mb-2 text-sm font-medium">Identitas wajah</h3>
           <FaceEnrollmentPanel
             employeeId={employee.id}
             employeeName={displayName}
@@ -818,7 +818,7 @@ function FaceIdentityCards({
         </div>
         {canUpdate && faceEngineConfigured ? (
           <div>
-            <h3 className="mb-2 text-sm font-medium">Face verification</h3>
+            <h3 className="mb-2 text-sm font-medium">Verifikasi wajah</h3>
             <FaceVerificationPanel
               employeeId={employee.id}
               employeeName={displayName}

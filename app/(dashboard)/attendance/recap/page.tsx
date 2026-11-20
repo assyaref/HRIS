@@ -34,7 +34,7 @@ import {
 } from "@/features/attendance/recap.schemas";
 
 export const metadata: Metadata = {
-  title: "Attendance recap",
+  title: "Rekap absensi",
 };
 
 function readParam(
@@ -96,7 +96,7 @@ function resolveRecapQuery(
       page: 1,
       error:
         hasPeriod || issue?.path[0] === "startDate" || issue?.path[0] === "endDate"
-          ? (issue?.message ?? "Invalid filters.")
+          ? (issue?.message ?? "Filter tidak valid.")
           : null,
     };
   }
@@ -224,8 +224,8 @@ export default async function AttendanceRecapPage({
             Rekap Absensi
           </h1>
           <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-            {total} {total === 1 ? "employee" : "employees"} · working days
-            are Monday–Friday within each employee&apos;s employment window.
+            {total} karyawan · hari kerja adalah Senin–Jumat dalam masa kerja
+            masing-masing karyawan.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -233,7 +233,7 @@ export default async function AttendanceRecapPage({
             href="/attendance/management"
             className={buttonVariants({ variant: "outline", size: "sm" })}
           >
-            Attendance management
+            Kelola absensi
           </Link>
           <Link
             href={`/api/attendance/recap/export?${exportQuery.toString()}`}
@@ -261,7 +261,7 @@ export default async function AttendanceRecapPage({
       >
         <div className="space-y-2">
           <label htmlFor="recap-start-date" className="text-sm font-medium">
-            Start date
+            Tanggal mulai
           </label>
           <input
             id="recap-start-date"
@@ -274,7 +274,7 @@ export default async function AttendanceRecapPage({
         </div>
         <div className="space-y-2">
           <label htmlFor="recap-end-date" className="text-sm font-medium">
-            End date
+            Tanggal selesai
           </label>
           <input
             id="recap-end-date"
@@ -287,7 +287,7 @@ export default async function AttendanceRecapPage({
         </div>
         <div className="space-y-2">
           <label htmlFor="recap-department" className="text-sm font-medium">
-            Department
+            Departemen
           </label>
           <select
             id="recap-department"
@@ -295,7 +295,7 @@ export default async function AttendanceRecapPage({
             defaultValue={filters.department ?? ""}
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
-            <option value="">All departments</option>
+            <option value="">Semua departemen</option>
             {options.departments.map((department) => (
               <option key={department} value={department}>
                 {department}
@@ -305,7 +305,7 @@ export default async function AttendanceRecapPage({
         </div>
         <div className="space-y-2">
           <label htmlFor="recap-location" className="text-sm font-medium">
-            Work location
+            Lokasi kerja
           </label>
           <select
             id="recap-location"
@@ -313,7 +313,7 @@ export default async function AttendanceRecapPage({
             defaultValue={filters.workLocationId ?? ""}
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
-            <option value="">All locations</option>
+            <option value="">Semua lokasi</option>
             {options.workLocations.map((location) => (
               <option key={location.id} value={location.id}>
                 {location.name}
@@ -323,7 +323,7 @@ export default async function AttendanceRecapPage({
         </div>
         <div className="space-y-2">
           <label htmlFor="recap-manager" className="text-sm font-medium">
-            Manager
+            Atasan
           </label>
           <select
             id="recap-manager"
@@ -331,7 +331,7 @@ export default async function AttendanceRecapPage({
             defaultValue={filters.managerId ?? ""}
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
-            <option value="">All managers</option>
+            <option value="">Semua atasan</option>
             {options.managers.map((manager) => (
               <option key={manager.id} value={manager.id}>
                 {manager.name}
@@ -341,7 +341,7 @@ export default async function AttendanceRecapPage({
         </div>
         <div className="space-y-2">
           <label htmlFor="recap-employment-type" className="text-sm font-medium">
-            Employment type
+            Jenis kepegawaian
           </label>
           <select
             id="recap-employment-type"
@@ -349,7 +349,7 @@ export default async function AttendanceRecapPage({
             defaultValue={filters.employmentType ?? ""}
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
-            <option value="">All types</option>
+            <option value="">Semua jenis</option>
             {options.employmentTypes.map((type) => (
               <option key={type} value={type}>
                 {type}
@@ -359,7 +359,7 @@ export default async function AttendanceRecapPage({
         </div>
         <div className="space-y-2">
           <label htmlFor="recap-status" className="text-sm font-medium">
-            Employee status
+            Status karyawan
           </label>
           <select
             id="recap-status"
@@ -367,20 +367,20 @@ export default async function AttendanceRecapPage({
             defaultValue={filters.employmentStatus ?? ""}
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
-            <option value="">All statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
+            <option value="">Semua status</option>
+            <option value="active">Aktif</option>
+            <option value="inactive">Nonaktif</option>
           </select>
         </div>
         <div className="space-y-2">
           <label htmlFor="recap-search" className="text-sm font-medium">
-            Search
+            Cari
           </label>
           <input
             id="recap-search"
             name="q"
             defaultValue={filters.q ?? ""}
-            placeholder="Name or employee number"
+            placeholder="Nama atau nomor karyawan"
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           />
         </div>
@@ -389,14 +389,14 @@ export default async function AttendanceRecapPage({
             type="submit"
             className="inline-flex h-10 items-center justify-center rounded-md bg-secondary px-4 text-sm font-medium text-secondary-foreground hover:bg-secondary/80"
           >
-            Apply filters
+            Terapkan filter
           </button>
           {hasFilters || query.error ? (
             <Link
               href={`/attendance/recap?startDate=${period.startDate}&endDate=${period.endDate}`}
               className={buttonVariants({ variant: "ghost" })}
             >
-              Clear
+              Bersihkan
             </Link>
           ) : null}
         </div>
@@ -406,13 +406,13 @@ export default async function AttendanceRecapPage({
         <StatCard
           icon="employees"
           tone="blue"
-          label="Total Employees"
+          label="Total Karyawan"
           value={kpi.totalEmployees}
         />
         <StatCard
           icon="trend-up"
           tone="primary"
-          label="Attendance Rate"
+          label="Tingkat Kehadiran"
           value={
             kpi.attendanceRate === null
               ? "—"
@@ -423,37 +423,36 @@ export default async function AttendanceRecapPage({
         <StatCard
           icon="check-in"
           tone="green"
-          label="Present"
+          label="Hadir"
           value={kpi.present}
         />
-        <StatCard icon="alert" tone="rose" label="Absent" value={kpi.absent} />
+        <StatCard icon="alert" tone="rose" label="Tidak hadir" value={kpi.absent} />
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard icon="clock" tone="amber" label="Late" value={kpi.late} />
-        <StatCard icon="leave" tone="blue" label="Leave" value={kpi.leave} />
-        <StatCard icon="permission" tone="slate" label="Sick" value={kpi.sick} />
+        <StatCard icon="clock" tone="amber" label="Terlambat" value={kpi.late} />
+        <StatCard icon="leave" tone="blue" label="Cuti" value={kpi.leave} />
+        <StatCard icon="permission" tone="slate" label="Sakit" value={kpi.sick} />
         <StatCard
           icon="permission"
           tone="slate"
-          label="Permission"
+          label="Hak akses"
           value={kpi.permission}
         />
       </div>
 
       <div>
         <h2 className="text-lg font-semibold tracking-tight">
-          Attendance performance
+          Kinerja kehadiran
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Sorted by attendance rate ascending — employees needing attention
-          appear first. Click an employee for the daily drill-down.
+          Diurutkan dari tingkat kehadiran terendah — karyawan yang perlu perhatian tampil lebih dulu. Klik karyawan untuk melihat rincian harian.
         </p>
       </div>
 
       {rows.length === 0 ? (
         <EmptyState
-          title="No attendance data found"
-          description="No attendance data found for the selected period."
+          title="Tidak ada data absensi"
+          description="Tidak ada data absensi untuk periode yang dipilih."
         />
       ) : (
         <>
@@ -461,20 +460,20 @@ export default async function AttendanceRecapPage({
             <Table>
               <TableHeader>
                 <TableRow>
-                  {renderSortableHead({ field: "employeeNumber", label: "Employee No" })} 
-                  {renderSortableHead({ field: "employeeName", label: "Employee Name" })} 
-                  {renderSortableHead({ field: "department", label: "Department" })} 
-                  {renderSortableHead({ field: "workLocation", label: "Work Location" })} 
-                  {renderSortableHead({ field: "manager", label: "Manager" })} 
-                  {renderSortableHead({ field: "workingDays", label: "Working Days", align: "right" })} 
-                  {renderSortableHead({ field: "present", label: "Present", align: "right" })} 
-                  {renderSortableHead({ field: "late", label: "Late", align: "right" })} 
-                  {renderSortableHead({ field: "leave", label: "Leave", align: "right" })} 
-                  {renderSortableHead({ field: "sick", label: "Sick", align: "right" })} 
-                  {renderSortableHead({ field: "permission", label: "Permission", align: "right" })} 
-                  {renderSortableHead({ field: "absent", label: "Absent", align: "right" })} 
-                  {renderSortableHead({ field: "attendanceRate", label: "Attendance Rate", align: "right" })} 
-                  <TableHead className="text-right">Details</TableHead>
+                  {renderSortableHead({ field: "employeeNumber", label: "No. Karyawan" })} 
+                  {renderSortableHead({ field: "employeeName", label: "Nama Karyawan" })} 
+                  {renderSortableHead({ field: "department", label: "Departemen" })} 
+                  {renderSortableHead({ field: "workLocation", label: "Lokasi Kerja" })} 
+                  {renderSortableHead({ field: "manager", label: "Atasan" })} 
+                  {renderSortableHead({ field: "workingDays", label: "Hari Kerja", align: "right" })} 
+                  {renderSortableHead({ field: "present", label: "Hadir", align: "right" })} 
+                  {renderSortableHead({ field: "late", label: "Terlambat", align: "right" })} 
+                  {renderSortableHead({ field: "leave", label: "Cuti", align: "right" })} 
+                  {renderSortableHead({ field: "sick", label: "Sakit", align: "right" })} 
+                  {renderSortableHead({ field: "permission", label: "Hak akses", align: "right" })} 
+                  {renderSortableHead({ field: "absent", label: "Tidak hadir", align: "right" })} 
+                  {renderSortableHead({ field: "attendanceRate", label: "Tingkat Kehadiran", align: "right" })} 
+                  <TableHead className="text-right">Detail</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -507,7 +506,7 @@ export default async function AttendanceRecapPage({
                           size: "sm",
                         })}
                       >
-                        View
+                        Lihat
                       </Link>
                     </TableCell>
                   </TableRow>
@@ -518,11 +517,11 @@ export default async function AttendanceRecapPage({
 
           {totalPages > 1 ? (
             <nav
-              aria-label="Attendance recap pagination"
+              aria-label="Halaman rekap absensi"
               className="flex items-center justify-between gap-3"
             >
               <p className="text-sm text-muted-foreground">
-                Page {page} of {totalPages} · {total} employees
+                Halaman {page} dari {totalPages} · {total} karyawan
               </p>
               <div className="flex gap-2">
                 {page > 1 ? (
@@ -533,7 +532,7 @@ export default async function AttendanceRecapPage({
                       size: "sm",
                     })}
                   >
-                    Previous
+                    Sebelumnya
                   </Link>
                 ) : null}
                 {page < totalPages ? (
@@ -544,7 +543,7 @@ export default async function AttendanceRecapPage({
                       size: "sm",
                     })}
                   >
-                    Next
+                    Berikutnya
                   </Link>
                 ) : null}
               </div>

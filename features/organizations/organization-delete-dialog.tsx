@@ -55,7 +55,7 @@ export function DeleteOrganizationDialog({
       // Announce here: on success the row (and this dialog) unmounts as the
       // list revalidates, so a render-time toast would never fire.
       if (result.status === "success") {
-        notifier.success(result.message ?? "Organization deleted.");
+        notifier.success(result.message ?? "Organisasi dihapus.");
       }
       return result;
     },
@@ -71,7 +71,7 @@ export function DeleteOrganizationDialog({
 
   function openWithWarning() {
     notifier.warning(
-      "Deleting an organization is permanent and cannot be undone."
+      "Penghapusan organisasi bersifat permanen dan tidak dapat dibatalkan."
     );
     setOpen(true);
   }
@@ -86,13 +86,13 @@ export function DeleteOrganizationDialog({
         onClick={openWithWarning}
         aria-label={`Delete ${organization.name}`}
       >
-        Delete
+        Hapus
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-destructive">
-              Delete organization
+              Hapus organisasi
             </DialogTitle>
             <DialogDescription>
               {withData
@@ -112,16 +112,16 @@ export function DeleteOrganizationDialog({
 
           <div className="space-y-3 rounded-md border border-destructive/40 p-4">
             <div className="grid grid-cols-[9rem_1fr] gap-x-3 gap-y-2 text-sm">
-              <span className="text-muted-foreground">Name</span>
+              <span className="text-muted-foreground">Nama</span>
               <span className="truncate font-medium">
                 {organization.name}
               </span>
-              <span className="text-muted-foreground">Code</span>
+              <span className="text-muted-foreground">Kode</span>
               <span className="font-mono">{organization.code}</span>
-              <span className="text-muted-foreground">Dependent records</span>
+              <span className="text-muted-foreground">Data terkait</span>
               <span className="font-medium tabular-nums">
                 {dependencyTotal === 0
-                  ? "None — safe to delete"
+                  ? "Tidak ada — aman dihapus"
                   : "Ada — semua ikut dihapus"}
               </span>
             </div>
@@ -156,7 +156,7 @@ export function DeleteOrganizationDialog({
               onClick={() => setOpen(false)}
               disabled={isPending}
             >
-              Cancel
+              Batal
             </Button>
             <Button
               type="button"
@@ -168,7 +168,7 @@ export function DeleteOrganizationDialog({
                 ? "Menghapus..."
                 : withData
                   ? "Hapus beserta data"
-                  : "Delete organization"}
+                  : "Hapus organisasi"}
             </Button>
           </DialogFooter>
         </DialogContent>

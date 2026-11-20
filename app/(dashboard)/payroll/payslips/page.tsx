@@ -36,7 +36,7 @@ import {
 } from "@/features/payroll/queries";
 
 export const metadata: Metadata = {
-  title: "Payslips",
+  title: "Slip gaji",
 };
 
 export default async function PayslipsOverviewPage() {
@@ -65,7 +65,7 @@ export default async function PayslipsOverviewPage() {
             Slip Gaji Karyawan
           </h1>
           <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-            Calculated and distribution payslips across all periods.
+            Slip gaji hasil perhitungan dan distribusi di semua periode.
           </p>
         </div>
 
@@ -75,7 +75,7 @@ export default async function PayslipsOverviewPage() {
               href="/payroll/payslips/upload"
               className={buttonVariants({ size: "sm" })}
             >
-              Upload distribution payslip
+              Unggah slip gaji distribusi
             </Link>
           ) : null}
           {canUpload ? (
@@ -83,45 +83,44 @@ export default async function PayslipsOverviewPage() {
               href="/payroll/payslips/bulk-upload"
               className={buttonVariants({ variant: "outline", size: "sm" })}
             >
-              Bulk upload
+              Unggah massal
             </Link>
           ) : null}
           <Link
             href="/payroll"
             className={buttonVariants({ variant: "outline", size: "sm" })}
           >
-            Back
+            Kembali
           </Link>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Recent payslips</CardTitle>
+          <CardTitle>Slip gaji terbaru</CardTitle>
           <CardDescription>
-            Showing the latest {RECENT_PAYSLIPS_LIMIT} payslips for your
-            organization.
+            Menampilkan {RECENT_PAYSLIPS_LIMIT} slip gaji terbaru untuk organisasi Anda.
           </CardDescription>
         </CardHeader>
         <CardContent>
           {payslips.length === 0 ? (
             <EmptyState
-              title="No payslips yet"
-              description="Calculated and distribution payslips will appear here."
+              title="Belum ada slip gaji"
+              description="Slip gaji hasil perhitungan dan distribusi akan tampil di sini."
             />
           ) : (
             <div className="overflow-hidden rounded-lg border border-border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Payslip</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Period</TableHead>
-                    <TableHead>Issued</TableHead>
+                    <TableHead>Slip gaji</TableHead>
+                    <TableHead>Jenis</TableHead>
+                    <TableHead>Karyawan</TableHead>
+                    <TableHead>Periode</TableHead>
+                    <TableHead>Diterbitkan</TableHead>
                     <TableHead>Status</TableHead>
                     {actorIsSuperAdmin ? (
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead className="text-right">Aksi</TableHead>
                     ) : null}
                   </TableRow>
                 </TableHeader>
@@ -142,8 +141,8 @@ export default async function PayslipsOverviewPage() {
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {payslip.kind === "distribution"
-                          ? "Distribution"
-                          : "Calculated"}
+                          ? "Distribusi"
+                          : "Terhitung"}
                       </TableCell>
                       <TableCell>
                         <span className="font-medium">

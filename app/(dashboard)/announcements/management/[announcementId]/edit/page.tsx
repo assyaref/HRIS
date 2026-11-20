@@ -23,7 +23,7 @@ import { RemoveAttachmentButton } from "@/features/announcements/attachment-acti
 import { AnnouncementStatusBadge } from "@/features/announcements/announcement-badges";
 
 export const metadata: Metadata = {
-  title: "Edit Announcement",
+  title: "Ubah Pengumuman",
 };
 
 const UUID_PATTERN =
@@ -84,7 +84,7 @@ export default async function EditAnnouncementPage({
           <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <AnnouncementStatusBadge status={detail.status} />
             {published ? (
-              <span>Published announcements accept content edits only.</span>
+              <span>Pengumuman yang sudah terbit hanya dapat diubah isinya.</span>
             ) : null}
           </p>
         </div>
@@ -92,15 +92,15 @@ export default async function EditAnnouncementPage({
           href={`/announcements/${detail.id}`}
           className={buttonVariants({ variant: "outline", size: "sm" })}
         >
-          Back to announcement
+          Kembali ke pengumuman
         </Link>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Announcement details</CardTitle>
+          <CardTitle>Detail pengumuman</CardTitle>
           <CardDescription>
-            Title, content, priority, schedule and expiry.
+            Judul, isi, prioritas, jadwal, dan masa berlaku.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -114,18 +114,18 @@ export default async function EditAnnouncementPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Audience</CardTitle>
+          <CardTitle>Penerima</CardTitle>
           <CardDescription>
             {published
-              ? "Audience is locked while the announcement is published."
-              : "Choose who can see this announcement."}
+              ? "Penerima dikunci selama pengumuman diterbitkan."
+              : "Pilih siapa saja yang dapat melihat pengumuman ini."}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {published ? (
             <p className="text-sm text-muted-foreground">
               {detail.targetType === "all_employees"
-                ? "Visible to all employees."
+                ? "Terlihat oleh semua karyawan."
                 : `Targeted ${detail.recipientIds.length} recipient(s).`}
             </p>
           ) : (
@@ -141,18 +141,18 @@ export default async function EditAnnouncementPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Attachments</CardTitle>
+          <CardTitle>Lampiran</CardTitle>
           <CardDescription>
             {published
-              ? "Attachments cannot be removed while published."
-              : "Remove files you no longer want to share."}
+              ? "Lampiran tidak dapat dihapus saat pengumuman diterbitkan."
+              : "Hapus berkas yang tidak ingin Anda bagikan lagi."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           {detail.attachments.length === 0 ? (
             <EmptyState
-              title="No attachments"
-              description="Upload files from the form above."
+              title="Tidak ada lampiran"
+              description="Unggah berkas melalui formulir di atas."
               className="border-0 py-6"
             />
           ) : (
@@ -178,7 +178,7 @@ export default async function EditAnnouncementPage({
                       size: "sm",
                     })}
                   >
-                    Download
+                    Unduh
                   </a>
                   {published ? null : (
                     <RemoveAttachmentButton

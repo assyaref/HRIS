@@ -91,7 +91,7 @@ async function rejectExistingInOrganization(
       dbRejected.set(row.rowNumber, {
         ...row,
         status: null,
-        error: "Employee number already exists in your organization.",
+        error: "Nomor karyawan sudah terdaftar di organisasi Anda.",
         validationStatus: "error",
       });
     } else if (
@@ -101,7 +101,7 @@ async function rejectExistingInOrganization(
       dbRejected.set(row.rowNumber, {
         ...row,
         status: null,
-        error: "Email already exists in your organization.",
+        error: "Email sudah terdaftar di organisasi Anda.",
         validationStatus: "error",
       });
     }
@@ -127,14 +127,14 @@ async function previewImport(
 ): Promise<ImportResult> {
   const file = formData.get("csvFile");
   if (!(file instanceof File)) {
-    return toError("No file selected.");
+    return toError("Belum ada berkas yang dipilih.");
   }
 
   let text: string;
   try {
     text = await file.text();
   } catch {
-    return toError("Could not read the uploaded file. Please try again.");
+    return toError("Berkas yang diunggah gagal dibaca. Silakan coba lagi.");
   }
 
   const lines = text
@@ -143,7 +143,7 @@ async function previewImport(
     .filter((line) => line.trim() !== "");
 
   if (lines.length < 2) {
-    return toError("CSV must contain a header row and at least one data row.");
+    return toError("Berkas CSV harus berisi baris judul dan minimal satu baris data.");
   }
 
   const dataRowCount = lines.length - 1;
@@ -198,14 +198,14 @@ async function confirmImport(
 ): Promise<ImportResult> {
   const rawPayload = formData.get("rows");
   if (typeof rawPayload !== "string" || rawPayload.trim() === "") {
-    return toError("Import confirmation is missing its payload.");
+    return toError("Data konfirmasi impor tidak lengkap.");
   }
 
   let payload: unknown;
   try {
     payload = JSON.parse(rawPayload);
   } catch {
-    return toError("Import confirmation payload is invalid.");
+    return toError("Data konfirmasi impor tidak valid.");
   }
   if (!Array.isArray(payload) || payload.length === 0) {
     return toError("No employees to import.");
@@ -269,7 +269,7 @@ async function confirmImport(
         hireDate: employee.hireDate,
         status: null,
         statusRaw: rawStatus || null,
-        error: "Duplicate employee number in the file.",
+        error: "Nomor karyawan ganda di dalam berkas.",
         validationStatus: "error",
       });
       return;
@@ -284,7 +284,7 @@ async function confirmImport(
         hireDate: employee.hireDate,
         status: null,
         statusRaw: rawStatus || null,
-        error: "Duplicate email in the file.",
+        error: "Email ganda di dalam berkas.",
         validationStatus: "error",
       });
       return;
@@ -329,7 +329,7 @@ async function confirmImport(
 
   if (confirmed.length === 0) {
     return toError(
-      "All of the imported employees already exist. No records were changed."
+      "Semua karyawan yang diimpor sudah ada. Tidak ada data yang diubah."
     );
   }
 
@@ -351,11 +351,11 @@ async function confirmImport(
   } catch (error) {
     if (isUniqueViolation(error)) {
       return toError(
-        "Some of the imported employees already exist. No records were changed."
+        "Sebagian karyawan yang diimpor sudah ada. Tidak ada data yang diubah."
       );
     }
     console.error("[employees] import failed", error);
-    return toError("Import failed. No records were changed. Please try again.");
+    return toError("Impor gagal. Tidak ada data yang diubah. Silakan coba lagi.");
   }
 
   try {
@@ -382,9 +382,7 @@ async function confirmImport(
     status: "success",
     totalRows: payload.length,
     successCount: confirmed.length,
-    message: `${confirmed.length} employee${
-      confirmed.length === 1 ? "" : "s"
-    } imported successfully.`,
+    message: `${confirmed.length} karyawan berhasil diimpor.`,
   };
 }
 
@@ -404,7 +402,7 @@ export async function importEmployeesAction(
   await requirePermission(user.id, PERMISSIONS.EMPLOYEES_CREATE);
 
   if (!user.organizationId) {
-    return toError("Your account is not assigned to an organization.");
+    return toError("Akun Anda belum ditetapkan ke organisasi.");
   }
   const organizationId = user.organizationId;
 

@@ -181,7 +181,7 @@ async function validateEmployeeLink(
     currentUserId
   );
   if (!linkable.some((employee) => employee.id === employeeId)) {
-    return "The selected employee does not exist in this organization or is already linked to another user account.";
+    return "Karyawan yang dipilih tidak ada di organisasi ini atau sudah tertaut ke akun pengguna lain.";
   }
   return null;
 }
@@ -228,7 +228,7 @@ export async function createUserAction(
     : actor.organizationId ?? undefined;
 
   if (!organizationId || !isUuid(organizationId)) {
-    return error("Your account is not assigned to an organization.");
+    return error("Akun Anda belum ditetapkan ke organisasi.");
   }
 
   const parsed = createUserSchema.safeParse({
@@ -256,12 +256,12 @@ export async function createUserAction(
     )
     .limit(1);
   if (!orgRows[0]) {
-    return error("Selected organization is not available.");
+    return error("Organisasi yang dipilih tidak tersedia.");
   }
 
   const role = await roleInOrganization(roleId, organizationId);
   if (!role) {
-    return error("Selected role is not available in this organization.");
+    return error("Peran yang dipilih tidak tersedia di organisasi ini.");
   }
 
   const scopeDecision = evaluateManageScope({
@@ -279,7 +279,7 @@ export async function createUserAction(
     return {
       status: "error",
       fieldErrors: {
-        email: "This email address is already in use.",
+        email: "Alamat email ini sudah dipakai.",
       },
     };
   }
@@ -358,19 +358,19 @@ export async function createUserAction(
     revalidatePath("/settings/users");
     return {
       status: "success",
-      message: `User account created with the ${role.name} role.`,
+      message: `Akun pengguna dibuat dengan peran ${role.name}.`,
     };
   } catch (caught) {
     if (isUniqueViolation(caught)) {
       return {
         status: "error",
         fieldErrors: {
-          email: "This email address is already in use.",
+          email: "Alamat email ini sudah dipakai.",
         },
       };
     }
     console.error("[users] create failed", caught);
-    return error("Could not create the user account. Please try again.");
+    return error("Akun pengguna gagal dibuat. Silakan coba lagi.");
   }
 }
 
@@ -389,7 +389,7 @@ export async function updateUserAction(
   await requirePermission(actor.userId, PERMISSIONS.USERS_UPDATE);
 
   if (!isUuid(userId)) {
-    return error("Invalid user account.");
+    return error("Akun pengguna tidak valid.");
   }
 
   const targetRows = await db
@@ -406,7 +406,7 @@ export async function updateUserAction(
 
   const target = targetRows[0];
   if (!target || !target.organizationId) {
-    return error("The user account was not found.");
+    return error("Akun pengguna tidak ditemukan.");
   }
   const organizationId = target.organizationId;
 
@@ -454,7 +454,7 @@ export async function updateUserAction(
   if (isNewRoleId && nextRoleId) {
     nextRole = await roleInOrganization(nextRoleId, organizationId);
     if (!nextRole) {
-      return error("Selected role is not available in this organization.");
+      return error("Peran yang dipilih tidak tersedia di organisasi ini.");
     }
 
     const roleDecision = evaluateManageScope({
@@ -471,7 +471,7 @@ export async function updateUserAction(
     // through editing — deactivation is the supported lifecycle transition.
     if (targetIsSuperAdmin && nextRole.code !== SUPERADMIN_ROLE_CODE) {
       return error(
-        "The SUPERADMIN role cannot be removed through editing. Deactivate the account instead."
+        "Peran SUPERADMIN tidak dapat dihapus lewat pengeditan. Nonaktifkan akunnya saja."
       );
     }
   }
@@ -484,7 +484,7 @@ export async function updateUserAction(
     return {
       status: "error",
       fieldErrors: {
-        email: "This email address is already in use.",
+        email: "Alamat email ini sudah dipakai.",
       },
     };
   }
@@ -588,12 +588,12 @@ export async function updateUserAction(
       return {
         status: "error",
         fieldErrors: {
-          email: "This email address is already in use.",
+          email: "Alamat email ini sudah dipakai.",
         },
       };
     }
     console.error("[users] update failed", caught);
-    return error("Could not update the user account. Please try again.");
+    return error("Akun pengguna gagal diperbarui. Silakan coba lagi.");
   }
 
   await audit("user.updated", {
@@ -612,9 +612,9 @@ export async function updateUserAction(
 
   revalidatePath("/settings/users");
   if (changedFields.length === 0) {
-    return { status: "success", message: "No changes were made." };
+    return { status: "success", message: "Tidak ada perubahan." };
   }
-  return { status: "success", message: "User account updated." };
+  return { status: "success", message: "Akun pengguna diperbarui." };
 }
 
 /**
@@ -638,7 +638,7 @@ export async function deleteUserAction(
   await requirePermission(actor.userId, PERMISSIONS.USERS_DELETE);
 
   if (!isUuid(userId)) {
-    return error("Invalid user account.");
+    return error("Akun pengguna tidak valid.");
   }
 
   const targetRows = await db
@@ -654,7 +654,7 @@ export async function deleteUserAction(
 
   const target = targetRows[0];
   if (!target || !target.organizationId) {
-    return error("The user account was not found.");
+    return error("Akun pengguna tidak ditemukan.");
   }
   const organizationId = target.organizationId;
 
@@ -701,7 +701,7 @@ export async function deleteUserAction(
     await db.delete(users).where(eq(users.id, userId));
   } catch (caught) {
     console.error("[users] delete failed", caught);
-    return error("Could not delete the user account. Please try again.");
+    return error("Akun pengguna gagal dihapus. Silakan coba lagi.");
   }
 
   await audit("user.deleted", {
@@ -719,7 +719,7 @@ export async function deleteUserAction(
   });
 
   revalidatePath("/settings/users");
-  return { status: "success", message: "User account deleted." };
+  return { status: "success", message: "Akun pengguna dihapus." };
 }
 
 /**
@@ -738,7 +738,7 @@ export async function resetUserPasswordAction(
   await requirePermission(actor.userId, PERMISSIONS.USERS_PASSWORD_RESET);
 
   if (!isUuid(userId)) {
-    return error("Invalid user account.");
+    return error("Akun pengguna tidak valid.");
   }
 
   const targetRows = await db
@@ -754,7 +754,7 @@ export async function resetUserPasswordAction(
 
   const target = targetRows[0];
   if (!target || !target.organizationId) {
-    return error("The user account was not found.");
+    return error("Akun pengguna tidak ditemukan.");
   }
   const organizationId = target.organizationId;
 
@@ -763,13 +763,13 @@ export async function resetUserPasswordAction(
     !actor.isSuperAdmin &&
     !sameOrganization(actor.organizationId, organizationId)
   ) {
-    return error("You do not have permission to reset passwords in this organization.");
+    return error("Anda tidak berhak mereset kata sandi di organisasi ini.");
   }
 
   // Check if target is SUPERADMIN (tenant actors cannot manage SUPERADMIN)
   const targetIsSuperAdmin = await isSuperAdminAccount(userId);
   if (targetIsSuperAdmin && !actor.isSuperAdmin) {
-    return error("You do not have permission to manage a Super Administrator account.");
+    return error("Anda tidak berhak mengelola akun Super Administrator.");
   }
 
   // Get employee number if linked (for temporary password default)
@@ -793,7 +793,7 @@ export async function resetUserPasswordAction(
   // Validate temporary password (length only, complexity not required as forced change follows)
   const policyResult = validatePasswordPolicy(finalTempPassword, { complexity: false });
   if (!policyResult.ok) {
-    return error("Temporary password must be at least 8 characters long.");
+    return error("Kata sandi sementara minimal 8 karakter.");
   }
 
   try {
@@ -833,7 +833,7 @@ export async function resetUserPasswordAction(
     };
   } catch (caught) {
     console.error("[users] reset password failed", caught);
-    return error("Could not reset the password. Please try again.");
+    return error("Kata sandi gagal direset. Silakan coba lagi.");
   }
 }
 

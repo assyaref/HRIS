@@ -236,12 +236,12 @@ async function validateUserLink(
     .where(and(eq(users.id, userId), eq(users.organizationId, organizationId)))
     .limit(1);
   if (!userRows[0]) {
-    return "The selected user account does not exist in your organization.";
+    return "Akun pengguna yang dipilih tidak ada di organisasi Anda.";
   }
 
   const linkable = await listLinkableUsers(organizationId, excludeEmployeeId);
   if (!linkable.some((user) => user.id === userId)) {
-    return "That user account is already linked to another employee.";
+    return "Akun pengguna tersebut sudah tertaut ke karyawan lain.";
   }
   return null;
 }
@@ -313,10 +313,10 @@ async function readCreateProfileSections(
     names.some((name) => optionalField(formData, name) !== undefined);
 
   if (!canPersonal && submitted(PERSONAL_FIELDS)) {
-    return { ok: false, state: toStateError("You are not authorized to set personal details.") };
+    return { ok: false, state: toStateError("Anda tidak berhak mengatur data pribadi.") };
   }
   if (!canEmployment && submitted(EMPLOYMENT_FIELDS)) {
-    return { ok: false, state: toStateError("You are not authorized to set employment details.") };
+    return { ok: false, state: toStateError("Anda tidak berhak mengatur data kepegawaian.") };
   }
 
   const errors: Record<string, string> = {};
@@ -336,7 +336,7 @@ async function readCreateProfileSections(
     const value = optionalField(formData, name);
     if (!value) return null;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(value))) {
-      errors[name] = "Use the YYYY-MM-DD date format.";
+      errors[name] = "Gunakan format tanggal YYYY-MM-DD.";
       return null;
     }
     return toDateValue(value);
@@ -344,7 +344,7 @@ async function readCreateProfileSections(
 
   const personalEmail = capped("personalEmail", 254, "Personal email");
   if (personalEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(personalEmail)) {
-    errors.personalEmail = "Personal email is invalid.";
+    errors.personalEmail = "Email pribadi tidak valid.";
   }
   const personal = {
     nickname: capped("nickname", 100, "Nickname"),
@@ -373,7 +373,7 @@ async function readCreateProfileSections(
     employment.contractEnd &&
     employment.contractEnd < employment.contractStart
   ) {
-    errors.contractEnd = "Contract end cannot be before the start.";
+    errors.contractEnd = "Akhir kontrak tidak boleh sebelum tanggal mulai.";
   }
 
   // Work location and manager must belong to the caller's organization.
@@ -390,7 +390,7 @@ async function readCreateProfileSections(
           )
           .limit(1)
       : [];
-    if (!location[0]) errors.workLocationId = "The selected work location is invalid.";
+    if (!location[0]) errors.workLocationId = "Lokasi kerja yang dipilih tidak valid.";
   }
   if (managerId) {
     const manager = UUID_PATTERN.test(managerId)
@@ -402,7 +402,7 @@ async function readCreateProfileSections(
           )
           .limit(1)
       : [];
-    if (!manager[0]) errors.managerId = "The selected manager is invalid.";
+    if (!manager[0]) errors.managerId = "Atasan yang dipilih tidak valid.";
   }
 
   if (Object.keys(errors).length > 0) {
@@ -420,7 +420,7 @@ export async function createEmployeeAction(
   await requirePermission(user.id, PERMISSIONS.EMPLOYEES_CREATE);
 
   if (!user.organizationId) {
-    return toStateError("Your account is not assigned to an organization.");
+    return toStateError("Akun Anda belum ditetapkan ke organisasi.");
   }
   const organizationId = user.organizationId;
 
@@ -479,7 +479,7 @@ export async function createEmployeeAction(
   );
   if (inaccessibleRequiredField) {
     return toStateError(
-      "A required custom field is unavailable to your current roles. Employee creation was not performed."
+      "Ada field kustom wajib yang tidak tersedia untuk peran Anda saat ini. Karyawan tidak dibuat."
     );
   }
   const unauthorizedSubmitted = allDefinitions.some(
@@ -490,7 +490,7 @@ export async function createEmployeeAction(
   );
   if (unauthorizedSubmitted) {
     return toStateError(
-      "You are not authorized to set one or more submitted custom fields."
+      "Anda tidak berhak mengatur satu atau lebih field kustom yang dikirim."
     );
   }
   type CustomWrite = {
@@ -572,7 +572,7 @@ export async function createEmployeeAction(
         })
         .returning({ id: employees.id });
       const row = inserted[0];
-      if (!row) throw new Error("Employee insert returned no row.");
+      if (!row) throw new Error("Data karyawan gagal disimpan.");
       // First History-tab snapshot when an assignment was set at creation.
       if (
         employment.division ||
@@ -612,11 +612,11 @@ export async function createEmployeeAction(
   } catch (error) {
     if (isUniqueViolation(error)) {
       return toStateError(undefined, {
-        employeeNumber: `Employee number "${employeeNumber}" already exists in this organization.`,
+        employeeNumber: `Nomor karyawan "${employeeNumber}" sudah ada di organisasi ini.`,
       });
     }
     console.error("[employees] create failed", error);
-    return toStateError("Could not create the employee. Please try again.");
+    return toStateError("Karyawan gagal dibuat. Silakan coba lagi.");
   }
 
   try {
@@ -658,7 +658,7 @@ export async function updateEmployeeAction(
   await requirePermission(user.id, PERMISSIONS.EMPLOYEES_UPDATE);
 
   if (!user.organizationId) {
-    return toStateError("Your account is not assigned to an organization.");
+    return toStateError("Akun Anda belum ditetapkan ke organisasi.");
   }
   const organizationId = user.organizationId;
 
@@ -759,7 +759,7 @@ export async function updateEmployeeAction(
   const statusChanged = nextValues.employmentStatus !== existing.employmentStatus;
 
   if (changedFields.length === 0 && !statusChanged) {
-    return { status: "success", message: "No changes were made." };
+    return { status: "success", message: "Tidak ada perubahan." };
   }
 
   try {
@@ -830,15 +830,15 @@ export async function updateEmployeeAction(
     });
   } catch (error) {
     if (error instanceof Error && error.message === "EMPLOYEE_NOT_FOUND") {
-      return toStateError("The employee no longer exists in your organization.");
+      return toStateError("Karyawan sudah tidak ada di organisasi Anda.");
     }
     if (isUniqueViolation(error)) {
       return toStateError(undefined, {
-        employeeNumber: `Employee number "${nextValues.employeeNumber}" already exists in this organization.`,
+        employeeNumber: `Nomor karyawan "${nextValues.employeeNumber}" sudah ada di organisasi ini.`,
       });
     }
     console.error("[employees] update failed", error);
-    return toStateError("Could not update the employee. Please try again.");
+    return toStateError("Data karyawan gagal diperbarui. Silakan coba lagi.");
   }
 
   try {
@@ -876,7 +876,7 @@ export async function updateEmployeeAction(
 
   revalidatePath("/employees");
   revalidatePath(`/employees/${employeeId}`);
-  return { status: "success", message: "Employee updated." };
+  return { status: "success", message: "Data karyawan diperbarui." };
 }
 
 /**
@@ -895,7 +895,7 @@ export async function createEmployeeAccountAction(
   await requirePermission(user.id, PERMISSIONS.USERS_CREATE);
 
   if (!user.organizationId) {
-    return toStateError("Your account is not assigned to an organization.");
+    return toStateError("Akun Anda belum ditetapkan ke organisasi.");
   }
   const organizationId = user.organizationId;
 
@@ -905,7 +905,7 @@ export async function createEmployeeAccountAction(
 
   // Check if employee already has a login account
   if (employee.userId) {
-    return toStateError("Employee already has a login account.");
+    return toStateError("Karyawan sudah memiliki akun login.");
   }
 
   // Extract and validate form fields
@@ -916,17 +916,17 @@ export async function createEmployeeAccountAction(
   // Validate email format
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!email || !emailRegex.test(email)) {
-    return toStateError(undefined, { email: "Please enter a valid email address." });
+    return toStateError(undefined, { email: "Masukkan alamat email yang valid." });
   }
 
   // Validate passwords match
   if (password !== confirmPassword) {
-    return toStateError(undefined, { confirmPassword: "Passwords do not match." });
+    return toStateError(undefined, { confirmPassword: "Kata sandi tidak cocok." });
   }
 
   // Validate password strength (minimum 8 characters)
   if (password.length < 8) {
-    return toStateError(undefined, { password: "Password must be at least 8 characters long." });
+    return toStateError(undefined, { password: "Kata sandi minimal 8 karakter." });
   }
 
   try {
@@ -958,7 +958,7 @@ export async function createEmployeeAccountAction(
         .returning({ id: users.id });
 
       const newUserId = insertedUser[0]?.id;
-      if (!newUserId) throw new Error("Failed to create user account.");
+      if (!newUserId) throw new Error("Akun pengguna gagal dibuat.");
 
       // Ensure all organization-level roles are provisioned (idempotent)
       for (const roleCode of ORGANIZATION_ROLE_CODES) {
@@ -992,7 +992,7 @@ export async function createEmployeeAccountAction(
         .limit(1);
 
       const roleId = employeeRole[0]?.id;
-      if (!roleId) throw new Error("EMPLOYEE role not found in your organization.");
+      if (!roleId) throw new Error("Peran EMPLOYEE tidak ditemukan di organisasi Anda.");
 
       // Insert user_role mapping
       await tx.insert(userRoles).values({
@@ -1039,14 +1039,14 @@ export async function createEmployeeAccountAction(
 
     revalidatePath("/employees");
     revalidatePath(`/employees/${employeeId}`);
-    return { status: "success", message: "Login account created successfully." };
+    return { status: "success", message: "Akun login berhasil dibuat." };
   } catch (error) {
     if (error instanceof Error && error.message === "DUPLICATE_EMAIL") {
-      return toStateError(undefined, { email: "This email address is already in use." });
+      return toStateError(undefined, { email: "Alamat email ini sudah dipakai." });
     }
     console.error("[employees] account creation failed", error);
     return toStateError(
-      error instanceof Error ? error.message : "Could not create the account. Please try again."
+      error instanceof Error ? error.message : "Akun gagal dibuat. Silakan coba lagi."
     );
   }
 }
@@ -1252,7 +1252,7 @@ function toPermanentDeleteError(
 
 /**
  * Second confirmation layer: the operator must have ticked
- * "I understand that this action cannot be undone."
+ * "Saya mengerti bahwa tindakan ini tidak dapat dibatalkan."
  *
  * Re-validated server-side because the UI gate is a convenience, not a control:
  * a request crafted by hand can omit the field, and the operation must still be
@@ -1383,7 +1383,7 @@ export async function permanentlyDeleteEmployeeAction(
     });
     return toPermanentDeleteError(
       "FORBIDDEN",
-      "Your account is not assigned to an organization."
+      "Akun Anda belum ditetapkan ke organisasi."
     );
   }
   // The employee's OWNING organization is read from the database and is
@@ -1863,7 +1863,7 @@ export async function permanentlyDeleteEmployeeAction(
     revalidatePath(`/employees/${employeeId}`);
     return {
       status: "success",
-      message: "Employee permanently deleted successfully.",
+      message: "Karyawan berhasil dihapus permanen.",
       removedSummary: outcome.removedSummary,
       retainedDependencies: outcome.retainedDependencies,
     };
@@ -2000,7 +2000,7 @@ export async function bulkPermanentlyDeleteEmployeesAction(
     return {
       status: "error",
       code: "INVALID_IDS",
-      message: "The organization context is invalid.",
+      message: "Konteks organisasi tidak valid.",
     };
   }
 
@@ -2041,7 +2041,7 @@ export async function bulkPermanentlyDeleteEmployeesAction(
     return {
       status: "error",
       code: "NO_ORGANIZATION",
-      message: "Your account is not assigned to an organization.",
+      message: "Akun Anda belum ditetapkan ke organisasi.",
     };
   }
 
@@ -2060,7 +2060,7 @@ export async function bulkPermanentlyDeleteEmployeesAction(
     return {
       status: "error",
       code: "INVALID_IDS",
-      message: "The selection is invalid. Please refresh and try again.",
+      message: "Pilihan tidak valid. Muat ulang halaman lalu coba lagi.",
     };
   }
 
@@ -2068,7 +2068,7 @@ export async function bulkPermanentlyDeleteEmployeesAction(
     return {
       status: "error",
       code: "EMPTY_SELECTION",
-      message: "No employees were selected.",
+      message: "Tidak ada karyawan yang dipilih.",
     };
   }
 
@@ -2079,7 +2079,7 @@ export async function bulkPermanentlyDeleteEmployeesAction(
     return {
       status: "error",
       code: "DUPLICATE_IDS",
-      message: "The selection contains duplicate employees.",
+      message: "Pilihan berisi karyawan ganda.",
     };
   }
 
@@ -2088,7 +2088,7 @@ export async function bulkPermanentlyDeleteEmployeesAction(
     return {
       status: "error",
       code: "INVALID_IDS",
-      message: "One or more selected employee ids are invalid.",
+      message: "Satu atau lebih ID karyawan yang dipilih tidak valid.",
     };
   }
 
@@ -2097,7 +2097,7 @@ export async function bulkPermanentlyDeleteEmployeesAction(
     return {
       status: "error",
       code: "CONFIRMATION_MISMATCH",
-      message: `Type exactly “${expectedConfirmation}” to confirm.`,
+      message: `Ketik persis “${expectedConfirmation}” untuk konfirmasi.`,
     };
   }
 
@@ -2183,7 +2183,7 @@ export async function bulkPermanentlyDeleteEmployeesAction(
         if (!current) {
           return {
             code: "DENIED",
-            failed: [{ id, employeeNumber: "", reason: "Employee not found." }],
+            failed: [{ id, employeeNumber: "", reason: "Karyawan tidak ditemukan." }],
           };
         }
         locked.push(current);
@@ -2304,7 +2304,7 @@ export async function bulkPermanentlyDeleteEmployeesAction(
         if (removed.length === 0) {
           return {
             code: "DENIED",
-            failed: [{ id: current.id, employeeNumber: current.employeeNumber, reason: "Employee no longer exists." }],
+            failed: [{ id: current.id, employeeNumber: current.employeeNumber, reason: "Karyawan sudah tidak ada." }],
           };
         }
 
@@ -2445,7 +2445,7 @@ export async function bulkPermanentlyDeleteEmployeesAction(
   revalidatePath("/employees");
   return {
     status: "success",
-    message: `Permanently deleted ${outcome.deleted.length} employee(s).`,
+    message: `${outcome.deleted.length} karyawan berhasil dihapus permanen.`,
     selectedCount: employeeContext.selectedCount,
     deletedCount: outcome.deleted.length,
     deletedEmployeeNumbers,
@@ -2549,7 +2549,7 @@ export async function checkEmployeeDeletionDependenciesAction(
 
   if (!sessionOrganizationId) {
     return deniedDependencyReport(
-      "Your account is not assigned to an organization."
+      "Akun Anda belum ditetapkan ke organisasi."
     );
   }
 
@@ -2616,7 +2616,7 @@ export async function deleteEmployeeAction(
   await requirePermission(user.id, PERMISSIONS.EMPLOYEES_DELETE);
 
   if (!user.organizationId) {
-    return toStateError("Your account is not assigned to an organization.");
+    return toStateError("Akun Anda belum ditetapkan ke organisasi.");
   }
   const organizationId = user.organizationId;
   const employee = await getEmployeeInOrganization(employeeId, organizationId);
@@ -2692,14 +2692,14 @@ export async function deleteEmployeeAction(
     });
   } catch (error) {
     if (error instanceof Error && error.message === "EMPLOYEE_NOT_FOUND") {
-      return toStateError("The employee no longer exists in your organization.");
+      return toStateError("Karyawan sudah tidak ada di organisasi Anda.");
     }
     console.error("[employees] deactivate failed", error);
-    return toStateError("Could not deactivate the employee. Please try again.");
+    return toStateError("Karyawan gagal dinonaktifkan. Silakan coba lagi.");
   }
 
   if (!changed) {
-    return { status: "success", message: "Employee is already inactive." };
+    return { status: "success", message: "Karyawan sudah nonaktif." };
   }
 
   try {
@@ -2721,5 +2721,5 @@ export async function deleteEmployeeAction(
 
   revalidatePath("/employees");
   revalidatePath(`/employees/${employee.id}`);
-  return { status: "success", message: "Employee deactivated successfully." };
+  return { status: "success", message: "Karyawan berhasil dinonaktifkan." };
 }

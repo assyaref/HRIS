@@ -29,7 +29,7 @@ import { attendanceFilterSchema } from "@/features/attendance/schemas";
 import { AttendanceDeleteButton } from "@/features/attendance/attendance-delete-button";
 
 export const metadata: Metadata = {
-  title: "Attendance management",
+  title: "Kelola absensi",
 };
 
 function readParam(
@@ -87,14 +87,14 @@ export default async function AttendanceManagementPage({
             Kelola Absensi
           </h1>
           <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-            {total} {total === 1 ? "record" : "records"} in your organization.
+            {total} data di organisasi Anda.
           </p>
         </div>
         <Link
           href="/attendance/readiness"
           className={buttonVariants({ variant: "outline", size: "sm" })}
         >
-          Attendance readiness
+          Kesiapan absensi
         </Link>
       </div>
 
@@ -105,19 +105,19 @@ export default async function AttendanceManagementPage({
       >
         <div className="space-y-2">
           <label htmlFor="attendance-search" className="text-sm font-medium">
-            Search
+            Cari
           </label>
           <input
             id="attendance-search"
             name="q"
             defaultValue={filters.q ?? ""}
-            placeholder="Name or employee number"
+            placeholder="Nama atau nomor karyawan"
             className="flex h-10 w-full min-w-44 rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           />
         </div>
         <div className="space-y-2">
           <label htmlFor="attendance-date" className="text-sm font-medium">
-            Date
+            Tanggal
           </label>
           <input
             id="attendance-date"
@@ -129,7 +129,7 @@ export default async function AttendanceManagementPage({
         </div>
         <div className="space-y-2">
           <label htmlFor="attendance-project" className="text-sm font-medium">
-            Project
+            Proyek
           </label>
           <select
             id="attendance-project"
@@ -137,7 +137,7 @@ export default async function AttendanceManagementPage({
             defaultValue={filters.projectId ?? ""}
             className="flex h-10 w-full min-w-40 rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
-            <option value="">All projects</option>
+            <option value="">Semua proyek</option>
             {projects.map((project) => (
               <option key={project.id} value={project.id}>
                 {project.name}
@@ -155,11 +155,11 @@ export default async function AttendanceManagementPage({
             defaultValue={filters.status ?? ""}
             className="flex h-10 w-full min-w-36 rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
-            <option value="">All statuses</option>
-            <option value="present">Present</option>
-            <option value="completed">Completed</option>
-            <option value="incomplete">Incomplete</option>
-            <option value="rejected">Rejected</option>
+            <option value="">Semua status</option>
+            <option value="present">Hadir</option>
+            <option value="completed">Selesai</option>
+            <option value="incomplete">Belum lengkap</option>
+            <option value="rejected">Ditolak</option>
           </select>
         </div>
         <button
@@ -173,14 +173,14 @@ export default async function AttendanceManagementPage({
             href="/attendance/management"
             className={buttonVariants({ variant: "ghost" })}
           >
-            Clear
+            Bersihkan
           </Link>
         ) : null}
       </form>
       {items.length === 0 ? (
         <EmptyState
-          title="No attendance records"
-          description="No records match the current filters."
+          title="Tidak ada data absensi"
+          description="Tidak ada data yang sesuai filter."
         />
       ) : (
         <>
@@ -188,13 +188,13 @@ export default async function AttendanceManagementPage({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Employee</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Check in</TableHead>
-                  <TableHead>Check out</TableHead>
+                  <TableHead>Karyawan</TableHead>
+                  <TableHead>Tanggal</TableHead>
+                  <TableHead>Absen masuk</TableHead>
+                  <TableHead>Absen pulang</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>Lokasi</TableHead>
+                  <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -236,7 +236,7 @@ export default async function AttendanceManagementPage({
                             size: "sm",
                           })}
                         >
-                          Details
+                          Detail
                         </Link>
                         {canDelete ? (
                           <AttendanceDeleteButton
@@ -254,11 +254,11 @@ export default async function AttendanceManagementPage({
 
           {totalPages > 1 ? (
             <nav
-              aria-label="Attendance pagination"
+              aria-label="Halaman absensi"
               className="flex items-center justify-between gap-3"
             >
               <p className="text-sm text-muted-foreground">
-                Page {page} of {totalPages}
+                Halaman {page} dari {totalPages}
               </p>
               <div className="flex gap-2">
                 {page > 1 ? (
@@ -269,7 +269,7 @@ export default async function AttendanceManagementPage({
                       size: "sm",
                     })}
                   >
-                    Previous
+                    Sebelumnya
                   </Link>
                 ) : null}
                 {page < totalPages ? (
@@ -280,7 +280,7 @@ export default async function AttendanceManagementPage({
                       size: "sm",
                     })}
                   >
-                    Next
+                    Berikutnya
                   </Link>
                 ) : null}
               </div>

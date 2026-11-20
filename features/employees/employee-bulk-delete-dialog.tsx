@@ -85,7 +85,7 @@ export function EmployeeBulkDeleteDialog({
     if (state.status !== "success" || handledSuccess.current) return;
     handledSuccess.current = true;
     notifier.success(
-      state.message ?? "Selected employees were permanently deleted."
+      state.message ?? "Karyawan terpilih berhasil dihapus permanen."
     );
     reset();
     router.refresh();
@@ -122,12 +122,10 @@ export function EmployeeBulkDeleteDialog({
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="text-destructive">
-              Permanently Delete Selected Employees?
+              Hapus Permanen Karyawan Terpilih?
             </DialogTitle>
             <DialogDescription>
-              You are about to permanently delete {selectedCount} selected
-              employee record{selectedCount === 1 ? "" : "s"}. This action
-              cannot be undone.
+              Anda akan menghapus permanen {selectedCount} data karyawan terpilih. Tindakan ini tidak dapat dibatalkan.
             </DialogDescription>
           </DialogHeader>
 
@@ -135,12 +133,12 @@ export function EmployeeBulkDeleteDialog({
             <div className="space-y-3 rounded-md border border-destructive/40 bg-destructive/5 p-4">
               <div className="grid grid-cols-[7rem_1fr] gap-x-3 gap-y-2 text-sm">
                 <span className="text-muted-foreground">
-                  Selected employees
+                  Karyawan terpilih
                 </span>
                 <span className="font-mono font-medium">{selectedCount}</span>
                 {organizationName ? (
                   <>
-                    <span className="text-muted-foreground">Organization</span>
+                    <span className="text-muted-foreground">Organisasi</span>
                     <span className="truncate">{organizationName}</span>
                   </>
                 ) : null}
@@ -152,36 +150,31 @@ export function EmployeeBulkDeleteDialog({
 
             <div className="rounded-md border border-border bg-muted/40 p-3">
               <p className="text-xs font-medium text-muted-foreground">
-                Related data impact
+                Dampak ke data terkait
               </p>
               <p className="text-sm text-muted-foreground">
-                Deletable related records (payroll, payslips, documents, face
-                ID, project assignments and other profile records) are removed
-                with each employee in a single transaction. Protected historical
-                records (attendance, leave, permission and employment history)
-                are retained for legal and audit purposes and are never deleted.
+                Data terkait yang dapat dihapus (payroll, slip gaji, dokumen, Face ID, penugasan proyek, dan data profil lainnya) dihapus bersama setiap karyawan dalam satu transaksi. Data historis yang dilindungi (absensi, cuti, izin, dan riwayat kepegawaian) disimpan untuk keperluan hukum dan audit dan tidak pernah dihapus.
               </p>
             </div>
 
             <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm">
               <p className="font-medium text-destructive">
-                This action cannot be undone.
+                Tindakan ini tidak dapat dibatalkan.
               </p>
               <p className="mt-1 text-destructive/90">
-                Deleted employee records and their deletable related records are
-                permanently removed. Protected historical records are retained.
+                Data karyawan yang dihapus beserta data terkait yang dapat dihapus akan hilang permanen. Data historis yang dilindungi tetap disimpan.
               </p>
             </div>
 
             <p className="text-sm font-medium">
-              Type the confirmation phrase to enable deletion
+              Ketik frasa konfirmasi untuk mengaktifkan penghapusan
             </p>
             <div className="space-y-2">
               <label
                 htmlFor="bulk-delete-confirmation"
                 className="text-xs text-muted-foreground"
               >
-                Confirmation phrase
+                Frasa konfirmasi
               </label>
               <Input
                 id="bulk-delete-confirmation"
@@ -197,17 +190,16 @@ export function EmployeeBulkDeleteDialog({
                 id="bulk-delete-confirmation-help"
                 className="text-xs text-muted-foreground"
               >
-                Type exactly{" "}
+                Ketik persis{" "}
                 <span className="font-mono font-medium">{expectedConfirmation}</span>{" "}
-                to enable deletion.
+                untuk mengaktifkan penghapusan.
               </p>
               {confirmation !== "" && !confirmationMatches && (
                 <p
                   className="text-xs text-destructive"
                   data-testid="bulk-delete-confirmation-mismatch"
                 >
-                  The phrase does not match the {selectedCount} selected
-                  employee{selectedCount === 1 ? "" : "s"}.
+                  Frasa tidak cocok dengan {selectedCount} karyawan terpilih.
                 </p>
               )}
             </div>
@@ -222,9 +214,7 @@ export function EmployeeBulkDeleteDialog({
                 data-testid="bulk-delete-acknowledgement"
               />
               <span>
-                I understand that this action cannot be undone and I want to
-                permanently delete these {selectedCount} employee{" "}
-                {selectedCount === 1 ? "" : "s"}.
+                Saya mengerti bahwa tindakan ini tidak dapat dibatalkan dan saya ingin menghapus permanen {selectedCount} karyawan ini.
               </span>
             </label>
 
@@ -244,7 +234,7 @@ export function EmployeeBulkDeleteDialog({
                 data-testid="bulk-delete-final-result"
               >
                 <p className="font-medium text-emerald-700">
-                  {state.deletedCount ?? 0} employee{(state.deletedCount ?? 0) === 1 ? "" : "s"} permanently deleted.
+                  {state.deletedCount ?? 0} karyawan berhasil dihapus permanen.
                 </p>
                 {state.deletedEmployeeNumbers &&
                 state.deletedEmployeeNumbers.length > 0 ? (
@@ -267,7 +257,7 @@ export function EmployeeBulkDeleteDialog({
                 }}
                 data-testid="bulk-delete-final-result-close"
               >
-                Close
+                Tutup
               </Button>
             ) : (
               <>
@@ -277,7 +267,7 @@ export function EmployeeBulkDeleteDialog({
                   disabled={isPending}
                   onClick={reset}
                 >
-                  Cancel
+                  Batal
                 </Button>
                 <Button
                   type="button"
@@ -290,8 +280,8 @@ export function EmployeeBulkDeleteDialog({
                   }}
                 >
                   {isPending
-                    ? "Deleting…"
-                    : `Delete ${selectedCount} Employee(s)`}
+                    ? "Menghapus…"
+                    : `Hapus ${selectedCount} Karyawan`}
                 </Button>
               </>
             )}

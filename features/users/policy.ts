@@ -26,10 +26,10 @@ export type UserStatus = (typeof USER_STATUSES)[number];
 
 /** Human-friendly display pairs (the UI maps schema statuses to labels). */
 export const STATUS_DISPLAY: Record<UserStatus, { label: string; tone: "ok" | "warn" | "muted" | "danger" }> = {
-  active: { label: "Active", tone: "ok" },
-  suspended: { label: "Inactive", tone: "warn" },
-  pending: { label: "Invited", tone: "muted" },
-  locked: { label: "Locked", tone: "danger" },
+  active: { label: "Aktif", tone: "ok" },
+  suspended: { label: "Nonaktif", tone: "warn" },
+  pending: { label: "Diundang", tone: "muted" },
+  locked: { label: "Terkunci", tone: "danger" },
 };
 
 export function isActivationTransition(
@@ -51,11 +51,11 @@ export function isDeactivationTransition(
 /* ------------------------------------------------------------------ */
 
 export const DELETE_REJECTION_MESSAGES = {
-  SELF_DELETE: "You cannot delete your own account.",
+  SELF_DELETE: "Anda tidak dapat menghapus akun Anda sendiri.",
   LAST_SUPERADMIN:
-    "Cannot delete the last active Super Administrator account.",
+    "Akun Super Administrator aktif terakhir tidak dapat dihapus.",
   PROTECTED_HISTORY:
-    "This account cannot be deleted because it has protected historical records. Deactivate the account instead.",
+    "Akun ini tidak dapat dihapus karena memiliki data historis yang dilindungi. Nonaktifkan akunnya saja.",
 } as const;
 
 export type DeleteRejectionCode =
@@ -144,9 +144,9 @@ export function isDeleteRejectionCode(
 /* ------------------------------------------------------------------ */
 
 export const DEACTIVATION_REJECTION_MESSAGES = {
-  SELF_DEACTIVATION: "You cannot deactivate your own account.",
+  SELF_DEACTIVATION: "Anda tidak dapat menonaktifkan akun Anda sendiri.",
   LAST_SUPERADMIN:
-    "Cannot deactivate the last active Super Administrator account.",
+    "Akun Super Administrator aktif terakhir tidak dapat dinonaktifkan.",
 } as const;
 
 export type DeactivationDecision =
@@ -200,11 +200,11 @@ export function evaluateUserDeactivation(
 
 export const MANAGE_REJECTION_MESSAGES = {
   SCOPE_MISMATCH:
-    "You do not have permission to manage user accounts in this organization.",
+    "Anda tidak berhak mengelola akun pengguna di organisasi ini.",
   SUPERADMIN_ROLE_PROTECTED:
-    "The SUPERADMIN role cannot be delegated by tenant administrators.",
+    "Peran SUPERADMIN tidak dapat didelegasikan oleh administrator tenant.",
   SUPERADMIN_TARGET_PROTECTED:
-    "You do not have permission to manage a Super Administrator account.",
+    "Anda tidak berhak mengelola akun Super Administrator.",
 } as const;
 
 export type ManageDecision =

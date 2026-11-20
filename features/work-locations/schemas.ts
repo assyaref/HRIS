@@ -42,45 +42,45 @@ const validTimezones = [
 const nameSchema = z
   .string()
   .trim()
-  .min(1, "Location name is required.")
-  .max(100, "Location name must be 100 characters or fewer.");
+  .min(1, "Nama lokasi wajib diisi.")
+  .max(100, "Nama lokasi maksimal 100 karakter.");
 
 const latitudeSchema = z
   .number()
-  .finite("Latitude must be a finite number.")
-  .min(WORK_LOCATION_LATITUDE_MIN, "Latitude must be between -90 and 90.")
-  .max(WORK_LOCATION_LATITUDE_MAX, "Latitude must be between -90 and 90.")
+  .finite("Latitude harus berupa angka yang valid.")
+  .min(WORK_LOCATION_LATITUDE_MIN, "Latitude harus antara -90 dan 90.")
+  .max(WORK_LOCATION_LATITUDE_MAX, "Latitude harus antara -90 dan 90.")
   .optional();
 
 const longitudeSchema = z
   .number()
-  .finite("Longitude must be a finite number.")
-  .min(WORK_LOCATION_LONGITUDE_MIN, "Longitude must be between -180 and 180.")
-  .max(WORK_LOCATION_LONGITUDE_MAX, "Longitude must be between -180 and 180.")
+  .finite("Longitude harus berupa angka yang valid.")
+  .min(WORK_LOCATION_LONGITUDE_MIN, "Longitude harus antara -180 dan 180.")
+  .max(WORK_LOCATION_LONGITUDE_MAX, "Longitude harus antara -180 dan 180.")
   .optional();
 
 const radiusMetersSchema = z
   .number()
-  .finite("Radius must be a finite number.")
-  .positive("Radius must be a positive number.")
+  .finite("Radius harus berupa angka yang valid.")
+  .positive("Radius harus berupa angka positif.")
   .min(
     WORK_LOCATION_RADIUS_MIN_METERS,
-    "Minimum radius is 50 meters."
+    "Radius minimal 50 meter."
   )
   .max(
     WORK_LOCATION_RADIUS_MAX_METERS,
-    "Maximum radius is 50km."
+    "Radius maksimal 50 km."
   )
   .optional();
 
 const maxGpsAccuracyMetersSchema = z
   .number()
-  .finite("GPS accuracy must be a finite number.")
-  .positive("GPS accuracy must be a positive number.")
-  .min(WORK_LOCATION_GPS_ACCURACY_MIN_METERS, "Minimum GPS accuracy is 1 meter.")
+  .finite("Akurasi GPS harus berupa angka yang valid.")
+  .positive("Akurasi GPS harus berupa angka positif.")
+  .min(WORK_LOCATION_GPS_ACCURACY_MIN_METERS, "Akurasi GPS minimal 1 meter.")
   .max(
     WORK_LOCATION_GPS_ACCURACY_MAX_METERS,
-    "Maximum GPS accuracy is 500 meters."
+    "Akurasi GPS maksimal 500 meter."
   )
   .optional();
 
@@ -104,7 +104,7 @@ const optionalStatusSchema = z.enum(WORK_LOCATION_STATUSES).optional();
 //   actor's organization and is ACTIVE before persisting (see
 //   `evaluateWorkLocationProjectEligibility`).
 // - The DB column stays nullable to keep legacy rows readable — no migration.
-const projectIdSchema = z.string().uuid("Invalid project ID format.");
+const projectIdSchema = z.string().uuid("Format ID proyek tidak valid.");
 
 /** Project options for the Work Location selector (client-safe, no server imports). */
 export interface WorkLocationProjectOption {

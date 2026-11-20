@@ -76,16 +76,16 @@ export function PayrollPeriodEditDialog({
         size="sm"
         onClick={() => setOpen(true)}
       >
-        Edit
+        Ubah
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit payroll period</DialogTitle>
+            <DialogTitle>Ubah periode payroll</DialogTitle>
             <DialogDescription>
               {nameOnly
-                ? "This period is processing — only the period name can be changed."
-                : "Update the payroll cycle details. Dates use YYYY-MM-DD and are stored as UTC."}
+                ? "Periode ini sedang diproses — hanya nama periode yang dapat diubah."
+                : "Perbarui detail siklus payroll. Tanggal memakai format YYYY-MM-DD dan disimpan dalam UTC."}
             </DialogDescription>
           </DialogHeader>
           <form action={submit} className="space-y-4">
@@ -99,7 +99,7 @@ export function PayrollPeriodEditDialog({
             ) : null}
 
             <div className="space-y-2">
-              <Label htmlFor="edit-period-code">Code</Label>
+              <Label htmlFor="edit-period-code">Kode</Label>
               <Input
                 id="edit-period-code"
                 name="code"
@@ -108,7 +108,7 @@ export function PayrollPeriodEditDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-period-name">Name</Label>
+              <Label htmlFor="edit-period-name">Nama</Label>
               <Input
                 id="edit-period-name"
                 name="name"
@@ -118,7 +118,7 @@ export function PayrollPeriodEditDialog({
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="edit-period-start">Start date</Label>
+                <Label htmlFor="edit-period-start">Tanggal mulai</Label>
                 <Input
                   id="edit-period-start"
                   name="periodStart"
@@ -129,7 +129,7 @@ export function PayrollPeriodEditDialog({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-period-end">End date</Label>
+                <Label htmlFor="edit-period-end">Tanggal selesai</Label>
                 <Input
                   id="edit-period-end"
                   name="periodEnd"
@@ -140,7 +140,7 @@ export function PayrollPeriodEditDialog({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-period-payment">Payment date</Label>
+                <Label htmlFor="edit-period-payment">Tanggal pembayaran</Label>
                 <Input
                   id="edit-period-payment"
                   name="paymentDate"
@@ -158,10 +158,10 @@ export function PayrollPeriodEditDialog({
                 variant="ghost"
                 onClick={() => setOpen(false)}
               >
-                Cancel
+                Batal
               </Button>
               <Button type="submit" disabled={pending}>
-                {pending ? "Saving…" : "Save changes"}
+                {pending ? "Menyimpan…" : "Simpan perubahan"}
               </Button>
             </DialogFooter>
           </form>

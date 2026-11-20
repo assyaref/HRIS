@@ -276,13 +276,13 @@ export async function buildTemplateWorkbook(
     cell.fill = HEADER_FILL;
     cell.font = HEADER_FONT;
   });
-  instructions.addRow(["Purpose", "Employee Master Data template — one row per record."]);
-  instructions.addRow(["Employees tab", "Create or update core employee rows. Employee No. is the unique key."]);
+  instructions.addRow(["Purpose", "Templat Master Data Karyawan — satu baris per data."]);
+  instructions.addRow(["Employees tab", "Membuat atau memperbarui baris inti karyawan. Kolom Employee No. adalah kunci unik."]);
   instructions.addRow(["Status", "Allowed: active, inactive"]);
-  instructions.addRow(["Gender", "Allowed: Male, Female, or a blank for unspecified."]);
-  instructions.addRow(["Address Type", "Allowed: KTP, Domicile (one row per type per employee)."]);
+  instructions.addRow(["Gender", "Nilai yang diizinkan: Male, Female, atau kosong jika tidak diisi."]);
+  instructions.addRow(["Address Type", "Nilai yang diizinkan: KTP, Domicile (satu baris per jenis per karyawan)."]);
   instructions.addRow(["Custom Fields tab", "Active fields defined in Settings → Employee Fields appear automatically."]);
-  instructions.addRow(["Multi Select", "To pick several options join them with commas, e.g. M,L."]);
+  instructions.addRow(["Multi Select", "Untuk memilih beberapa opsi, pisahkan dengan koma, mis. M,L."]);
   instructions.addRow(["Import", "Save as .xlsx and import via the Employees page Import button."]);
 
   const employees = addTemplateSheet(workbook, {

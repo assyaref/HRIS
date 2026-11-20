@@ -30,13 +30,13 @@ const STATE_COPY: Record<AttendanceCardState, StateCopy> = {
     label: "Belum Presensi",
   },
   CHECKED_IN: {
-    title: "Good Job!",
+    title: "Kerja bagus!",
     description: "Anda sudah melakukan presensi masuk hari ini.",
     tone: "success",
     label: "Sudah Masuk",
   },
   CHECKED_OUT: {
-    title: "Good Job!",
+    title: "Kerja bagus!",
     description: "Anda sudah melakukan presensi hari ini.",
     tone: "success",
     label: "Selesai",

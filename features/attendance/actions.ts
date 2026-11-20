@@ -75,7 +75,7 @@ async function resolveAttendanceContext(
       ok: false,
       result: {
         ok: false,
-        message: "Your account is not assigned to an organization.",
+        message: "Akun Anda belum ditetapkan ke organisasi.",
       },
     };
   }
@@ -85,7 +85,7 @@ async function resolveAttendanceContext(
       ok: false,
       result: {
         ok: false,
-        message: "No employee profile is linked to your account.",
+        message: "Tidak ada profil karyawan yang tertaut ke akun Anda.",
       },
     };
   }
@@ -93,7 +93,7 @@ async function resolveAttendanceContext(
 }
 
 function firstIssueMessage(issues: { message: string }[]): string {
-  return issues[0]?.message ?? "The request could not be validated.";
+  return issues[0]?.message ?? "Permintaan tidak dapat divalidasi.";
 }
 
 async function appendAttendanceEvent(input: {
@@ -163,7 +163,7 @@ const CHECK_IN_FORM_FIELDS = new Set([
 ]);
 
 function invalidCheckInInput(): AttendanceActionResult {
-  return { ok: false, message: "The request could not be validated." };
+  return { ok: false, message: "Permintaan tidak dapat divalidasi." };
 }
 
 /**
@@ -320,7 +320,7 @@ export async function checkInAction(
       eventType: "check_in_rejected",
       reason: "employee_inactive",
     });
-    return { ok: false, message: "Inactive employees cannot check in." };
+    return { ok: false, message: "Karyawan nonaktif tidak dapat absen masuk." };
   }
 
   const { projectId, workLocationId, notes } = parsed.data;
@@ -376,7 +376,7 @@ export async function checkInAction(
 
   // TS narrowing guard (unreachable given the check above).
   if (!coords) {
-    return { ok: false, message: "Location data is missing." };
+    return { ok: false, message: "Data lokasi tidak ada." };
   }
 
   // Re-validate project/work-location ownership against ACTIVE assignments.
@@ -486,7 +486,7 @@ export async function checkInAction(
       eventType: "verification_failed",
       reason: verification.reason,
     });
-    return { ok: false, message: "Identity verification failed." };
+    return { ok: false, message: "Verifikasi identitas gagal." };
   }
 
   // Server time + work-location timezone date.
@@ -511,7 +511,7 @@ export async function checkInAction(
       if (openRecord[0]) {
         return {
           duplicate: true,
-          message: "You already have an open check-in.",
+          message: "Anda masih memiliki absen masuk yang terbuka.",
           id: null,
         };
       }
@@ -529,7 +529,7 @@ export async function checkInAction(
       if (dayRecord[0]) {
         return {
           duplicate: true,
-          message: "You have already checked in for this day.",
+          message: "Anda sudah absen masuk untuk hari ini.",
           id: null,
         };
       }
@@ -556,7 +556,7 @@ export async function checkInAction(
         .returning({ id: attendanceRecords.id });
 
       const recordId = inserted[0]?.id;
-      if (!recordId) throw new Error("Attendance insert returned no row.");
+      if (!recordId) throw new Error("Data absensi gagal disimpan.");
 
       await tx.insert(attendanceEvents).values({
         organizationId,
@@ -617,7 +617,7 @@ export async function checkInAction(
         eventType: "check_in_rejected",
         reason: "duplicate_check_in",
       });
-      return { ok: false, message: outcome.message ?? "Check-in was not recorded." };
+      return { ok: false, message: outcome.message ?? "Absen masuk tidak tercatat." };
     }
 
     await auditAttendance({
@@ -628,12 +628,12 @@ export async function checkInAction(
       employeeNumber: employee.employeeNumber,
       eventType: "check_in_success",
     });
-    return { ok: true, message: "Checked in successfully." };
+    return { ok: true, message: "Absen masuk berhasil." };
   } catch (error) {
     console.error("[attendance] check-in failed", error);
     return {
       ok: false,
-      message: "Check-in could not be completed. Please try again.",
+      message: "Absen masuk gagal. Silakan coba lagi.",
     };
   }
 }
@@ -817,7 +817,7 @@ export async function checkOutAction(
     });
 
     if (outcome.outcome === "not_checked_in") {
-      return { ok: false, message: "You do not have an open check-in." };
+      return { ok: false, message: "Anda tidak memiliki absen masuk yang terbuka." };
     }
     if (outcome.outcome === "location_failed") {
       await auditAttendance({
@@ -842,7 +842,7 @@ export async function checkOutAction(
         eventType: "verification_failed",
         reason: "identity_verification_failed",
       });
-      return { ok: false, message: "Identity verification failed." };
+      return { ok: false, message: "Verifikasi identitas gagal." };
     }
 
     await auditAttendance({
@@ -853,12 +853,12 @@ export async function checkOutAction(
       employeeNumber: employee.employeeNumber,
       eventType: "check_out_success",
     });
-    return { ok: true, message: "Checked out successfully." };
+    return { ok: true, message: "Absen pulang berhasil." };
   } catch (error) {
     console.error("[attendance] check-out failed", error);
     return {
       ok: false,
-      message: "Check-out could not be completed. Please try again.",
+      message: "Absen pulang gagal. Silakan coba lagi.",
     };
   }
 }

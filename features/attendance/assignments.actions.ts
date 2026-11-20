@@ -66,7 +66,7 @@ export async function createAssignmentAction(
       return {
         status: "error",
         ok: false,
-        message: "Your account is not assigned to an organization.",
+        message: "Akun Anda belum ditetapkan ke organisasi.",
       };
     }
 
@@ -85,7 +85,7 @@ export async function createAssignmentAction(
       return {
         status: "error",
         ok: false,
-        message: "Please correct the errors below.",
+        message: "Silakan perbaiki kesalahan di bawah.",
         fieldErrors,
       };
     }
@@ -139,7 +139,7 @@ export async function createAssignmentAction(
     return {
       status: "success",
       ok: true,
-      message: "Employee assigned to the project successfully.",
+      message: "Karyawan berhasil ditugaskan ke proyek.",
     };
   } catch (error) {
     // Rare race on the partial unique index (concurrent duplicate submits).
@@ -147,14 +147,14 @@ export async function createAssignmentAction(
       return {
         status: "error",
         ok: false,
-        message: "This employee is already actively assigned to the project.",
+        message: "Karyawan ini sudah aktif ditugaskan ke proyek tersebut.",
       };
     }
     console.error("[assignments] create error:", error);
     return {
       status: "error",
       ok: false,
-      message: "Failed to assign employee to the project. Please try again.",
+      message: "Karyawan gagal ditugaskan ke proyek. Silakan coba lagi.",
     };
   }
 }
@@ -170,7 +170,7 @@ export async function endAssignmentAction(
     if (!user.organizationId) {
       return {
         ok: false,
-        message: "Your account is not assigned to an organization.",
+        message: "Akun Anda belum ditetapkan ke organisasi.",
       };
     }
 
@@ -187,7 +187,7 @@ export async function endAssignmentAction(
       return { ok: false, message: decision.message };
     }
     if (!assignment) {
-      return { ok: false, message: "Assignment not found." };
+      return { ok: false, message: "Penugasan tidak ditemukan." };
     }
 
     const endedAt = new Date();
@@ -218,12 +218,12 @@ export async function endAssignmentAction(
     });
 
     revalidatePath(`/employees/${assignment.employeeId}`);
-    return { ok: true, message: "Assignment ended successfully." };
+    return { ok: true, message: "Penugasan berhasil diakhiri." };
   } catch (error) {
     console.error("[assignments] end error:", error);
     return {
       ok: false,
-      message: "Failed to end the assignment. Please try again.",
+      message: "Penugasan gagal diakhiri. Silakan coba lagi.",
     };
   }
 }

@@ -228,7 +228,7 @@ export function ImportExcelDialog({
       setResult({
         ...initialResult,
         status: "error",
-        message: "Choose a .xlsx file first.",
+        message: "Pilih berkas .xlsx terlebih dahulu.",
       });
       return;
     }
@@ -260,7 +260,7 @@ export function ImportExcelDialog({
       setResult({
         ...initialResult,
         status: "error",
-        message: "Could not validate the file. Please try again.",
+        message: "Berkas gagal divalidasi. Silakan coba lagi.",
       });
       setStep(0);
     } finally {
@@ -282,7 +282,7 @@ export function ImportExcelDialog({
         notifier.success(next.message ?? "Excel import complete.");
         router.refresh();
       } else {
-        notifier.error(next.message ?? "Import failed.");
+        notifier.error(next.message ?? "Impor gagal.");
         setStep(3);
       }
     } catch {
@@ -348,16 +348,16 @@ export function ImportExcelDialog({
         type="button"
         variant="outline"
         onClick={openDialog}
-        aria-label="Import employees from Excel"
+        aria-label="Impor karyawan dari Excel"
       >
         <HrisIcon name="download" className="size-4 rotate-180" />
-        Import
+        Impor
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Import employees from Excel</DialogTitle>
+            <DialogTitle>Impor karyawan dari Excel</DialogTitle>
             <DialogDescription>
               Unknown Employee No. rows are created; existing rows are
               updated. Custom Fields and the section sheets are applied
@@ -433,8 +433,7 @@ export function ImportExcelDialog({
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                Start from the downloadable template. Maximum 500 employees
-                per import.
+                Mulai dari template yang dapat diunduh. Maksimal 500 karyawan per impor.
               </p>
             </div>
           ) : null}
@@ -513,7 +512,7 @@ export function ImportExcelDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="workLocation">Work Location</Label>
+                <Label htmlFor="workLocation">Lokasi Kerja</Label>
                 <select
                   value={settings.workLocationId ?? ""}
                   onChange={(e) =>
@@ -566,7 +565,7 @@ export function ImportExcelDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="provisionAccounts">Account Provisioning</Label>
+                <Label htmlFor="provisionAccounts">Pembuatan Akun</Label>
                 <div className="flex items-center gap-2">
                   <input
                     type="checkbox"
@@ -605,19 +604,16 @@ export function ImportExcelDialog({
               <div className="flex flex-wrap gap-4 text-sm">
                 <span>
                   <span className="font-medium">{result.totalRows}</span> total
-                  rows
+                  baris
                 </span>
                 <span className="text-emerald-700">
-                  <span className="font-medium">{result.createCount}</span> to
-                  create
+                  <span className="font-medium">{result.createCount}</span> akan dibuat
                 </span>
                 <span className="text-primary">
-                  <span className="font-medium">{result.updateCount}</span> to
-                  update
+                  <span className="font-medium">{result.updateCount}</span> akan diperbarui
                 </span>
                 <span className="text-destructive">
-                  <span className="font-medium">{result.errorCount}</span> with
-                  errors
+                  <span className="font-medium">{result.errorCount}</span> berisi kesalahan
                 </span>
               </div>
               {result.message ? (
@@ -638,12 +634,12 @@ export function ImportExcelDialog({
               {result.previewErrors.length > 0 ? (
                 <div className="max-h-56 overflow-auto rounded-md border border-destructive/40">
                   <table className="w-full text-sm">
-                    <caption className="sr-only">Validation errors</caption>
+                    <caption className="sr-only">Kesalahan validasi</caption>
                     <thead className="sticky top-0 bg-card">
                       <tr className="border-b border-border text-left text-xs text-muted-foreground">
-                        <th className="p-2 font-mono">Row</th>
-                        <th className="p-2">Employee No.</th>
-                        <th className="p-2">Error</th>
+                        <th className="p-2 font-mono">Baris</th>
+                        <th className="p-2">No. Karyawan</th>
+                        <th className="p-2">Kesalahan</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -668,7 +664,7 @@ export function ImportExcelDialog({
                 </div>
               ) : (
                 <div className="rounded-md border border-emerald-600/40 bg-emerald-600/10 px-3 py-2 text-sm text-emerald-700">
-                  No validation errors — the workbook can be imported.
+                  Tidak ada kesalahan validasi — workbook dapat diimpor.
                 </div>
               )}
             </div>
@@ -677,7 +673,7 @@ export function ImportExcelDialog({
           {/* Step 4: Import */}
           {step === 4 && result.status !== "success" ? (
             <p className="text-sm text-muted-foreground">
-              Importing {importCount} row(s). Please keep this dialog open.
+              Mengimpor {importCount} baris. Jangan tutup dialog ini.
             </p>
           ) : null}
 
@@ -689,7 +685,7 @@ export function ImportExcelDialog({
               </div>
               <div>
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-foreground">
-                  Import Completed
+                  Impor Selesai
                 </h3>
                 <p className="text-xs text-muted-foreground mt-1">
                   {result.summary?.employeesCreated ?? result.createCount} karyawan dibuat,{" "}
@@ -702,60 +698,60 @@ export function ImportExcelDialog({
               </div>
               <div className="grid gap-4 sm:grid-cols-3">
                 <SummaryCard
-                  title="Employees"
+                  title="Karyawan"
                   rows={[
                     {
-                      label: "Created",
+                      label: "Dibuat",
                       value: result.summary?.employeesCreated ?? result.createCount,
                       tone: "emerald",
                     },
                     {
-                      label: "Updated",
+                      label: "Diperbarui",
                       value: result.summary?.employeesUpdated ?? result.updateCount,
                       tone: "sky",
                     },
                     {
-                      label: "Failed",
+                      label: "Gagal",
                       value: result.summary?.employeesFailed ?? 0,
                       tone: "destructive",
                     },
                   ]}
                 />
                 <SummaryCard
-                  title="Accounts"
+                  title="Akun"
                   rows={[
                     {
-                      label: "Created",
+                      label: "Dibuat",
                       value: result.summary?.accountsCreated ?? 0,
                       tone: "emerald",
                     },
                     {
-                      label: "Existing",
+                      label: "Sudah ada",
                       value: result.summary?.accountsExisting ?? 0,
                       tone: "sky",
                     },
                     {
-                      label: "Failed",
+                      label: "Gagal",
                       value: result.summary?.accountsFailed ?? 0,
                       tone: "destructive",
                     },
                   ]}
                 />
                 <SummaryCard
-                  title="Assignments"
+                  title="Penugasan"
                   rows={[
                     {
-                      label: "Created",
+                      label: "Dibuat",
                       value: result.summary?.assignmentsCreated ?? 0,
                       tone: "emerald",
                     },
                     {
-                      label: "Existing",
+                      label: "Sudah ada",
                       value: result.summary?.assignmentsExisting ?? 0,
                       tone: "sky",
                     },
                     {
-                      label: "Failed",
+                      label: "Gagal",
                       value: result.summary?.assignmentsFailed ?? 0,
                       tone: "destructive",
                     },
@@ -764,8 +760,7 @@ export function ImportExcelDialog({
               </div>
               {(result.summary?.accountsCreated ?? 0) > 0 ? (
                 <div className="rounded-xl border border-info/40 bg-surface-info px-4 py-3 text-sm text-info">
-                  Initial password is the Employee Number. The employee must
-                  change it after first login.
+                  Kata sandi awal adalah Nomor Karyawan. Karyawan wajib menggantinya setelah login pertama.
                 </div>
               ) : null}
               {result.errors && result.errors.length > 0 ? (
@@ -773,7 +768,7 @@ export function ImportExcelDialog({
                   role="alert"
                   className="space-y-1 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm"
                 >
-                  <p className="font-semibold text-destructive">Import Errors</p>
+                  <p className="font-semibold text-destructive">Kesalahan Impor</p>
                   {result.errors.map((error, index) => (
                     <p key={index} className="text-destructive">
                       {error}
@@ -783,7 +778,7 @@ export function ImportExcelDialog({
               ) : null}
               {result.warnings && result.warnings.length > 0 ? (
                 <div className="space-y-1 rounded-md border border-amber-600/40 bg-amber-600/10 px-3 py-2 text-sm">
-                  <p className="font-semibold text-amber-700">Warnings</p>
+                  <p className="font-semibold text-amber-700">Peringatan</p>
                   {result.warnings.map((warning, index) => (
                     <p key={index} className="text-amber-700">
                       {warning}
@@ -794,19 +789,19 @@ export function ImportExcelDialog({
               {result.details && result.details.length > 0 ? (
                 <div className="max-h-64 overflow-auto rounded-md border border-border">
                   <table className="w-full text-sm">
-                    <caption className="sr-only">Import details</caption>
+                    <caption className="sr-only">Detail impor</caption>
                     <thead className="sticky top-0 bg-card">
                       <tr className="border-b border-border text-left text-xs text-muted-foreground">
-                        <th className="p-2">Employee No.</th>
-                        <th className="p-2">Name</th>
+                        <th className="p-2">No. Karyawan</th>
+                        <th className="p-2">Nama</th>
                         <th className="p-2">Email</th>
-                        <th className="p-2">Action</th>
-                        <th className="p-2">Account</th>
-                        <th className="p-2">Assignment</th>
-                        <th className="p-2">Organization</th>
-                        <th className="p-2">Project</th>
-                        <th className="p-2">Work Location</th>
-                        <th className="p-2">Role</th>
+                        <th className="p-2">Aksi</th>
+                        <th className="p-2">Akun</th>
+                        <th className="p-2">Penugasan</th>
+                        <th className="p-2">Organisasi</th>
+                        <th className="p-2">Proyek</th>
+                        <th className="p-2">Lokasi Kerja</th>
+                        <th className="p-2">Peran</th>
                         <th className="p-2">Status</th>
                       </tr>
                     </thead>
@@ -874,7 +869,7 @@ export function ImportExcelDialog({
                   disabled={!result.details || result.details.length === 0}
                   onClick={downloadImportLog}
                 >
-                  Download Import Log
+                  Unduh Log Impor
                 </Button>
                 <Button
                   type="button"
@@ -901,7 +896,7 @@ export function ImportExcelDialog({
                     router.refresh();
                   }}
                 >
-                  Done
+                  Selesai
                 </Button>
               </>
             ) : (
@@ -912,7 +907,7 @@ export function ImportExcelDialog({
                   disabled={busy}
                   onClick={() => setOpen(false)}
                 >
-                  Cancel
+                  Batal
                 </Button>
                 {step >= 3 ? (
                   <Button
@@ -924,7 +919,7 @@ export function ImportExcelDialog({
                       setStep(0);
                     }}
                   >
-                    Re-upload
+                    Unggah ulang
                   </Button>
                 ) : null}
                 {step === 0 ? (
@@ -933,7 +928,7 @@ export function ImportExcelDialog({
                     disabled={!file || busy}
                     onClick={runPreview}
                   >
-                    {busy ? "Validating..." : "Validate"}
+                    {busy ? "Memvalidasi..." : "Validasi"}
                   </Button>
                 ) : step === 1 ? (
                   <Button
@@ -946,7 +941,7 @@ export function ImportExcelDialog({
                     }
                     onClick={runPreview}
                   >
-                    {busy ? "Validating..." : "Validate"}
+                    {busy ? "Memvalidasi..." : "Validasi"}
                   </Button>
                 ) : (
                   <Button
@@ -957,10 +952,8 @@ export function ImportExcelDialog({
                     onClick={runConfirm}
                   >
                     {busy
-                      ? "Importing..."
-                      : `Import ${importCount} record${
-                          importCount === 1 ? "" : "s"
-                        }`}
+                      ? "Mengimpor..."
+                      : `Impor ${importCount} data`}
                   </Button>
                 )}
               </>

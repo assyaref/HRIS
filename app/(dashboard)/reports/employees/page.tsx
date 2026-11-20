@@ -88,7 +88,7 @@ function GroupTable({ title, groups }: { title: string; groups: MovementGroup[] 
                 <TableHead>Nama</TableHead>
                 <TableHead className="text-right">Masuk</TableHead>
                 <TableHead className="text-right">Keluar</TableHead>
-                <TableHead className="text-right">Headcount</TableHead>
+                <TableHead className="text-right">Jumlah karyawan</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

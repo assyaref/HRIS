@@ -82,37 +82,37 @@
  */
 
 export const EMPLOYEE_PERMANENT_DELETE_NOT_FOUND_MESSAGE =
-  "Employee not found.";
+  "Karyawan tidak ditemukan.";
 
 export const EMPLOYEE_PERMANENT_DELETE_FORBIDDEN_MESSAGE =
-  "You do not have permission to permanently delete employees.";
+  "Anda tidak berhak menghapus permanen karyawan.";
 
 export const EMPLOYEE_PERMANENT_DELETE_CONFIRMATION_MESSAGE =
-  "Employee number confirmation does not match.";
+  "Konfirmasi nomor karyawan tidak cocok.";
 
 export const EMPLOYEE_PERMANENT_DELETE_ACKNOWLEDGEMENT_MESSAGE =
-  "You must confirm that this action cannot be undone.";
+  "Anda harus mengonfirmasi bahwa tindakan ini tidak dapat dibatalkan.";
 
 export const EMPLOYEE_PERMANENT_DELETE_PROTECTED_MESSAGE =
-  "Employee cannot be permanently deleted because protected historical records exist.";
+  "Karyawan tidak dapat dihapus permanen karena ada data historis yang dilindungi.";
 
 export const EMPLOYEE_PERMANENT_DELETE_RETAINED_COMPLETION_MESSAGE =
-  "Permanent deletion cannot be completed because protected historical records must be retained.";
+  "Hapus permanen tidak dapat diselesaikan karena data historis yang dilindungi harus disimpan.";
 
 export const EMPLOYEE_PERMANENT_DELETE_RETAINED_COMPLETION_EXPLANATION =
-  "The Super Administrator override removed the application-level block, but the database still enforces the retention of these records (ON DELETE RESTRICT, NOT NULL employee references). Nothing was deleted.";
+  "Override Super Administrator telah membuka blokir di tingkat aplikasi, tetapi database tetap mewajibkan data ini disimpan (ON DELETE RESTRICT, referensi karyawan NOT NULL). Tidak ada data yang dihapus.";
 
 export const EMPLOYEE_PERMANENT_DELETE_RETAINED_PREREQUISITES =
-  "To complete this deletion, obtain the retention-policy approval and the required database change for the retained categories, or deactivate/archive this employee instead.";
+  "Untuk menyelesaikan penghapusan ini, dapatkan persetujuan kebijakan retensi dan perubahan database yang diperlukan untuk kategori yang disimpan, atau nonaktifkan/arsipkan karyawan ini.";
 
 export const EMPLOYEE_PERMANENT_DELETE_DEPENDENCY_MESSAGE =
-  "Employee cannot be permanently deleted because related records still exist.";
+  "Karyawan tidak dapat dihapus permanen karena masih ada data terkait.";
 
 export const EMPLOYEE_PERMANENT_DELETE_FAILED_MESSAGE =
-  "Permanent deletion failed. No data was deleted.";
+  "Hapus permanen gagal. Tidak ada data yang dihapus.";
 
 export const EMPLOYEE_PERMANENT_DELETE_ADVICE =
-  "Please deactivate/archive this employee instead.";
+  "Silakan nonaktifkan/arsipkan karyawan ini saja.";
 
 /**
  * Dependency categories, in display order.
@@ -296,9 +296,9 @@ export function buildPermanentDeleteProtectedMessage(
   return [
     EMPLOYEE_PERMANENT_DELETE_PROTECTED_MESSAGE,
     "",
-    `Cannot delete employee ${employeeNumber}.`,
+    `Karyawan ${employeeNumber} tidak dapat dihapus.`,
     "",
-    "Protected records:",
+    "Data yang dilindungi:",
     ...(lines.length > 0 ? lines : ["Other related records: 0"]),
     "",
     EMPLOYEE_PERMANENT_DELETE_ADVICE,
@@ -339,9 +339,9 @@ export function buildPermanentDeleteRetainedCompletionMessage(
   return [
     EMPLOYEE_PERMANENT_DELETE_RETAINED_COMPLETION_MESSAGE,
     "",
-    `Cannot delete employee ${employeeNumber} while its protected records are retained.`,
+    `Karyawan ${employeeNumber} tidak dapat dihapus selama data yang dilindungi masih disimpan.`,
     "",
-    "Retained records:",
+    "Data yang disimpan:",
     ...(lines.length > 0 ? lines : ["Other related records: 0"]),
     "",
     EMPLOYEE_PERMANENT_DELETE_RETAINED_COMPLETION_EXPLANATION,
@@ -373,7 +373,7 @@ export function buildPermanentDeleteDependencyMessage(
   return [
     EMPLOYEE_PERMANENT_DELETE_DEPENDENCY_MESSAGE,
     "",
-    `Cannot delete employee ${employeeNumber}.`,
+    `Karyawan ${employeeNumber} tidak dapat dihapus.`,
     "",
     "Related records exist:",
     ...(lines.length > 0 ? lines : ["Other related records: 0"]),
@@ -383,7 +383,7 @@ export function buildPermanentDeleteDependencyMessage(
 }
 
 export const EMPLOYEE_PERMANENT_DELETE_SELF_LINKED_MESSAGE =
-  "You cannot permanently delete the employee record linked to your own account.";
+  "Anda tidak dapat menghapus permanen data karyawan yang tertaut ke akun Anda.";
 
 /** The permission code required for permanent deletion (from the catalog). */
 export const EMPLOYEE_PERMANENT_DELETE_PERMISSION =

@@ -70,14 +70,14 @@ export default async function EditWorkLocationPage({ params }: PageProps) {
           >
             <path d="m15 18-6-6 6-6" />
           </svg>
-          <span className="sr-only">Back</span>
+          <span className="sr-only">Kembali</span>
         </Link>
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
-            Edit {location.name}
+            Ubah {location.name}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Update work location details and geofence settings.
+            Perbarui detail lokasi kerja dan pengaturan geofence.
           </p>
         </div>
       </div>
@@ -85,9 +85,9 @@ export default async function EditWorkLocationPage({ params }: PageProps) {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Location details</CardTitle>
+            <CardTitle>Detail lokasi</CardTitle>
             <CardDescription>
-              Update the basic information and geofence coordinates for this work location.
+              Perbarui informasi dasar dan koordinat geofence lokasi kerja ini.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -102,7 +102,7 @@ export default async function EditWorkLocationPage({ params }: PageProps) {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Location information</CardTitle>
+              <CardTitle>Informasi lokasi</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
@@ -111,25 +111,25 @@ export default async function EditWorkLocationPage({ params }: PageProps) {
                   <p className="font-mono">{location.id}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Project</p>
-                  <p>{location.projectName ?? "Not Assigned"}</p>
+                  <p className="text-muted-foreground">Proyek</p>
+                  <p>{location.projectName ?? "Belum Ditetapkan"}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Status</p>
                   <p>{location.status}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Created</p>
+                  <p className="text-muted-foreground">Dibuat</p>
                   <p>{new Date(location.createdAt).toLocaleDateString()}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Updated</p>
+                  <p className="text-muted-foreground">Diperbarui</p>
                   <p>{new Date(location.updatedAt).toLocaleDateString()}</p>
                 </div>
               </div>
               {location.latitude && location.longitude && (
                 <div>
-                  <p className="text-muted-foreground text-sm">Coordinates</p>
+                  <p className="text-muted-foreground text-sm">Koordinat</p>
                   <p className="font-mono text-sm">
                     {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
                   </p>

@@ -50,7 +50,7 @@ export function EditUserDialog({
   );
 
   if (state.status === "success" && open) {
-    notifier.success(state.message ?? "User account updated.");
+    notifier.success(state.message ?? "Akun pengguna diperbarui.");
     setOpen(false);
   }
 
@@ -69,18 +69,18 @@ export function EditUserDialog({
         onClick={() => setOpen(true)}
         aria-label={`Edit ${user.email}`}
       >
-        Edit
+        Ubah
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit user</DialogTitle>
+            <DialogTitle>Ubah pengguna</DialogTitle>
             <DialogDescription>
-              Update account details for{" "}
+              Perbarui detail akun untuk{" "}
               <span className="font-medium text-foreground">
                 {user.email}
               </span>
-              . The organization cannot be changed.
+              . Organisasi tidak dapat diubah.
             </DialogDescription>
           </DialogHeader>
 
@@ -95,12 +95,12 @@ export function EditUserDialog({
 
           <form action={formAction} noValidate className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-user-name">Name</Label>
+              <Label htmlFor="edit-user-name">Nama</Label>
               <Input
                 id="edit-user-name"
                 name="name"
                 defaultValue={user.name ?? ""}
-                placeholder="Full name"
+                placeholder="Nama lengkap"
                 autoComplete="off"
                 invalid={Boolean(nameError)}
                 aria-invalid={Boolean(nameError)}
@@ -127,7 +127,7 @@ export function EditUserDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-user-role">Role</Label>
+              <Label htmlFor="edit-user-role">Peran</Label>
               <select
                 id="edit-user-role"
                 name="roleId"
@@ -135,7 +135,7 @@ export function EditUserDialog({
                 defaultValue={user.roleId ?? ""}
               >
                 <option value="" disabled>
-                  Select a role
+                  Pilih peran
                 </option>
                 {roles.map((role) => (
                   <option key={role.id} value={role.id}>
@@ -156,14 +156,14 @@ export function EditUserDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-user-employee">Employee</Label>
+              <Label htmlFor="edit-user-employee">Karyawan</Label>
               <select
                 id="edit-user-employee"
                 name="employeeId"
                 className={selectClasses}
                 defaultValue={user.employeeId ?? ""}
               >
-                <option value="">— Not linked to an employee</option>
+                <option value="">— Tidak tertaut ke karyawan</option>
                 {employees.map((employee) => (
                   <option key={employee.id} value={employee.id}>
                     [{employee.employeeNumber}] {employee.employeeName}
@@ -183,10 +183,10 @@ export function EditUserDialog({
                 className={selectClasses}
                 defaultValue={user.status}
               >
-                <option value="pending">Invited</option>
-                <option value="active">Active</option>
-                <option value="suspended">Inactive</option>
-                <option value="locked">Locked</option>
+                <option value="pending">Diundang</option>
+                <option value="active">Aktif</option>
+                <option value="suspended">Nonaktif</option>
+                <option value="locked">Terkunci</option>
               </select>
               {statusError ? (
                 <p className="text-sm text-destructive">{statusError}</p>
@@ -195,11 +195,11 @@ export function EditUserDialog({
 
             <div className="grid grid-cols-2 gap-3 rounded-md border border-border bg-muted/40 p-3">
               <div>
-                <p className="text-xs text-muted-foreground">Organization</p>
+                <p className="text-xs text-muted-foreground">Organisasi</p>
                 <p className="text-sm font-medium">{user.organizationCode}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Current status</p>
+                <p className="text-xs text-muted-foreground">Status saat ini</p>
                 <UserStatusBadge status={user.status} />
               </div>
             </div>
@@ -211,10 +211,10 @@ export function EditUserDialog({
                 onClick={() => setOpen(false)}
                 disabled={isPending}
               >
-                Cancel
+                Batal
               </Button>
               <Button type="submit" disabled={isPending}>
-                {isPending ? "Saving..." : "Save changes"}
+                {isPending ? "Menyimpan..." : "Simpan perubahan"}
               </Button>
             </DialogFooter>
           </form>

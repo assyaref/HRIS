@@ -82,7 +82,7 @@ export function AnnouncementCarousel({
   return (
     <section
       aria-roledescription="carousel"
-      aria-label="Company announcements"
+      aria-label="Pengumuman perusahaan"
       className={cn("relative", className)}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
@@ -180,7 +180,7 @@ export function AnnouncementCarousel({
             <button
               key={item.id}
               type="button"
-              aria-label={`Go to announcement ${dotIndex + 1}`}
+              aria-label={`Ke pengumuman ${dotIndex + 1}`}
               aria-current={dotIndex === index}
               onClick={() => {
                 setPaused(true);
@@ -201,7 +201,7 @@ export function AnnouncementCarousel({
         <>
           <button
             type="button"
-            aria-label="Previous announcement"
+            aria-label="Pengumuman sebelumnya"
             onClick={() => go(index - 1)}
             className="absolute top-1/2 -left-1 hidden size-8 -translate-y-1/2 items-center justify-center rounded-full bg-card/90 text-muted-foreground shadow ring-1 ring-border hover:text-primary sm:flex"
           >
@@ -209,7 +209,7 @@ export function AnnouncementCarousel({
           </button>
           <button
             type="button"
-            aria-label="Next announcement"
+            aria-label="Pengumuman berikutnya"
             onClick={() => go(index + 1)}
             className="absolute top-1/2 -right-1 hidden size-8 -translate-y-1/2 items-center justify-center rounded-full bg-card/90 text-muted-foreground shadow ring-1 ring-border hover:text-primary sm:flex"
           >
